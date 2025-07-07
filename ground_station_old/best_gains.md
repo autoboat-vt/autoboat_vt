@@ -6,7 +6,7 @@ simulation:
     "rudder_d_gain": 0,
     "rudder_n_gain": 0
 
-sailbot boat rudder:
+sailboat_rudder:
     "rudder_p_gain": 1,
     "rudder_i_gain": 0.2,
     "rudder_d_gain": 0.3,

@@ -7,4 +7,3 @@ app_data/boat_data_bounds/
 app_data/buoy_data/
 !app_data/boat_data_bounds/default.json
 !app_data/buoy_data/default.json
-sailbot_groundstation.yml

@@ -10,7 +10,7 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from std_msgs.msg import Float32, Bool, String, Int32
 from geometry_msgs.msg import Vector3, Twist
 from sensor_msgs.msg import NavSatFix, Image
-from sailbot_msgs.msg import WaypointList, VESCTelemetryData
+from autoboat_msgs.msg import WaypointList, VESCTelemetryData
 from cv_bridge import CvBridge
 
 import numpy as np

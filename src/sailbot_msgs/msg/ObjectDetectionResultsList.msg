@@ -1,1 +1,0 @@
-sailbot_msgs/ObjectDetectionResult[] detection_results

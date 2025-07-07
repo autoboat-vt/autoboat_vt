@@ -1,0 +1,1 @@
+autoboat_msgs/ObjectDetectionResult[] detection_results

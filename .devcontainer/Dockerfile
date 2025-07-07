@@ -5,7 +5,7 @@
 
 
 FROM ros:humble
-ARG USERNAME=sailbot_user
+ARG USERNAME=autoboat_user
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 

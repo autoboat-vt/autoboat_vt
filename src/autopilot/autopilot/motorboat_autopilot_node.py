@@ -6,7 +6,7 @@ from .autopilot_library.utils import *
 import rclpy
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from rclpy.node import Node
-from sailbot_msgs.msg import WaypointList, RCData, VESCControlData
+from autoboat_msgs.msg import WaypointList, RCData, VESCControlData
 from std_msgs.msg import Float32, String, Int32, Bool 
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix
