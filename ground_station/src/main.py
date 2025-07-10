@@ -25,7 +25,9 @@ class MainWindow(QMainWindow):
         self.main_widget = QTabWidget()
         self.setCentralWidget(self.main_widget)
         try:
+            # load console first to capture any startup messages
             self.main_widget.addTab(ConsoleOutputWidget(), "Console Output")
+
             self.main_widget.addTab(GroundStationWidget(), "Ground Station")
             self.main_widget.addTab(AutopilotParamEditor(), "Autopilot Parameters")
             self.main_widget.addTab(CameraWidget(), "Camera Feed")
