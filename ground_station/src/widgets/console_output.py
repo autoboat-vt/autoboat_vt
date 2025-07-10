@@ -1,7 +1,7 @@
 import sys
 
-from PyQt5 import QtCore, QtGui
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTextEdit
+from qtpy import QtCore, QtGui
+from qtpy.QtWidgets import QWidget, QVBoxLayout, QTextEdit
 
 from syntax_highlighters.console import ConsoleHighlighter
 
@@ -16,11 +16,11 @@ class EmittingStream(QtCore.QObject):
 
     Attributes
     ----------
-    textWritten: `pyqtSignal`
+    textWritten: `Signal`
         Signal emitted when text is written to the stream.
     """
 
-    textWritten = QtCore.pyqtSignal(str)
+    textWritten = QtCore.Signal(str)
 
     def write(self, text) -> None:
         """

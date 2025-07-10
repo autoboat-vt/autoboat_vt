@@ -13,9 +13,9 @@ from widgets.popup_edit import TextEditWindow
 from pathlib import PurePath
 from typing import Union, Literal, Optional, Any
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtWidgets import (
+from qtpy.QtCore import Qt
+from qtpy.QtWebEngineWidgets import QWebEngineView
+from qtpy.QtWidgets import (
     QGridLayout,
     QGroupBox,
     QLabel,

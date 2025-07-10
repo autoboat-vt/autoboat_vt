@@ -4,7 +4,7 @@ from widgets.popup_edit import TextEditWindow
 from copy import deepcopy
 import json
 from jsonc_parser.parser import JsoncParser
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QVBoxLayout,
@@ -14,9 +14,9 @@ from PyQt5.QtWidgets import (
     QSizePolicy,
     QScrollArea,
     QPushButton,
-    QFrame,  # We'll use this for the frame
+    QFrame,
 )
-from PyQt5.QtCore import Qt
+from qtpy.QtCore import Qt
 
 
 class AutopilotParamWidget(QFrame):

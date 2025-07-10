@@ -1,7 +1,7 @@
 import requests
 import constants
 from typing import Union
-from PyQt5.QtCore import QThread, pyqtSignal
+from qtpy.QtCore import QThread, Signal
 
 
 class TelemetryUpdater(QThread):
@@ -14,11 +14,11 @@ class TelemetryUpdater(QThread):
 
     Attributes
     ----------
-    boat_data_fetched: `pyqtSignal`
+    boat_data_fetched: `Signal`
         Signal to send boat data to the main thread. Emits a dictionary containing telemetry data.
     """
 
-    boat_data_fetched = pyqtSignal(dict)
+    boat_data_fetched = Signal(dict)
 
     def __init__(self) -> None:
         super().__init__()
@@ -75,12 +75,12 @@ class WaypointFetcher(QThread):
 
     Attributes
     ----------
-    waypoints_fetched: `pyqtSignal`
+    waypoints_fetched: `Signal`
         Signal to send waypoints to the main thread. Emits a list of lists containing
         waypoints, where each waypoint is a list of `[latitude, longitude]`.
     """
 
-    waypoints_fetched = pyqtSignal(list)
+    waypoints_fetched = Signal(list)
 
     def __init__(self) -> None:
         super().__init__()
@@ -109,11 +109,11 @@ class ImageFetcher(QThread):
 
     Attributes
     ----------
-    image_fetched: `pyqtSignal`
+    image_fetched: `Signal`
         Signal to send image to the main thread. Emits a base64 encoded string of the image.
     """
 
-    image_fetched = pyqtSignal(str)
+    image_fetched = Signal(str)
 
     def __init__(self) -> None:
         super().__init__()

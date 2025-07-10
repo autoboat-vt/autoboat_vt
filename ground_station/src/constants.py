@@ -2,8 +2,8 @@ import os
 import sys
 from pathlib import PurePath
 from qtpy.QtCore import QRect, QTimer
-from PyQt5.QtGui import QColor, QIcon
-from PyQt5.QtWidgets import QPushButton
+from qtpy.QtGui import QColor, QIcon
+from qtpy.QtWidgets import QPushButton
 import qtawesome as qta
 from types import SimpleNamespace
 from typing import Optional, Callable
@@ -42,8 +42,10 @@ def __get_icons() -> SimpleNamespace:
     }
 
     for icon_name, icon in icons.items():
-        if not isinstance(icon, QIcon):
-            print(f"Warning: Failed to load icon '{icon_name}'.")
+        assert isinstance(icon, QIcon), (
+            f"Icon '{icon_name}' is not a valid QIcon. "
+            "Please check the icon name or ensure the icon is available."
+        )
 
     return SimpleNamespace(**icons)
 
@@ -90,7 +92,7 @@ def pushbutton_maker(
     return button
 # endregion functions
 
-# see main.py for where this is set
+# see `main.py` for where this is set
 ICONS = None
 
 # colors (monokai pro color scheme)
