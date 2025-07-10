@@ -5,7 +5,6 @@ from widgets.camera_widget.camera import CameraWidget
 from widgets.console_output import ConsoleOutputWidget
 from widgets.autopilot_param_editor.editor import AutopilotParamEditor
 
-from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 from qtpy.QtGui import QIcon
 
