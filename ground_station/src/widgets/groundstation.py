@@ -53,7 +53,10 @@ class GroundStationWidget(QWidget):
             "vesc_data_wattage_to_motor": 0.0,
             "vesc_data_motor_temperature": 0.0,
         }
-        self.buoys: dict[dict[str, float]] = dict()
+
+        # buoy_name => {"lat": float, "lon": float}
+        self.buoys: dict[str, dict[str, float]] = dict()
+
         self.boat_data: dict[str, Any] = dict()
         self.autopilot_parameters: dict[str, Any] = dict()
         self.telemetry_data_limits: dict[str, float] = dict()

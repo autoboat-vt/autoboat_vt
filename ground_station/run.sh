@@ -58,7 +58,7 @@ bin/server &
 GO_PID=$!
 
 # Start Python script in the background
-$local_python -X faulthandler src/main.py &
+$local_python src/main.py &
 PYTHON_PID=$!
 
 # Trap Ctrl+C and kill both processes

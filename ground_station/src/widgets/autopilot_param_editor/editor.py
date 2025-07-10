@@ -1,6 +1,7 @@
 import constants
 from syntax_highlighters.json import JsonHighlighter
 from widgets.popup_edit import TextEditWindow
+from copy import deepcopy
 
 import ast
 from jsonc_parser.parser import JsoncParser
@@ -50,10 +51,10 @@ class AutopilotParamWidget(QWidget):
         }
         # region validate parameter config
         try:
-            self.name = config.keys()[0]
-            self.type = type_map[config["type"]]
+            self.name: str = config.keys()[0]
+            self.type: type = type_map[config["type"]]
             self.default_val = config["default"]
-            self.description = config["description"]
+            self.description: str = config["description"]
 
             assert isinstance(self.name, str), "Parameter name must be a string."
             assert isinstance(self.default_val, self.type), (
@@ -68,7 +69,7 @@ class AutopilotParamWidget(QWidget):
         # endregion validate parameter config
 
         # region define layouts
-        self.value = self.default_val
+        self.value = deepcopy(self.default_val)
 
         self.layout = QGridLayout()
 

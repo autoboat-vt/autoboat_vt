@@ -1,14 +1,14 @@
 import os
 import sys
 from pathlib import PurePath
-from PyQt5.QtCore import QRect, QTimer
+from qtpy.QtCore import QRect, QTimer
 from PyQt5.QtGui import QColor, QIcon
 from PyQt5.QtWidgets import QPushButton
 import qtawesome as qta
 from types import SimpleNamespace
-from typing import Optional
+from typing import Optional, Callable
 
-
+# region functions
 def __get_icons() -> SimpleNamespace:
     """
     Load and return a set of icons for the application.
@@ -47,11 +47,10 @@ def __get_icons() -> SimpleNamespace:
 
     return SimpleNamespace(**icons)
 
-
 def pushbutton_maker(
     button_text: str,
     icon: QIcon,
-    function: callable,
+    function: Callable,
     max_width: Optional[int] = None,
     min_height: Optional[int] = None,
     is_clickable: bool = True,
@@ -89,7 +88,7 @@ def pushbutton_maker(
     button.clicked.connect(function)
     button.setDisabled(not is_clickable)
     return button
-
+# endregion functions
 
 # see main.py for where this is set
 ICONS = None
