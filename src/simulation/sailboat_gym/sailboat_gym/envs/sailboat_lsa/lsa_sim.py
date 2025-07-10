@@ -68,7 +68,7 @@ class SimResetInfo(TypedDict):
 
 class LSASim(metaclass=ProfilingMeta):
     DEFAULT_PORT = 5555  # set in Dockerfile
-    DOCKER_IMAGE_NAME = 'aanimated/sailbot_simulation:latest'
+    DOCKER_IMAGE_NAME = 'aanimated/autoboat_simulation:latest'
 
     def __init__(self, name='default') -> None:
         self.name = re.sub(r'[^a-zA-Z0-9]', '-', name)
@@ -166,7 +166,7 @@ class LSASim(metaclass=ProfilingMeta):
             'dt_theta_sail': np.array([obs['dt_theta_sail']], dtype=np.float32),
             'wind': np.array([obs['wind']['x'], obs['wind']['y']], dtype=np.float32),
             
-            # Changed by sailbot: we do not care about water measurements and we have no way of measuring it, so it will mess with the RL algorithm
+            # Changed by autoboat: we do not care about water measurements and we have no way of measuring it, so it will mess with the RL algorithm
             # 'water': np.array([obs['water']['x'], obs['water']['y']], dtype=np.float32),
             'water': np.array([0, 0], dtype=np.float32)
         }

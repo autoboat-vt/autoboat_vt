@@ -13,7 +13,7 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='sailbot_user',
+    maintainer='autoboat_user',
     maintainer_email='chrisjnassif@gmail.com',
     description='TODO: Package description',
     license='TODO: License declaration',

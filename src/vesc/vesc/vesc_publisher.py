@@ -15,7 +15,7 @@ from rclpy.node import Node
 
 from std_msgs.msg import String, Float32
 
-from sailbot_msgs.msg import VESCTelemetryData, VESCControlData
+from autoboat_msgs.msg import VESCTelemetryData, VESCControlData
 
 motorPolePairs = 7
 

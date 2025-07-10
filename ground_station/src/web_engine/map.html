@@ -33,20 +33,20 @@
             static buoy_color = "orange"
             static waypoint_color = "blue"
             static boat_icon = L.icon({
-                iconUrl: "https://raw.githubusercontent.com/sailbot-vt/sailbot_vt/refs/heads/main/ground_station/app_data/assets/boat.png",
+                iconUrl: "https://raw.githubusercontent.com/autoboat-vt/autoboat_vt/refs/heads/main/ground_station/app_data/assets/boat.png",
                 iconSize: [50, 50],
                 iconAnchor: [25, 25],
             });
             static buoy_icon = L.icon({
-                iconUrl: `https://raw.githubusercontent.com/sailbot-vt/sailbot_vt/refs/heads/main/ground_station/app_data/assets/marker-icon-${map_interface.buoy_color}.png`,
-                shadowUrl: `https://raw.githubusercontent.com/sailbot-vt/sailbot_vt/refs/heads/main/ground_station/app_data/assets/marker-shadow.png`,
+                iconUrl: `https://raw.githubusercontent.com/autoboat-vt/autoboat_vt/refs/heads/main/ground_station/app_data/assets/marker-icon-${map_interface.buoy_color}.png`,
+                shadowUrl: `https://raw.githubusercontent.com/autoboat-vt/autoboat_vt/refs/heads/main/ground_station/app_data/assets/marker-shadow.png`,
                 iconSize: [25, 41],
                 iconAnchor: [12, 41],
                 shadowSize: [41, 41]
             });
             static waypoint_icon = L.icon({
-                iconUrl: `https://raw.githubusercontent.com/sailbot-vt/sailbot_vt/refs/heads/main/ground_station/app_data/assets/marker-icon-${map_interface.waypoint_color}.png`,
-                shadowUrl: `https://raw.githubusercontent.com/sailbot-vt/sailbot_vt/refs/heads/main/ground_station/app_data/assets/marker-shadow.png`,
+                iconUrl: `https://raw.githubusercontent.com/autoboat-vt/autoboat_vt/refs/heads/main/ground_station/app_data/assets/marker-icon-${map_interface.waypoint_color}.png`,
+                shadowUrl: `https://raw.githubusercontent.com/autoboat-vt/autoboat_vt/refs/heads/main/ground_station/app_data/assets/marker-shadow.png`,
                 iconSize: [25, 41],
                 iconAnchor: [12, 41],
                 shadowSize: [41, 41]
@@ -137,8 +137,8 @@
                     this.map.eachLayer(layer => {
                         if (layer instanceof L.Marker && layer.getLatLng().equals(waypoint)) {
                             layer.setIcon(L.icon({
-                                iconUrl: `https://raw.githubusercontent.com/sailbot-vt/sailbot_vt/refs/heads/main/ground_station/app_data/assets/marker-icon-${color}.png`,
-                                shadowUrl: `https://raw.githubusercontent.com/sailbot-vt/sailbot_vt/refs/heads/main/ground_station/app_data/assets/marker-shadow.png`,
+                                iconUrl: `https://raw.githubusercontent.com/autoboat-vt/autoboat_vt/refs/heads/main/ground_station/app_data/assets/marker-icon-${color}.png`,
+                                shadowUrl: `https://raw.githubusercontent.com/autoboat-vt/autoboat_vt/refs/heads/main/ground_station/app_data/assets/marker-shadow.png`,
                                 iconSize: [25, 41],
                                 iconAnchor: [12, 41],
                                 shadowSize: [41, 41]

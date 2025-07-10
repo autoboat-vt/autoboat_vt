@@ -4,7 +4,7 @@
   <name>microros</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="eliasc23@vt.edu">sailbot_user</maintainer>
+  <maintainer email="eliasc23@vt.edu">autoboat_user</maintainer>
   <license>TODO: License declaration</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

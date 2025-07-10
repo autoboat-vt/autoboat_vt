@@ -13,7 +13,7 @@ import time
 import serial
 from serial.tools import list_ports
 from std_msgs.msg import Bool
-from sailbot_msgs.msg import RCData
+from autoboat_msgs.msg import RCData
 from rclpy.node import Node
 
 from crsf_parser.payloads import PacketsTypes
