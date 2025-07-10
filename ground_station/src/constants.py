@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import PurePath
 from qtpy.QtCore import QRect, QTimer
-from qtpy.QtGui import QColor, QIcon
+from qtpy.QtGui import QColor, QIcon, QFont
 from qtpy.QtWidgets import QPushButton
 import qtawesome as qta
 from types import SimpleNamespace
@@ -106,6 +106,11 @@ GREEN = QColor("#9CD57B")
 
 # window dimensions
 WINDOW_BOX = QRect(100, 100, 800, 600)
+
+# font
+font = QFont("", 13)
+font.setStyleHint(QFont.Monospace)
+font.setStyleStrategy(QFont.PreferDevice)
 
 # timers
 SUPER_SLOW_TIMER = QTimer()

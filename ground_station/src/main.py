@@ -5,6 +5,7 @@ from widgets.camera_widget.camera import CameraWidget
 from widgets.console_output import ConsoleOutputWidget
 from widgets.autopilot_param_editor.editor import AutopilotParamEditor
 
+from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 from qtpy.QtGui import QIcon
 
@@ -43,6 +44,7 @@ if __name__ == "__main__":
     constants.ICONS = constants.__get_icons()
     app_icon: QIcon = constants.ICONS.boat
     app.setWindowIcon(app_icon)
+    app.setFont(constants.font)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
