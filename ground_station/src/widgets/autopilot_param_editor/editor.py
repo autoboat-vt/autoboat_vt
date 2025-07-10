@@ -2,24 +2,24 @@ import constants
 from syntax_highlighters.json import JsonHighlighter
 from widgets.popup_edit import TextEditWindow
 from copy import deepcopy
-
-import ast
+import json
 from jsonc_parser.parser import JsoncParser
 from PyQt5.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QVBoxLayout,
-    QGridLayout,
     QLabel,
     QLineEdit,
     QSpacerItem,
     QSizePolicy,
     QScrollArea,
+    QPushButton,
+    QFrame,  # We'll use this for the frame
 )
 from PyQt5.QtCore import Qt
 
 
-class AutopilotParamWidget(QWidget):
+class AutopilotParamWidget(QFrame):
     """
     A widget for displaying autopilot parameters and interacting with them.
 
@@ -33,7 +33,7 @@ class AutopilotParamWidget(QWidget):
 
     Inherits
     --------
-    `QWidget`
+    `QFrame`
     """
 
     def __init__(self, config: dict) -> None:
@@ -49,9 +49,10 @@ class AutopilotParamWidget(QWidget):
             "tuple": tuple,
             "set": set,
         }
+
         # region validate parameter config
         try:
-            self.name: str = config.keys()[0]
+            self.name: str = config["name"]
             self.type: type = type_map[config["type"]]
             self.default_val = config["default"]
             self.description: str = config["description"]
@@ -71,33 +72,50 @@ class AutopilotParamWidget(QWidget):
         # region define layouts
         self.value = deepcopy(self.default_val)
 
-        self.layout = QGridLayout()
+        self.main_layout = QHBoxLayout(self)
+        self.main_layout.setContentsMargins(10, 10, 10, 10)
+        self.setLayout(self.main_layout)
 
         # for button name and interface to control it
-        self.left_layout = QHBoxLayout()
+        self.left_layout = QVBoxLayout()
+        self.left_layout.setContentsMargins(0, 0, 0, 0)
 
         # for the send and reset buttons
-        # top is send, bottom is reset
         self.right_layout = QVBoxLayout()
+        self.right_layout.setAlignment(Qt.AlignTop)
         # endregion define layouts
 
         # region left layout
-        self.label = QLabel(self.name)
+        self.label = QLabel(f"<b>{self.name}</b>")
         self.label.setToolTip(self.description)
+        self.description_label = QLabel(self.description)
+        self.description_label.setWordWrap(True)
+        self.description_label.setStyleSheet("color: #D3D3D3; font-size: 12pt;")
 
-        if isinstance(self.type, (list, dict, tuple, set)):
-            self.modify_element = constants.pushbutton_maker(
-                self.name, constants.ICONS.pencil, self.edit_sequence_data
-            )
-
+        if self.type in (list, dict, tuple, set):
+            self.modify_element = QPushButton("Edit")
+            self.modify_element.setIcon(constants.ICONS.pencil)
+            self.modify_element.clicked.connect(self.edit_sequence_data)
+            self.value_display = QLabel(str(self.value))
+            self.value_display.setWordWrap(True)
+            self.value_display.setStyleSheet("font-family: monospace;")
         else:
-            self.modify_element = QLineEdit(self.value)
+            self.modify_element = QLineEdit(str(self.value))
+            self.modify_element.setMinimumWidth(200)
+            self.modify_element.editingFinished.connect(self.update_value_from_lineedit)
 
-        self.label.setBuddy(self.modify_element)
+            # no separate display for simple types
+            self.value_display = None
 
         self.left_layout.addWidget(self.label)
+        self.left_layout.addWidget(self.description_label)
+
+        if self.value_display:
+            self.left_layout.addWidget(self.value_display)
+
         self.left_layout.addWidget(self.modify_element)
         # endregion left layout
+
         # region right layout
         self.send_button = constants.pushbutton_maker(
             "Send",
@@ -105,7 +123,7 @@ class AutopilotParamWidget(QWidget):
             lambda: None,
             max_width=100,
             min_height=30,
-            is_clickable=False,
+            is_clickable=True,
         )
         self.reset_button = constants.pushbutton_maker(
             "Reset",
@@ -119,28 +137,46 @@ class AutopilotParamWidget(QWidget):
         self.right_layout.addWidget(self.reset_button)
         # endregion right layout
 
-    def reset_value(self) -> None:
-        """
-        Reset the value of the parameter to its default value.
-        """
+        self.main_layout.addLayout(self.left_layout, 70)  # 70% width
+        self.main_layout.addLayout(self.right_layout, 30)  # 30% width
 
-        self.value = self.default_val
+        self.setFrameStyle(QFrame.Box | QFrame.Plain)
+        self.setLineWidth(1)
+
+    def reset_value(self) -> None:
+        """Reset the value of the parameter to its default value."""
+
+        self.value = deepcopy(self.default_val)
         if isinstance(self.modify_element, QLineEdit):
             self.modify_element.setText(str(self.value))
-        else:
+        elif self.value_display:
+            self.value_display.setText(str(self.value))
             print(f"Info: {self.name} reset to default value: {self.value}.")
 
-    def edit_sequence_data(self) -> None:
-        """
-        Open a text editor for editing a sequence of values.
+        self.reset_button.setEnabled(False)
 
-        `self.edit_sequence_callback` is called when the user closes or clicks the save button in the text edit window.
-        `self.edit_sequence_callback` recieves the text from the text edit window when the user clicks the save button,
-        otherwise it recieves the text without any changes.
-        """
+    def update_value_from_lineedit(self) -> None:
+        """Update value from `QLineEdit` input."""
 
         try:
-            initial_text = str(self.value)
+            text = self.modify_element.text()
+            if self.type is bool:
+                # Handle boolean conversion
+                self.value = text.lower() in ("true", "1", "yes", "on")
+            else:
+                self.value = self.type(text)
+        except ValueError:
+            print(f"Error: Invalid value for {self.name}. Resetting to previous value.")
+            self.modify_element.setText(str(self.value))
+
+        self.send_button.setEnabled(True)
+        self.reset_button.setEnabled(True)
+
+    def edit_sequence_data(self) -> None:
+        """Open a text editor for editing a sequence of values."""
+
+        try:
+            initial_text = json.dumps(self.value, indent=2)
             self.text_edit_window = TextEditWindow(
                 highlighter=JsonHighlighter, initial_text=initial_text
             )
@@ -154,37 +190,37 @@ class AutopilotParamWidget(QWidget):
             print(f"Error: Failed to open text edit window for {self.name}: {e}")
 
     def edit_sequence_data_callback(self, text: str) -> None:
-        """
-        Callback function for the `edit_sequence_data` function.
-
-        This function is called when the user closes the text edit window.
-        It retrieves the edited text and saves it to the `self.buoys` variable and closes the window.
-
-        Parameters
-        ----------
-        text
-            The text entered by the user in the text edit window.
-        """
+        """Callback function for the `edit_sequence_data` function."""
 
         try:
-            edited_data = ast.literal_eval(text)
+            edited_data = json.loads(text)
+
+            if self.type is tuple:
+                edited_data = tuple(edited_data)
+            elif self.type is set:
+                edited_data = set(edited_data)
+
+            if not isinstance(edited_data, self.type):
+                raise TypeError(f"Edited data must be of type {self.type.__name__}.")
+
             if edited_data == self.value:
                 print(f"Info: No changes made to {self.name}.")
             else:
-                if isinstance(edited_data, self.type):
-                    self.value = edited_data
-                    print(f"Info: {self.name} updated to {self.value}.")
-                else:
-                    raise TypeError(
-                        f"Error: Edited data must be of type {self.type.__name__}."
-                    )
-        except (SyntaxError, ValueError) as e:
+                self.value = edited_data
+                if self.value_display:
+                    self.value_display.setText(str(self.value))
+                print(f"Info: {self.name} updated to {self.value}.")
+
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
             print(f"Error: Invalid data format for {self.name}: {e}")
+
+        self.send_button.setEnabled(True)
+        self.reset_button.setEnabled(True)
 
 
 class AutopilotParamEditor(QWidget):
     """
-    A layout for displaying autopilot parameters in a grid format.
+    A widget for interacting with and editing autopilot parameters.
 
     Inherits
     --------
@@ -193,38 +229,127 @@ class AutopilotParamEditor(QWidget):
 
     def __init__(self) -> None:
         super().__init__()
-        self.config: dict = JsoncParser.parse_file(
-            constants.AUTO_PILOT_PARAMS_DIR / "editor_config.jsonc"
-        )
+
+        self.main_layout = QVBoxLayout()
+        self.setLayout(self.main_layout)
+
+        try:
+            self.config: dict = JsoncParser.parse_file(
+                constants.AUTO_PILOT_PARAMS_DIR / "params_default.jsonc"
+            )
+            print(
+                f"Info: Loaded {len(self.config)} parameters from `{constants.AUTO_PILOT_PARAMS_DIR / 'params_default.jsonc'}`."
+            )
+        except Exception as e:
+            print(
+                f"Error loading autopilot parameters: {e}\n"
+                "Please ensure the file exists in the `app_data/autopilot_params` directory."
+            )
+            self.config = {}
+
+        self.params_container = QWidget()
+        self.params_layout = QVBoxLayout()
+        self.params_layout.setAlignment(Qt.AlignTop)
+        self.params_container.setLayout(self.params_layout)
+        self.widgets = []
 
         self.scroll = QScrollArea()
-        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.scroll.setWidgetResizable(True)
+        self.scroll.setWidget(self.params_container)
 
-        self.params_widget = QWidget()
-        self.params_layout = QVBoxLayout()
-        self.params.setLayout(self.params_layout)
+        self.searchbar = QLineEdit()
+        self.searchbar.setPlaceholderText("Search parameters...")
+        self.searchbar.textChanged.connect(self.filter_parameters)
+
+        self.searchbar.setClearButtonEnabled(True)
+
+        # Status label to show search results
+        self.status_label = QLabel()
+        self.status_label.setStyleSheet("color: #D3D3D3; font-size: 12pt;")
+        self.status_label.setAlignment(Qt.AlignCenter)
+
+        self.main_layout.addWidget(self.searchbar)
+        self.main_layout.addWidget(self.status_label)
+        self.main_layout.addWidget(self.scroll)
+
+        self.add_parameters()
+        self.update_status_label()
+
+    def add_parameters(self) -> None:
+        """Add all parameters to the layout."""
+
+        # Clear existing widgets
+        for widget in self.widgets:
+            widget.deleteLater()
         self.widgets = []
 
         for key in self.config.keys():
-            param_widget = AutopilotParamWidget(self.config[key])
-            self.params_layout.addWidget(param_widget)
-            self.widgets.append(param_widget)
+            # Create config with name
+            param_config = self.config[key].copy()
+            param_config["name"] = key
+            try:
+                param_widget = AutopilotParamWidget(param_config)
+                self.params_layout.addWidget(param_widget)
+                self.widgets.append(param_widget)
+            except Exception as e:
+                print(f"Error creating widget for parameter '{key}': {e}")
 
-        spacer = QSpacerItem(1, 1, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        self.params_layout.addItem(spacer)
+        # add spacer to push content to top
+        if hasattr(self, "spacer"):
+            self.params_layout.removeItem(self.spacer)
+        self.spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.params_layout.addItem(self.spacer)
 
-        # Scroll Area Properties.
-        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.scroll.setWidgetResizable(True)
-        self.scroll.setWidget(self.params_widget)
+    def filter_parameters(self, search_text: str = "") -> None:
+        """
+        Filter parameters based on search text.
 
-        # Search bar.
-        self.searchbar = QLineEdit()
+        Parameters
+        ----------
+        search_text
+            The text to filter parameters by. Defaults to an empty string, which shows all parameters.
+        """
 
-        main_layout = QVBoxLayout(self)
-        main_layout.addWidget(self.searchbar)
-        main_layout.addWidget(self.scroll)
+        search_text = search_text.lower().strip()
+        visible_count = 0
+
+        for widget in self.widgets:
+            name_match = search_text in widget.name.lower()
+            desc_match = search_text in widget.description.lower()
+
+            if search_text and not (name_match or desc_match):
+                widget.hide()
+            else:
+                widget.show()
+                visible_count += 1
+
+        self.update_status_label(visible_count, search_text)
+
+    def update_status_label(
+        self, visible_count: int = None, search_text: str = ""
+    ) -> None:
+        """
+        Update the status label with search results.
+
+        Parameters
+        ----------
+        visible_count
+            The number of parameters currently visible after filtering.
+            If `None`, it will be calculated from the number of current widgets.
+
+        search_text
+            The text used for filtering parameters. If empty, it indicates that all parameters are shown.
+        """
+
+        if visible_count is None:
+            visible_count = len(self.widgets)
+
+        if not search_text:
+            self.status_label.setText(f"Showing all {visible_count} parameters")
+        else:
+            if visible_count == 0:
+                self.status_label.setText(f"No parameters match '{search_text}'")
+            else:
+                self.status_label.setText(
+                    f"Showing {visible_count} parameters matching '{search_text}'"
+                )

@@ -24,11 +24,14 @@ class MainWindow(QMainWindow):
         self.setGeometry(constants.WINDOW_BOX)
         self.main_widget = QTabWidget()
         self.setCentralWidget(self.main_widget)
-        self.main_widget.addTab(GroundStationWidget(), "Ground Station")
-        self.main_widget.addTab(CameraWidget(), "Camera Feed")
-        # self.main_widget.addTab(ConsoleOutputWidget(), "Console Output")
-        self.main_widget.addTab(AutopilotParamEditor(), "Autopilot Parameters")
-        self.main_widget.setCurrentIndex(0)
+        try:
+            self.main_widget.addTab(ConsoleOutputWidget(), "Console Output")
+            self.main_widget.addTab(GroundStationWidget(), "Ground Station")
+            self.main_widget.addTab(AutopilotParamEditor(), "Autopilot Parameters")
+            self.main_widget.addTab(CameraWidget(), "Camera Feed")
+        except Exception as e:
+            print(f"Error: {e}")
+        self.main_widget.setCurrentIndex(1)
 
 
 if __name__ == "__main__":
