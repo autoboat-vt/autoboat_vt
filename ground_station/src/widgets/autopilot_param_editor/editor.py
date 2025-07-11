@@ -25,11 +25,12 @@ class AutopilotParamWidget(QFrame):
 
     Parameters
     ----------
-    name
-        The name of the parameter.
-
-    default_val
-        The default value of the parameter.
+    config
+        A dictionary containing the parameter configuration. It should include:
+        - `name`: The name of the parameter (str).
+        - `type`: The type of the parameter (str, one of "bool", "int", "float", "str", "list", "dict", "tuple", "set").
+        - `default`: The default value for the parameter, which should match the specified type.
+        - `description`: A description of the parameter (str).
 
     Inherits
     --------
