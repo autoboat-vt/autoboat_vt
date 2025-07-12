@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 from pathlib import PurePath
 from qtpy.QtCore import QRect, QTimer
 from qtpy.QtGui import QColor, QIcon, QFont
@@ -153,15 +154,31 @@ try:
     HTML_CAMERA_PATH = PurePath(CAMERA_DIR / "camera.html")
     HTML_CAMERA = open(HTML_CAMERA_PATH).read()
 
+    if "params_default.jsonc" not in os.listdir(DATA_DIR / "autopilot_params"):
+        raise Exception(
+            "Default autopilot parameters file not found, please redownload the directory from GitHub."
+        )
+
     if "autopilot_params" not in os.listdir(DATA_DIR):
         os.makedirs(DATA_DIR / "autopilot_params")
 
-    __autopilot_param_editor_dir = PurePath(
+    _autopilot_param_editor_dir = PurePath(
         SRC_DIR / "widgets" / "autopilot_param_editor"
     )
-    if "params_temp.json" not in os.listdir(__autopilot_param_editor_dir):
-        with open(__autopilot_param_editor_dir / "params_temp.json", "w") as f:
-            pass
+    if "params_temp.json" not in os.listdir(_autopilot_param_editor_dir):
+        shutil.copyfile(
+            PurePath(DATA_DIR / "autopilot_params" / "params_default.jsonc"),
+            PurePath(_autopilot_param_editor_dir / "params_temp.json"),
+        )
+
+        with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "r") as f:
+            lines = f.readlines()
+
+        # remove comments and empty lines
+        with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "w") as f:
+            for line in lines:
+                if not line.strip().startswith("//"):
+                    f.write(line)
 
     if "boat_data" not in os.listdir(DATA_DIR):
         os.makedirs(DATA_DIR / "boat_data")

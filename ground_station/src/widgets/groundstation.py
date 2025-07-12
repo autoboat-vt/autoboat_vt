@@ -300,6 +300,7 @@ class GroundStationWidget(QWidget):
                 print(
                     f"Error: Failed to send waypoints: {e}\nWaypoints: {self.waypoints}"
                 )
+            print(f"Info: Waypoints sent successfully: {self.waypoints}")
         else:
             try:
                 requests.post(
@@ -319,6 +320,7 @@ class GroundStationWidget(QWidget):
                 constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"]
             ).json()
             if remote_waypoints:
+                print(f"Info: Fetched waypoints from server: {remote_waypoints}")
                 existing_waypoints = self.waypoints.copy()
                 self.browser.page().runJavaScript("map.clear_waypoints()")
                 for waypoint in remote_waypoints:
