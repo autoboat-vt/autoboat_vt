@@ -248,14 +248,18 @@ class AutopilotParamWidget(QFrame):
 
         try:
             edited_data = safe_load(self.modify_element.text())
+
             if edited_data == self.value:
-                print(f"Info: No changes made to {self.name}.")
                 return
 
             if isinstance(self.type, bool):
                 edited_data = edited_data.lower() in ["true", "1", "yes", "on"]
 
             edited_data_type = type(edited_data)
+
+            if isinstance(edited_data_type, int) and isinstance(self.type, float):
+                edited_data = float(edited_data)
+                edited_data_type = float
 
             if not isinstance(edited_data, self.type):
                 raise TypeError(
@@ -321,8 +325,8 @@ class AutopilotParamWidget(QFrame):
 
         try:
             edited_data = safe_load(text)
+
             if edited_data == self.value:
-                print(f"Info: No changes made to {self.name}.")
                 return
 
             edited_data_type = type(edited_data)
