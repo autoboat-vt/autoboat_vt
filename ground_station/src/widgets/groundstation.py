@@ -139,6 +139,7 @@ class GroundStationWidget(QWidget):
         self.left_layout.addWidget(self.left_button_groupbox)
 
         self.left_widget.setLayout(self.left_layout)
+        self.left_widget.setMaximumWidth(self.left_width)
         # self.left_layout.setContentsMargins(0, 0, 0, self.left_width)
         self.main_layout.addWidget(self.left_widget, 0, 0)
 
