@@ -252,18 +252,15 @@ class AutopilotParamWidget(QFrame):
             if edited_data == self.value:
                 return
 
-            if isinstance(self.type, bool):
+            if self.type is bool and isinstance(edited_data, str):
                 edited_data = edited_data.lower() in ["true", "1", "yes", "on"]
 
-            edited_data_type = type(edited_data)
-
-            if isinstance(edited_data_type, int) and isinstance(self.type, float):
+            if isinstance(edited_data, int) and self.type is float:
                 edited_data = float(edited_data)
-                edited_data_type = float
 
             if not isinstance(edited_data, self.type):
                 raise TypeError(
-                    f"Edited data must be of type {self.type.__name__}, but got {edited_data_type.__name__}."
+                    f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}."
                 )
 
             with open(
@@ -329,11 +326,9 @@ class AutopilotParamWidget(QFrame):
             if edited_data == self.value:
                 return
 
-            edited_data_type = type(edited_data)
-
-            if not isinstance(edited_data_type, self.type):
+            if not isinstance(edited_data, self.type):
                 raise TypeError(
-                    f"Edited data must be of type {self.type.__name__}, but got {edited_data_type.__name__}."
+                    f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}."
                 )
 
         except TypeError:
