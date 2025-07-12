@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime
 
 from qtpy import QtCore, QtGui
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QTextEdit
@@ -87,9 +88,14 @@ class ConsoleOutputWidget(QWidget):
             The text to append to the console output.
         """
 
+        now = datetime.now()
+        formatted_time = now.strftime("(%I:%M:%S %p)")
         cursor = self.console_output.textCursor()
         cursor.movePosition(QtGui.QTextCursor.End)
-        cursor.insertText(text)
+
+        if text.strip():
+            cursor.insertText(f"{formatted_time} Info: {text}\n")
+
         self.console_output.setTextCursor(cursor)
         self.console_output.ensureCursorVisible()
 
