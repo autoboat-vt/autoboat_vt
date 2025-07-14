@@ -1,6 +1,6 @@
 {
     "name": "VT AutoBoat Development Container",
-    "image": "aanimated/autoboat_docker_dev_image",
+    "image": "autoboatvt/autoboat_docker_dev_image",
     "privileged": true,
     "remoteUser": "",
     "containerUser": "",
