@@ -4,7 +4,7 @@ import shutil
 from pathlib import PurePath
 from qtpy.QtCore import QRect, QTimer, Qt
 from qtpy.QtGui import QColor, QIcon, QPalette
-from qtpy.QtWidgets import QPushButton
+from qtpy.QtWidgets import QPushButton, QMessageBox
 import qtawesome as qta
 from types import SimpleNamespace
 from typing import Optional, Callable
@@ -40,6 +40,8 @@ def __get_icons() -> SimpleNamespace:
         "hard_drive": qta.icon("fa6.hard-drive"),
         "boat": qta.icon("mdi.sail-boat"),
         "image_upload": qta.icon("mdi.image-move"),
+        "notification": qta.icon("mdi.bell"),
+        "warning": qta.icon("mdi.alert"),
     }
 
     for icon_name, icon in icons.items():
@@ -91,6 +93,49 @@ def pushbutton_maker(
     button.clicked.connect(function)
     button.setDisabled(not is_clickable)
     return button
+
+
+def show_message_box(
+    title: str,
+    message: str,
+    icon: Optional[QIcon] = None,
+    buttons: Optional[list[QMessageBox.StandardButton]] = None,
+) -> QMessageBox.StandardButton:
+    """
+    Show a message box with the specified title, message, and optional icon and buttons.
+
+    Parameters
+    ----------
+    title
+        The title of the message box.
+    message
+        The message to display in the message box.
+    icon
+        An optional icon to display in the message box.
+    buttons
+        A list of standard buttons to show. Defaults to `[QMessageBox.Ok]`. <br>
+        Example: `[QMessageBox.Yes, QMessageBox.No]`
+
+    Returns
+    -------
+    QMessageBox.StandardButton
+        The button that was clicked by the user.
+    """
+    if buttons is None:
+        buttons = [QMessageBox.Ok]
+
+    msg_box = QMessageBox()
+    msg_box.setWindowTitle(title)
+    msg_box.setText(message)
+
+    if icon:
+        msg_box.setIconPixmap(icon.pixmap(64, 64))
+
+    for button in buttons:
+        msg_box.addButton(button)
+
+    clicked_button = msg_box.exec_()
+    return QMessageBox.StandardButton(clicked_button)
 # endregion functions
 
 # see `main.py` for where this is set
@@ -134,6 +179,10 @@ STYLE_SHEET = """
 WINDOW_BOX = QRect(100, 100, 800, 600)
 
 # timers
+TEN_SECOND_TIMER = QTimer()
+TEN_SECOND_TIMER.setInterval(10000)
+
+
 SUPER_SLOW_TIMER = QTimer()
 SUPER_SLOW_TIMER.setInterval(500)
 

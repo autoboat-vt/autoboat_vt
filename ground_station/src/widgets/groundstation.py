@@ -26,6 +26,7 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QFileDialog,
+    QMessageBox,
 )
 # endregion imports
 
@@ -162,7 +163,6 @@ class GroundStationWidget(QWidget):
         self.right_tab1_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.right_tab1_table = QTableWidget()
         self.right_tab1_table.setMinimumWidth(self.right_width)
-
         self.can_send_waypoints = True
         self.send_waypoints_button = constants.pushbutton_maker(
             "Send Waypoints",
@@ -258,25 +258,34 @@ class GroundStationWidget(QWidget):
         # endregion setup UI
 
         self.telemetry_handler = thread_classes.TelemetryUpdater()
-        self.js_waypoint_handler = thread_classes.WaypointFetcher()
+        self.js_waypoint_handler = thread_classes.LocalWaypointFetcher()
+        self.telemetry_waypoint_handler = thread_classes.RemoteWaypointFetcher()
 
         # Connect signals to update UI
         self.telemetry_handler.boat_data_fetched.connect(self.update_telemetry_display)
         self.js_waypoint_handler.waypoints_fetched.connect(
             self.update_waypoints_display
         )
+        self.telemetry_waypoint_handler.waypoints_fetched.connect(
+            self.check_telemetry_waypoints
+        )
+
+        # 10 second timer
+        self.ten_second_timer = constants.TEN_SECOND_TIMER
+        self.ten_second_timer.timeout.connect(self.telemetry_waypoint_handler_starter)
 
         # Slow timer
         self.slow_timer = constants.SLOW_TIMER
-        constants.SLOW_TIMER.timeout.connect(self.update_telemetry_starter)
+        self.slow_timer.timeout.connect(self.update_telemetry_starter)
 
         # Fast timer
         self.fast_timer = constants.FAST_TIMER
-        constants.FAST_TIMER.timeout.connect(self.js_waypoint_handler_starter)
+        self.fast_timer.timeout.connect(self.js_waypoint_handler_starter)
 
         # Start timers
         self.fast_timer.start()
         self.slow_timer.start()
+        self.ten_second_timer.start()
 
     # region button functions
     def send_waypoints(self, test: bool = False) -> None:
@@ -618,6 +627,12 @@ class GroundStationWidget(QWidget):
         if not self.js_waypoint_handler.isRunning():
             self.js_waypoint_handler.start()
 
+    def telemetry_waypoint_handler_starter(self) -> None:
+        """Starts the telemetry waypoint handler thread."""
+
+        if not self.telemetry_waypoint_handler.isRunning():
+            self.telemetry_waypoint_handler.start()
+
     def update_telemetry_starter(self) -> None:
         """Starts the telemetry handler thread."""
 
@@ -663,6 +678,57 @@ class GroundStationWidget(QWidget):
                     )
             self.right_tab1_table.resizeColumnsToContents()
             self.right_tab1_table.resizeRowsToContents()
+
+    def check_telemetry_waypoints(self, waypoints: list[list[float]]) -> None:
+        """
+        Check if the waypoints on the telemetry server are the same as the local waypoints.
+        If the  y are different, show a dialog and let user decide whether to update the local waypoints.
+
+        Parameters
+        ----------
+        waypoints
+            List of waypoints to check.
+        """
+
+        flag = False
+        for waypoint in waypoints:
+            if waypoint not in self.waypoints:
+                flag = True
+                break
+
+        if flag:
+            print(
+                "Warning: Local waypoints are different from telemetry server waypoints."
+            )
+            response = constants.show_message_box(
+                "Local Waypoints Mismatch",
+                "The local waypoints are different from the telemetry server waypoints. Do you want to update the local waypoints?",
+                constants.ICONS.warning,
+                [
+                    QMessageBox.StandardButton.Yes,
+                    QMessageBox.StandardButton.No,
+                ],
+            )
+            if response == QMessageBox.StandardButton.Yes:
+                not_uploaded_waypoints = [
+                    waypoint for waypoint in self.waypoints if waypoint not in waypoints
+                ]
+                self.waypoints = waypoints.copy()
+                self.browser.page().runJavaScript("map.clear_waypoints()")
+                for waypoint in self.waypoints:
+                    self.browser.page().runJavaScript(
+                        f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"
+                    )
+                self.browser.page().runJavaScript("map.change_color_waypoints('red')")
+                for waypoint in not_uploaded_waypoints:
+                    self.browser.page().runJavaScript(
+                        f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"
+                    )
+                print("Info: Local waypoints updated from telemetry server.")
+            else:
+                print("Info: Local waypoints not updated.")
+        else:
+            print("Info: Local waypoints match telemetry server waypoints.")
 
     def update_telemetry_display(
         self,
