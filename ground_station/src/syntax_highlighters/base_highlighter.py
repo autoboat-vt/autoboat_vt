@@ -1,4 +1,4 @@
-from PyQt5.QtGui import QSyntaxHighlighter, QTextCharFormat, QFont, QColor
+from qtpy.QtGui import QSyntaxHighlighter, QTextCharFormat, QFont, QColor
 
 
 class BaseHighlighter(QSyntaxHighlighter):

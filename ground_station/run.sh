@@ -67,3 +67,8 @@ trap "kill $GO_PID $PYTHON_PID" SIGINT
 # Wait for both processes to finish
 wait $GO_PID
 wait $PYTHON_PID
+
+# Cleanup
+if [ -f "src/widgets/autopilot_param_editor/params_temp.json" ]; then
+    rm src/widgets/autopilot_param_editor/params_temp.json
+fi

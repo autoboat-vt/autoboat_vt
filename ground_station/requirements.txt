@@ -6,3 +6,4 @@ PyQt5
 packaging
 idna
 charset-normalizer
+jsonc-parser

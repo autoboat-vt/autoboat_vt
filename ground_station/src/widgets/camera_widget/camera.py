@@ -2,8 +2,8 @@ import constants
 import thread_classes
 import json
 
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtWidgets import QWidget, QGridLayout, QHBoxLayout, QPushButton
+from qtpy.QtWebEngineWidgets import QWebEngineView
+from qtpy.QtWidgets import QWidget, QGridLayout, QHBoxLayout, QPushButton
 
 
 class CameraWidget(QWidget):

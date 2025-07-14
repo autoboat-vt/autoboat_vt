@@ -1,8 +1,100 @@
 import os
 import sys
+import shutil
 from pathlib import PurePath
-from PyQt5.QtCore import QRect, QTimer
-from PyQt5.QtGui import QColor
+from qtpy.QtCore import QRect, QTimer
+from qtpy.QtGui import QColor, QIcon, QFont
+from qtpy.QtWidgets import QPushButton
+import qtawesome as qta
+from types import SimpleNamespace
+from typing import Optional, Callable
+
+# region functions
+def __get_icons() -> SimpleNamespace:
+    """
+    Load and return a set of icons for the application.
+
+    Returns
+    -------
+    SimpleNamespace
+        A namespace object containing the loaded icons.
+        Each icon can be accessed as an attribute of the namespace.
+
+        Example: `icons.upload` = `icons["upload"]`
+
+    Raises
+    -------
+    TypeError
+        If an icon fails to load or is not a QIcon.
+        This indicates that the icon name is not valid or the icon could not be found.
+    """
+
+    icons = {
+        "upload": qta.icon("mdi.upload"),
+        "download": qta.icon("mdi.download"),
+        "delete": qta.icon("mdi.trash-can"),
+        "save": qta.icon("mdi.content-save"),
+        "cog": qta.icon("mdi.cog"),
+        "pencil": qta.icon("ei.pencil"),
+        "refresh": qta.icon("mdi.refresh"),
+        "hard_drive": qta.icon("fa6.hard-drive"),
+        "boat": qta.icon("mdi.sail-boat"),
+        "image_upload": qta.icon("mdi.image-move"),
+    }
+
+    for icon_name, icon in icons.items():
+        assert isinstance(icon, QIcon), (
+            f"Icon '{icon_name}' is not a valid QIcon. "
+            "Please check the icon name or ensure the icon is available."
+        )
+
+    return SimpleNamespace(**icons)
+
+def pushbutton_maker(
+    button_text: str,
+    icon: QIcon,
+    function: Callable,
+    max_width: Optional[int] = None,
+    min_height: Optional[int] = None,
+    is_clickable: bool = True,
+) -> QPushButton:
+    """
+    Create a `QPushButton` with the specified features.
+
+    Parameters
+    ----------
+    button_text
+        The text to display on the button.
+    icon
+        The icon to display on the button.
+    function
+        The function to connect to the button's clicked signal.
+    max_width
+        The maximum width of the button. If not specified, not used.
+    min_height
+        The minimum height of the button. If not specified, not used.
+    is_clickable
+        Whether the button should be clickable. Defaults to `True`.
+
+    Returns
+    -------
+    QPushButton
+        The created button.
+    """
+
+    button = QPushButton(button_text)
+    button.setIcon(icon)
+    if max_width is not None:
+        button.setMaximumWidth(max_width)
+    if min_height is not None:
+        button.setMinimumHeight(min_height)
+    button.clicked.connect(function)
+    button.setDisabled(not is_clickable)
+    return button
+# endregion functions
+
+# see `main.py` for where this is set
+ICONS = None
 
 # colors (monokai pro color scheme)
 YELLOW = QColor("#ffd866")
@@ -15,6 +107,11 @@ GREEN = QColor("#9CD57B")
 
 # window dimensions
 WINDOW_BOX = QRect(100, 100, 800, 600)
+
+# font
+font = QFont("", 13)
+font.setStyleHint(QFont.Monospace)
+font.setStyleStrategy(QFont.PreferDevice)
 
 # timers
 SUPER_SLOW_TIMER = QTimer()
@@ -59,8 +156,31 @@ try:
     HTML_CAMERA_PATH = PurePath(CAMERA_DIR / "camera.html")
     HTML_CAMERA = open(HTML_CAMERA_PATH).read()
 
+    if "params_default.jsonc" not in os.listdir(DATA_DIR / "autopilot_params"):
+        raise Exception(
+            "Default autopilot parameters file not found, please redownload the directory from GitHub."
+        )
+
     if "autopilot_params" not in os.listdir(DATA_DIR):
         os.makedirs(DATA_DIR / "autopilot_params")
+
+    _autopilot_param_editor_dir = PurePath(
+        SRC_DIR / "widgets" / "autopilot_param_editor"
+    )
+    if "params_temp.json" not in os.listdir(_autopilot_param_editor_dir):
+        shutil.copyfile(
+            PurePath(DATA_DIR / "autopilot_params" / "params_default.jsonc"),
+            PurePath(_autopilot_param_editor_dir / "params_temp.json"),
+        )
+
+        with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "r") as f:
+            lines = f.readlines()
+
+        # remove comments and empty lines
+        with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "w") as f:
+            for line in lines:
+                if not line.strip().startswith("//"):
+                    f.write(line)
 
     if "boat_data" not in os.listdir(DATA_DIR):
         os.makedirs(DATA_DIR / "boat_data")

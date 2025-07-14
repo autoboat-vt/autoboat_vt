@@ -1,12 +1,12 @@
-from PyQt5.QtGui import (
+from qtpy.QtGui import (
     QFontDatabase,
     QPainter,
     QColor,
     QSyntaxHighlighter,
     QFontMetrics,
 )
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QPlainTextEdit
-from PyQt5.QtCore import QSize, QRect, Qt, pyqtSignal
+from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton, QPlainTextEdit
+from qtpy.QtCore import QSize, QRect, Qt, Signal
 from typing import Optional
 
 
@@ -36,11 +36,11 @@ class TextEditWindow(QWidget):
 
     Attributes
     -------
-    user_text_emitter: `pyqtSignal`
+    user_text_emitter: `Signal`
         Signal emitted when the window is closed, carrying the entered text.
     """
 
-    user_text_emitter = pyqtSignal(str)
+    user_text_emitter = Signal(str)
 
     def __init__(
         self,
@@ -247,12 +247,12 @@ class TextEditWindow(QWidget):
             self.highlighter.rehighlight()
 
     def save(self) -> None:
-        """Save current text"""
+        """Save current text."""
 
         self.current_text = self.editor.toPlainText()
 
     def closeEvent(self, event) -> None:
-        """Handle window closing"""
+        """Handle window closing."""
 
         self.current_text = self.editor.toPlainText()
         self.user_text_emitter.emit(self.current_text)

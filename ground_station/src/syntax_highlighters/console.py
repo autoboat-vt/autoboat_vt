@@ -1,5 +1,5 @@
-from PyQt5.QtCore import QRegularExpression
-from PyQt5.QtGui import QFont
+from qtpy.QtCore import QRegularExpression
+from qtpy.QtGui import QFont
 from constants import YELLOW, RED, GREEN
 from syntax_highlighters.base_highlighter import BaseHighlighter
 
