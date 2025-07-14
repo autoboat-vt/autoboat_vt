@@ -2,8 +2,8 @@ import os
 import sys
 import shutil
 from pathlib import PurePath
-from qtpy.QtCore import QRect, QTimer
-from qtpy.QtGui import QColor, QIcon, QFont
+from qtpy.QtCore import QRect, QTimer, Qt
+from qtpy.QtGui import QColor, QIcon, QPalette
 from qtpy.QtWidgets import QPushButton
 import qtawesome as qta
 from types import SimpleNamespace
@@ -105,13 +105,33 @@ RED = QColor("#f76c7c")
 GREY = QColor("#82878b")
 GREEN = QColor("#9CD57B")
 
+# pallette and style sheet
+PALLETTE = QPalette()
+
+PALLETTE.setColor(QPalette.Window, QColor(53, 53, 53))
+PALLETTE.setColor(QPalette.WindowText, Qt.white)
+PALLETTE.setColor(QPalette.Base, QColor(25, 25, 25))
+PALLETTE.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+PALLETTE.setColor(QPalette.ToolTipBase, Qt.white)
+PALLETTE.setColor(QPalette.ToolTipText, Qt.white)
+PALLETTE.setColor(QPalette.Text, Qt.white)
+PALLETTE.setColor(QPalette.Button, QColor(53, 53, 53))
+PALLETTE.setColor(QPalette.ButtonText, Qt.white)
+PALLETTE.setColor(QPalette.BrightText, Qt.red)
+PALLETTE.setColor(QPalette.Link, QColor(42, 130, 218))
+PALLETTE.setColor(QPalette.Highlight, Qt.white)
+PALLETTE.setColor(QPalette.HighlightedText, Qt.black)
+
+STYLE_SHEET = """
+    QToolTip { 
+        color: #ffffff; 
+        background-color: #2a82da; 
+        border: 1px solid white;
+    }
+"""
+
 # window dimensions
 WINDOW_BOX = QRect(100, 100, 800, 600)
-
-# font
-font = QFont("", 13)
-font.setStyleHint(QFont.Monospace)
-font.setStyleStrategy(QFont.PreferDevice)
 
 # timers
 SUPER_SLOW_TIMER = QTimer()

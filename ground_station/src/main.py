@@ -39,11 +39,15 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setApplicationName("SailBussy Ground Station")
+
     app.setStyle("Fusion")
+    app.setPalette(constants.PALLETTE)
+    app.setStyleSheet(constants.STYLE_SHEET)
+
     constants.ICONS = constants.__get_icons()
     app_icon: QIcon = constants.ICONS.boat
     app.setWindowIcon(app_icon)
-    app.setFont(constants.font)
+
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
