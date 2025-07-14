@@ -682,7 +682,7 @@ class GroundStationWidget(QWidget):
     def check_telemetry_waypoints(self, waypoints: list[list[float]]) -> None:
         """
         Check if the waypoints on the telemetry server are the same as the local waypoints.
-        If the  y are different, show a dialog and let user decide whether to update the local waypoints.
+        If they are different, show a dialog and let user decide whether to update the local waypoints.
 
         Parameters
         ----------
