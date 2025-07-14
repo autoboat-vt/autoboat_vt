@@ -68,7 +68,7 @@ class SimResetInfo(TypedDict):
 
 class LSASim(metaclass=ProfilingMeta):
     DEFAULT_PORT = 5555  # set in Dockerfile
-    DOCKER_IMAGE_NAME = 'aanimated/autoboat_simulation:latest'
+    DOCKER_IMAGE_NAME = 'autoboatvt/autoboat_simulation:latest'
 
     def __init__(self, name='default') -> None:
         self.name = re.sub(r'[^a-zA-Z0-9]', '-', name)
