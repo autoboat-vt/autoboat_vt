@@ -184,7 +184,7 @@ class AutopilotParamWidget(QFrame):
             try:
                 response = requests.post(
                     constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
-                    json=existing_data,
+                    json={"value": existing_data},
                 )
                 response.raise_for_status()
                 print(f"Info: Successfully sent {self.name} with value {self.value}.")
@@ -459,7 +459,7 @@ class AutopilotParamEditor(QWidget):
         try:
             response = requests.post(
                 constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
-                json=existing_data,
+                json={"value": existing_data},
             )
             response.raise_for_status()
             print("Info: All parameters sent successfully.")
