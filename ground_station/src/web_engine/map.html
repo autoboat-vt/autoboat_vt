@@ -125,6 +125,15 @@
             }
 
             add_waypoint(lat, lon) {
+                // Check if the waypoint already exists
+                for (let waypoint of this.waypoints) {
+                    if (waypoint[0] === lat && waypoint[1] === lon) {
+                        console.log("Waypoint already exists at this location.");
+                        return;
+                    }
+                }
+
+                // Add the new waypoint
                 this.waypoints.push([lat, lon]);
                 L.marker([lat, lon], {
                     icon: map_interface.waypoint_icon

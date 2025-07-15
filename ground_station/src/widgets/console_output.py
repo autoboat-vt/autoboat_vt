@@ -94,7 +94,7 @@ class ConsoleOutputWidget(QWidget):
         cursor.movePosition(QtGui.QTextCursor.End)
 
         if text.strip():
-            cursor.insertText(f"{formatted_time} Info: {text}\n")
+            cursor.insertText(f"{formatted_time} {text}\n")
 
         self.console_output.setTextCursor(cursor)
         self.console_output.ensureCursorVisible()
