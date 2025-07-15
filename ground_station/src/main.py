@@ -44,7 +44,9 @@ if __name__ == "__main__":
     app.setPalette(constants.PALLETTE)
     app.setStyleSheet(constants.STYLE_SHEET)
 
+    # needs to be set once the app is started
     constants.ICONS = constants.__get_icons()
+
     app_icon: QIcon = constants.ICONS.boat
     app.setWindowIcon(app_icon)
 

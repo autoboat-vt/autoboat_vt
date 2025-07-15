@@ -43,8 +43,8 @@ class GroundStationWidget(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.waypoints: list[list[float]] = list()
-        self.num_waypoints = 0
-        self.boat_data_averages = {
+        self.num_waypoints: int = 0
+        self.boat_data_averages: dict[str, float] = {
             "vesc_data_rpm": 0.0,
             "vesc_data_amp_hours": 0.0,
             "vesc_data_amp_hours_charged": 0.0,
@@ -352,6 +352,15 @@ class GroundStationWidget(QWidget):
         except requests.exceptions.RequestException as e:
             print(f"Error: Failed to pull waypoints: {e}")
 
+    def clear_waypoints(self) -> None:
+        """Clear waypoints from the table."""
+
+        self.can_reset_waypoints = False
+        self.can_pull_waypoints = True
+        self.pull_waypoints_button.setDisabled(not self.can_pull_waypoints)
+        js_code = "map.clear_waypoints()"
+        self.browser.page().runJavaScript(js_code)
+
     def send_image(self) -> None:
         """
         Send image to the server.
@@ -598,15 +607,6 @@ class GroundStationWidget(QWidget):
 
         except Exception as e:
             print(f"Error: Failed to load buoy data: {e}")
-
-    def clear_waypoints(self) -> None:
-        """Clear waypoints from the table."""
-
-        self.can_reset_waypoints = False
-        self.can_pull_waypoints = True
-        self.pull_waypoints_button.setDisabled(not self.can_pull_waypoints)
-        js_code = "map.clear_waypoints()"
-        self.browser.page().runJavaScript(js_code)
 
     def zoom_to_boat(self) -> None:
         """Center the view on the boat's position."""

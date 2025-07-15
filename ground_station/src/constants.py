@@ -103,6 +103,8 @@ def show_message_box(
 ) -> QMessageBox.StandardButton:
     """
     Show a message box with the specified title, message, and optional icon and buttons.
+    Returns the button that was clicked by the user. If the user closes the message box
+    without clicking a button, it returns `QMessageBox.StandardButton.NoButton`.
 
     Parameters
     ----------
@@ -139,7 +141,7 @@ def show_message_box(
 # endregion functions
 
 # see `main.py` for where this is set
-ICONS = None
+ICONS: QIcon
 
 # colors (monokai pro color scheme)
 YELLOW = QColor("#ffd866")
@@ -192,9 +194,8 @@ FAST_TIMER = QTimer()
 FAST_TIMER.setInterval(1)  # 1 ms for fast timer
 
 # base url for telemetry server
-# TELEMETRY_SERVER_URL = "http://54.165.159.151:8080/"
-TELEMETRY_SERVER_URL = "http://3.138.35.188:5000/"
-
+TELEMETRY_SERVER_URL = "http://54.165.159.151:8080/"
+# TELEMETRY_SERVER_URL = "http://3.138.35.188:5000/"
 
 # endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint`
 TELEMETRY_SERVER_ENDPOINTS = {

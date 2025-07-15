@@ -1,6 +1,8 @@
-#!/usr/bin/env bash
+#!/usr/bin/env -S bash -euo pipefail
 
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+os_type=$(uname -s | tr '[:upper:]' '[:lower:]')
+
+if [[ "$os_type" == "linux"* ]]; then
     export QT_XCB_GL_INTEGRATION=none
     export XDG_SESSION_TYPE=x11
     export QT_QPA_PLATFORM=xcb
@@ -18,57 +20,71 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-local_go=$(which go)
-local_python=$(which python3)
+local_go=$(command -v go)
+local_python=$(command -v python3)
 
 mkdir -p bin
+bin_name="server_$os_type"
 
-if [ -f "bin/server" ]; then
-    last_build_time=$(cat "last_build_time.txt")
-    # if last_build_time is older than 1 hour
-    if [ $(($(date +%s) - last_build_time)) -gt 3600 ]; then
-        echo "Server binary out of date. Rebuilding..."
-        $local_go mod tidy
-        $local_go build -o bin/server src/web_engine/server.go
-        if [ $? -ne 0 ]; then
-            echo "Failed to build the Go server."
-            exit 1
+should_rebuild=false
+
+if [[ -f "bin/$bin_name" ]]; then
+    if [[ -f "last_build_time.txt" ]]; then
+        build_os_type=$(sed -n '1p' last_build_time.txt)
+        if [[ "$build_os_type" != "$os_type" ]]; then
+            echo "Server binary was built for $build_os_type, but this is $os_type. Rebuilding..."
+            should_rebuild=true
+        fi
+
+        last_build_time=$(sed -n '2p' last_build_time.txt)
+        now=$(date +%s)
+        if (( now - last_build_time > 3600 )); then
+            echo "Server binary is over 1 hour old. Rebuilding..."
+            should_rebuild=true
         else
-            echo "Go server built successfully."
-            date +%s > last_build_time.txt
+            echo "Server binary is fresh. Skipping rebuild."
         fi
     else
-        echo "last_build_time.txt is less than 1 hour old. Skipping build."
+        echo "No last_build_time.txt file found. Rebuilding..."
+        should_rebuild=true
     fi
 else
     echo "Server binary not found. Building..."
+    should_rebuild=true
+fi
+
+if [[ "$should_rebuild" == true ]]; then
     $local_go mod tidy
-    $local_go build -o bin/server src/web_engine/server.go
-    if [ $? -ne 0 ]; then
+    if $local_go build -o "bin/$bin_name" src/web_engine/server.go; then
+        echo "Go server built successfully."
+        {
+            echo "$os_type"
+            date +%s
+        } > last_build_time.txt
+    else
         echo "Failed to build the Go server."
         exit 1
-    else
-        echo "Go server built successfully."
-        date +%s > last_build_time.txt
     fi
 fi
 
 # Start the Go server in the background
-bin/server & 
+bin/$bin_name &
 GO_PID=$!
 
 # Start Python script in the background
 $local_python src/main.py &
 PYTHON_PID=$!
 
-# Trap Ctrl+C and kill both processes
-trap "kill $GO_PID $PYTHON_PID" SIGINT
+cleanup() {
+    kill "$GO_PID" "$PYTHON_PID" 2>/dev/null || true
+    wait "$GO_PID" "$PYTHON_PID" 2>/dev/null || true
 
-# Wait for both processes to finish
-wait $GO_PID
-wait $PYTHON_PID
+    if [[ -f "src/widgets/autopilot_param_editor/params_temp.json" ]]; then
+        rm "src/widgets/autopilot_param_editor/params_temp.json"
+    fi
+}
+trap cleanup EXIT
 
-# Cleanup
-if [ -f "src/widgets/autopilot_param_editor/params_temp.json" ]; then
-    rm src/widgets/autopilot_param_editor/params_temp.json
-fi
+# Wait for either process to exit, then trigger cleanup
+wait -n "$GO_PID" "$PYTHON_PID"
+exit 0
