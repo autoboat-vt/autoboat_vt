@@ -22,7 +22,6 @@ import base64
 import geopy.distance
 
 
-# TELEMETRY_SERVER_URL = 'http://54.165.159.151:8080/'
 TELEMETRY_SERVER_URL = 'http://3.138.35.188:5000/'
 
 

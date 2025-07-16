@@ -194,8 +194,7 @@ FAST_TIMER = QTimer()
 FAST_TIMER.setInterval(1)  # 1 ms for fast timer
 
 # base url for telemetry server
-TELEMETRY_SERVER_URL = "http://54.165.159.151:8080/"
-# TELEMETRY_SERVER_URL = "http://3.138.35.188:5000/"
+TELEMETRY_SERVER_URL = "http://3.138.35.188:5000/"
 
 # endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint`
 TELEMETRY_SERVER_ENDPOINTS = {
