@@ -5,6 +5,7 @@ from copy import deepcopy
 from yaml import safe_load
 import requests
 import json
+from typing import Any
 from pathlib import PurePath
 from jsonc_parser.parser import JsoncParser
 from qtpy.QtWidgets import (
@@ -71,7 +72,7 @@ class AutopilotParamWidget(QFrame):
             assert isinstance(self.description, str), "Description must be a string."
 
         except (KeyError, IndexError):
-            raise ValueError(
+            print(
                 "Invalid configuration for `AutopilotParamWidget`. See `src/widgets/autopilot_param_editor/editor_config.jsonc`."
             )
         # endregion validate parameter config
@@ -167,6 +168,7 @@ class AutopilotParamWidget(QFrame):
             existing_data = requests.get(
                 constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"]
             ).json()
+
         except requests.exceptions.RequestException as e:
             print(
                 f"Error: Failed to fetch existing autopilot parameters. Cannot send {self.name}: {e}"
@@ -181,6 +183,7 @@ class AutopilotParamWidget(QFrame):
                     f"Warning: {self.name} not found in existing parameters. Adding it."
                 )
                 existing_data[self.name] = self.value
+
             try:
                 response = requests.post(
                     constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
@@ -188,9 +191,11 @@ class AutopilotParamWidget(QFrame):
                 )
                 response.raise_for_status()
                 print(f"Info: Successfully sent {self.name} with value {self.value}.")
+
             except requests.exceptions.RequestException as e:
                 print(f"Error: Failed to send {self.name} with value {self.value}: {e}")
                 return
+
         else:
             print(
                 f"Error: Unexpected data format from telemetry server: {existing_data}. "
@@ -216,9 +221,11 @@ class AutopilotParamWidget(QFrame):
                 self.value = data[self.name]
                 if isinstance(self.modify_element, QLineEdit):
                     self.modify_element.setText(str(self.value))
+
                 elif self.value_display:
                     self.value_display.setText(str(self.value))
                 print(f"Info: Pulled {self.name} with value {self.value}.")
+
             else:
                 print(f"Warning: {self.name} not found in pulled data.")
 
@@ -235,6 +242,7 @@ class AutopilotParamWidget(QFrame):
         self.value = deepcopy(self.default_val)
         if isinstance(self.modify_element, QLineEdit):
             self.modify_element.setText(str(self.value))
+
         elif self.value_display:
             self.value_display.setText(str(self.value))
             print(f"Info: {self.name} reset to default value: {self.value}.")
@@ -265,7 +273,6 @@ class AutopilotParamWidget(QFrame):
 
             with open(
                 PurePath(constants._autopilot_param_editor_dir / "params_temp.json"),
-                "r",
             ) as file:
                 temp_params = json.load(file)
 
@@ -360,6 +367,9 @@ class AutopilotParamEditor(QWidget):
         self.main_layout = QGridLayout()
         self.setLayout(self.main_layout)
 
+        self.config: dict[str, dict[str, Any]] = dict()
+        self.widgets: list[AutopilotParamWidget] = list()
+
         # region actions button group
         self.button_group_box = QGroupBox()
         self.button_layout = QHBoxLayout()
@@ -405,7 +415,7 @@ class AutopilotParamEditor(QWidget):
         # endregion actions button group
 
         try:
-            self.config: dict = JsoncParser.parse_file(
+            self.config = JsoncParser.parse_file(
                 constants.AUTO_PILOT_PARAMS_DIR / "params_default.jsonc"
             )
             print(
@@ -416,13 +426,11 @@ class AutopilotParamEditor(QWidget):
                 f"Error loading autopilot parameters: {e}\n"
                 "Please ensure the file exists in the `app_data/autopilot_params` directory."
             )
-            self.config = {}
 
         self.params_container = QWidget()
         self.params_layout = QVBoxLayout()
         self.params_layout.setAlignment(Qt.AlignTop)
         self.params_container.setLayout(self.params_layout)
-        self.widgets = []
 
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)

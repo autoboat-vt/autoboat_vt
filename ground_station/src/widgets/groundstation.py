@@ -269,6 +269,10 @@ class GroundStationWidget(QWidget):
         self.telemetry_waypoint_handler.waypoints_fetched.connect(
             self.check_telemetry_waypoints
         )
+        self.telemetry_waypoint_handler.request_url_change.connect(
+            self.change_telemetry_server_url
+        )
+        self.remember_telemetry_server_url_status = False
 
         # 10 second timer
         self.ten_second_timer = constants.TEN_SECOND_TIMER
@@ -536,6 +540,8 @@ class GroundStationWidget(QWidget):
             print(f"Error: Failed to edit buoy data: {e}")
 
     def update_buoy_table(self) -> None:
+        """Update the buoy table with the latest buoy data."""
+
         self.right_tab2_table.clear()
         self.right_tab2_table.setRowCount(0)
         self.right_tab2_table.setColumnCount(2)
@@ -729,6 +735,48 @@ class GroundStationWidget(QWidget):
                 print("Info: Local waypoints not updated.")
         else:
             print("Info: Local waypoints match telemetry server waypoints.")
+
+    def change_telemetry_server_url(self, telemetry_status: bool) -> None:
+        """
+        Prompt the user to change the telemetry server URL if fetching waypoints fails.
+
+        Parameters
+        ----------
+        telemetry_status
+            Boolean indicating whether the telemetry server is reachable or not.
+            If `True`, it means the telemetry server is not reachable and waypoints could not be fetched.
+            If `False`, it means the telemetry server is reachable and waypoints were fetched successfully.
+        """
+
+        if not telemetry_status and not self.remember_telemetry_server_url_status:
+            self.ten_second_timer.stop()
+            response, self.remember_telemetry_server_url_status = (
+                constants.show_message_box(
+                    "Failed to fetch waypoints",
+                    "Do you want to change the telemetry server URL?",
+                    constants.ICONS.question,
+                    [
+                        QMessageBox.StandardButton.Yes,
+                        QMessageBox.StandardButton.No,
+                    ],
+                    True,
+                )
+            )
+
+            if response == QMessageBox.StandardButton.Yes:
+                new_url = constants.show_input_dialog(
+                    "Change Telemetry Server URL",
+                    "Enter the new telemetry server URL:",
+                    default_value=constants.TELEMETRY_SERVER_URL,
+                    input_type=str,
+                )
+                if new_url:
+                    constants.TELEMETRY_SERVER_URL = new_url
+                    print(f"Info: Changed telemetry server URL to {new_url}")
+
+            else:
+                print("Info: Telemetry server URL not changed.")
+            self.ten_second_timer.start()
 
     def update_telemetry_display(
         self,
