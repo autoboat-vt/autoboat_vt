@@ -267,10 +267,14 @@ class TelemetryNode(Node):
             "full_autonomy_maneuver": self.full_autonomy_maneuver,
             "speed": self.speed,
             "velocity_vector": (self.velocity_vector[0], self.velocity_vector[1]),
-            "bearing": self.desired_heading, "heading": self.heading,
-            "true_wind_speed": self.true_wind_speed, "true_wind_angle": self.true_wind_angle,
-            "apparent_wind_speed": self.apparent_wind_speed, "apparent_wind_angle": self.apparent_wind_angle,
-            "sail_angle": self.desired_sail_angle, "rudder_angle": self.desired_rudder_angle,
+            "bearing": self.desired_heading, 
+            "heading": self.heading,
+            "true_wind_speed": self.true_wind_speed, 
+            "true_wind_angle": self.true_wind_angle,
+            "apparent_wind_speed": self.apparent_wind_speed, 
+            "apparent_wind_angle": self.apparent_wind_angle,
+            "sail_angle": self.desired_sail_angle, 
+            "rudder_angle": self.desired_rudder_angle,
             "current_waypoint_index": self.current_waypoint_index,
             "distance_to_next_waypoint": get_distance_to_waypoint([self.position.latitude, self.position.longitude], self.current_waypoints_list[self.current_waypoint_index])
         }
