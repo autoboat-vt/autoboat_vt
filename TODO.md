@@ -30,3 +30,6 @@ Add is it water api to autopilot for collision avoidance and navigation
 
 
 In the autopilot, label what is in degrees and what is in radians in the variable name
+
+
+HIGH PRIORITY: in the telemetry node, we are incorrectly calculating the true wind vector. Please fix that
