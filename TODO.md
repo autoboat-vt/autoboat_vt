@@ -34,4 +34,3 @@ In the autopilot, label what is in degrees and what is in radians in the variabl
 
 HIGH PRIORITY: in the telemetry node, we are incorrectly calculating the true wind vector. Please fix that
 
-In the telemetry node, please don't use the waypoints/delete route. Just use the waypoints/get_new instead to get the same behaviour 
