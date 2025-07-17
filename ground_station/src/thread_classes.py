@@ -1,3 +1,13 @@
+"""
+Module containing classes for handling background tasks in the ground station application.
+
+Contains:
+- TelemetryUpdater: Fetches telemetry data from the telemetry server.
+- LocalWaypointFetcher: Fetches waypoints from the local server.
+- RemoteWaypointFetcher: Fetches waypoints from the telemetry server.
+- ImageFetcher: Fetches images from the telemetry server.
+"""
+
 import requests
 import constants
 from typing import Union

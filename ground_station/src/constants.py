@@ -1,3 +1,27 @@
+"""
+Module containing constants and utility functions for the ground station application.
+
+Functions:
+- pushbutton_maker: Creates a styled QPushButton.
+- show_message_box: Displays a message box with customizable options.
+- show_input_dialog: Displays an input dialog for user input.
+
+Constants:
+- ICONS: A namespace containing application icons.
+- YELLOW, PURPLE, BLUE, WHITE, RED, GREY, GREEN: Color constants for the application.
+- PALLETTE: A QPalette object for the application's color scheme.
+- STYLE_SHEET: A string containing the application's style sheet.
+- WINDOW_BOX: QRect defining the main window dimensions.
+- TEN_SECOND_TIMER, SUPER_SLOW_TIMER, SLOW_TIMER, FAST_TIMER: QTimer objects for various intervals.
+- TELEMETRY_SERVER_URL: Base URL for the telemetry server.
+- TELEMETRY_SERVER_ENDPOINTS: Dictionary of endpoints for the telemetry server.
+- WAYPOINTS_SERVER_URL: URL for the local waypoints server.
+- TOP_LEVEL_DIR, SRC_DIR, DATA_DIR: Paths to the main directories of the application.
+- HTML_MAP_PATH, HTML_MAP: Path and content of the HTML file used by the map widget in the ground station.
+- HTML_CAMERA_PATH, HTML_CAMERA: Path and content of the HTML file used by the camera widget.
+- ASSETS_DIR, AUTO_PILOT_PARAMS_DIR, BOAT_DATA_DIR, BOAT_DATA_LIMITS_DIR, BUOY_DATA_DIR: Paths to various data directories.
+"""
+
 import os
 import sys
 import shutil
@@ -9,6 +33,7 @@ import qtawesome as qta
 from types import SimpleNamespace
 from typing import Optional, Callable, Union
 from typing import TypeVar
+
 
 T = TypeVar("T")
 
