@@ -60,7 +60,7 @@ class CameraWidget(QWidget):
         self.is_paused = False
         self.run_button.setDisabled(self.is_running)
         self.pause_button.setDisabled(self.is_paused)
-        print("Info: Unpaused camera feed timer.")
+        print("[Info] Unpaused camera feed timer.")
 
     def pause_timer(self) -> None:
         """Pause the timer that fetches images from the camera."""
@@ -72,7 +72,7 @@ class CameraWidget(QWidget):
         self.web_view.page().runJavaScript(f"setBase64Image({js_image_str});")
         self.pause_button.setDisabled(self.is_paused)
         self.run_button.setDisabled(self.is_running)
-        print("Info: Paused camera feed timer.")
+        print("[Info] Paused camera feed timer.")
 
     def update_camera_feed_starter(self) -> None:
         """Start the image fetcher thread to update the camera feed if it is not already running."""

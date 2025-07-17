@@ -12,6 +12,7 @@ from typing import TypeVar
 
 T = TypeVar("T")
 
+
 # region functions
 def __get_icons() -> SimpleNamespace:
     """
@@ -55,6 +56,7 @@ def __get_icons() -> SimpleNamespace:
         )
 
     return SimpleNamespace(**icons)
+
 
 def pushbutton_maker(
     button_text: str,
@@ -189,10 +191,12 @@ def show_input_dialog(
         return input_type(text)
     else:
         return None
+
+
 # endregion functions
 
 # see `main.py` for where this is set
-ICONS: QIcon
+ICONS: SimpleNamespace
 
 # colors (monokai pro color scheme)
 YELLOW = QColor("#ffd866")
@@ -322,5 +326,5 @@ try:
     BUOY_DATA_DIR = PurePath(DATA_DIR / "buoy_data")
 
 except Exception as e:
-    print(f"Error: {e}")
+    print(f"[Error] {e}")
     sys.exit(1)

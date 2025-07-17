@@ -24,6 +24,10 @@ class EmittingStream(QThread):
 
     textWritten = Signal(str)
 
+    def __init__(self) -> None:
+        super().__init__()
+        self.terminal = sys.stdout
+
     def write(self, text) -> None:
         """
         Write text to the stream and emit a signal with the text.
@@ -34,6 +38,8 @@ class EmittingStream(QThread):
             The text to write to the stream.
         """
 
+        self.terminal.write(str(text))
+        self.terminal.flush()
         self.textWritten.emit(str(text))
 
     def flush(self) -> None:
@@ -42,7 +48,7 @@ class EmittingStream(QThread):
         standard output streams.
         """
 
-        pass
+        self.terminal.flush()
 
 
 class ConsoleOutputWidget(QWidget):
@@ -65,7 +71,6 @@ class ConsoleOutputWidget(QWidget):
 
         self.console_output = QTextEdit()
         self.console_output.setReadOnly(True)
-        self.console_output.setLineWrapMode(QTextEdit.NoWrap)
         self.main_layout.addWidget(self.console_output)
 
         self.highlighter = ConsoleHighlighter(self.console_output.document())

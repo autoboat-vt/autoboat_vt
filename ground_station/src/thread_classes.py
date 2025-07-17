@@ -59,7 +59,7 @@ class TelemetryUpdater(QThread):
                 "vesc_data_time_since_vesc_startup_in_ms": 0.0,
                 "vesc_data_motor_temperature": 0.0,
             }
-            print("Warning: Failed to fetch boat data. Using default values.")
+            print("[Warning] Failed to fetch boat data. Using default values.")
 
         self.boat_data_fetched.emit(boat_status)
 
@@ -106,11 +106,11 @@ class LocalWaypointFetcher(QThread):
 
         except requests.exceptions.RequestException:
             waypoints = []
-            print("Warning: Failed to fetch waypoints. Using empty list.")
+            print("[Warning] Failed to fetch waypoints. Using empty list.")
 
         except ValueError:
             print(
-                f"Warning: Waypoints data is not in expected format. Using empty list.\nExpected: {list[list[float]]}, Received: {waypoints}",
+                f"[Warning] Waypoints data is not in expected format. Using empty list.\nExpected: {list[list[float]]}, Received: {waypoints}",
             )
             waypoints = []
 
@@ -155,12 +155,12 @@ class RemoteWaypointFetcher(QThread):
 
         except requests.exceptions.RequestException:
             waypoints = []
-            print("Warning: Failed to fetch waypoints. Using empty list.")
+            print("[Warning] Failed to fetch waypoints. Using empty list.")
             self.request_url_change.emit(True)
 
         except ValueError:
             print(
-                f"Warning: Waypoints data is not in expected format. Using empty list.\nExpected: {list[list[float]]}, Received: {waypoints}",
+                f"[Warning] Waypoints data is not in expected format. Using empty list.\nExpected: {list[list[float]]}, Received: {waypoints}",
             )
             waypoints = []
             self.request_url_change.emit(True)
@@ -209,10 +209,10 @@ class ImageFetcher(QThread):
             base64_encoded_image = open(
                 constants.ASSETS_DIR / "cool-guy-base64.txt"
             ).read()
-            print("Warning: Failed to fetch image. Using cool guy image.")
+            print("[Warning] Failed to fetch image. Using cool guy image.")
 
         except ValueError as e:
-            print(f"Warning: {e}")
+            print(f"[Warning] {e}")
             base64_encoded_image = open(
                 constants.ASSETS_DIR / "cool-guy-base64.txt"
             ).read()

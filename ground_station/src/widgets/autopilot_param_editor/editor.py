@@ -26,6 +26,270 @@ from qtpy.QtWidgets import (
 from qtpy.QtCore import Qt
 
 
+class AutopilotParamEditor(QWidget):
+    """
+    A widget for interacting with and editing autopilot parameters.
+
+    Inherits
+    --------
+    `QWidget`
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.main_layout = QGridLayout()
+        self.setLayout(self.main_layout)
+
+        self.config: dict[str, dict[str, Any]] = dict()
+        self.widgets: list[AutopilotParamWidget] = list()
+
+        # region actions button group
+        self.button_group_box = QGroupBox()
+        self.button_layout = QHBoxLayout()
+        self.button_group_box.setLayout(self.button_layout)
+
+        self.send_all_button = constants.pushbutton_maker(
+            "Send All",
+            constants.ICONS.upload,
+            self.send_all_parameters,
+            max_width=200,
+            min_height=30,
+            is_clickable=True,
+        )
+        self.pull_all_button = constants.pushbutton_maker(
+            "Pull All",
+            constants.ICONS.download,
+            self.pull_all_parameters,
+            max_width=200,
+            min_height=30,
+            is_clickable=True,
+        )
+        self.load_from_file_button = constants.pushbutton_maker(
+            "Load from File",
+            constants.ICONS.hard_drive,
+            self.load_parameters_from_file,
+            max_width=200,
+            min_height=30,
+            is_clickable=True,
+        )
+        self.save_to_file_button = constants.pushbutton_maker(
+            "Save to File",
+            constants.ICONS.save,
+            self.save_parameters_to_file,
+            max_width=200,
+            min_height=30,
+            is_clickable=True,
+        )
+
+        self.button_layout.addWidget(self.send_all_button)
+        self.button_layout.addWidget(self.pull_all_button)
+        self.button_layout.addWidget(self.load_from_file_button)
+        self.button_layout.addWidget(self.save_to_file_button)
+        # endregion actions button group
+
+        try:
+            self.config = JsoncParser.parse_file(
+                constants.AUTO_PILOT_PARAMS_DIR / "params_default.jsonc"
+            )
+            print(
+                f"[Info] Loaded {len(self.config)} parameters from `{constants.AUTO_PILOT_PARAMS_DIR / 'params_default.jsonc'}`."
+            )
+        except Exception:
+            print(
+                "[Error] Please ensure the file exists in the `app_data/autopilot_params` directory."
+            )
+
+        self.params_container = QWidget()
+        self.params_layout = QVBoxLayout()
+        self.params_layout.setAlignment(Qt.AlignTop)
+        self.params_container.setLayout(self.params_layout)
+
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setWidget(self.params_container)
+
+        self.searchbar = QLineEdit()
+        self.searchbar.setPlaceholderText("Search parameters...")
+        self.searchbar.textChanged.connect(self.filter_parameters)
+
+        self.searchbar.setClearButtonEnabled(True)
+
+        # Status label to show search results
+        self.status_label = QLabel()
+        self.status_label.setStyleSheet("color: #D3D3D3; font-size: 12pt;")
+        self.status_label.setAlignment(Qt.AlignCenter)
+
+        self.main_layout.addWidget(self.searchbar, 0, 0)
+        self.main_layout.addWidget(self.status_label, 1, 0)
+        self.main_layout.addWidget(self.scroll, 2, 0)
+        self.main_layout.addWidget(self.button_group_box, 3, 0)
+
+        self.add_parameters()
+        self.update_status_label()
+
+    def send_all_parameters(self) -> None:
+        """Send all parameters to the telemetry endpoint."""
+
+        print("[Info] Sending all parameters...")
+        existing_data = {}
+        for widget in self.widgets:
+            if isinstance(widget, AutopilotParamWidget):
+                existing_data[widget.name] = widget.value
+
+        try:
+            response = requests.post(
+                constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
+                json={"value": existing_data},
+            )
+            response.raise_for_status()
+            print("[Info] All parameters sent successfully.")
+        except requests.exceptions.RequestException as e:
+            print(f"[Error] Failed to send all parameters: {e}")
+
+    def pull_all_parameters(self) -> None:
+        """Pull all parameters from the telemetry endpoint."""
+
+        print("[Info] Pulling all parameters...")
+        try:
+            response = requests.get(
+                constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"]
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            for widget in self.widgets:
+                if isinstance(widget, AutopilotParamWidget):
+                    if widget.name in data:
+                        widget.value = data[widget.name]
+                        if isinstance(widget.modify_element, QLineEdit):
+                            widget.modify_element.setText(str(widget.value))
+                        elif widget.value_display:
+                            widget.value_display.setText(str(widget.value))
+                    else:
+                        print(f"[Warning] {widget.name} not found in pulled data.")
+
+            print("[Info] All parameters pulled successfully.")
+        except requests.exceptions.RequestException as e:
+            print(f"[Error] Failed to pull all parameters: {e}")
+
+    def load_parameters_from_file(self) -> None:
+        """Load parameters from a file."""
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load Parameters from File",
+            "",
+            "JSONC Files (*.jsonc);;JSON Files (*.json);;All Files (*)",
+        )
+        if not file_path:
+            return
+
+        try:
+            data = JsoncParser.parse_file(PurePath(file_path))
+            self.config = data
+            self.add_parameters()
+            self.update_status_label()
+            print(f"[Info] Loaded parameters from {file_path}.")
+        except Exception as e:
+            print(f"[Error] Unable to read from file: {e}")
+
+    def save_parameters_to_file(self) -> None:
+        """Save parameters to a file."""
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Parameters to File", "", "JSON Files (*.json);;All Files (*)"
+        )
+        if not file_path:
+            return
+
+        try:
+            with open(file_path, "w") as file:
+                json.dump(self.config, file, indent=4)
+                print(f"[Info] Saved parameters to {file_path}.")
+        except Exception as e:
+            print(f"[Error] Unable to save parameters to file: {e}")
+
+    def add_parameters(self) -> None:
+        """Add all parameters to the layout."""
+
+        # Clear existing widgets
+        for widget in self.widgets:
+            widget.deleteLater()
+        self.widgets = []
+
+        for key in self.config.keys():
+            # Create config with name
+            param_config = self.config[key].copy()
+            param_config["name"] = key
+            try:
+                param_widget = AutopilotParamWidget(param_config)
+                self.params_layout.addWidget(param_widget)
+                self.widgets.append(param_widget)
+            except Exception as e:
+                print(f"Error creating widget for parameter '{key}': {e}")
+
+        # add spacer to push content to top
+        if hasattr(self, "spacer"):
+            self.params_layout.removeItem(self.spacer)
+        self.spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.params_layout.addItem(self.spacer)
+
+    def filter_parameters(self, search_text: str = "") -> None:
+        """
+        Filter parameters based on search text.
+
+        Parameters
+        ----------
+        search_text
+            The text to filter parameters by. Defaults to an empty string, which shows all parameters.
+        """
+
+        search_text = search_text.lower().strip()
+        visible_count = 0
+
+        for widget in self.widgets:
+            name_match = search_text in widget.name.lower()
+            desc_match = search_text in widget.description.lower()
+
+            if search_text and not (name_match or desc_match):
+                widget.hide()
+            else:
+                widget.show()
+                visible_count += 1
+
+        self.update_status_label(visible_count, search_text)
+
+    def update_status_label(
+        self, visible_count: int = None, search_text: str = ""
+    ) -> None:
+        """
+        Update the status label with search results.
+
+        Parameters
+        ----------
+        visible_count
+            The number of parameters currently visible after filtering.
+            If `None`, it will be calculated from the number of current widgets.
+
+        search_text
+            The text used for filtering parameters. If empty, it indicates that all parameters are shown.
+        """
+
+        if visible_count is None:
+            visible_count = len(self.widgets)
+
+        if not search_text:
+            self.status_label.setText(f"Showing all {visible_count} parameters")
+        else:
+            if visible_count == 0:
+                self.status_label.setText(f"No parameters match '{search_text}'")
+            else:
+                self.status_label.setText(
+                    f"Showing {visible_count} parameters matching '{search_text}'"
+                )
+
+
 class AutopilotParamWidget(QFrame):
     """
     A widget for displaying autopilot parameters and interacting with them.
@@ -163,7 +427,7 @@ class AutopilotParamWidget(QFrame):
     def send_value(self) -> None:
         """Send the current value of the parameter to the telemetry endpoint."""
 
-        print(f"Info: Sending value for {self.name}: {self.value}")
+        print(f"[Info] Sending value for {self.name}: {self.value}")
         try:
             existing_data = requests.get(
                 constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"]
@@ -171,7 +435,7 @@ class AutopilotParamWidget(QFrame):
 
         except requests.exceptions.RequestException as e:
             print(
-                f"Error: Failed to fetch existing autopilot parameters. Cannot send {self.name}: {e}"
+                f"[Error] Failed to fetch existing autopilot parameters. Cannot send {self.name}: {e}"
             )
             return
 
@@ -180,7 +444,7 @@ class AutopilotParamWidget(QFrame):
                 existing_data[self.name] = self.value
             else:
                 print(
-                    f"Warning: {self.name} not found in existing parameters. Adding it."
+                    f"[Warning] {self.name} not found in existing parameters. Adding it."
                 )
                 existing_data[self.name] = self.value
 
@@ -190,15 +454,17 @@ class AutopilotParamWidget(QFrame):
                     json={"value": existing_data},
                 )
                 response.raise_for_status()
-                print(f"Info: Successfully sent {self.name} with value {self.value}.")
+                print(f"[Info] Successfully sent {self.name} with value {self.value}.")
 
             except requests.exceptions.RequestException as e:
-                print(f"Error: Failed to send {self.name} with value {self.value}: {e}")
+                print(
+                    f"[Error] Failed to send {self.name} with value {self.value}: {e}"
+                )
                 return
 
         else:
             print(
-                f"Error: Unexpected data format from telemetry server: {existing_data}. "
+                f"[Error] Unexpected data format from telemetry server: {existing_data}. "
                 "Expected a dictionary of parameters."
             )
             return
@@ -224,13 +490,13 @@ class AutopilotParamWidget(QFrame):
 
                 elif self.value_display:
                     self.value_display.setText(str(self.value))
-                print(f"Info: Pulled {self.name} with value {self.value}.")
+                print(f"[Info] Pulled {self.name} with value {self.value}.")
 
             else:
-                print(f"Warning: {self.name} not found in pulled data.")
+                print(f"[Warning] {self.name} not found in pulled data.")
 
         except requests.exceptions.RequestException as e:
-            print(f"Error: Failed to pull value for {self.name}: {e}")
+            print(f"[Error] Failed to pull value for {self.name}: {e}")
 
         self.reset_button.setEnabled(True)
         self.send_button.setEnabled(False)
@@ -245,7 +511,7 @@ class AutopilotParamWidget(QFrame):
 
         elif self.value_display:
             self.value_display.setText(str(self.value))
-            print(f"Info: {self.name} reset to default value: {self.value}.")
+            print(f"[Info] {self.name} reset to default value: {self.value}.")
 
         self.reset_button.setEnabled(False)
         self.send_button.setEnabled(True)
@@ -285,12 +551,14 @@ class AutopilotParamWidget(QFrame):
                 json.dump(temp_params, file, indent=4)
 
         except TypeError:
-            print(f"Error: Invalid value for {self.name}. Resetting to previous value.")
+            print(
+                f"[Error] Invalid value for {self.name}. Resetting to previous value."
+            )
             self.modify_element.setText(str(self.value))
             return
 
         except Exception as e:
-            print(f"Error: Failed to update value for {self.name}: {e}")
+            print(f"[Error] Failed to update value for {self.name}: {e}")
             return
 
         self.value = edited_data
@@ -315,7 +583,7 @@ class AutopilotParamWidget(QFrame):
             self.text_edit_window.show()
 
         except Exception as e:
-            print(f"Error: Failed to open text edit window for {self.name}: {e}")
+            print(f"[Error] Failed to open text edit window for {self.name}: {e}")
 
     def edit_sequence_data_callback(self, text: str) -> None:
         """
@@ -339,279 +607,16 @@ class AutopilotParamWidget(QFrame):
                 )
 
         except TypeError:
-            print(f"Error: Invalid value for {self.name}. Resetting to previous value.")
+            print(
+                f"[Error] Invalid value for {self.name}. Resetting to previous value."
+            )
             self.value_display.setText(str(self.value))
             return
 
         self.value = edited_data
         self.value_display.setText(str(self.value))
-        print(f"Info: {self.name} updated to {self.value}.")
+        print(f"[Info] {self.name} updated to {self.value}.")
 
         self.send_button.setEnabled(True)
         self.pull_button.setEnabled(True)
         self.reset_button.setEnabled(True)
-
-
-class AutopilotParamEditor(QWidget):
-    """
-    A widget for interacting with and editing autopilot parameters.
-
-    Inherits
-    --------
-    `QWidget`
-    """
-
-    def __init__(self) -> None:
-        super().__init__()
-
-        self.main_layout = QGridLayout()
-        self.setLayout(self.main_layout)
-
-        self.config: dict[str, dict[str, Any]] = dict()
-        self.widgets: list[AutopilotParamWidget] = list()
-
-        # region actions button group
-        self.button_group_box = QGroupBox()
-        self.button_layout = QHBoxLayout()
-        self.button_group_box.setLayout(self.button_layout)
-
-        self.send_all_button = constants.pushbutton_maker(
-            "Send All",
-            constants.ICONS.upload,
-            self.send_all_parameters,
-            max_width=200,
-            min_height=30,
-            is_clickable=True,
-        )
-        self.pull_all_button = constants.pushbutton_maker(
-            "Pull All",
-            constants.ICONS.download,
-            self.pull_all_parameters,
-            max_width=200,
-            min_height=30,
-            is_clickable=True,
-        )
-        self.load_from_file_button = constants.pushbutton_maker(
-            "Load from File",
-            constants.ICONS.hard_drive,
-            self.load_parameters_from_file,
-            max_width=200,
-            min_height=30,
-            is_clickable=True,
-        )
-        self.save_to_file_button = constants.pushbutton_maker(
-            "Save to File",
-            constants.ICONS.save,
-            self.save_parameters_to_file,
-            max_width=200,
-            min_height=30,
-            is_clickable=True,
-        )
-
-        self.button_layout.addWidget(self.send_all_button)
-        self.button_layout.addWidget(self.pull_all_button)
-        self.button_layout.addWidget(self.load_from_file_button)
-        self.button_layout.addWidget(self.save_to_file_button)
-        # endregion actions button group
-
-        try:
-            self.config = JsoncParser.parse_file(
-                constants.AUTO_PILOT_PARAMS_DIR / "params_default.jsonc"
-            )
-            print(
-                f"Info: Loaded {len(self.config)} parameters from `{constants.AUTO_PILOT_PARAMS_DIR / 'params_default.jsonc'}`."
-            )
-        except Exception as e:
-            print(
-                f"Error loading autopilot parameters: {e}\n"
-                "Please ensure the file exists in the `app_data/autopilot_params` directory."
-            )
-
-        self.params_container = QWidget()
-        self.params_layout = QVBoxLayout()
-        self.params_layout.setAlignment(Qt.AlignTop)
-        self.params_container.setLayout(self.params_layout)
-
-        self.scroll = QScrollArea()
-        self.scroll.setWidgetResizable(True)
-        self.scroll.setWidget(self.params_container)
-
-        self.searchbar = QLineEdit()
-        self.searchbar.setPlaceholderText("Search parameters...")
-        self.searchbar.textChanged.connect(self.filter_parameters)
-
-        self.searchbar.setClearButtonEnabled(True)
-
-        # Status label to show search results
-        self.status_label = QLabel()
-        self.status_label.setStyleSheet("color: #D3D3D3; font-size: 12pt;")
-        self.status_label.setAlignment(Qt.AlignCenter)
-
-        self.main_layout.addWidget(self.searchbar, 0, 0)
-        self.main_layout.addWidget(self.status_label, 1, 0)
-        self.main_layout.addWidget(self.scroll, 2, 0)
-        self.main_layout.addWidget(self.button_group_box, 3, 0)
-
-        self.add_parameters()
-        self.update_status_label()
-
-    def send_all_parameters(self) -> None:
-        """Send all parameters to the telemetry endpoint."""
-
-        print("Info: Sending all parameters...")
-        existing_data = {}
-        for widget in self.widgets:
-            if isinstance(widget, AutopilotParamWidget):
-                existing_data[widget.name] = widget.value
-
-        try:
-            response = requests.post(
-                constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
-                json={"value": existing_data},
-            )
-            response.raise_for_status()
-            print("Info: All parameters sent successfully.")
-        except requests.exceptions.RequestException as e:
-            print(f"Error: Failed to send all parameters: {e}")
-
-    def pull_all_parameters(self) -> None:
-        """Pull all parameters from the telemetry endpoint."""
-
-        print("Info: Pulling all parameters...")
-        try:
-            response = requests.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"]
-            )
-            response.raise_for_status()
-            data = response.json()
-
-            for widget in self.widgets:
-                if isinstance(widget, AutopilotParamWidget):
-                    if widget.name in data:
-                        widget.value = data[widget.name]
-                        if isinstance(widget.modify_element, QLineEdit):
-                            widget.modify_element.setText(str(widget.value))
-                        elif widget.value_display:
-                            widget.value_display.setText(str(widget.value))
-                    else:
-                        print(f"Warning: {widget.name} not found in pulled data.")
-
-            print("Info: All parameters pulled successfully.")
-        except requests.exceptions.RequestException as e:
-            print(f"Error: Failed to pull all parameters: {e}")
-
-    def load_parameters_from_file(self) -> None:
-        """Load parameters from a file."""
-
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Load Parameters from File",
-            "",
-            "JSONC Files (*.jsonc);;JSON Files (*.json);;All Files (*)",
-        )
-        if not file_path:
-            return
-
-        try:
-            data = JsoncParser.parse_file(PurePath(file_path))
-            self.config = data
-            self.add_parameters()
-            self.update_status_label()
-            print(f"Info: Loaded parameters from {file_path}.")
-        except Exception as e:
-            print(f"Error: Unable to read from file: {e}")
-
-    def save_parameters_to_file(self) -> None:
-        """Save parameters to a file."""
-
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, "Save Parameters to File", "", "JSON Files (*.json);;All Files (*)"
-        )
-        if not file_path:
-            return
-
-        try:
-            with open(file_path, "w") as file:
-                json.dump(self.config, file, indent=4)
-                print(f"Info: Saved parameters to {file_path}.")
-        except Exception as e:
-            print(f"Error: Unable to save parameters to file: {e}")
-
-    def add_parameters(self) -> None:
-        """Add all parameters to the layout."""
-
-        # Clear existing widgets
-        for widget in self.widgets:
-            widget.deleteLater()
-        self.widgets = []
-
-        for key in self.config.keys():
-            # Create config with name
-            param_config = self.config[key].copy()
-            param_config["name"] = key
-            try:
-                param_widget = AutopilotParamWidget(param_config)
-                self.params_layout.addWidget(param_widget)
-                self.widgets.append(param_widget)
-            except Exception as e:
-                print(f"Error creating widget for parameter '{key}': {e}")
-
-        # add spacer to push content to top
-        if hasattr(self, "spacer"):
-            self.params_layout.removeItem(self.spacer)
-        self.spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        self.params_layout.addItem(self.spacer)
-
-    def filter_parameters(self, search_text: str = "") -> None:
-        """
-        Filter parameters based on search text.
-
-        Parameters
-        ----------
-        search_text
-            The text to filter parameters by. Defaults to an empty string, which shows all parameters.
-        """
-
-        search_text = search_text.lower().strip()
-        visible_count = 0
-
-        for widget in self.widgets:
-            name_match = search_text in widget.name.lower()
-            desc_match = search_text in widget.description.lower()
-
-            if search_text and not (name_match or desc_match):
-                widget.hide()
-            else:
-                widget.show()
-                visible_count += 1
-
-        self.update_status_label(visible_count, search_text)
-
-    def update_status_label(
-        self, visible_count: int = None, search_text: str = ""
-    ) -> None:
-        """
-        Update the status label with search results.
-
-        Parameters
-        ----------
-        visible_count
-            The number of parameters currently visible after filtering.
-            If `None`, it will be calculated from the number of current widgets.
-
-        search_text
-            The text used for filtering parameters. If empty, it indicates that all parameters are shown.
-        """
-
-        if visible_count is None:
-            visible_count = len(self.widgets)
-
-        if not search_text:
-            self.status_label.setText(f"Showing all {visible_count} parameters")
-        else:
-            if visible_count == 0:
-                self.status_label.setText(f"No parameters match '{search_text}'")
-            else:
-                self.status_label.setText(
-                    f"Showing {visible_count} parameters matching '{search_text}'"
-                )
