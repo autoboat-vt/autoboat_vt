@@ -269,6 +269,10 @@ class GroundStationWidget(QWidget):
         self.telemetry_waypoint_handler.waypoints_fetched.connect(
             self.check_telemetry_waypoints
         )
+        self.telemetry_waypoint_handler.request_url_change.connect(
+            self.change_telemetry_server_url
+        )
+        self.remember_telemetry_server_url_status = False
 
         # 10 second timer
         self.ten_second_timer = constants.TEN_SECOND_TIMER
@@ -308,9 +312,9 @@ class GroundStationWidget(QWidget):
                 self.browser.page().runJavaScript(js_code)
             except requests.exceptions.RequestException as e:
                 print(
-                    f"Error: Failed to send waypoints: {e}\nWaypoints: {self.waypoints}"
+                    f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}"
                 )
-            print(f"Info: Waypoints sent successfully: {self.waypoints}")
+            print(f"[Info] Waypoints sent successfully: {self.waypoints}")
         else:
             try:
                 requests.post(
@@ -319,7 +323,7 @@ class GroundStationWidget(QWidget):
                 )
             except requests.exceptions.RequestException as e:
                 print(
-                    f"Error: Failed to send waypoints: {e}\nWaypoints: {self.waypoints}"
+                    f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}"
                 )
 
     def pull_waypoints(self) -> None:
@@ -330,7 +334,7 @@ class GroundStationWidget(QWidget):
                 constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"]
             ).json()
             if remote_waypoints:
-                print(f"Info: Fetched waypoints from server: {remote_waypoints}")
+                print(f"[Info] Fetched waypoints from server: {remote_waypoints}")
                 existing_waypoints = self.waypoints.copy()
                 self.browser.page().runJavaScript("map.clear_waypoints()")
                 for waypoint in remote_waypoints:
@@ -343,14 +347,14 @@ class GroundStationWidget(QWidget):
                         f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"
                     )
             else:
-                print("Warning: No waypoints found on the server.")
+                print("[Warning] No waypoints found on the server.")
             self.can_pull_waypoints = False
             self.pull_waypoints_button.setDisabled(not self.can_pull_waypoints)
 
         except KeyError:
-            print("Error: No waypoints found in the response from the server.")
+            print("[Error] No waypoints found in the response from the server.")
         except requests.exceptions.RequestException as e:
-            print(f"Error: Failed to pull waypoints: {e}")
+            print(f"[Error] Failed to pull waypoints: {e}")
 
     def clear_waypoints(self) -> None:
         """Clear waypoints from the table."""
@@ -381,9 +385,9 @@ class GroundStationWidget(QWidget):
                 json={"value": autopilot_parameters},
             ).json()
         except requests.exceptions.RequestException as e:
-            print(f"Error: Failed to send image: {e}")
+            print(f"[Error] Failed to send image: {e}")
         except FileNotFoundError as e:
-            print(f"Error: Image file not found: {e}")
+            print(f"[Error] Image file not found: {e}")
 
     def save_boat_data(self) -> None:
         """
@@ -401,7 +405,7 @@ class GroundStationWidget(QWidget):
                 json.dump(self.boat_data, f, indent=4)
 
         except Exception as e:
-            print(f"Error: Failed to save boat data: {e}")
+            print(f"[Error] Failed to save boat data: {e}")
 
     def edit_boat_data_limits(self) -> None:
         """
@@ -424,7 +428,7 @@ class GroundStationWidget(QWidget):
             self.text_edit_window.show()
 
         except Exception as e:
-            print(f"Error: Failed to open boat data limits edit window: {e}")
+            print(f"[Error] Failed to open boat data limits edit window: {e}")
 
     def edit_boat_data_limits_callback(self, text: str) -> None:
         """
@@ -444,7 +448,7 @@ class GroundStationWidget(QWidget):
             self.telemetry_data_limits = json.loads(edited_config)
 
         except Exception as e:
-            print(f"Error: Failed to edit boat data limits: {e}")
+            print(f"[Error] Failed to edit boat data limits: {e}")
 
     def load_boat_data_limits(self) -> None:
         """
@@ -469,7 +473,7 @@ class GroundStationWidget(QWidget):
                 self.telemetry_data_limits = json.load(f)
 
         except Exception as e:
-            print(f"Error: Failed to load boat data limits: {e}")
+            print(f"[Error] Failed to load boat data limits: {e}")
 
     def save_boat_data_limits(self) -> None:
         """
@@ -488,7 +492,7 @@ class GroundStationWidget(QWidget):
                 json.dump(self.telemetry_data_limits, f, indent=4)
 
         except Exception as e:
-            print(f"Error: Failed to save boat data limits: {e}")
+            print(f"[Error] Failed to save boat data limits: {e}")
 
     def edit_buoy_data(self) -> None:
         """
@@ -511,7 +515,7 @@ class GroundStationWidget(QWidget):
             self.text_edit_window.show()
 
         except Exception as e:
-            print(f"Error: Failed to open buoy data edit window: {e}")
+            print(f"[Error] Failed to open buoy data edit window: {e}")
 
     def edit_buoy_data_callback(self, text: str) -> None:
         """
@@ -533,9 +537,11 @@ class GroundStationWidget(QWidget):
                 self.update_buoy_table()
 
         except Exception as e:
-            print(f"Error: Failed to edit buoy data: {e}")
+            print(f"[Error] Failed to edit buoy data: {e}")
 
     def update_buoy_table(self) -> None:
+        """Update the buoy table with the latest buoy data."""
+
         self.right_tab2_table.clear()
         self.right_tab2_table.setRowCount(0)
         self.right_tab2_table.setColumnCount(2)
@@ -575,7 +581,7 @@ class GroundStationWidget(QWidget):
                 json.dump(self.buoys, f, indent=4)
 
         except Exception as e:
-            print(f"Error: Failed to save buoy data: {e}")
+            print(f"[Error] Failed to save buoy data: {e}")
 
     def load_buoy_data(self) -> None:
         """
@@ -588,7 +594,7 @@ class GroundStationWidget(QWidget):
         try:
             buoy_files = os.listdir(constants.BUOY_DATA_DIR)
             if not buoy_files:
-                print("Warning: No buoy data files found.")
+                print("[Warning] No buoy data files found.")
 
             else:
                 chosen_file = QFileDialog.getOpenFileName(
@@ -606,7 +612,7 @@ class GroundStationWidget(QWidget):
                 self.update_buoy_table()
 
         except Exception as e:
-            print(f"Error: Failed to load buoy data: {e}")
+            print(f"[Error] Failed to load buoy data: {e}")
 
     def zoom_to_boat(self) -> None:
         """Center the view on the boat's position."""
@@ -616,7 +622,7 @@ class GroundStationWidget(QWidget):
             self.browser.page().runJavaScript(js_code)
 
         else:
-            print("Warning: Boat position not available.")
+            print("[Warning] Boat position not available.")
 
     # endregion button functions
 
@@ -698,7 +704,7 @@ class GroundStationWidget(QWidget):
 
         if flag:
             print(
-                "Warning: Local waypoints are different from telemetry server waypoints."
+                "[Warning] Local waypoints are different from telemetry server waypoints."
             )
             response = constants.show_message_box(
                 "Local Waypoints Mismatch",
@@ -724,11 +730,55 @@ class GroundStationWidget(QWidget):
                     self.browser.page().runJavaScript(
                         f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"
                     )
-                print("Info: Local waypoints updated from telemetry server.")
+                print("[Info] Local waypoints updated from telemetry server.")
             else:
-                print("Info: Local waypoints not updated.")
+                print("[Info] Local waypoints not updated.")
         else:
-            print("Info: Local waypoints match telemetry server waypoints.")
+            print("[Info] Local waypoints match telemetry server waypoints.")
+
+    def change_telemetry_server_url(self, telemetry_status: bool) -> None:
+        """
+        Prompt the user to change the telemetry server URL if fetching waypoints fails.
+
+        Parameters
+        ----------
+        telemetry_status
+            Boolean indicating whether the telemetry server is reachable or not.
+            If `True`, it means the telemetry server is not reachable and waypoints could not be fetched.
+            If `False`, it means the telemetry server is reachable and waypoints were fetched successfully.
+        """
+
+        if not telemetry_status and not self.remember_telemetry_server_url_status:
+            self.ten_second_timer.stop()
+            response, self.remember_telemetry_server_url_status = (
+                constants.show_message_box(
+                    "Failed to fetch waypoints",
+                    "Do you want to change the telemetry server URL?",
+                    constants.ICONS.question,
+                    [
+                        QMessageBox.StandardButton.Yes,
+                        QMessageBox.StandardButton.No,
+                    ],
+                    True,
+                )
+            )
+
+            if response == QMessageBox.StandardButton.Yes:
+                new_url = constants.show_input_dialog(
+                    "Change Telemetry Server URL",
+                    "Enter the new telemetry server URL:",
+                    default_value=constants.TELEMETRY_SERVER_URL,
+                    input_type=str,
+                )
+                if new_url:
+                    print(
+                        f"[Info] Changed telemetry server URL to {new_url}, was {constants.TELEMETRY_SERVER_URL}."
+                    )
+                    constants.TELEMETRY_SERVER_URL = new_url
+
+            else:
+                print("[Info] Telemetry server URL not changed.")
+            self.ten_second_timer.start()
 
     def update_telemetry_display(
         self,

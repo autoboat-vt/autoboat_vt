@@ -1,3 +1,13 @@
+"""
+Module containing classes for handling background tasks in the ground station application.
+
+Contains:
+- TelemetryUpdater: Fetches telemetry data from the telemetry server.
+- LocalWaypointFetcher: Fetches waypoints from the local server.
+- RemoteWaypointFetcher: Fetches waypoints from the telemetry server.
+- ImageFetcher: Fetches images from the telemetry server.
+"""
+
 import requests
 import constants
 from typing import Union
@@ -31,6 +41,7 @@ class TelemetryUpdater(QThread):
             boat_status = requests.get(
                 constants.TELEMETRY_SERVER_ENDPOINTS["boat_status"]
             ).json()
+
         except requests.exceptions.RequestException:
             boat_status = {
                 "position": [36.983731367697374, -76.29555376681454],
@@ -58,10 +69,13 @@ class TelemetryUpdater(QThread):
                 "vesc_data_time_since_vesc_startup_in_ms": 0.0,
                 "vesc_data_motor_temperature": 0.0,
             }
-            print("Warning: Failed to fetch boat data. Using default values.")
+            print("[Warning] Failed to fetch boat data. Using default values.")
+
         self.boat_data_fetched.emit(boat_status)
 
     def run(self) -> None:
+        """Run the thread to fetch boat data from the telemetry server."""
+
         self.get_boat_data()
 
 
@@ -85,18 +99,33 @@ class LocalWaypointFetcher(QThread):
     def __init__(self) -> None:
         super().__init__()
 
+    def run(self) -> None:
+        """Run the thread to fetch waypoints from the local server."""
+
+        self.get_waypoints()
+
     def get_waypoints(self) -> None:
         """Fetch waypoints from the local server and emit them."""
 
         try:
-            waypoints = requests.get(constants.WAYPOINTS_SERVER_URL).json()
+            waypoints: list[list[float]] = requests.get(
+                constants.WAYPOINTS_SERVER_URL
+            ).json()
+            if not isinstance(waypoints, list):
+                raise ValueError("Waypoints data is not a list")
+
         except requests.exceptions.RequestException:
             waypoints = []
-            print("Warning: Failed to fetch waypoints. Using empty list.")
+            print("[Warning] Failed to fetch waypoints. Using empty list.")
+
+        except ValueError:
+            print(
+                f"[Warning] Waypoints data is not in expected format. Using empty list.\nExpected: {list[list[float]]}, Received: {waypoints}",
+            )
+            waypoints = []
+
         self.waypoints_fetched.emit(waypoints)
 
-    def run(self) -> None:
-        self.get_waypoints()
 
 class RemoteWaypointFetcher(QThread):
     """
@@ -114,9 +143,15 @@ class RemoteWaypointFetcher(QThread):
     """
 
     waypoints_fetched = Signal(list)
+    request_url_change = Signal(bool)
 
     def __init__(self) -> None:
         super().__init__()
+
+    def run(self) -> None:
+        """Run the thread to fetch waypoints from the telemetry server."""
+
+        self.get_waypoints()
 
     def get_waypoints(self) -> None:
         """Fetch waypoints from the telemetry server and emit them."""
@@ -125,13 +160,23 @@ class RemoteWaypointFetcher(QThread):
             waypoints = requests.get(
                 constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"]
             ).json()
+            if not isinstance(waypoints, list):
+                raise ValueError("Waypoints data is not a list")
+
         except requests.exceptions.RequestException:
             waypoints = []
-            print("Warning: Failed to fetch waypoints. Using empty list.")
-        self.waypoints_fetched.emit(waypoints)
+            print("[Warning] Failed to fetch waypoints. Using empty list.")
+            self.request_url_change.emit(True)
 
-    def run(self) -> None:
-        self.get_waypoints()
+        except ValueError:
+            print(
+                f"[Warning] Waypoints data is not in expected format. Using empty list.\nExpected: {list[list[float]]}, Received: {waypoints}",
+            )
+            waypoints = []
+            self.request_url_change.emit(True)
+
+        self.request_url_change.emit(False)
+        self.waypoints_fetched.emit(waypoints)
 
 
 class ImageFetcher(QThread):
@@ -153,7 +198,14 @@ class ImageFetcher(QThread):
     def __init__(self) -> None:
         super().__init__()
 
+    def run(self) -> None:
+        """Run the thread to fetch images from the telemetry server."""
+
+        self.get_image()
+
     def get_image(self) -> None:
+        """Fetch an image from the telemetry server and emit it as a base64 encoded string."""
+
         try:
             image_data = requests.get(
                 constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
@@ -167,15 +219,12 @@ class ImageFetcher(QThread):
             base64_encoded_image = open(
                 constants.ASSETS_DIR / "cool-guy-base64.txt"
             ).read()
-            print("Warning: Failed to fetch image. Using cool guy image.")
+            print("[Warning] Failed to fetch image. Using cool guy image.")
 
         except ValueError as e:
-            print(f"Warning: {e}")
+            print(f"[Warning] {e}")
             base64_encoded_image = open(
                 constants.ASSETS_DIR / "cool-guy-base64.txt"
             ).read()
 
         self.image_fetched.emit(base64_encoded_image)
-
-    def run(self) -> None:
-        self.get_image()

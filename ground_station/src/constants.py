@@ -1,13 +1,42 @@
+"""
+Module containing constants and utility functions for the ground station application.
+
+Functions:
+- pushbutton_maker: Creates a styled QPushButton.
+- show_message_box: Displays a message box with customizable options.
+- show_input_dialog: Displays an input dialog for user input.
+
+Constants:
+- ICONS: A namespace containing application icons.
+- YELLOW, PURPLE, BLUE, WHITE, RED, GREY, GREEN: Color constants for the application.
+- PALLETTE: A QPalette object for the application's color scheme.
+- STYLE_SHEET: A string containing the application's style sheet.
+- WINDOW_BOX: QRect defining the main window dimensions.
+- TEN_SECOND_TIMER, SUPER_SLOW_TIMER, SLOW_TIMER, FAST_TIMER: QTimer objects for various intervals.
+- TELEMETRY_SERVER_URL: Base URL for the telemetry server.
+- TELEMETRY_SERVER_ENDPOINTS: Dictionary of endpoints for the telemetry server.
+- WAYPOINTS_SERVER_URL: URL for the local waypoints server.
+- TOP_LEVEL_DIR, SRC_DIR, DATA_DIR: Paths to the main directories of the application.
+- HTML_MAP_PATH, HTML_MAP: Path and content of the HTML file used by the map widget in the ground station.
+- HTML_CAMERA_PATH, HTML_CAMERA: Path and content of the HTML file used by the camera widget.
+- ASSETS_DIR, AUTO_PILOT_PARAMS_DIR, BOAT_DATA_DIR, BOAT_DATA_LIMITS_DIR, BUOY_DATA_DIR: Paths to various data directories.
+"""
+
 import os
 import sys
 import shutil
 from pathlib import PurePath
 from qtpy.QtCore import QRect, QTimer, Qt
 from qtpy.QtGui import QColor, QIcon, QPalette
-from qtpy.QtWidgets import QPushButton, QMessageBox
+from qtpy.QtWidgets import QPushButton, QMessageBox, QInputDialog, QCheckBox
 import qtawesome as qta
 from types import SimpleNamespace
-from typing import Optional, Callable
+from typing import Optional, Callable, Union
+from typing import TypeVar
+
+
+T = TypeVar("T")
+
 
 # region functions
 def __get_icons() -> SimpleNamespace:
@@ -42,6 +71,7 @@ def __get_icons() -> SimpleNamespace:
         "image_upload": qta.icon("mdi.image-move"),
         "notification": qta.icon("mdi.bell"),
         "warning": qta.icon("mdi.alert"),
+        "question": qta.icon("mdi.help-circle"),
     }
 
     for icon_name, icon in icons.items():
@@ -51,6 +81,7 @@ def __get_icons() -> SimpleNamespace:
         )
 
     return SimpleNamespace(**icons)
+
 
 def pushbutton_maker(
     button_text: str,
@@ -100,7 +131,8 @@ def show_message_box(
     message: str,
     icon: Optional[QIcon] = None,
     buttons: Optional[list[QMessageBox.StandardButton]] = None,
-) -> QMessageBox.StandardButton:
+    remember_choice_option: Optional[bool] = False,
+) -> Union[QMessageBox.StandardButton, tuple[QMessageBox.StandardButton, bool]]:
     """
     Show a message box with the specified title, message, and optional icon and buttons.
     Returns the button that was clicked by the user. If the user closes the message box
@@ -117,12 +149,17 @@ def show_message_box(
     buttons
         A list of standard buttons to show. Defaults to `[QMessageBox.Ok]`. <br>
         Example: `[QMessageBox.Yes, QMessageBox.No]`
+    remember_choice_option
+        If `True`, adds a "Remember my choice" checkbox to the message box.
 
     Returns
     -------
     QMessageBox.StandardButton
         The button that was clicked by the user.
+    bool
+        If `remember_choice_option` is `True`, returns whether the user checked the "Remember my choice" checkbox.
     """
+
     if buttons is None:
         buttons = [QMessageBox.Ok]
 
@@ -136,12 +173,55 @@ def show_message_box(
     for button in buttons:
         msg_box.addButton(button)
 
-    clicked_button = msg_box.exec_()
-    return QMessageBox.StandardButton(clicked_button)
+    if remember_choice_option:
+        remember_checkbox = QCheckBox("Remember my decision")
+        msg_box.setCheckBox(remember_checkbox)
+        clicked_button = msg_box.exec_()
+        return QMessageBox.StandardButton(clicked_button), remember_checkbox.isChecked()
+
+    else:
+        clicked_button = msg_box.exec_()
+        return QMessageBox.StandardButton(clicked_button)
+
+
+def show_input_dialog(
+    title: str,
+    label: str,
+    default_value: Optional[str] = None,
+    input_type: T = str,
+) -> Union[T, None]:
+    """
+    Show an input dialog to get user input.
+
+    Parameters
+    ----------
+    title
+        The title of the input dialog.
+    label
+        The label for the input field.
+    default_value
+        The default value to show in the input field.
+    input_type
+        The type to convert the input to. Defaults to `str`. <br>
+        Example: `int`, `float`, etc.
+
+    Returns
+    -------
+    Union[T, None]
+        The user input converted to the specified type, or `None` if the dialog was cancelled.
+    """
+
+    text, ok = QInputDialog.getText(None, title, label, text=default_value)
+    if ok:
+        return input_type(text)
+    else:
+        return None
+
+
 # endregion functions
 
 # see `main.py` for where this is set
-ICONS: QIcon
+ICONS: SimpleNamespace
 
 # colors (monokai pro color scheme)
 YELLOW = QColor("#ffd866")
@@ -271,5 +351,5 @@ try:
     BUOY_DATA_DIR = PurePath(DATA_DIR / "buoy_data")
 
 except Exception as e:
-    print(f"Error: {e}")
+    print(f"[Error] {e}")
     sys.exit(1)

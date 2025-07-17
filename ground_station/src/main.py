@@ -2,11 +2,10 @@ import sys
 import constants
 from widgets.groundstation import GroundStationWidget
 from widgets.camera_widget.camera import CameraWidget
-from widgets.console_output import ConsoleOutputWidget
 from widgets.autopilot_param_editor.editor import AutopilotParamEditor
+from widgets.console_output import ConsoleOutputWidget
 
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
-from qtpy.QtGui import QIcon
 
 
 class MainWindow(QMainWindow):
@@ -22,6 +21,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("SailBussy Ground Station")
         self.setGeometry(constants.WINDOW_BOX)
+        self.setStyleSheet(constants.STYLE_SHEET)
+        self.setPalette(constants.PALLETTE)
         self.main_widget = QTabWidget()
         self.setCentralWidget(self.main_widget)
         try:
@@ -38,18 +39,11 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    app.setApplicationName("SailBussy Ground Station")
-
-    app.setStyle("Fusion")
-    app.setPalette(constants.PALLETTE)
-    app.setStyleSheet(constants.STYLE_SHEET)
-
-    # needs to be set once the app is started
     constants.ICONS = constants.__get_icons()
-
-    app_icon: QIcon = constants.ICONS.boat
-    app.setWindowIcon(app_icon)
-
     window = MainWindow()
+    app.setApplicationName("SailBussy Ground Station")
+    app.setStyle("Fusion")
+    app.setWindowIcon(constants.ICONS.boat)
+
     window.show()
     sys.exit(app.exec())

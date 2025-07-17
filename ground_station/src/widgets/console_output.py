@@ -1,19 +1,20 @@
 import sys
 from datetime import datetime
 
-from qtpy import QtCore, QtGui
+from qtpy.QtCore import QThread, Signal
+from qtpy.QtGui import QTextCursor, QCloseEvent
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QTextEdit
 
 from syntax_highlighters.console import ConsoleHighlighter
 
 
-class EmittingStream(QtCore.QObject):
+class EmittingStream(QThread):
     """
     A custom stream that emits text written to it as a signal.
 
     Inherits
     --------
-    `QObject`
+    `QThread`
 
     Attributes
     ----------
@@ -21,7 +22,11 @@ class EmittingStream(QtCore.QObject):
         Signal emitted when text is written to the stream.
     """
 
-    textWritten = QtCore.Signal(str)
+    textWritten = Signal(str)
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.terminal = sys.stdout
 
     def write(self, text) -> None:
         """
@@ -33,6 +38,8 @@ class EmittingStream(QtCore.QObject):
             The text to write to the stream.
         """
 
+        self.terminal.write(str(text))
+        self.terminal.flush()
         self.textWritten.emit(str(text))
 
     def flush(self) -> None:
@@ -41,7 +48,7 @@ class EmittingStream(QtCore.QObject):
         standard output streams.
         """
 
-        pass
+        self.terminal.flush()
 
 
 class ConsoleOutputWidget(QWidget):
@@ -64,7 +71,6 @@ class ConsoleOutputWidget(QWidget):
 
         self.console_output = QTextEdit()
         self.console_output.setReadOnly(True)
-        self.console_output.setLineWrapMode(QTextEdit.NoWrap)
         self.main_layout.addWidget(self.console_output)
 
         self.highlighter = ConsoleHighlighter(self.console_output.document())
@@ -88,18 +94,19 @@ class ConsoleOutputWidget(QWidget):
             The text to append to the console output.
         """
 
-        now = datetime.now()
-        formatted_time = now.strftime("(%I:%M:%S %p)")
-        cursor = self.console_output.textCursor()
-        cursor.movePosition(QtGui.QTextCursor.End)
-
         if text.strip():
-            cursor.insertText(f"{formatted_time} {text}\n")
+            now = datetime.now()
+            formatted_time = now.strftime("(%I:%M:%S %p)")
+            cursor = self.console_output.textCursor()
+            cursor.movePosition(QTextCursor.End)
+            cursor.insertText(
+                f"{formatted_time} {text}\n" + (int(len(text.splitlines()) > 1) * "\n")
+            )
 
-        self.console_output.setTextCursor(cursor)
-        self.console_output.ensureCursorVisible()
+            self.console_output.setTextCursor(cursor)
+            self.console_output.ensureCursorVisible()
 
-    def closeEvent(self, event: QtGui.QCloseEvent) -> None:
+    def closeEvent(self, event: QCloseEvent) -> None:
         """
         Restore original streams when widget is closed.
 
