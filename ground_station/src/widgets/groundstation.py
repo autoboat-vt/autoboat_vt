@@ -760,7 +760,7 @@ class GroundStationWidget(QWidget):
 
         if not telemetry_status and not self.remember_telemetry_server_url_status:
             self.ten_second_timer.stop()
-            response, self.remember_telemetry_server_url_status = (
+            response, temp_remember_telemetry_server_url_status = (
                 constants.show_message_box(
                     "Failed to fetch waypoints",
                     "Do you want to change the telemetry server URL?",
@@ -787,6 +787,9 @@ class GroundStationWidget(QWidget):
                     constants.TELEMETRY_SERVER_URL = new_url
 
             else:
+                self.remember_telemetry_server_url_status = (
+                    temp_remember_telemetry_server_url_status
+                )
                 print("[Info] Telemetry server URL not changed.")
             self.ten_second_timer.start()
 
