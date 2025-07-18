@@ -19,7 +19,7 @@ class ConsoleHighlighter(BaseHighlighter):
 
         self.pattern = QRegularExpression(
             r"\((?P<timestamp>[^()]+)\)\s*|"
-            r"(?P<error>Error:)|"
+            r"(?P<error>Error)|"
             r"(?P<warning>Warning)|"
             r"(?P<info>Info)"
             r"(?P<text>.*)"
