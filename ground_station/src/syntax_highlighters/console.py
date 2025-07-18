@@ -1,5 +1,6 @@
 from qtpy.QtCore import QRegularExpression
 from qtpy.QtGui import QFont
+from typing import Optional
 from constants import YELLOW, RED, GREEN, WHITE
 from syntax_highlighters.base_highlighter import BaseHighlighter
 
@@ -13,7 +14,7 @@ class ConsoleHighlighter(BaseHighlighter):
     `BaseHighlighter`
     """
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent: Optional[object] = None) -> None:
         super().__init__(parent)
 
         self.pattern = QRegularExpression(

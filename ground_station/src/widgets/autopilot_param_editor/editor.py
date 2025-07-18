@@ -4,6 +4,7 @@ from widgets.popup_edit import TextEditWindow
 from copy import deepcopy
 from yaml import safe_load
 import requests
+from typing import Optional
 import json
 from typing import Any
 from pathlib import PurePath
@@ -41,8 +42,8 @@ class AutopilotParamEditor(QWidget):
         self.main_layout = QGridLayout()
         self.setLayout(self.main_layout)
 
-        self.config: dict[str, dict[str, Any]] = dict()
-        self.widgets: list[AutopilotParamWidget] = list()
+        self.config: dict[str, dict[str, Any]] = {}
+        self.widgets: list[AutopilotParamWidget] = []
 
         # region actions button group
         self.button_group_box = QGroupBox()
@@ -218,7 +219,7 @@ class AutopilotParamEditor(QWidget):
             widget.deleteLater()
         self.widgets = []
 
-        for key in self.config.keys():
+        for key in self.config:
             # Create config with name
             param_config = self.config[key].copy()
             param_config["name"] = key
@@ -261,7 +262,7 @@ class AutopilotParamEditor(QWidget):
         self.update_status_label(visible_count, search_text)
 
     def update_status_label(
-        self, visible_count: int = None, search_text: str = ""
+        self, visible_count: Optional[int] = None, search_text: str = ""
     ) -> None:
         """
         Update the status label with search results.
@@ -281,13 +282,12 @@ class AutopilotParamEditor(QWidget):
 
         if not search_text:
             self.status_label.setText(f"Showing all {visible_count} parameters")
+        elif visible_count == 0:
+            self.status_label.setText(f"No parameters match '{search_text}'")
         else:
-            if visible_count == 0:
-                self.status_label.setText(f"No parameters match '{search_text}'")
-            else:
-                self.status_label.setText(
-                    f"Showing {visible_count} parameters matching '{search_text}'"
-                )
+            self.status_label.setText(
+                f"Showing {visible_count} parameters matching '{search_text}'"
+            )
 
 
 class AutopilotParamWidget(QFrame):

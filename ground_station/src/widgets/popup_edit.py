@@ -6,7 +6,7 @@ from qtpy.QtGui import (
     QFontMetrics,
 )
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton, QPlainTextEdit
-from qtpy.QtCore import QSize, QRect, Qt, Signal
+from qtpy.QtCore import QSize, QRect, Qt, Signal, QEvent
 from typing import Optional
 
 
@@ -95,14 +95,28 @@ class TextEditWindow(QWidget):
             self.text_edit_window = None  # Will be set by parent
 
         def sizeHint(self) -> QSize:
-            """Return the size hint for the line number area."""
+            """
+            Return the size hint for the line number area.
+
+            Returns
+            -------
+            QSize
+                The preferred size of the line number area.
+            """
 
             if self.text_edit_window:
                 return QSize(self.text_edit_window.line_number_area_width(), 0)
             return QSize(50, 0)  # Default fallback
 
-        def paintEvent(self, event) -> None:
-            """Handle paint events for the line number area."""
+        def paintEvent(self, event: QEvent) -> None:
+            """
+            Handle paint events for the line number area.
+
+            Parameters
+            ----------
+            event
+                The paint event that triggered this method.
+            """
 
             if self.text_edit_window:
                 self.text_edit_window.line_number_area_paint_event(event)
@@ -128,7 +142,7 @@ class TextEditWindow(QWidget):
 
         self.editor.blockCountChanged.connect(self.update_line_number_area_width)
         self.editor.updateRequest.connect(self.update_line_number_area)
-        self.update_line_number_area_width(0)
+        self.update_line_number_area_width()
 
     def line_number_area_width(self) -> int:
         """
@@ -142,13 +156,14 @@ class TextEditWindow(QWidget):
 
         digits = 1
         max_line = max(1, self.editor.blockCount())
+
         while max_line >= 10:
             max_line //= 10
             digits += 1
-        space = 10 + self.fontMetrics().horizontalAdvance("9") * digits
-        return space
 
-    def update_line_number_area_width(self, _) -> None:
+        return 10 + self.fontMetrics().horizontalAdvance("9") * digits
+
+    def update_line_number_area_width(self) -> None:
         """Update margins to make space for line numbers."""
 
         self.editor.setViewportMargins(self.line_number_area_width(), 0, 0, 0)
@@ -174,9 +189,9 @@ class TextEditWindow(QWidget):
             )
 
         if rect.contains(self.editor.viewport().rect()):
-            self.update_line_number_area_width(0)
+            self.update_line_number_area_width()
 
-    def resizeEvent(self, event) -> None:
+    def resizeEvent(self, event: QEvent) -> None:
         """
         Handle editor resize events.
 
@@ -192,8 +207,15 @@ class TextEditWindow(QWidget):
             QRect(cr.left(), cr.top(), self.line_number_area_width(), cr.height())
         )
 
-    def line_number_area_paint_event(self, event) -> None:
-        """Paint line numbers in the dedicated area."""
+    def line_number_area_paint_event(self, event: QEvent) -> None:
+        """
+        Paint line numbers in the dedicated area.
+
+        Parameters
+        ----------
+        event
+            The paint event that triggered this method.
+        """
 
         painter = QPainter(self.line_number_area)
         painter.fillRect(event.rect(), QColor("#313131"))
@@ -251,8 +273,15 @@ class TextEditWindow(QWidget):
 
         self.current_text = self.editor.toPlainText()
 
-    def closeEvent(self, event) -> None:
-        """Handle window closing."""
+    def closeEvent(self, event: QEvent) -> None:
+        """
+        Handle window closing.
+
+        Parameters
+        ----------
+        event
+            The close event that triggered this method.
+        """
 
         self.current_text = self.editor.toPlainText()
         self.user_text_emitter.emit(self.current_text)

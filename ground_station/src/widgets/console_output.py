@@ -1,5 +1,6 @@
 import sys
 from datetime import datetime
+import pytz
 
 from qtpy.QtCore import QThread, Signal
 from qtpy.QtGui import QTextCursor, QCloseEvent
@@ -18,17 +19,17 @@ class EmittingStream(QThread):
 
     Attributes
     ----------
-    textWritten: `Signal`
+    text_written: `Signal`
         Signal emitted when text is written to the stream.
     """
 
-    textWritten = Signal(str)
+    text_written = Signal(str)
 
     def __init__(self) -> None:
         super().__init__()
         self.terminal = sys.stdout
 
-    def write(self, text) -> None:
+    def write(self, text: str) -> None:
         """
         Write text to the stream and emit a signal with the text.
 
@@ -38,9 +39,9 @@ class EmittingStream(QThread):
             The text to write to the stream.
         """
 
-        self.terminal.write(str(text))
+        self.terminal.write(text)
         self.terminal.flush()
-        self.textWritten.emit(str(text))
+        self.text_written.emit(text)
 
     def flush(self) -> None:
         """
@@ -81,8 +82,8 @@ class ConsoleOutputWidget(QWidget):
         sys.stdout = self.stdout_stream
         sys.stderr = self.stderr_stream
 
-        self.stdout_stream.textWritten.connect(self.append_text)
-        self.stderr_stream.textWritten.connect(self.append_text)
+        self.stdout_stream.text_written.connect(self.append_text)
+        self.stderr_stream.text_written.connect(self.append_text)
 
     def append_text(self, text: str) -> None:
         """
@@ -95,7 +96,7 @@ class ConsoleOutputWidget(QWidget):
         """
 
         if text.strip():
-            now = datetime.now()
+            now = datetime.now(pytz.timezone("America/New_York"))
             formatted_time = now.strftime("(%I:%M:%S %p)")
             cursor = self.console_output.textCursor()
             cursor.movePosition(QTextCursor.End)

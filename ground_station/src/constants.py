@@ -250,9 +250,9 @@ PALLETTE.setColor(QPalette.Highlight, Qt.white)
 PALLETTE.setColor(QPalette.HighlightedText, Qt.black)
 
 STYLE_SHEET = """
-    QToolTip { 
-        color: #ffffff; 
-        background-color: #2a82da; 
+    QToolTip {
+        color: #ffffff;
+        background-color: #2a82da;
         border: 1px solid white;
     }
 """

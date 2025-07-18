@@ -112,13 +112,13 @@ class LocalWaypointFetcher(QThread):
                 constants.WAYPOINTS_SERVER_URL
             ).json()
             if not isinstance(waypoints, list):
-                raise ValueError("Waypoints data is not a list")
+                raise TypeError("Waypoints data is not a list")
 
         except requests.exceptions.RequestException:
             waypoints = []
             print("[Warning] Failed to fetch waypoints. Using empty list.")
 
-        except ValueError:
+        except TypeError:
             print(
                 f"[Warning] Waypoints data is not in expected format. Using empty list.\nExpected: {list[list[float]]}, Received: {waypoints}",
             )
@@ -161,14 +161,14 @@ class RemoteWaypointFetcher(QThread):
                 constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"]
             ).json()
             if not isinstance(waypoints, list):
-                raise ValueError("Waypoints data is not a list")
+                raise TypeError("Waypoints data is not a list")
 
         except requests.exceptions.RequestException:
             waypoints = []
             print("[Warning] Failed to fetch waypoints. Using empty list.")
             self.request_url_change.emit(True)
 
-        except ValueError:
+        except TypeError:
             print(
                 f"[Warning] Waypoints data is not in expected format. Using empty list.\nExpected: {list[list[float]]}, Received: {waypoints}",
             )
@@ -216,15 +216,12 @@ class ImageFetcher(QThread):
                 raise ValueError("Image data is None")
 
         except requests.exceptions.RequestException:
-            base64_encoded_image = open(
-                constants.ASSETS_DIR / "cool-guy-base64.txt"
-            ).read()
+            with open(constants.ASSETS_DIR / "cool-guy-base64.txt") as f:
+                base64_encoded_image = f.read()
             print("[Warning] Failed to fetch image. Using cool guy image.")
 
         except ValueError as e:
             print(f"[Warning] {e}")
-            base64_encoded_image = open(
-                constants.ASSETS_DIR / "cool-guy-base64.txt"
-            ).read()
-
+            with open(constants.ASSETS_DIR / "cool-guy-base64.txt") as f:
+                base64_encoded_image = f.read()
         self.image_fetched.emit(base64_encoded_image)

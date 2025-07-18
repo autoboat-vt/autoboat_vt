@@ -42,7 +42,7 @@ class GroundStationWidget(QWidget):
 
     def __init__(self) -> None:
         super().__init__()
-        self.waypoints: list[list[float]] = list()
+        self.waypoints: list[list[float]] = []
         self.num_waypoints: int = 0
         self.boat_data_averages: dict[str, float] = {
             "vesc_data_rpm": 0.0,
@@ -56,11 +56,11 @@ class GroundStationWidget(QWidget):
         }
 
         # buoy_name => {"lat": float, "lon": float}
-        self.buoys: dict[str, dict[str, float]] = dict()
+        self.buoys: dict[str, dict[str, float]] = {}
 
-        self.boat_data: dict[str, Any] = dict()
-        self.autopilot_parameters: dict[str, Any] = dict()
-        self.telemetry_data_limits: dict[str, float] = dict()
+        self.boat_data: dict[str, Any] = {}
+        self.autopilot_parameters: dict[str, Any] = {}
+        self.telemetry_data_limits: dict[str, float] = {}
 
         # region define layouts
         self.main_layout = QGridLayout()
@@ -407,6 +407,8 @@ class GroundStationWidget(QWidget):
         except Exception as e:
             print(f"[Error] Failed to save boat data: {e}")
 
+        print(f"[Info] Boat data saved to {file_path}")
+
     def edit_boat_data_limits(self) -> None:
         """
         Opens a text edit window to edit the telemetry data limits.
@@ -475,6 +477,8 @@ class GroundStationWidget(QWidget):
         except Exception as e:
             print(f"[Error] Failed to load boat data limits: {e}")
 
+        print(f"[Info] Boat data limits loaded from {chosen_file[0]}")
+
     def save_boat_data_limits(self) -> None:
         """
         Save upper and lower bounds for some of the telemetry data.
@@ -493,6 +497,8 @@ class GroundStationWidget(QWidget):
 
         except Exception as e:
             print(f"[Error] Failed to save boat data limits: {e}")
+
+        print(f"[Info] Boat data limits saved to {file_path}")
 
     def edit_buoy_data(self) -> None:
         """
@@ -583,6 +589,8 @@ class GroundStationWidget(QWidget):
         except Exception as e:
             print(f"[Error] Failed to save buoy data: {e}")
 
+        print(f"[Info] Buoy data saved to {file_path}")
+
     def load_buoy_data(self) -> None:
         """
         Load buoy data from the `buoy_data` directory, if none selected use `default.json`.
@@ -613,6 +621,8 @@ class GroundStationWidget(QWidget):
 
         except Exception as e:
             print(f"[Error] Failed to load buoy data: {e}")
+
+        print(f"[Info] Buoy data loaded from {chosen_file[0]}")
 
     def zoom_to_boat(self) -> None:
         """Center the view on the boat's position."""
@@ -874,11 +884,11 @@ Current to VESC: {boat_data.get("vesc_data_current_to_vesc", -69.420):.5f} A
 Voltage to VESC: {boat_data.get("vesc_data_voltage_to_vesc", -69.420):.5f} V
 Wattage to Motor: {fix_formatting(boat_data.get("vesc_data_wattage_to_motor"))} W
 Voltage to Motor: {boat_data.get("vesc_data_voltage_to_motor", -69.420):.5f} V
-Time Since VESC Startup: {convert_to_seconds(boat_data.get("vesc_data_time_since_vesc_startup_in_ms", -1.0)):.5f} seconds 
+Time Since VESC Startup: {convert_to_seconds(boat_data.get("vesc_data_time_since_vesc_startup_in_ms", -1.0)):.5f} seconds
 Motor Temperature: {fix_formatting(boat_data.get("vesc_data_motor_temperature"))}°C
 """
         else:
-            for key in self.boat_data_averages.keys():
+            for key in self.boat_data_averages:
                 # self.boat_data = data from one iteration in the past
                 # boat_data = data from the current iteration
                 current_value = boat_data.get(key)
@@ -910,7 +920,7 @@ Current to VESC: {self.boat_data_averages.get("vesc_data_current_to_vesc", -69.4
 Voltage to VESC: {self.boat_data_averages.get("vesc_data_voltage_to_vesc", -69.420):.5f} V
 Wattage to Motor: {fix_formatting(self.boat_data_averages.get("vesc_data_wattage_to_motor"))} W
 Voltage to Motor: {self.boat_data_averages.get("vesc_data_voltage_to_motor", -69.420):.5f} V
-Time Since VESC Startup: {convert_to_seconds(boat_data.get("vesc_data_time_since_vesc_startup_in_ms", -1)):.5f} seconds 
+Time Since VESC Startup: {convert_to_seconds(boat_data.get("vesc_data_time_since_vesc_startup_in_ms", -1)):.5f} seconds
 Motor Temperature: {fix_formatting(self.boat_data_averages.get("vesc_data_motor_temperature"))}°C
 """
 
@@ -928,7 +938,7 @@ Motor Temperature: {fix_formatting(self.boat_data_averages.get("vesc_data_motor_
     # endregion pyqt thread functions
 
     # region helper functions
-    def safe_convert_to_float(self, x) -> Union[float, Literal[0]]:
+    def safe_convert_to_float(self, x: object) -> Union[float, Literal[0]]:
         """
         Safely convert a value to float, returning 0 if conversion fails.
 

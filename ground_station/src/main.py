@@ -23,8 +23,10 @@ class MainWindow(QMainWindow):
         self.setGeometry(constants.WINDOW_BOX)
         self.setStyleSheet(constants.STYLE_SHEET)
         self.setPalette(constants.PALLETTE)
+
         self.main_widget = QTabWidget()
         self.setCentralWidget(self.main_widget)
+
         try:
             # load console first to capture any startup messages
             self.main_widget.addTab(ConsoleOutputWidget(), "Console Output")
@@ -41,7 +43,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     constants.ICONS = constants.__get_icons()
     window = MainWindow()
-    app.setApplicationName("SailBussy Ground Station")
     app.setStyle("Fusion")
     app.setWindowIcon(constants.ICONS.boat)
 
