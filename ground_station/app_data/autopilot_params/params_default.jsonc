@@ -94,7 +94,7 @@
         "default": 25.0,
         "description": "Hard over value for the rudder control, in radians."
     },
-    
+
     // Heading control parameters
     "heading_p_gain": {
         "type": "float",

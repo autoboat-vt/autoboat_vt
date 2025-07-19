@@ -523,13 +523,15 @@ class AutopilotParamWidget(QFrame):
         try:
             edited_data = safe_load(self.modify_element.text())
 
-            if edited_data == self.value:
-                return
+            if self.type is bool:
+                if isinstance(edited_data, (int, float)):
+                    if edited_data in (0, 1):
+                        edited_data = bool(edited_data)
 
-            if self.type is bool and isinstance(edited_data, str):
-                edited_data = edited_data.lower() in ["true", "1", "yes", "on"]
+                elif isinstance(edited_data, bool):
+                    edited_data = bool(edited_data)
 
-            if isinstance(edited_data, int) and self.type is float:
+            if self.type is float and isinstance(edited_data, int):
                 edited_data = float(edited_data)
 
             if not isinstance(edited_data, self.type):
