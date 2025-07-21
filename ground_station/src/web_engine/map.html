@@ -1,15 +1,21 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
     <head>
         <title>Sailboat Tracker</title>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"></script>
-        <script src="https://rawgit.com/bbecquet/Leaflet.RotatedMarker/master/leaflet.rotatedMarker.js"></script>
         <link
             rel="stylesheet"
-            href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css"
+            href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         />
+        <script
+            type="text/javascript"
+            src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        ></script>
+        <script
+            type="text/javascript"
+            src="https://rawgit.com/bbecquet/Leaflet.RotatedMarker/master/leaflet.rotatedMarker.js"
+        ></script>
         <style>
             #map {
                 position: absolute;
@@ -23,18 +29,18 @@
 
     <body>
         <div id="map"></div>
-        <script>
+        <script type="text/javascript">
             class map_interface {
                 static map_options = {
                     center: [36.983731367697374, -76.29555376681454],
                     zoom: 13,
                 };
                 static assets_url =
-                    'https://raw.githubusercontent.com/autoboat-vt/autoboat_vt/refs/heads/main/ground_station/app_data/assets/';
-                static buoy_color = 'orange';
-                static waypoint_color = 'blue';
+                    "https://raw.githubusercontent.com/autoboat-vt/autoboat_vt/refs/heads/main/ground_station/app_data/assets/";
+                static buoy_color = "orange";
+                static waypoint_color = "blue";
                 static boat_icon = L.icon({
-                    iconUrl: map_interface.assets_url + 'boat.png',
+                    iconUrl: map_interface.assets_url + "boat.png",
                     iconSize: [50, 50],
                     iconAnchor: [25, 25],
                 });
@@ -42,7 +48,7 @@
                     iconUrl:
                         map_interface.assets_url +
                         `marker-icon-${map_interface.buoy_color}.png`,
-                    shadowUrl: map_interface.assets_url + 'marker-shadow.png',
+                    shadowUrl: map_interface.assets_url + "marker-shadow.png",
                     iconSize: [25, 41],
                     iconAnchor: [12, 41],
                     shadowSize: [41, 41],
@@ -51,7 +57,7 @@
                     iconUrl:
                         map_interface.assets_url +
                         `marker-icon-${map_interface.waypoint_color}.png`,
-                    shadowUrl: map_interface.assets_url + 'marker-shadow.png',
+                    shadowUrl: map_interface.assets_url + "marker-shadow.png",
                     iconSize: [25, 41],
                     iconAnchor: [12, 41],
                     shadowSize: [41, 41],
@@ -66,23 +72,20 @@
                     };
                     this.min_zoom = 5;
                     this.max_zoom = 20;
-                    this.map = L.map('map', map_interface.map_options);
+                    this.map = L.map("map", map_interface.map_options);
 
                     L.tileLayer(
-                        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        {
-                            minZoom: this.min_zoom,
-                            maxZoom: this.max_zoom,
-                        },
+                        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        { minZoom: this.min_zoom, maxZoom: this.max_zoom }
                     ).addTo(this.map);
 
                     // Click event to add waypoint
-                    this.map.on('click', (e) => {
+                    this.map.on("click", e => {
                         this.add_waypoint(e.latlng.lat, e.latlng.lng);
                     });
 
                     // Right-click event to remove waypoint
-                    this.map.on('contextmenu', (e) => {
+                    this.map.on("contextmenu", e => {
                         let zoom =
                             this.map.getZoom() == this.min_zoom
                                 ? this.map.getZoom() + 1
@@ -92,7 +95,7 @@
                         this.waypoints.forEach((waypoint, index) => {
                             const distance = Math.sqrt(
                                 (waypoint[0] - e.latlng.lat) ** 2 +
-                                    (waypoint[1] - e.latlng.lng) ** 2,
+                                    (waypoint[1] - e.latlng.lng) ** 2
                             );
                             if (
                                 distance < closest_distance &&
@@ -111,49 +114,57 @@
                     this.boat_marker = L.marker(this.boat.location, {
                         icon: map_interface.boat_icon,
                         rotationAngle: this.boat.heading,
-                        rotationOrigin: 'center',
+                        rotationOrigin: "center",
                     }).addTo(this.map);
 
-                    this.map.on('zoomend', () => {
+                    this.map.on("zoomend", () => {
                         const zoomLevel = this.map.getZoom();
                         this.zoom_icons(zoomLevel);
                     });
                 }
 
+                /**
+                 * Synchronizes waypoints with the server.
+                 * Sends the current waypoints to the server via a POST request.
+                 * @return {Promise<void>}
+                 */
                 async sync_waypoints() {
                     try {
                         const response = await fetch(
-                            'http://localhost:3001/waypoints',
+                            "http://localhost:3001/waypoints",
                             {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                // only send new waypoints
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({
                                     waypoints: this.waypoints,
                                 }),
-                            },
+                            }
                         );
 
                         if (response.ok) {
-                            console.log('Waypoints synced with server');
+                            console.log("Waypoints synced with server");
                         } else {
                             console.error(
-                                'Failed to sync waypoints with server',
+                                "Failed to sync waypoints with server"
                             );
                         }
                     } catch (error) {
-                        console.error('Error sending waypoint:', error);
+                        console.error("Error sending waypoint:", error);
                     }
                 }
 
+                /**
+                 * Adds a waypoint to the map and syncs it with the server.
+                 * @param {number} lat - Latitude of the waypoint.
+                 * @param {number} lon - Longitude of the waypoint.
+                 * @return {void}
+                 */
                 add_waypoint(lat, lon) {
                     // Check if the waypoint already exists
                     for (let waypoint of this.waypoints) {
                         if (waypoint[0] === lat && waypoint[1] === lon) {
                             console.log(
-                                'Waypoint already exists at this location.',
+                                "Waypoint already exists at this location."
                             );
                             return;
                         }
@@ -167,9 +178,14 @@
                     this.sync_waypoints();
                 }
 
+                /**
+                 * Changes the color of all waypoints on the map.
+                 * @param {string} color - The new color for the waypoints.
+                 * @return {void}
+                 */
                 change_color_waypoints(color) {
                     this.waypoints.forEach((waypoint, index) => {
-                        this.map.eachLayer((layer) => {
+                        this.map.eachLayer(layer => {
                             if (
                                 layer instanceof L.Marker &&
                                 layer.getLatLng().equals(waypoint)
@@ -181,20 +197,25 @@
                                             `marker-icon-${map_interface.waypoint_color}.png`,
                                         shadowUrl:
                                             map_interface.assets_url +
-                                            'marker-shadow.png',
+                                            "marker-shadow.png",
                                         iconSize: [25, 41],
                                         iconAnchor: [12, 41],
                                         shadowSize: [41, 41],
-                                    }),
+                                    })
                                 );
                             }
                         });
                     });
                 }
 
+                /**
+                 * Removes the waypoint at the specified index from the map and syncs the changes with the server.
+                 * @param {number} index - The index of the waypoint to remove.
+                 * @return {void}
+                 */
                 remove_waypoint(index) {
                     const removed = this.waypoints.splice(index, 1)[0];
-                    this.map.eachLayer((layer) => {
+                    this.map.eachLayer(layer => {
                         if (
                             layer instanceof L.Marker &&
                             layer.getLatLng().equals(removed)
@@ -205,6 +226,10 @@
                     this.sync_waypoints();
                 }
 
+                /**
+                 * Clears all waypoints from the map and syncs the changes with the server.
+                 * @return {void}
+                 */
                 clear_waypoints() {
                     for (let i = this.waypoints.length - 1; i >= 0; i--) {
                         this.remove_waypoint(i);
@@ -213,6 +238,12 @@
                     this.sync_waypoints();
                 }
 
+                /**
+                 * Adds a buoy to the map.
+                 * @param {number} lat - Latitude of the buoy.
+                 * @param {number} lon - Longitude of the buoy.
+                 * @return {void}
+                 */
                 add_buoy(lat, lon) {
                     this.buoys.push([lat, lon]);
                     L.marker([lat, lon], {
@@ -220,9 +251,14 @@
                     }).addTo(this.map);
                 }
 
+                /**
+                 * Removes the buoy at the specified index from the map.
+                 * @param {number} index - The index of the buoy to remove.
+                 * @return {void}
+                 */
                 remove_buoy(index) {
                     const removed = this.buoys.splice(index, 1)[0];
-                    this.map.eachLayer((layer) => {
+                    this.map.eachLayer(layer => {
                         if (
                             layer instanceof L.Marker &&
                             layer.getLatLng().equals(removed)
@@ -232,6 +268,10 @@
                     });
                 }
 
+                /**
+                 * Clears all buoys from the map.
+                 * @return {void}
+                 */
                 clear_buoys() {
                     for (let i = this.buoys.length - 1; i >= 0; i--) {
                         this.remove_buoy(i);
@@ -239,30 +279,56 @@
                     this.buoys = [];
                 }
 
+                /**
+                 * Updates the boat's location on the map.
+                 * @param {number} lat - Latitude of the boat.
+                 * @param {number} lon - Longitude of the boat.
+                 * @return {void}
+                 */
                 update_boat_location(lat, lon) {
                     this.boat.location = [lat, lon];
                     this.boat_marker.setLatLng(this.boat.location);
                 }
 
+                /**
+                 * Updates the boat's heading on the map.
+                 * @param {number} heading - The new heading of the boat in degrees.
+                 * @return {void}
+                 */
                 update_boat_heading(heading) {
                     this.boat.heading = heading;
                     this.boat_marker.setRotationAngle(90 - heading);
                 }
 
+                /**
+                 * Focuses the map on the boat's current location.
+                 * @return {void}
+                 */
                 focus_map_on_boat() {
                     this.map.setView(this.boat.location, this.map.getZoom());
                 }
 
+                /**
+                 * Focuses the map on a specific waypoint.
+                 * @param {number} lat - Latitude of the waypoint.
+                 * @param {number} lon - Longitude of the waypoint.
+                 * @return {void}
+                 */
                 focus_map_on_waypoint(lat, lon) {
                     this.map.setView([lat, lon], this.map.getZoom());
                 }
 
+                /**
+                 * Adjusts the size of the icons based on the current zoom level.
+                 * @param {number} zoom - The current zoom level of the map.
+                 * @return {void}
+                 */
                 zoom_icons(zoom) {
                     const size = Math.max(
                         20,
-                        Math.min(60, 4 * Math.pow(zoom, 0.9)),
+                        Math.min(60, 4 * Math.pow(zoom, 0.9))
                     );
-                    this.map.eachLayer((layer) => {
+                    this.map.eachLayer(layer => {
                         if (layer instanceof L.Marker) {
                             layer.setIcon(
                                 L.icon({
@@ -276,7 +342,7 @@
                                         .shadowUrl
                                         ? [size, size]
                                         : undefined,
-                                }),
+                                })
                             );
                         }
                     });

@@ -274,14 +274,18 @@ FAST_TIMER = QTimer()
 FAST_TIMER.setInterval(1)  # 1 ms for fast timer
 
 # base url for telemetry server
-TELEMETRY_SERVER_URL = "http://3.138.35.188:5000/"
+TELEMETRY_SERVER_URL = "http://54.165.159.151:8080/"
+# TELEMETRY_SERVER_URL = "http://3.138.35.188:5000/"
 
 # endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint`
 TELEMETRY_SERVER_ENDPOINTS = {
     "boat_status": TELEMETRY_SERVER_URL + "boat_status/get",
+    "get_new_boat_status": TELEMETRY_SERVER_URL + "boat_status/get_new",
     "waypoints_test": TELEMETRY_SERVER_URL + "waypoints/test",
     "get_waypoints": TELEMETRY_SERVER_URL + "waypoints/get",
     "set_waypoints": TELEMETRY_SERVER_URL + "waypoints/set",
+    "get_default_autopilot_parameters": TELEMETRY_SERVER_URL
+    + "autopilot_parameters/get_default",
     "get_autopilot_parameters": TELEMETRY_SERVER_URL + "autopilot_parameters/get",
     "set_autopilot_parameters": TELEMETRY_SERVER_URL + "autopilot_parameters/set",
 }
