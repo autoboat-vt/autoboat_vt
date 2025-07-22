@@ -3,7 +3,11 @@ QtAwesome
 python-dateutil
 PyQtWebEngine
 PyQt5
+QtPy
 packaging
 idna
 charset-normalizer
 jsonc-parser
+requests
+PyYAML
+pytz
