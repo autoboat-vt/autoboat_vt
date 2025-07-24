@@ -1,32 +1,34 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>Camera Feed</title>
-    <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin-top: 50px;
-    }
-    img {
-      max-width: 300px;
-      height: auto;
-      border: 1px solid #ccc;
-    }
-  </style>
-  </head>
-  <body>
+    <head>
+        <meta charset="utf-8" />
+        <title>Camera Feed</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                text-align: center;
+                margin-top: 50px;
+            }
+            img {
+                max-width: 300px;
+                height: auto;
+                border: 1px solid #ccc;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Base64 Image Display</h1>
+        <img id="base64Image" alt="Camera feed image" />
 
-    <h1>Base64 Image Display</h1>
-    <img id="base64Image" />
-
-    <script>
-    function setBase64Image(base64String) {
-        const imgElement = document.getElementById("base64Image");
-        imgElement.src = `data:image/jpeg;base64,${base64String}`;
-    }
-    </script>
-
-  </body>
+        <script type="text/javascript">
+            /**
+             * Sets the source of the image element to a base64 encoded string.
+             * @param {string} base64String - The base64 encoded image string.
+             */
+            function setBase64Image(base64String) {
+                const imgElement = document.getElementById("base64Image");
+                imgElement.src = `data:image/jpeg;base64,${base64String}`;
+            }
+        </script>
+    </body>
 </html>

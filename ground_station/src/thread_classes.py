@@ -26,9 +26,15 @@ class TelemetryUpdater(QThread):
     ----------
     boat_data_fetched: `Signal`
         Signal to send boat data to the main thread. Emits a dictionary containing telemetry data.
+
+    request_url_change: `Signal`
+        Signal to request a change in the telemetry server URL. Emits a value from the `constants.TelemetryStatus`. <br>
+        `SUCCESS` indicates that the telemetry server is reachable and waypoints were fetched successfully. <br>
+        `FAILURE` indicates that the telemetry server is not reachable and waypoints could not be fetched.
     """
 
     boat_data_fetched = Signal(dict)
+    request_url_change = Signal(constants.TelemetryStatus)
 
     def __init__(self) -> None:
         super().__init__()
@@ -39,8 +45,10 @@ class TelemetryUpdater(QThread):
         try:
             boat_status: dict[str, Union[str, float, list[float], list[list[float]]]]
             boat_status = requests.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["boat_status"]
+                constants.TELEMETRY_SERVER_ENDPOINTS["boat_status"],
+                timeout=5,
             ).json()
+            self.request_url_change.emit(constants.TelemetryStatus.SUCCESS)
 
         except requests.exceptions.RequestException:
             boat_status = {
@@ -69,7 +77,7 @@ class TelemetryUpdater(QThread):
                 "vesc_data_time_since_vesc_startup_in_ms": 0.0,
                 "vesc_data_motor_temperature": 0.0,
             }
-            print("[Warning] Failed to fetch boat data. Using default values.")
+            self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
 
         self.boat_data_fetched.emit(boat_status)
 
@@ -140,10 +148,15 @@ class RemoteWaypointFetcher(QThread):
     waypoints_fetched: `Signal`
         Signal to send waypoints to the main thread. Emits a list of lists containing
         waypoints, where each waypoint is a list of `[latitude, longitude]`.
+
+    request_url_change: `Signal`
+        Signal to request a change in the telemetry server URL. Emits a value from the `constants.TelemetryStatus`. <br>
+        `SUCCESS` indicates that the telemetry server is reachable and waypoints were fetched successfully. <br>
+        `FAILURE` indicates that the telemetry server is not reachable and waypoints could not be fetched.
     """
 
     waypoints_fetched = Signal(list)
-    request_url_change = Signal(bool)
+    request_url_change = Signal(constants.TelemetryStatus)
 
     def __init__(self) -> None:
         super().__init__()
@@ -157,25 +170,27 @@ class RemoteWaypointFetcher(QThread):
         """Fetch waypoints from the telemetry server and emit them."""
 
         try:
+            waypoints: list[list[float]]
             waypoints = requests.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"]
+                constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"],
+                timeout=5,
             ).json()
             if not isinstance(waypoints, list):
                 raise TypeError("Waypoints data is not a list")
+            self.request_url_change.emit(constants.TelemetryStatus.SUCCESS)
 
         except requests.exceptions.RequestException:
             waypoints = []
             print("[Warning] Failed to fetch waypoints. Using empty list.")
-            self.request_url_change.emit(True)
+            self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
 
         except TypeError:
             print(
                 f"[Warning] Waypoints data is not in expected format. Using empty list.\nExpected: {list[list[float]]}, Received: {waypoints}",
             )
             waypoints = []
-            self.request_url_change.emit(True)
+            self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
 
-        self.request_url_change.emit(False)
         self.waypoints_fetched.emit(waypoints)
 
 
@@ -224,4 +239,5 @@ class ImageFetcher(QThread):
             print(f"[Warning] {e}")
             with open(constants.ASSETS_DIR / "cool-guy-base64.txt") as f:
                 base64_encoded_image = f.read()
+
         self.image_fetched.emit(base64_encoded_image)

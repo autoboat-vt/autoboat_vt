@@ -263,6 +263,9 @@ class GroundStationWidget(QWidget):
 
         # Connect signals to update UI
         self.telemetry_handler.boat_data_fetched.connect(self.update_telemetry_display)
+        self.telemetry_handler.request_url_change.connect(
+            self.change_telemetry_server_url
+        )
         self.js_waypoint_handler.waypoints_fetched.connect(
             self.update_waypoints_display
         )
@@ -272,7 +275,7 @@ class GroundStationWidget(QWidget):
         self.telemetry_waypoint_handler.request_url_change.connect(
             self.change_telemetry_server_url
         )
-        self.remember_telemetry_server_url_status = False
+        self.remember_telemetry_server_url_status: bool = False
 
         # 10 second timer
         self.ten_second_timer = constants.TEN_SECOND_TIMER
@@ -285,6 +288,8 @@ class GroundStationWidget(QWidget):
         # Fast timer
         self.fast_timer = constants.FAST_TIMER
         self.fast_timer.timeout.connect(self.js_waypoint_handler_starter)
+
+        self.timers = [self.ten_second_timer, self.slow_timer, self.fast_timer]
 
         # Start timers
         self.fast_timer.start()
@@ -746,20 +751,26 @@ class GroundStationWidget(QWidget):
         else:
             print("[Info] Local waypoints match telemetry server waypoints.")
 
-    def change_telemetry_server_url(self, telemetry_status: bool) -> None:
+    def change_telemetry_server_url(
+        self, telemetry_status: constants.TelemetryStatus
+    ) -> None:
         """
         Prompt the user to change the telemetry server URL if fetching waypoints fails.
 
         Parameters
         ----------
         telemetry_status
-            Boolean indicating whether the telemetry server is reachable or not.
-            If `True`, it means the telemetry server is not reachable and waypoints could not be fetched.
-            If `False`, it means the telemetry server is reachable and waypoints were fetched successfully.
+            If `constants.TelemetryStatus.SUCCESS`, it means the telemetry server is reachable and waypoints were fetched successfully. <br>
+            If `constants.TelemetryStatus.FAILURE`, it means the telemetry server is not reachable and waypoints could not be fetched.
         """
 
-        if not telemetry_status and not self.remember_telemetry_server_url_status:
-            self.ten_second_timer.stop()
+        if (
+            telemetry_status == constants.TelemetryStatus.FAILURE
+            and not self.remember_telemetry_server_url_status
+        ):
+            for timer in self.timers:
+                timer.stop()
+
             response, temp_remember_telemetry_server_url_status = (
                 constants.show_message_box(
                     "Failed to fetch waypoints",
@@ -780,18 +791,41 @@ class GroundStationWidget(QWidget):
                     default_value=constants.TELEMETRY_SERVER_URL,
                     input_type=str,
                 )
+
                 if new_url:
                     print(
                         f"[Info] Changed telemetry server URL to {new_url}, was {constants.TELEMETRY_SERVER_URL}."
                     )
                     constants.TELEMETRY_SERVER_URL = new_url
+                    for endpoint in constants.TELEMETRY_SERVER_ENDPOINTS:
+                        path_tail = "/".join(
+                            constants.TELEMETRY_SERVER_ENDPOINTS[endpoint].split("/")[
+                                -2:
+                            ]
+                        )
+                        new_endpoint_url = constants.TELEMETRY_SERVER_URL + path_tail
+                        constants.TELEMETRY_SERVER_ENDPOINTS[endpoint] = (
+                            new_endpoint_url
+                        )
 
-            else:
+                else:
+                    print(
+                        "[Warning] No new telemetry server URL provided, keeping old one."
+                    )
+
+            elif response == QMessageBox.StandardButton.No:
                 self.remember_telemetry_server_url_status = (
                     temp_remember_telemetry_server_url_status
                 )
                 print("[Info] Telemetry server URL not changed.")
-            self.ten_second_timer.start()
+
+            else:
+                print(
+                    f"[Error] Received unexpected response from user dialog. Got: {response}, expected Yes or No."
+                )
+
+            for timer in self.timers:
+                timer.start()
 
     def update_telemetry_display(
         self,

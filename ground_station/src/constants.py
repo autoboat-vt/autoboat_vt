@@ -7,6 +7,7 @@ Functions:
 - show_input_dialog: Displays an input dialog for user input.
 
 Constants:
+- TelemetryStatus: Enum representing the status of telemetry data fetching.
 - ICONS: A namespace containing application icons.
 - YELLOW, PURPLE, BLUE, WHITE, RED, GREY, GREEN: Color constants for the application.
 - PALLETTE: A QPalette object for the application's color scheme.
@@ -31,8 +32,8 @@ from qtpy.QtGui import QColor, QIcon, QPalette
 from qtpy.QtWidgets import QPushButton, QMessageBox, QInputDialog, QCheckBox
 import qtawesome as qta
 from types import SimpleNamespace
-from typing import Optional, Callable, Union
-from typing import TypeVar
+from typing import Optional, Callable, Union, TypeVar
+from enum import Enum
 
 
 T = TypeVar("T")
@@ -220,6 +221,25 @@ def show_input_dialog(
 
 # endregion functions
 
+
+class TelemetryStatus(Enum):
+    """
+    Enum representing the status of telemetry data fetching.
+
+    Attributes
+    ----------
+    `SUCCESS`: Indicates that telemetry data was fetched successfully. <br>
+    `FAILURE`: Indicates that telemetry data fetching failed.
+
+    Inherits
+    --------
+    `Enum`
+    """
+
+    SUCCESS: str = "success"
+    FAILURE: str = "failure"
+
+
 # see `main.py` for where this is set
 ICONS: SimpleNamespace
 
@@ -274,8 +294,8 @@ FAST_TIMER = QTimer()
 FAST_TIMER.setInterval(1)  # 1 ms for fast timer
 
 # base url for telemetry server
-TELEMETRY_SERVER_URL = "http://54.165.159.151:8080/"
-# TELEMETRY_SERVER_URL = "http://3.138.35.188:5000/"
+# TELEMETRY_SERVER_URL = "http://54.165.159.151:8080/"
+TELEMETRY_SERVER_URL = "http://3.138.35.188:5000/"
 
 # endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint`
 TELEMETRY_SERVER_ENDPOINTS = {
