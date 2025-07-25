@@ -4,7 +4,6 @@ from widgets.popup_edit import TextEditWindow
 from copy import deepcopy
 from yaml import safe_load
 import requests
-from typing import Optional
 import json
 from typing import Any
 from pathlib import PurePath
@@ -262,7 +261,7 @@ class AutopilotParamEditor(QWidget):
         self.update_status_label(visible_count, search_text)
 
     def update_status_label(
-        self, visible_count: Optional[int] = None, search_text: str = ""
+        self, visible_count: int | None = None, search_text: str = ""
     ) -> None:
         """
         Update the status label with search results.

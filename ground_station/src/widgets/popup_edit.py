@@ -7,7 +7,6 @@ from qtpy.QtGui import (
 )
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton, QPlainTextEdit
 from qtpy.QtCore import QSize, QRect, Qt, Signal, QEvent
-from typing import Optional
 
 
 class TextEditWindow(QWidget):
@@ -44,7 +43,7 @@ class TextEditWindow(QWidget):
 
     def __init__(
         self,
-        highlighter: Optional[QSyntaxHighlighter] = None,
+        highlighter: QSyntaxHighlighter | None = None,
         initial_text: str = "",
         tab_width: int = 4,
         font_size: int = 14,

@@ -32,8 +32,10 @@ from qtpy.QtGui import QColor, QIcon, QPalette
 from qtpy.QtWidgets import QPushButton, QMessageBox, QInputDialog, QCheckBox
 import qtawesome as qta
 from types import SimpleNamespace
-from typing import Optional, Callable, Union, TypeVar
-from enum import Enum
+from typing import TypeVar
+from collections.abc import Callable
+from enum import auto
+from strenum import StrEnum
 
 
 T = TypeVar("T")
@@ -50,7 +52,12 @@ def __get_icons() -> SimpleNamespace:
         A namespace object containing the loaded icons.
         Each icon can be accessed as an attribute of the namespace.
 
-        Example: `icons.upload` = `icons["upload"]`
+        >>> icons.upload == icons["upload"]
+        True
+
+    Notes
+    -----
+    The icons cannot be loaded until a `QApplication` instance is created.
 
     Raises
     -------
@@ -59,20 +66,20 @@ def __get_icons() -> SimpleNamespace:
         This indicates that the icon name is not valid or the icon could not be found.
     """
 
-    icons = {
-        "upload": qta.icon("mdi.upload"),
-        "download": qta.icon("mdi.download"),
-        "delete": qta.icon("mdi.trash-can"),
-        "save": qta.icon("mdi.content-save"),
-        "cog": qta.icon("mdi.cog"),
-        "pencil": qta.icon("ei.pencil"),
-        "refresh": qta.icon("mdi.refresh"),
-        "hard_drive": qta.icon("fa6.hard-drive"),
-        "boat": qta.icon("mdi.sail-boat"),
-        "image_upload": qta.icon("mdi.image-move"),
-        "notification": qta.icon("mdi.bell"),
-        "warning": qta.icon("mdi.alert"),
-        "question": qta.icon("mdi.help-circle"),
+    icons: dict[str, QIcon] = {
+        "upload": qta.icon("mdi.upload", color="white"),
+        "download": qta.icon("mdi.download", color="white"),
+        "delete": qta.icon("mdi.trash-can", color="white"),
+        "save": qta.icon("mdi.content-save", color="white"),
+        "cog": qta.icon("mdi.cog", color="white"),
+        "pencil": qta.icon("ei.pencil", color="white"),
+        "refresh": qta.icon("mdi.refresh", color="white"),
+        "hard_drive": qta.icon("fa6.hard-drive", color="white"),
+        "boat": qta.icon("mdi.sail-boat", color="white"),
+        "image_upload": qta.icon("mdi.image-move", color="white"),
+        "notification": qta.icon("mdi.bell", color="white"),
+        "warning": qta.icon("mdi.alert", color="white"),
+        "question": qta.icon("mdi.help-circle", color="white"),
     }
 
     for icon_name, icon in icons.items():
@@ -88,8 +95,8 @@ def pushbutton_maker(
     button_text: str,
     icon: QIcon,
     function: Callable,
-    max_width: Optional[int] = None,
-    min_height: Optional[int] = None,
+    max_width: int | None = None,
+    min_height: int | None = None,
     is_clickable: bool = True,
 ) -> QPushButton:
     """
@@ -130,10 +137,10 @@ def pushbutton_maker(
 def show_message_box(
     title: str,
     message: str,
-    icon: Optional[QIcon] = None,
-    buttons: Optional[list[QMessageBox.StandardButton]] = None,
-    remember_choice_option: Optional[bool] = False,
-) -> Union[QMessageBox.StandardButton, tuple[QMessageBox.StandardButton, bool]]:
+    icon: QIcon | None = None,
+    buttons: list[QMessageBox.StandardButton] | None = None,
+    remember_choice_option: bool | None = False,
+) -> QMessageBox.StandardButton | tuple[QMessageBox.StandardButton, bool]:
     """
     Show a message box with the specified title, message, and optional icon and buttons.
     Returns the button that was clicked by the user. If the user closes the message box
@@ -188,9 +195,9 @@ def show_message_box(
 def show_input_dialog(
     title: str,
     label: str,
-    default_value: Optional[str] = None,
+    default_value: str | None = None,
     input_type: T = str,
-) -> Union[T, None]:
+) -> T | None:
     """
     Show an input dialog to get user input.
 
@@ -222,7 +229,7 @@ def show_input_dialog(
 # endregion functions
 
 
-class TelemetryStatus(Enum):
+class TelemetryStatus(StrEnum):
     """
     Enum representing the status of telemetry data fetching.
 
@@ -233,11 +240,11 @@ class TelemetryStatus(Enum):
 
     Inherits
     --------
-    `Enum`
+    `StrEnum`
     """
 
-    SUCCESS: str = "success"
-    FAILURE: str = "failure"
+    SUCCESS: str = auto()
+    FAILURE: str = auto()
 
 
 # see `main.py` for where this is set
@@ -294,8 +301,8 @@ FAST_TIMER = QTimer()
 FAST_TIMER.setInterval(1)  # 1 ms for fast timer
 
 # base url for telemetry server
-# TELEMETRY_SERVER_URL = "http://54.165.159.151:8080/"
-TELEMETRY_SERVER_URL = "http://3.138.35.188:5000/"
+TELEMETRY_SERVER_URL = "http://54.165.159.151:8080/"
+# TELEMETRY_SERVER_URL = "http://3.138.35.188:5000/"
 
 # endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint`
 TELEMETRY_SERVER_ENDPOINTS = {

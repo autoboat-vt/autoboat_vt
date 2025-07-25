@@ -10,7 +10,6 @@ Contains:
 
 import requests
 import constants
-from typing import Union
 from qtpy.QtCore import QThread, Signal
 
 
@@ -28,13 +27,15 @@ class TelemetryUpdater(QThread):
         Signal to send boat data to the main thread. Emits a dictionary containing telemetry data.
 
     request_url_change: `Signal`
-        Signal to request a change in the telemetry server URL. Emits a value from the `constants.TelemetryStatus`. <br>
-        `SUCCESS` indicates that the telemetry server is reachable and waypoints were fetched successfully. <br>
-        `FAILURE` indicates that the telemetry server is not reachable and waypoints could not be fetched.
+        Signal to request a change in the telemetry server URL.
+        <ul>
+        <li> <code>SUCCESS</code> indicates that the telemetry server is reachable and waypoints were fetched successfully.</li>
+        <li> <code>FAILURE</code> indicates that the telemetry server is not reachable and waypoints could not be fetched.</li>
+        </ul>
     """
 
-    boat_data_fetched = Signal(dict)
-    request_url_change = Signal(constants.TelemetryStatus)
+    boat_data_fetched: dict = Signal(dict)
+    request_url_change: constants.TelemetryStatus = Signal(constants.TelemetryStatus)
 
     def __init__(self) -> None:
         super().__init__()
@@ -43,7 +44,7 @@ class TelemetryUpdater(QThread):
         """Fetch boat data from the telemetry server and emit it."""
 
         try:
-            boat_status: dict[str, Union[str, float, list[float], list[list[float]]]]
+            boat_status: dict[str, str | float | list[float] | list[list[float]]]
             boat_status = requests.get(
                 constants.TELEMETRY_SERVER_ENDPOINTS["boat_status"],
                 timeout=5,

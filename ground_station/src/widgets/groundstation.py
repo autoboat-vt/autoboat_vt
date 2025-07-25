@@ -11,7 +11,7 @@ from syntax_highlighters.json import JsonHighlighter
 from widgets.popup_edit import TextEditWindow
 
 from pathlib import PurePath
-from typing import Union, Literal, Optional, Any
+from typing import Literal, Any
 
 from qtpy.QtCore import Qt
 from qtpy.QtWebEngineWidgets import QWebEngineView
@@ -760,8 +760,10 @@ class GroundStationWidget(QWidget):
         Parameters
         ----------
         telemetry_status
-            If `constants.TelemetryStatus.SUCCESS`, it means the telemetry server is reachable and waypoints were fetched successfully. <br>
-            If `constants.TelemetryStatus.FAILURE`, it means the telemetry server is not reachable and waypoints could not be fetched.
+            <ul>
+            <li> <code>SUCCESS</code> indicates that the telemetry server is reachable and waypoints were fetched successfully.</li>
+            <li> <code>FAILURE</code> indicates that the telemetry server is not reachable and waypoints could not be fetched.</li>
+            </ul>
         """
 
         if (
@@ -830,7 +832,7 @@ class GroundStationWidget(QWidget):
     def update_telemetry_display(
         self,
         boat_data: dict[
-            str, Union[float, str, tuple[float, float], list[tuple[float, float]]]
+            str, float | str | tuple[float, float] | list[tuple[float, float]]
         ],
     ) -> None:
         """
@@ -842,7 +844,7 @@ class GroundStationWidget(QWidget):
             Dictionary containing boat data fetched from the telemetry server.
         """
 
-        def fix_formatting(data_item: Optional[float]) -> str:
+        def fix_formatting(data_item: float | None) -> str:
             """
             Applies some formatting rules that multiple keys have in common.
 
@@ -975,7 +977,7 @@ Motor Temperature: {fix_formatting(self.boat_data_averages.get("vesc_data_motor_
     # endregion pyqt thread functions
 
     # region helper functions
-    def safe_convert_to_float(self, x: object) -> Union[float, Literal[0]]:
+    def safe_convert_to_float(self, x: object) -> float | Literal[0]:
         """
         Safely convert a value to float, returning 0 if conversion fails.
 

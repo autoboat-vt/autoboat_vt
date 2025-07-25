@@ -11,3 +11,4 @@ jsonc-parser
 requests
 PyYAML
 pytz
+strenum

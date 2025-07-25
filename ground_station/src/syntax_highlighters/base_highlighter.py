@@ -1,5 +1,4 @@
 from qtpy.QtGui import QSyntaxHighlighter, QTextCharFormat, QFont, QColor
-from typing import Optional
 
 
 class BaseHighlighter(QSyntaxHighlighter):
@@ -11,7 +10,7 @@ class BaseHighlighter(QSyntaxHighlighter):
     `QSyntaxHighlighter`
     """
 
-    def __init__(self, parent: Optional[object] = None) -> None:
+    def __init__(self, parent: object | None = None) -> None:
         super().__init__(parent)
 
     @staticmethod

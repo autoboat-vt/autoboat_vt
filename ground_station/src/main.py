@@ -21,8 +21,6 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("SailBussy Ground Station")
         self.setGeometry(constants.WINDOW_BOX)
-        self.setStyleSheet(constants.STYLE_SHEET)
-        self.setPalette(constants.PALLETTE)
 
         self.main_widget = QTabWidget()
         self.setCentralWidget(self.main_widget)
@@ -43,6 +41,8 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     constants.ICONS = constants.__get_icons()
     window = MainWindow()
+    app.setStyleSheet(constants.STYLE_SHEET)
+    app.setPalette(constants.PALLETTE)
     app.setStyle("Fusion")
     app.setWindowIcon(constants.ICONS.boat)
 
