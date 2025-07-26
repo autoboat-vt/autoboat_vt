@@ -1,0 +1,115 @@
+{
+    "sail_lookup_table_wind_angles": {
+        "type": "list",
+        "default": [0, 45, 90, 135, 180, 225, 270, 315, 360],
+        "description": "Wind angles for the lookup table in degrees."
+    },
+    "sail_lookup_table_sail_positions": {
+        "type": "list",
+        "default": [70.0, 50.0, 30.0, 10.0, 0.0, 10.0, 30.0, 50.0, 70.0],
+        "description": "Sail positions corresponding to the wind angles in the lookup table."
+    },
+    "no_sail_zone_size": {
+        "type": "float",
+        "default": 100.0,
+        "description": "Size of the no-sail zone in degrees."
+    },
+    "min_sail_angle": {
+        "type": "float",
+        "default": 0.0,
+        "description": "Minimum angle to sail before changing tacks, in degrees."
+    },
+    "max_sail_angle": {
+        "type": "float",
+        "default": 90.0,
+        "description": "Maximum angle to sail before changing tacks, in degrees."
+    },
+
+    "autopilot_refresh_rate": {
+        "type": "float",
+        "default": 30.0,
+        "description": "Refresh rate for the autopilot in seconds."
+    },
+    "waypoint_accuracy": {
+        "type": "float",
+        "default": 5.0,
+        "description": "The accuracy required to consider a waypoint reached, in meters."
+    },
+    "perform_forced_jibe_instead_of_tack": {
+        "type": "bool",
+        "default": false,
+        "description": "If true, perform a forced jibe instead of a tack when the wind angle is too high."
+    },
+    "tack_distance": {
+        "type": "float",
+        "default": 100.0,
+        "description": "Rough distance to sail before changing tacks based on dynamic tacking system. Ask Chris for more info."
+    },
+    "jibe_tolerance": {
+        "type": "float",
+        "default": 10.0,
+        "description": "How close to jibe angle to stop steering around and start sailing along the jibe line."
+    },
+    "tack_tolerance": {
+        "type": "float",
+        "default": 10.0,
+        "description": "How close to tacking angle to stop steering around and start sailing along the tack line."
+    },
+
+    "min_rudder_angle": {
+        "type": "float",
+        "default": -25.0,
+        "description": "Minimum angle for the rudder, in degrees."
+    },
+    "max_rudder_angle": {
+        "type": "float",
+        "default": 25.0,
+        "description": "Maximum angle for the rudder, in degrees."
+    },
+    "rudder_p_gain": {
+        "type": "float",
+        "default": 1.0,
+        "description": "Proportional gain for the rudder control."
+    },
+    "rudder_i_gain": {
+        "type": "float",
+        "default": 0.3,
+        "description": "Integral gain for the rudder control."
+    },
+    "rudder_d_gain": {
+        "type": "float",
+        "default": 0.2,
+        "description": "Derivative gain for the rudder control."
+    },
+    "rudder_n_gain": {
+        "type": "float",
+        "default": 1.0,
+        "description": "N gain for the rudder control."
+    },
+    "rudder_hard_over": {
+        "type": "float",
+        "default": 25.0,
+        "description": "Hard over value for the rudder control, in radians."
+    },
+    
+    "heading_p_gain": {
+        "type": "float",
+        "default": 1.0,
+        "description": "Proportional gain for heading control."
+    },
+    "heading_i_gain": {
+        "type": "float",
+        "default": 0.3,
+        "description": "Integral gain for heading control."
+    },
+    "heading_d_gain": {
+        "type": "float",
+        "default": 0.2,
+        "description": "Derivative gain for heading control."
+    },
+    "heading_n_gain": {
+        "type": "float",
+        "default": 1.0,
+        "description": "N gain for heading control."
+    }
+}
