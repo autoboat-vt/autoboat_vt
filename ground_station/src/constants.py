@@ -300,7 +300,7 @@ SLOW_TIMER.setInterval(2)  # 2 ms for slow timer
 FAST_TIMER = QTimer()
 FAST_TIMER.setInterval(1)  # 1 ms for fast timer
 
-# base url for telemetry server
+# base url for telemetry server (the CIA is inside of my brain...)
 TELEMETRY_SERVER_URL = "http://54.165.159.151:8080/"
 # TELEMETRY_SERVER_URL = "http://3.138.35.188:5000/"
 
