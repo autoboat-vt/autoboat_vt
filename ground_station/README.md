@@ -29,3 +29,4 @@ Ensure that you have the following software installed on your system:
 
 - Left click on the map to add waypoints.
 - Right click to remove the waypoint closest to your mouse's cursor position.
+- Click on waypoint or buoy in the table to zoom to that marker on the map.
