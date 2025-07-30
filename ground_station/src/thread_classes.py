@@ -45,39 +45,15 @@ class TelemetryUpdater(QThread):
 
         try:
             boat_status: dict[str, str | float | list[float] | list[list[float]]]
-            boat_status = requests.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["boat_status"],
-                timeout=5,
+            boat_status = constants.REQ_SESSION.get(
+                constants.TELEMETRY_SERVER_ENDPOINTS["get_boat_status"],
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
             self.request_url_change.emit(constants.TelemetryStatus.SUCCESS)
 
-        except requests.exceptions.RequestException:
-            boat_status = {
-                "position": [36.983731367697374, -76.29555376681454],
-                "state": "failed_to_fetch",
-                "full_autonomy_maneuver": "N/A",
-                "speed": 0.0,
-                "bearing": 0.0,
-                "heading": 0.0,
-                "true_wind_speed": 0.0,
-                "true_wind_angle": 0.0,
-                "apparent_wind_speed": 0.0,
-                "apparent_wind_angle": 0.0,
-                "sail_angle": 0.0,
-                "rudder_angle": 0.0,
-                "current_waypoint_index": 0,
-                "current_route": [[0.0, 0.0]],
-                "vesc_data_rpm": 0.0,
-                "vesc_data_duty_cycle": 0.0,
-                "vesc_data_amp_hours": 0.0,
-                "vesc_data_amp_hours_charged": 0.0,
-                "vesc_data_current_to_vesc": 0.0,
-                "vesc_data_voltage_to_motor": 0.0,
-                "vesc_data_voltage_to_vesc": 0.0,
-                "vesc_data_wattage_to_motor": 0.0,
-                "vesc_data_time_since_vesc_startup_in_ms": 0.0,
-                "vesc_data_motor_temperature": 0.0,
-            }
+        except requests.exceptions.RequestException as e:
+            print(f"[Warning] Failed to fetch boat data: {e}")
+            boat_status = {}
             self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
 
         self.boat_data_fetched.emit(boat_status)
@@ -117,15 +93,18 @@ class LocalWaypointFetcher(QThread):
         """Fetch waypoints from the local server and emit them."""
 
         try:
-            waypoints: list[list[float]] = requests.get(
+            waypoints: list[list[float]] = constants.REQ_SESSION.get(
                 constants.WAYPOINTS_SERVER_URL
             ).json()
+
             if not isinstance(waypoints, list):
                 raise TypeError("Waypoints data is not a list")
 
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
+            print(
+                f"[Warning] Failed to fetch waypoints. Using empty list. Exception: {e}"
+            )
             waypoints = []
-            print("[Warning] Failed to fetch waypoints. Using empty list.")
 
         except TypeError:
             print(
@@ -172,17 +151,21 @@ class RemoteWaypointFetcher(QThread):
 
         try:
             waypoints: list[list[float]]
-            waypoints = requests.get(
+            waypoints = constants.REQ_SESSION.get(
                 constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"],
-                timeout=5,
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
+
             if not isinstance(waypoints, list):
                 raise TypeError("Waypoints data is not a list")
+
             self.request_url_change.emit(constants.TelemetryStatus.SUCCESS)
 
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
+            print(
+                f"[Warning] Failed to fetch waypoints. Using empty list. Exception: {e}"
+            )
             waypoints = []
-            print("[Warning] Failed to fetch waypoints. Using empty list.")
             self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
 
         except TypeError:
@@ -223,18 +206,18 @@ class ImageFetcher(QThread):
         """Fetch an image from the telemetry server and emit it as a base64 encoded string."""
 
         try:
-            image_data = requests.get(
+            image_data = constants.REQ_SESSION.get(
                 constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
-                timeout=5,
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
             base64_encoded_image = image_data.get("current_camera_image")
             if base64_encoded_image is None:
                 raise ValueError("Image data is None")
 
         except requests.exceptions.RequestException:
+            print("[Warning] Failed to fetch image. Using cool guy image.")
             with open(constants.ASSETS_DIR / "cool-guy-base64.txt") as f:
                 base64_encoded_image = f.read()
-            print("[Warning] Failed to fetch image. Using cool guy image.")
 
         except ValueError as e:
             print(f"[Warning] {e}")

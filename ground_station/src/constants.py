@@ -13,7 +13,7 @@ Constants:
 - PALLETTE: A QPalette object for the application's color scheme.
 - STYLE_SHEET: A string containing the application's style sheet.
 - WINDOW_BOX: QRect defining the main window dimensions.
-- TEN_SECOND_TIMER, SUPER_SLOW_TIMER, SLOW_TIMER, FAST_TIMER: QTimer objects for various intervals.
+- TEN_SECOND_TIMER, HALF_SECOND_TIMER, TEN_MS_TIMER, ONE_MS_TIMER: QTimer objects for various intervals.
 - TELEMETRY_SERVER_URL: Base URL for the telemetry server.
 - TELEMETRY_SERVER_ENDPOINTS: Dictionary of endpoints for the telemetry server.
 - WAYPOINTS_SERVER_URL: URL for the local waypoints server.
@@ -26,8 +26,9 @@ Constants:
 import os
 import sys
 import shutil
+import requests
 from pathlib import PurePath
-from qtpy.QtCore import QRect, QTimer, Qt
+from qtpy.QtCore import Qt, QRect, QTimer
 from qtpy.QtGui import QColor, QIcon, QPalette
 from qtpy.QtWidgets import QPushButton, QMessageBox, QInputDialog, QCheckBox
 import qtawesome as qta
@@ -229,6 +230,7 @@ def show_input_dialog(
 # endregion functions
 
 
+# region classes
 class TelemetryStatus(StrEnum):
     """
     Enum representing the status of telemetry data fetching.
@@ -246,6 +248,8 @@ class TelemetryStatus(StrEnum):
     SUCCESS: str = auto()
     FAILURE: str = auto()
 
+
+# endregion classes
 
 # see `main.py` for where this is set
 ICONS: SimpleNamespace
@@ -289,36 +293,42 @@ WINDOW_BOX = QRect(100, 100, 800, 600)
 
 # timers
 TEN_SECOND_TIMER = QTimer()
-TEN_SECOND_TIMER.setInterval(10000)
+TEN_SECOND_TIMER.setInterval(10_000)
 
-SUPER_SLOW_TIMER = QTimer()
-SUPER_SLOW_TIMER.setInterval(500)
+HALF_SECOND_TIMER = QTimer()
+HALF_SECOND_TIMER.setInterval(500)
 
-SLOW_TIMER = QTimer()
-SLOW_TIMER.setInterval(2)  # 2 ms for slow timer
+TEN_MS_TIMER = QTimer()
+TEN_MS_TIMER.setInterval(10)
 
-FAST_TIMER = QTimer()
-FAST_TIMER.setInterval(1)  # 1 ms for fast timer
+ONE_MS_TIMER = QTimer()
+ONE_MS_TIMER.setInterval(1)
 
-# base url for telemetry server (the CIA is inside of my brain...)
-# TELEMETRY_SERVER_URL = "http://54.165.159.151:8080/"
-TELEMETRY_SERVER_URL = "http://3.138.35.188:5000/"
-
-# endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint`
-TELEMETRY_SERVER_ENDPOINTS = {
-    "boat_status": TELEMETRY_SERVER_URL + "boat_status/get",
-    "get_new_boat_status": TELEMETRY_SERVER_URL + "boat_status/get_new",
-    "waypoints_test": TELEMETRY_SERVER_URL + "waypoints/test",
-    "get_waypoints": TELEMETRY_SERVER_URL + "waypoints/get",
-    "set_waypoints": TELEMETRY_SERVER_URL + "waypoints/set",
-    "get_default_autopilot_parameters": TELEMETRY_SERVER_URL
-    + "autopilot_parameters/get_default",
-    "get_autopilot_parameters": TELEMETRY_SERVER_URL + "autopilot_parameters/get",
-    "set_autopilot_parameters": TELEMETRY_SERVER_URL + "autopilot_parameters/set",
-}
 
 # url for local waypoints server
 WAYPOINTS_SERVER_URL = "http://localhost:3001/waypoints"
+
+# base url for telemetry server (the CIA is inside of my brain...)
+# TELEMETRY_SERVER_URL = "http://54.165.159.151:8080/"
+# TELEMETRY_SERVER_URL = "http://3.138.35.188:5000/"
+TELEMETRY_SERVER_URL = "http://localhost:8000/"
+
+# endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint`
+TELEMETRY_SERVER_ENDPOINTS = {
+    "get_boat_status": TELEMETRY_SERVER_URL + "boat_status/get",
+    "get_new_boat_status": TELEMETRY_SERVER_URL + "boat_status/get_new",
+    "get_waypoints": TELEMETRY_SERVER_URL + "waypoints/get",
+    "set_waypoints": TELEMETRY_SERVER_URL + "waypoints/set",
+    "waypoints_test": TELEMETRY_SERVER_URL + "waypoints/test",
+    "get_autopilot_parameters": TELEMETRY_SERVER_URL + "autopilot_parameters/get",
+    "set_autopilot_parameters": TELEMETRY_SERVER_URL + "autopilot_parameters/set",
+    "get_default_autopilot_parameters": TELEMETRY_SERVER_URL
+    + "autopilot_parameters/get_default",
+}
+
+TELEMETRY_TIMEOUT_SECONDS = 30
+
+REQ_SESSION = requests.Session()
 
 try:
     # should be the path to wherever `ground_station` is located
@@ -327,8 +337,8 @@ try:
     SRC_DIR = PurePath(TOP_LEVEL_DIR / "src")
     DATA_DIR = PurePath(TOP_LEVEL_DIR / "app_data")
 
-    WEB_ENGINE_DIR = PurePath(SRC_DIR / "web_engine")
-    HTML_MAP_PATH = PurePath(WEB_ENGINE_DIR / "map.html")
+    MAP_DIR = PurePath(SRC_DIR / "widgets" / "map_widget")
+    HTML_MAP_PATH = PurePath(MAP_DIR / "map.html")
     HTML_MAP = open(HTML_MAP_PATH).read()
 
     CAMERA_DIR = PurePath(SRC_DIR / "widgets" / "camera_widget")

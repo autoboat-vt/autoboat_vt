@@ -1,4 +1,4 @@
-module src/web_engine
+module src/widgets/map_widget
 
 go 1.18
 

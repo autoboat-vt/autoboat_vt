@@ -138,9 +138,10 @@ class AutopilotParamEditor(QWidget):
                 existing_data[widget.name] = widget.value
 
         try:
-            response = requests.post(
+            response = constants.REQ_SESSION.post(
                 constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
                 json={"value": existing_data},
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             )
             response.raise_for_status()
             print("[Info] All parameters sent successfully.")
@@ -152,8 +153,9 @@ class AutopilotParamEditor(QWidget):
 
         print("[Info] Pulling all parameters...")
         try:
-            response = requests.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"]
+            response = constants.REQ_SESSION.get(
+                constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             )
             response.raise_for_status()
             data = response.json()
@@ -428,8 +430,9 @@ class AutopilotParamWidget(QFrame):
 
         print(f"[Info] Sending value for {self.name}: {self.value}")
         try:
-            existing_data = requests.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"]
+            existing_data = constants.REQ_SESSION.get(
+                constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
 
         except requests.exceptions.RequestException as e:
@@ -448,9 +451,10 @@ class AutopilotParamWidget(QFrame):
                 existing_data[self.name] = self.value
 
             try:
-                response = requests.post(
+                response = constants.REQ_SESSION.post(
                     constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
                     json={"value": existing_data},
+                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
                 response.raise_for_status()
                 print(f"[Info] Successfully sent {self.name} with value {self.value}.")
@@ -476,7 +480,7 @@ class AutopilotParamWidget(QFrame):
         """Pull the current value of the parameter from the telemetry endpoint."""
 
         try:
-            response = requests.get(
+            response = constants.REQ_SESSION.get(
                 constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"]
             )
             response.raise_for_status()

@@ -33,16 +33,17 @@
             class map_interface {
                 static map_options = {
                     center: [36.983731367697374, -76.29555376681454],
-                    zoom: 13,
+                    zoom: 13
                 };
                 static assets_url =
                     "https://raw.githubusercontent.com/autoboat-vt/autoboat_vt/refs/heads/main/ground_station/app_data/assets/";
                 static buoy_color = "orange";
                 static waypoint_color = "blue";
+                static focused_waypoint_color = "violet";
                 static boat_icon = L.icon({
                     iconUrl: map_interface.assets_url + "boat.png",
                     iconSize: [50, 50],
-                    iconAnchor: [25, 25],
+                    iconAnchor: [25, 25]
                 });
                 static buoy_icon = L.icon({
                     iconUrl:
@@ -51,7 +52,7 @@
                     shadowUrl: map_interface.assets_url + "marker-shadow.png",
                     iconSize: [25, 41],
                     iconAnchor: [12, 41],
-                    shadowSize: [41, 41],
+                    shadowSize: [41, 41]
                 });
                 static waypoint_icon = L.icon({
                     iconUrl:
@@ -60,15 +61,17 @@
                     shadowUrl: map_interface.assets_url + "marker-shadow.png",
                     iconSize: [25, 41],
                     iconAnchor: [12, 41],
-                    shadowSize: [41, 41],
+                    shadowSize: [41, 41]
                 });
 
                 constructor() {
+                    this.last_focused_waypoint_color = "";
+                    this.lastFocusedTimeStamp = performance.now();
                     this.waypoints = [];
                     this.buoys = [];
                     this.boat = {
                         heading: 0,
-                        location: [36.983731367697374, -76.29555376681454],
+                        location: [36.983731367697374, -76.29555376681454]
                     };
                     this.min_zoom = 5;
                     this.max_zoom = 20;
@@ -78,6 +81,40 @@
                         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
                         { minZoom: this.min_zoom, maxZoom: this.max_zoom }
                     ).addTo(this.map);
+
+                    this.map.on("move", e => {
+                        if (
+                            this.lastFocusedTimeStamp &&
+                            this.last_focused_waypoint_color
+                        ) {
+                            let diff =
+                                performance.now() - this.lastFocusedTimeStamp;
+                            if (diff > 1000) {
+                                this.map.eachLayer(layer => {
+                                    if (
+                                        layer instanceof L.Marker &&
+                                        layer.options.icon.options.iconUrl.includes(
+                                            "marker-icon-violet"
+                                        )
+                                    ) {
+                                        layer.setIcon(
+                                            L.icon({
+                                                iconUrl:
+                                                    map_interface.assets_url +
+                                                    `marker-icon-${this.last_focused_waypoint_color}.png`,
+                                                shadowUrl:
+                                                    map_interface.assets_url +
+                                                    "marker-shadow.png",
+                                                iconSize: [25, 41],
+                                                iconAnchor: [12, 41],
+                                                shadowSize: [41, 41]
+                                            })
+                                        );
+                                    }
+                                });
+                            }
+                        }
+                    });
 
                     // Click event to add waypoint
                     this.map.on("click", e => {
@@ -114,7 +151,7 @@
                     this.boat_marker = L.marker(this.boat.location, {
                         icon: map_interface.boat_icon,
                         rotationAngle: this.boat.heading,
-                        rotationOrigin: "center",
+                        rotationOrigin: "center"
                     }).addTo(this.map);
 
                     this.map.on("zoomend", () => {
@@ -136,8 +173,8 @@
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({
-                                    waypoints: this.waypoints,
-                                }),
+                                    waypoints: this.waypoints
+                                })
                             }
                         );
 
@@ -173,7 +210,7 @@
                     // Add the new waypoint
                     this.waypoints.push([lat, lon]);
                     L.marker([lat, lon], {
-                        icon: map_interface.waypoint_icon,
+                        icon: map_interface.waypoint_icon
                     }).addTo(this.map);
                     this.sync_waypoints();
                 }
@@ -200,7 +237,7 @@
                                             "marker-shadow.png",
                                         iconSize: [25, 41],
                                         iconAnchor: [12, 41],
-                                        shadowSize: [41, 41],
+                                        shadowSize: [41, 41]
                                     })
                                 );
                             }
@@ -245,9 +282,10 @@
                  * @return {void}
                  */
                 add_buoy(lat, lon) {
+                    console.log(lat, lon);
                     this.buoys.push([lat, lon]);
                     L.marker([lat, lon], {
-                        icon: map_interface.buoy_icon,
+                        icon: map_interface.buoy_icon
                     }).addTo(this.map);
                 }
 
@@ -309,13 +347,93 @@
                 }
 
                 /**
-                 * Focuses the map on a specific waypoint.
-                 * @param {number} lat - Latitude of the waypoint.
-                 * @param {number} lon - Longitude of the waypoint.
+                 * Focuses the map on a specific marker (waypoint or buoy).
+                 * @param {number} lat - Latitude of the marker.
+                 * @param {number} lon - Longitude of the marker.
                  * @return {void}
                  */
-                focus_map_on_waypoint(lat, lon) {
-                    this.map.setView([lat, lon], this.map.getZoom());
+                focus_map_on_marker(lat, lon) {
+                    const markers = this.waypoints.concat(this.buoys);
+                    for (let waypoint of markers) {
+                        if (waypoint[0] === lat && waypoint[1] === lon) {
+                            this.lastFocusedTimeStamp = performance.now();
+                            this.map.setView(waypoint, this.map.getZoom());
+
+                            if (this.last_focused_waypoint_color) {
+                                // Reset the color of previously focused waypoint
+                                this.map.eachLayer(layer => {
+                                    if (
+                                        layer instanceof L.Marker &&
+                                        layer.options.icon.options.iconUrl.includes(
+                                            "marker-icon-violet"
+                                        )
+                                    ) {
+                                        layer.setIcon(
+                                            L.icon({
+                                                iconUrl:
+                                                    map_interface.assets_url +
+                                                    `marker-icon-${this.last_focused_waypoint_color}.png`,
+                                                shadowUrl:
+                                                    map_interface.assets_url +
+                                                    "marker-shadow.png",
+                                                iconSize: [25, 41],
+                                                iconAnchor: [12, 41],
+                                                shadowSize: [41, 41]
+                                            })
+                                        );
+                                    }
+                                });
+                            }
+
+                            // also change the color of the waypoint to indicate focus
+                            this.map.eachLayer(layer => {
+                                if (
+                                    layer instanceof L.Marker &&
+                                    layer.getLatLng().equals(waypoint)
+                                ) {
+                                    this.last_focused_waypoint_color =
+                                        layer.options.icon.options.iconUrl
+                                            .split("-")
+                                            .slice(-1)[0]
+                                            .replace(".png", "");
+                                    layer.setIcon(
+                                        L.icon({
+                                            iconUrl:
+                                                map_interface.assets_url +
+                                                `marker-icon-${map_interface.focused_waypoint_color}.png`,
+                                            shadowUrl:
+                                                map_interface.assets_url +
+                                                "marker-shadow.png",
+                                            iconSize: [25, 41],
+                                            iconAnchor: [12, 41],
+                                            shadowSize: [41, 41]
+                                        })
+                                    );
+                                } else if (
+                                    layer instanceof L.Marker &&
+                                    layer.options.icon.options.iconUrl.includes(
+                                        "marker-icon-violet"
+                                    )
+                                ) {
+                                    // Reset the color of previously focused waypoint
+                                    layer.setIcon(
+                                        L.icon({
+                                            iconUrl:
+                                                map_interface.assets_url +
+                                                `marker-icon-${this.last_focused_waypoint_color}.png`,
+                                            shadowUrl:
+                                                map_interface.assets_url +
+                                                "marker-shadow.png",
+                                            iconSize: [25, 41],
+                                            iconAnchor: [12, 41],
+                                            shadowSize: [41, 41]
+                                        })
+                                    );
+                                }
+                            });
+                            return;
+                        }
+                    }
                 }
 
                 /**
@@ -324,26 +442,30 @@
                  * @return {void}
                  */
                 zoom_icons(zoom) {
-                    const size = Math.max(
-                        20,
-                        Math.min(60, 4 * Math.pow(zoom, 0.9))
+                    const scale = Math.pow(2, zoom - this.map.getZoom());
+                    this.boat_marker.setIcon(
+                        L.icon({
+                            iconUrl: map_interface.assets_url + "boat.png",
+                            iconSize: [50 * scale, 50 * scale],
+                            iconAnchor: [25 * scale, 25 * scale]
+                        })
                     );
                     this.map.eachLayer(layer => {
                         if (layer instanceof L.Marker) {
-                            layer.setIcon(
-                                L.icon({
-                                    iconUrl: layer.options.icon.options.iconUrl,
-                                    iconSize: [size, size],
-                                    iconAnchor: [size / 2, size / 2],
-                                    shadowUrl:
-                                        layer.options.icon.options.shadowUrl ||
-                                        undefined,
-                                    shadowSize: layer.options.icon.options
-                                        .shadowUrl
-                                        ? [size, size]
-                                        : undefined,
-                                })
-                            );
+                            let iconUrl = layer.options.icon.options.iconUrl;
+                            if (iconUrl.includes("marker-icon")) {
+                                layer.setIcon(
+                                    L.icon({
+                                        iconUrl: iconUrl,
+                                        shadowUrl:
+                                            map_interface.assets_url +
+                                            "marker-shadow.png",
+                                        iconSize: [25 * scale, 41 * scale],
+                                        iconAnchor: [12 * scale, 41 * scale],
+                                        shadowSize: [41 * scale, 41 * scale]
+                                    })
+                                );
+                            }
                         }
                     });
                 }

@@ -14,6 +14,9 @@ if ! command -v go &> /dev/null; then
     exit 1
 fi
 
+go_src="src/widgets/map_widget/server.go"
+python_src="src/main.py"
+
 # Check for Python installation
 if ! command -v python3 &> /dev/null; then
     echo "Python 3 is not installed. Please install Python 3 to run this script."
@@ -55,7 +58,7 @@ fi
 
 if [[ "$should_rebuild" == true ]]; then
     $local_go mod tidy
-    if $local_go build -o "bin/$bin_name" src/web_engine/server.go; then
+    if $local_go build -o "bin/$bin_name" $go_src; then
         echo "Go server built successfully."
         {
             echo "$os_type"
@@ -72,7 +75,7 @@ bin/$bin_name &
 GO_PID=$!
 
 # Start Python script in the background
-$local_python src/main.py &
+$local_python $python_src &
 PYTHON_PID=$!
 
 cleanup() {

@@ -1,7 +1,6 @@
 # region imports
 import os
 import time
-import base64
 import requests
 import json
 
@@ -11,6 +10,7 @@ from syntax_highlighters.json import JsonHighlighter
 from widgets.popup_edit import TextEditWindow
 
 from pathlib import PurePath
+from functools import partial
 from typing import Literal, Any
 
 from qtpy.QtCore import Qt
@@ -44,23 +44,27 @@ class GroundStationWidget(QWidget):
         super().__init__()
         self.waypoints: list[list[float]] = []
         self.num_waypoints: int = 0
-        self.boat_data_averages: dict[str, float] = {
-            "vesc_data_rpm": 0.0,
-            "vesc_data_amp_hours": 0.0,
-            "vesc_data_amp_hours_charged": 0.0,
-            "vesc_data_current_to_vesc": 0.0,
-            "vesc_data_voltage_to_motor": 0.0,
-            "vesc_data_voltage_to_vesc": 0.0,
-            "vesc_data_wattage_to_motor": 0.0,
-            "vesc_data_motor_temperature": 0.0,
-        }
 
         # buoy_name => {"lat": float, "lon": float}
         self.buoys: dict[str, dict[str, float]] = {}
 
+        self.all_boat_data: dict[str, dict[str, dict]] = {}
         self.boat_data: dict[str, Any] = {}
-        self.autopilot_parameters: dict[str, Any] = {}
         self.telemetry_data_limits: dict[str, float] = {}
+
+        # should we remember the status of the user's last response to the
+        # dialog that asks if the telemetry server URL should be changed?
+        self.remember_telemetry_server_url_status: bool = False
+
+        # should we remember the status of the user's last response to the
+        # dialog that asks if the user wants to pull waypoints from the telemetry server?
+        self.remember_waypoints_pull_service_status: bool = False
+
+        # region timers
+        self.ten_ms_timer = constants.TEN_MS_TIMER
+        self.one_ms_timer = constants.ONE_MS_TIMER
+        self.ten_second_timer = constants.TEN_SECOND_TIMER
+        self.timers = [self.ten_second_timer, self.ten_ms_timer, self.one_ms_timer]
 
         # region define layouts
         self.main_layout = QGridLayout()
@@ -163,6 +167,9 @@ class GroundStationWidget(QWidget):
         self.right_tab1_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.right_tab1_table = QTableWidget()
         self.right_tab1_table.setMinimumWidth(self.right_width)
+        self.right_tab1_table.cellClicked.connect(
+            partial(self.zoom_to_marker, table="waypoints")
+        )
         self.can_send_waypoints = True
         self.send_waypoints_button = constants.pushbutton_maker(
             "Send Waypoints",
@@ -215,6 +222,9 @@ class GroundStationWidget(QWidget):
         self.right_tab2_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.right_tab2_table = QTableWidget()
         self.right_tab2_table.setMinimumWidth(self.right_width)
+        self.right_tab2_table.cellClicked.connect(
+            partial(self.zoom_to_marker, table="buoys")
+        )
 
         self.edit_buoy_data_button = constants.pushbutton_maker(
             "Edit Buoy Data",
@@ -258,43 +268,35 @@ class GroundStationWidget(QWidget):
         # endregion setup UI
 
         self.telemetry_handler = thread_classes.TelemetryUpdater()
-        self.js_waypoint_handler = thread_classes.LocalWaypointFetcher()
-        self.telemetry_waypoint_handler = thread_classes.RemoteWaypointFetcher()
+        self.local_waypoint_handler = thread_classes.LocalWaypointFetcher()
+        self.remote_waypoint_handler = thread_classes.RemoteWaypointFetcher()
 
-        # Connect signals to update UI
+        self.ten_second_timer.timeout.connect(self.remote_waypoint_handler_starter)
+        self.ten_ms_timer.timeout.connect(self.update_telemetry_starter)
+        self.one_ms_timer.timeout.connect(self.local_waypoint_handler_starter)
+
+        # updating displays
         self.telemetry_handler.boat_data_fetched.connect(self.update_telemetry_display)
+        self.local_waypoint_handler.waypoints_fetched.connect(
+            self.update_waypoints_display
+        )
+
+        # telemetry server URL change
+
         self.telemetry_handler.request_url_change.connect(
             self.change_telemetry_server_url
         )
-        self.js_waypoint_handler.waypoints_fetched.connect(
-            self.update_waypoints_display
-        )
-        self.telemetry_waypoint_handler.waypoints_fetched.connect(
-            self.check_telemetry_waypoints
-        )
-        self.telemetry_waypoint_handler.request_url_change.connect(
+        self.remote_waypoint_handler.request_url_change.connect(
             self.change_telemetry_server_url
         )
-        self.remember_telemetry_server_url_status: bool = False
 
-        # 10 second timer
-        self.ten_second_timer = constants.TEN_SECOND_TIMER
-        self.ten_second_timer.timeout.connect(self.telemetry_waypoint_handler_starter)
+        # misc
+        self.remote_waypoint_handler.waypoints_fetched.connect(
+            self.check_telemetry_waypoints
+        )
 
-        # Slow timer
-        self.slow_timer = constants.SLOW_TIMER
-        self.slow_timer.timeout.connect(self.update_telemetry_starter)
-
-        # Fast timer
-        self.fast_timer = constants.FAST_TIMER
-        self.fast_timer.timeout.connect(self.js_waypoint_handler_starter)
-
-        self.timers = [self.ten_second_timer, self.slow_timer, self.fast_timer]
-
-        # Start timers
-        self.fast_timer.start()
-        self.slow_timer.start()
-        self.ten_second_timer.start()
+        for timer in self.timers:
+            timer.start()
 
     # region button functions
     def send_waypoints(self, test: bool = False) -> None:
@@ -309,23 +311,33 @@ class GroundStationWidget(QWidget):
 
         if not test:
             try:
-                requests.post(
+                response = constants.REQ_SESSION.post(
                     constants.TELEMETRY_SERVER_ENDPOINTS["set_waypoints"],
                     json={"value": self.waypoints},
+                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
+                response.raise_for_status()
+
                 js_code = "map.change_color_waypoints('red')"
                 self.browser.page().runJavaScript(js_code)
+                print(
+                    f"[Info] Waypoints sent successfully. Waypoints: {self.waypoints}"
+                )
+
             except requests.exceptions.RequestException as e:
                 print(
                     f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}"
                 )
-            print(f"[Info] Waypoints sent successfully: {self.waypoints}")
+
         else:
             try:
-                requests.post(
+                response = constants.REQ_SESSION.post(
                     constants.TELEMETRY_SERVER_ENDPOINTS["waypoints_test"],
                     json={"value": self.waypoints},
+                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
+                response.raise_for_status()
+
             except requests.exceptions.RequestException as e:
                 print(
                     f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}"
@@ -335,9 +347,11 @@ class GroundStationWidget(QWidget):
         """Pull waypoints from the telemetry server and add them to the map."""
 
         try:
-            remote_waypoints: list[list[float]] = requests.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"]
+            remote_waypoints: list[list[float]] = constants.REQ_SESSION.get(
+                constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"],
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
+
             if remote_waypoints:
                 print(f"[Info] Fetched waypoints from server: {remote_waypoints}")
                 existing_waypoints = self.waypoints.copy()
@@ -351,15 +365,15 @@ class GroundStationWidget(QWidget):
                     self.browser.page().runJavaScript(
                         f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"
                     )
+
             else:
                 print("[Warning] No waypoints found on the server.")
+
             self.can_pull_waypoints = False
             self.pull_waypoints_button.setDisabled(not self.can_pull_waypoints)
 
-        except KeyError:
-            print("[Error] No waypoints found in the response from the server.")
         except requests.exceptions.RequestException as e:
-            print(f"[Error] Failed to pull waypoints: {e}")
+            print(f"[Error] Failed to pull waypoints. Exception: {e}")
 
     def clear_waypoints(self) -> None:
         """Clear waypoints from the table."""
@@ -369,30 +383,6 @@ class GroundStationWidget(QWidget):
         self.pull_waypoints_button.setDisabled(not self.can_pull_waypoints)
         js_code = "map.clear_waypoints()"
         self.browser.page().runJavaScript(js_code)
-
-    def send_image(self) -> None:
-        """
-        Send image to the server.
-
-        This function only for testing purposes.
-        """
-
-        try:
-            # read image from file and encode it to base64
-            image = PurePath(constants.ASSETS_DIR / "test.jpg")
-            with open(image, "rb") as f:
-                image = f.read()
-            base64_encoded_image = base64.b64encode(image).decode("utf-8")
-            autopilot_parameters = self.autopilot_parameters
-            autopilot_parameters["current_camera_image"] = base64_encoded_image
-            requests.post(
-                constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
-                json={"value": autopilot_parameters},
-            ).json()
-        except requests.exceptions.RequestException as e:
-            print(f"[Error] Failed to send image: {e}")
-        except FileNotFoundError as e:
-            print(f"[Error] Image file not found: {e}")
 
     def save_boat_data(self) -> None:
         """
@@ -639,20 +629,86 @@ class GroundStationWidget(QWidget):
         else:
             print("[Warning] Boat position not available.")
 
+    def zoom_to_marker(
+        self, row: int, table: Literal["waypoints", "buoys"] = "waypoints"
+    ) -> None:
+        """
+        Center the view on the selected waypoint in the table.
+
+        Parameters
+        ----------
+        row
+            The row index of the waypoint in the table.
+
+        table
+            The table to zoom in on, either "waypoints" or "buoys". Defaults to "waypoints".
+        """
+
+        if table == "waypoints":
+            if self.right_tab1_table.rowCount() > 0:
+                try:
+                    approx_lat = float(self.right_tab1_table.item(row, 0).text())
+                    approx_lon = float(self.right_tab1_table.item(row, 1).text())
+
+                    lat, lon = None, None
+                    for waypoint in self.waypoints:
+                        if (
+                            abs(waypoint[0] - approx_lat) < 1e-6
+                            and abs(waypoint[1] - approx_lon) < 1e-6
+                        ):
+                            lat, lon = waypoint
+                            break
+
+                    js_code = f"map.focus_map_on_marker({lat}, {lon})"
+                    self.browser.page().runJavaScript(js_code)
+
+                except (ValueError, TypeError) as e:
+                    print(f"[Error] Invalid waypoint data: {e}")
+            else:
+                print("[Warning] No waypoints available to zoom to.")
+
+        elif table == "buoys":
+            if self.right_tab2_table.rowCount() > 0:
+                try:
+                    approx_lat = float(self.right_tab2_table.item(row, 0).text())
+                    approx_lon = float(self.right_tab2_table.item(row, 1).text())
+
+                    lat, lon = None, None
+                    for buoy in self.buoys.values():
+                        if (
+                            abs(buoy["lat"] - approx_lat) < 1e-6
+                            and abs(buoy["lon"] - approx_lon) < 1e-6
+                        ):
+                            lat, lon = buoy["lat"], buoy["lon"]
+                            break
+
+                    js_code = f"map.focus_map_on_marker({lat}, {lon})"
+                    self.browser.page().runJavaScript(js_code)
+
+                except (ValueError, TypeError) as e:
+                    print(f"[Error] Invalid buoy data: {e}")
+            else:
+                print("[Warning] No buoys available to zoom to.")
+
+        else:
+            print(
+                f"[Error] Invalid table specified: {table}. Use 'waypoints' or 'buoys'."
+            )
+
     # endregion button functions
 
     # region pyqt thread functions
-    def js_waypoint_handler_starter(self) -> None:
+    def local_waypoint_handler_starter(self) -> None:
         """Starts the JS waypoint handler thread."""
 
-        if not self.js_waypoint_handler.isRunning():
-            self.js_waypoint_handler.start()
+        if not self.local_waypoint_handler.isRunning():
+            self.local_waypoint_handler.start()
 
-    def telemetry_waypoint_handler_starter(self) -> None:
+    def remote_waypoint_handler_starter(self) -> None:
         """Starts the telemetry waypoint handler thread."""
 
-        if not self.telemetry_waypoint_handler.isRunning():
-            self.telemetry_waypoint_handler.start()
+        if not self.remote_waypoint_handler.isRunning():
+            self.remote_waypoint_handler.start()
 
     def update_telemetry_starter(self) -> None:
         """Starts the telemetry handler thread."""
@@ -711,17 +767,13 @@ class GroundStationWidget(QWidget):
             List of waypoints to check.
         """
 
-        flag = False
-        for waypoint in waypoints:
-            if waypoint not in self.waypoints:
-                flag = True
-                break
+        equal_flag = sorted(self.waypoints) == sorted(waypoints)
 
-        if flag:
-            print(
-                "[Warning] Local waypoints are different from telemetry server waypoints."
-            )
-            response = constants.show_message_box(
+        if not equal_flag and not self.remember_waypoints_pull_service_status:
+            for timer in self.timers:
+                timer.stop()
+
+            response, temp_pull_waypoints_reminder = constants.show_message_box(
                 "Local Waypoints Mismatch",
                 "The local waypoints are different from the telemetry server waypoints. Do you want to update the local waypoints?",
                 constants.ICONS.warning,
@@ -729,6 +781,7 @@ class GroundStationWidget(QWidget):
                     QMessageBox.StandardButton.Yes,
                     QMessageBox.StandardButton.No,
                 ],
+                True,
             )
             if response == QMessageBox.StandardButton.Yes:
                 not_uploaded_waypoints = [
@@ -746,10 +799,25 @@ class GroundStationWidget(QWidget):
                         f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"
                     )
                 print("[Info] Local waypoints updated from telemetry server.")
+
             else:
+                self.remember_waypoints_pull_service_status = (
+                    temp_pull_waypoints_reminder
+                )
                 print("[Info] Local waypoints not updated.")
+
+            for timer in self.timers:
+                timer.start()
+
+        elif not equal_flag and self.remember_waypoints_pull_service_status:
+            print(
+                "[Info] Local waypoints do not match telemetry server waypoints, but user has chosen to not be reminded."
+            )
+
         else:
-            print("[Info] Local waypoints match telemetry server waypoints.")
+            print(
+                "[Info] Local waypoints match telemetry server waypoints, but user has chosen to not be reminded."
+            )
 
     def change_telemetry_server_url(
         self, telemetry_status: constants.TelemetryStatus
@@ -893,86 +961,56 @@ class GroundStationWidget(QWidget):
 
             return ms * 1000
 
+        self.boat_data = boat_data
+        self.all_boat_data[f"{time.time_ns()}"] = boat_data
+
         try:
-            distance_to_next_waypoint = boat_data.get("distance_to_next_waypoint", 0.0)
+            if not isinstance(self.boat_data.get("position"), list):
+                raise TypeError(
+                    "Boat position is not a list. Expected format: [latitude, longitude]"
+                )
+            if not isinstance(self.boat_data.get("heading"), float):
+                raise TypeError("Boat heading is not a float. Expected format: float")
 
-        except Exception as e:
-            print(e)
-            distance_to_next_waypoint = 0.0
+            if not all(
+                isinstance(coord, (float, int)) for coord in self.boat_data["position"]
+            ):
+                raise TypeError("Boat position coordinates are not all floats or ints.")
 
-            telemetry_text = f"""Boat Info:
-Position: {boat_data.get("position", [-69.420, -69.420])[0]:.8f}, {boat_data.get("position", [-69.420, -69.420])[1]:.8f}
-State: {boat_data.get("state", "N/A")}
-Speed: {boat_data.get("speed", -69.420):.5f} knots
-Distance To Next WP: {fix_formatting(distance_to_next_waypoint)} meters
-Bearing: {boat_data.get("bearing", -69.420):.5f}°
-Heading: {boat_data.get("heading", -69.420):.5f}°
-True Wind Speed: {boat_data.get("true_wind_speed", -69.420):.5f} knots
-True Wind Angle: {boat_data.get("true_wind_angle", -69.420):.5f}°
-Apparent Wind Speed: {boat_data.get("apparent_wind_speed", -69.420):.5f} knots
-Apparent Wind Angle: {boat_data.get("apparent_wind_angle", -69.420):.5f}°
-Sail Angle: {boat_data.get("sail_angle", -69.420):.5f}°
-Rudder Angle: {boat_data.get("rudder_angle", -69.420):.5f}°
-Current Waypoint Index: {boat_data.get("current_waypoint_index", "N/A")}
+            if len(self.boat_data["position"]) != 2:
+                raise ValueError(
+                    "Boat position list does not contain exactly two elements."
+                )
 
-VESC Data:
-RPM: {fix_formatting(boat_data.get("vesc_data_rpm"))}
-Duty Cycle: {fix_formatting(boat_data.get("vesc_data_duty_cycle", 0.0))}%
-Amp Hours: {boat_data.get("vesc_data_amp_hours", -69.420):.5f} Ah
-Current to VESC: {boat_data.get("vesc_data_current_to_vesc", -69.420):.5f} A
-Voltage to VESC: {boat_data.get("vesc_data_voltage_to_vesc", -69.420):.5f} V
-Wattage to Motor: {fix_formatting(boat_data.get("vesc_data_wattage_to_motor"))} W
-Voltage to Motor: {boat_data.get("vesc_data_voltage_to_motor", -69.420):.5f} V
-Time Since VESC Startup: {convert_to_seconds(boat_data.get("vesc_data_time_since_vesc_startup_in_ms", -1.0)):.5f} seconds
-Motor Temperature: {fix_formatting(boat_data.get("vesc_data_motor_temperature"))}°C
-"""
-        else:
-            for key in self.boat_data_averages:
-                # self.boat_data = data from one iteration in the past
-                # boat_data = data from the current iteration
-                current_value = boat_data.get(key)
-                if current_value is not None:
-                    self.boat_data_averages[key] = (
-                        self.boat_data_averages[key] + current_value
-                    ) / 2
-
-            telemetry_text = f"""Boat Info:
-Position: {boat_data.get("position", [-69.420, -69.420])[0]:.8f}, {boat_data.get("position", [-69.420, -69.420])[1]:.8f}
-State: {boat_data.get("state", "N/A")}
-Speed: {boat_data.get("speed", -69.420):.5f} knots
-Distance To Next WP: {fix_formatting(distance_to_next_waypoint)} meters
-Bearing: {boat_data.get("bearing", -69.420):.5f}°
-Heading: {boat_data.get("heading", -69.420):.5f}°
-True Wind Speed: {boat_data.get("true_wind_speed", -69.420):.5f} knots
-True Wind Angle: {boat_data.get("true_wind_angle", -69.420):.5f}°
-Apparent Wind Speed: {boat_data.get("apparent_wind_speed", -69.420):.5f} knots
-Apparent Wind Angle: {boat_data.get("apparent_wind_angle", -69.420):.5f}°
-Sail Angle: {boat_data.get("sail_angle", -69.420):.5f}°
-Rudder Angle: {boat_data.get("rudder_angle", -69.420):.5f}°
-Current Waypoint Index: {boat_data.get("current_waypoint_index", "N/A")}
-
-VESC Data:
-RPM: {fix_formatting(self.boat_data_averages.get("vesc_data_rpm"))}
-Duty Cycle: {fix_formatting(boat_data.get("vesc_data_duty_cycle", 0.0))}%
-Amp Hours: {self.boat_data_averages.get("vesc_data_amp_hours", -69.420):.5f} Ah
-Current to VESC: {self.boat_data_averages.get("vesc_data_current_to_vesc", -69.420):.5f} A
-Voltage to VESC: {self.boat_data_averages.get("vesc_data_voltage_to_vesc", -69.420):.5f} V
-Wattage to Motor: {fix_formatting(self.boat_data_averages.get("vesc_data_wattage_to_motor"))} W
-Voltage to Motor: {self.boat_data_averages.get("vesc_data_voltage_to_motor", -69.420):.5f} V
-Time Since VESC Startup: {convert_to_seconds(boat_data.get("vesc_data_time_since_vesc_startup_in_ms", -1)):.5f} seconds
-Motor Temperature: {fix_formatting(self.boat_data_averages.get("vesc_data_motor_temperature"))}°C
-"""
-
-        if isinstance(boat_data.get("position"), list):
-            js_code = f"map.update_boat_location({boat_data.get('position')[0]}, {boat_data.get('position')[1]})"
+            js_code = (
+                f"map.update_boat_location({self.boat_data['position'][0]}, {self.boat_data['position'][1]});"
+                f"map.update_boat_heading({self.boat_data['heading']});"
+            )
             self.browser.page().runJavaScript(js_code)
 
-        if isinstance(boat_data.get("heading"), float):
-            js_code = f"map.update_boat_heading({boat_data.get('heading')})"
-            self.browser.page().runJavaScript(js_code)
+        except TypeError:
+            self.boat_data["position"] = [-69.420, -69.420]
+            self.boat_data["heading"] = -69.420
+
+        telemetry_text = (
+            "Position: "
+            f"{self.boat_data.get('position', [-69.420, -69.420])[0]:.8f}, "
+            f"{self.boat_data.get('position', [-69.420, -69.420])[1]:.8f}\n"
+            f"State: {self.boat_data.get('state', 'N/A')}\n"
+            f"Speed: {self.boat_data.get('speed', -69.420):.5f} knots\n"
+            f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
+            f"Bearing: {self.boat_data.get('bearing', -69.420):.5f}°\n"
+            f"Heading: {self.boat_data.get('heading', -69.420):.5f}°\n"
+            f"True Wind Speed: {self.boat_data.get('true_wind_speed', -69.420):.5f} knots\n"
+            f"True Wind Angle: {self.boat_data.get('true_wind_angle', -69.420):.5f}°\n"
+            f"Apparent Wind Speed: {self.boat_data.get('apparent_wind_speed', -69.420):.5f} knots\n"
+            f"Apparent Wind Angle: {self.boat_data.get('apparent_wind_angle', -69.420):.5f}°\n"
+            f"Sail Angle: {self.boat_data.get('sail_angle', -69.420):.5f}°\n"
+            f"Rudder Angle: {self.boat_data.get('rudder_angle', -69.420):.5f}°\n"
+            f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index', 'N/A')}"
+        )
 
         self.left_text_section.setText(telemetry_text)
-        self.boat_data = boat_data
 
     # endregion pyqt thread functions
 
