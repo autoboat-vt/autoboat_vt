@@ -310,8 +310,8 @@ WAYPOINTS_SERVER_URL = "http://localhost:3001/waypoints"
 
 # base url for telemetry server (the CIA is inside of my brain...)
 # TELEMETRY_SERVER_URL = "http://54.165.159.151:8080/"
-# TELEMETRY_SERVER_URL = "http://3.138.35.188:5000/"
-TELEMETRY_SERVER_URL = "http://localhost:8000/"
+TELEMETRY_SERVER_URL = "http://3.138.35.188:5000/"
+# TELEMETRY_SERVER_URL = "http://localhost:8000/"
 
 # endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint`
 TELEMETRY_SERVER_ENDPOINTS = {
