@@ -160,7 +160,7 @@ class GroundStationWidget(QWidget):
         # endregion middle section
 
         # region right section
-        self.right_width = 300
+        self.right_width = 320
 
         # region tab1: waypoint data
         self.right_tab1_label = QLabel("Waypoints")
