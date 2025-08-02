@@ -48,7 +48,7 @@ class TelemetryUpdater(QThread):
             boat_status = constants.REQ_SESSION.get(
                 constants.TELEMETRY_SERVER_ENDPOINTS["get_boat_status"],
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-            ).json()
+            ).json()["value"]
             self.request_url_change.emit(constants.TelemetryStatus.SUCCESS)
 
         except requests.exceptions.RequestException as e:
