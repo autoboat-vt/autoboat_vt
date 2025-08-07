@@ -198,9 +198,7 @@ class SailboatAutopilot:
         apparent_wind_speed, apparent_wind_angle = cartesian_vector_to_polar(apparent_wind_vector[0], apparent_wind_vector[1])
         
         global_true_wind_angle = (true_wind_angle + heading) % 360
-        
-        self.logger.info(f"autopilot: {global_true_wind_angle}")
-        
+                
         desired_pos = self.waypoints[self.current_waypoint_index]
         distance_to_desired_position = get_distance_between_positions(cur_position, desired_pos)
 

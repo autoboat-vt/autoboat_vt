@@ -85,13 +85,12 @@ def get_bearing(current_pos: Position, destination_pos: Position):
     cur_lat, cur_lon = current_pos.get_lat_lon()
     des_lat, des_lon = destination_pos.get_lat_lon()
     azimuth_heading, _, _ = pyproj.Geod(ellps='WGS84').inv(cur_lon, cur_lat, des_lon, des_lat)
-    return (-azimuth_heading+90) % 360
-    # return (-azimuth_heading + 90) % 360   # azimuth is cw from true north while we want ccw from true east
+    return (-azimuth_heading + 90) % 360      # azimuth is cw from true north while we want ccw from true east
 
 
 
-def get_distance_between_positions(pos1: Position, pos2: Position):
-    return geopy.distance.geodesic(pos1.get_lat_lon(), pos2.get_lat_lon()).m
+def get_distance_between_positions(position1: Position, position2: Position):
+    return geopy.distance.geodesic(position1.get_lat_lon(), position2.get_lat_lon()).m
 
 
 

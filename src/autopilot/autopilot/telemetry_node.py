@@ -196,6 +196,7 @@ class TelemetryNode(Node):
         true_wind_vector = self.apparent_wind_vector + self.velocity_vector
         self.true_wind_speed, self.true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
 
+        
         if self.current_waypoints_list != []:
             current_position = Position(self.position.latitude, self.position.longitude)
             next_waypoint_position = Position(self.current_waypoints_list[self.current_waypoint_index][0], self.current_waypoints_list[self.current_waypoint_index][1])
@@ -204,7 +205,6 @@ class TelemetryNode(Node):
         else:
             distance_to_next_waypoint = 0.0
         
-        print(distance_to_next_waypoint)
         
         # boat_status_dict = {
         #     "position": (self.position.latitude, self.position.longitude), 
@@ -255,30 +255,31 @@ class TelemetryNode(Node):
             "current_waypoint_index": self.current_waypoint_index,
             "distance_to_next_waypoint": distance_to_next_waypoint
         }
-        
-        # self.get_logger().info(f"{pympler.asizeof.asizeof(list(boat_status_dictionary.values()))}")
+                
         
         # requests.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json={"value": list(boat_status_dictionary.values())})
         requests.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json={"value": boat_status_dictionary})
 
 
+
     def update_waypoints_from_telemetry(self):
         new_waypoints_list = self.get_raw_response("/waypoints/get_new")
         
-        if new_waypoints_list == {}: return
-        
+        if new_waypoints_list == []: return
         
         # parse waypoints        
         waypoints_nav_sat_fix_list = []
         for waypoint in new_waypoints_list:
             if not waypoint: continue
             
-            lat, lon = waypoint
+            latitude, longitude = waypoint
             
-            try: float(lat) and float(lon)
-            except: raise Exception("Waypoints from Server Were Improperly Formatted")
+            try: 
+                float(latitude) and float(longitude)   # check whether the latitude and longitude are both floars
+            except: 
+                raise Exception("Waypoints from Server Were Improperly Formatted")
             
-            waypoints_nav_sat_fix_list.append(NavSatFix(latitude=float(lat), longitude=float(lon)))
+            waypoints_nav_sat_fix_list.append(NavSatFix(latitude=float(latitude), longitude=float(longitude)))
         
         self.current_waypoints_list = new_waypoints_list
         self.waypoints_list_publisher.publish(WaypointList(waypoints=waypoints_nav_sat_fix_list))

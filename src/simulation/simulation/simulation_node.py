@@ -201,8 +201,6 @@ class SimulationNode(Node):
         # while the global true wind is measured ccw from true east
 
         true_wind_speed, global_true_wind_angle = self.cartesian_vector_to_polar(observation["wind"][0].item(), observation["wind"][1].item())
-
-        self.get_logger().info(f"simulation: {global_true_wind_angle}")
         
         true_wind_angle = global_true_wind_angle - heading_angle.data
         self.true_wind_vector = Vector3(x= (true_wind_speed * np.cos(np.deg2rad(true_wind_angle))), y= (true_wind_speed * np.sin(np.deg2rad(true_wind_angle))))
