@@ -4,7 +4,7 @@
 
 import serial, time
 
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+from rclpy.qos import qos_profile_sensor_data
 import rclpy
 
 from serial.tools import list_ports
@@ -70,15 +70,9 @@ class GPSPublisher(Node):
     
     def __init__(self):
         super().__init__('gps_publisher')
-
-        sensor_qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
-            history=QoSHistoryPolicy.KEEP_LAST,
-            depth=1
-        )
         
-        self.position_publisher = self.create_publisher(NavSatFix, '/position', sensor_qos_profile)
-        self.velocity_publisher = self.create_publisher(Twist, '/velocity', sensor_qos_profile)
+        self.position_publisher = self.create_publisher(NavSatFix, '/position', qos_profile_sensor_data)
+        self.velocity_publisher = self.create_publisher(Twist, '/velocity', qos_profile_sensor_data)
 
         # self.csv_writer = csv.DictWriter(open("gps_data.csv", "w+"), fieldnames=["time", "SOG", "velocity_east", "velocity_north"])
         # self.csv_writer.writeheader()

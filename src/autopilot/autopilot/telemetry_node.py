@@ -6,7 +6,7 @@ from .autopilot_library.utils import *
 
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+from rclpy.qos import qos_profile_sensor_data
 from std_msgs.msg import Float32, Bool, String, Int32
 from geometry_msgs.msg import Vector3, Twist
 from sensor_msgs.msg import NavSatFix, Image
@@ -24,33 +24,6 @@ import geopy.distance
 
 TELEMETRY_SERVER_URL = "http://vt-autoboat-telemetry.uk/"
 
-
-def get_distance_to_waypoint(
-        cur_position: list[float, float], next_waypoint: list[float, float]
-    ) -> float:
-        """
-        Calculates the distance to the next waypoint from the current position using geopy.
-
-        Parameters
-        ----------
-        cur_position
-            The current position of the boat as a list of latitude and longitude.
-        next_waypoint
-            The next waypoint as a list of latitude and longitude.
-
-        Returns
-        -------
-        float
-            The distance to the next waypoint in meters.
-        """
-
-        if next_waypoint:
-            return geopy.distance.geodesic(next_waypoint, cur_position).m
-        else:
-            return geopy.distance.Distance(0.0).m
-
- 
- 
  
  
  
@@ -69,12 +42,6 @@ class TelemetryNode(Node):
         self.create_timer(0.01, self.update_boat_status)
         self.create_timer(0.5, self.update_waypoints_from_telemetry)
         self.create_timer(0.5, self.update_autopilot_parameters_from_telemetry)
-
-        sensor_qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
-            history=QoSHistoryPolicy.KEEP_LAST,
-            depth=1
-        )
         
         self.cv_bridge  = CvBridge()
         
@@ -85,23 +52,23 @@ class TelemetryNode(Node):
         self.desired_heading_listener = self.create_subscription(Float32, '/desired_heading', self.desired_heading_callback, 10)
         self.current_waypoint_index_listener = self.create_subscription(Int32, '/current_waypoint_index', self.current_waypoint_index_callback, 10)
         
-        self.full_autonomy_maneuver_listener = self.create_subscription(msg_type=String, topic="/full_autonomy_maneuver", callback=self.full_autonomy_maneuver_callback, qos_profile=sensor_qos_profile)
-        self.autopilot_mode_listener = self.create_subscription(msg_type=String, topic="/autopilot_mode", callback=self.autopilot_mode_callback, qos_profile=sensor_qos_profile)
+        self.full_autonomy_maneuver_listener = self.create_subscription(msg_type=String, topic="/full_autonomy_maneuver", callback=self.full_autonomy_maneuver_callback, qos_profile=qos_profile_sensor_data)
+        self.autopilot_mode_listener = self.create_subscription(msg_type=String, topic="/autopilot_mode", callback=self.autopilot_mode_callback, qos_profile=qos_profile_sensor_data)
         
-        self.position_listener = self.create_subscription(msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=sensor_qos_profile)
-        self.velocity_listener = self.create_subscription(msg_type=Twist, topic="/velocity", callback=self.velocity_callback, qos_profile=sensor_qos_profile)
-        self.heading_listener = self.create_subscription(msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=sensor_qos_profile)
-        self.apparent_wind_vector_listener = self.create_subscription(msg_type=Vector3, topic="/apparent_wind_vector", callback=self.apparent_wind_vector_callback, qos_profile=sensor_qos_profile)
-        self.camera_rgb_image_listener = self.create_subscription(msg_type=Image, topic="/camera/camera/color/image_raw", callback=self.camera_rgb_image_callback, qos_profile=sensor_qos_profile)
-        self.vesc_telemetry_data_listener = self.create_subscription(VESCTelemetryData, '/vesc_telemetry_data', self.vesc_telemetry_data_callback, sensor_qos_profile)
+        self.position_listener = self.create_subscription(msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=qos_profile_sensor_data)
+        self.velocity_listener = self.create_subscription(msg_type=Twist, topic="/velocity", callback=self.velocity_callback, qos_profile=qos_profile_sensor_data)
+        self.heading_listener = self.create_subscription(msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=qos_profile_sensor_data)
+        self.apparent_wind_vector_listener = self.create_subscription(msg_type=Vector3, topic="/apparent_wind_vector", callback=self.apparent_wind_vector_callback, qos_profile=qos_profile_sensor_data)
+        self.camera_rgb_image_listener = self.create_subscription(msg_type=Image, topic="/camera/camera/color/image_raw", callback=self.camera_rgb_image_callback, qos_profile=qos_profile_sensor_data)
+        self.vesc_telemetry_data_listener = self.create_subscription(VESCTelemetryData, '/vesc_telemetry_data', self.vesc_telemetry_data_callback, qos_profile_sensor_data)
 
         
-        self.desired_sail_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_sail_angle", callback=self.desired_sail_angle_callback, qos_profile=sensor_qos_profile)
-        self.desired_rudder_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_rudder_angle", callback=self.desired_rudder_angle_callback, qos_profile=sensor_qos_profile)
+        self.desired_sail_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_sail_angle", callback=self.desired_sail_angle_callback, qos_profile=qos_profile_sensor_data)
+        self.desired_rudder_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_rudder_angle", callback=self.desired_rudder_angle_callback, qos_profile=qos_profile_sensor_data)
 
         # Default values in case these are never sent through ROS
         # If these values aren't changing then the ros node thats supposed to be sending these values may not be working correctly
-        self.current_waypoints_list: list[tuple[float, float]] = [(0., 0.),]
+        self.current_waypoints_list: list[tuple[float, float]] = []
         self.current_waypoint_index = 0
         self.position = NavSatFix(latitude=0., longitude=0.)
         
@@ -229,6 +196,16 @@ class TelemetryNode(Node):
         true_wind_vector = self.apparent_wind_vector + self.velocity_vector
         self.true_wind_speed, self.true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
 
+        if self.current_waypoints_list != []:
+            current_position = Position(self.position.latitude, self.position.longitude)
+            next_waypoint_position = Position(self.current_waypoints_list[self.current_waypoint_index][0], self.current_waypoints_list[self.current_waypoint_index][1])
+            distance_to_next_waypoint = get_distance_between_positions(current_position, next_waypoint_position)
+        
+        else:
+            distance_to_next_waypoint = 0.0
+        
+        print(distance_to_next_waypoint)
+        
         # boat_status_dict = {
         #     "position": (self.position.latitude, self.position.longitude), 
         #     "state": self.autopilot_mode,
@@ -276,7 +253,7 @@ class TelemetryNode(Node):
             "sail_angle": self.desired_sail_angle, 
             "rudder_angle": self.desired_rudder_angle,
             "current_waypoint_index": self.current_waypoint_index,
-            "distance_to_next_waypoint": get_distance_to_waypoint([self.position.latitude, self.position.longitude], self.current_waypoints_list[self.current_waypoint_index])
+            "distance_to_next_waypoint": distance_to_next_waypoint
         }
         
         # self.get_logger().info(f"{pympler.asizeof.asizeof(list(boat_status_dictionary.values()))}")

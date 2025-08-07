@@ -10,12 +10,11 @@ import math
 import os
 
 from gymnasium.wrappers.time_limit import TimeLimit
-from gymnasium.wrappers.record_video import RecordVideo
 from sailboat_gym import CV2DRenderer, Observation
 
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+from rclpy.qos import qos_profile_sensor_data
 from std_msgs.msg import Float32, Bool
 from geometry_msgs.msg import Vector3, Twist
 from sensor_msgs.msg import NavSatFix
@@ -50,11 +49,9 @@ def generate_wind_real_life_data(_):
     return generated_wind
 
 
-
 def generate_wind_down(_):
     # this is the wind direction measured as (what seems like) counter clockwise from true east
     return np.array([np.cos(np.deg2rad(-90)), np.sin(np.deg2rad(-90))])
-
 
 
 # randomize the wind direction to be more like real life
@@ -90,20 +87,14 @@ class SimulationNode(Node):
 
         super().__init__("simulation")
         
-        sensor_qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
-            history=QoSHistoryPolicy.KEEP_LAST,
-            depth=1
-        )
-
         # NOTE: All units are in standard SI units and angle is measured in degrees        
-        self.position_publisher = self.create_publisher(msg_type=NavSatFix, topic="/position", qos_profile=sensor_qos_profile)
-        self.velocity_publisher = self.create_publisher(msg_type=Twist, topic="/velocity", qos_profile=sensor_qos_profile)
-        self.heading_publisher = self.create_publisher(msg_type=Float32, topic="/heading", qos_profile=sensor_qos_profile)
-        self.apparent_wind_vector_publisher = self.create_publisher(msg_type=Vector3, topic="/apparent_wind_vector", qos_profile=sensor_qos_profile)
+        self.position_publisher = self.create_publisher(msg_type=NavSatFix, topic="/position", qos_profile=qos_profile_sensor_data)
+        self.velocity_publisher = self.create_publisher(msg_type=Twist, topic="/velocity", qos_profile=qos_profile_sensor_data)
+        self.heading_publisher = self.create_publisher(msg_type=Float32, topic="/heading", qos_profile=qos_profile_sensor_data)
+        self.apparent_wind_vector_publisher = self.create_publisher(msg_type=Vector3, topic="/apparent_wind_vector", qos_profile=qos_profile_sensor_data)
         
-        self.rudder_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_rudder_angle", callback=self.desired_rudder_angle_callback, qos_profile=sensor_qos_profile)
-        self.sail_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_sail_angle", callback=self.desired_sail_angle_callback, qos_profile=sensor_qos_profile)
+        self.rudder_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_rudder_angle", callback=self.desired_rudder_angle_callback, qos_profile=qos_profile_sensor_data)
+        self.sail_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_sail_angle", callback=self.desired_sail_angle_callback, qos_profile=qos_profile_sensor_data)
         
         self.termination_listener = self.create_subscription(msg_type=Bool, topic="/should_terminate", callback=self.should_terminate_callback, qos_profile=10)
         

@@ -197,7 +197,7 @@ class SailboatAutopilot:
         true_wind_speed, true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
         apparent_wind_speed, apparent_wind_angle = cartesian_vector_to_polar(apparent_wind_vector[0], apparent_wind_vector[1])
         
-        global_true_wind_angle = true_wind_angle + heading
+        global_true_wind_angle = (true_wind_angle + heading) % 360
         
         self.logger.info(f"autopilot: {global_true_wind_angle}")
         
@@ -221,12 +221,12 @@ class SailboatAutopilot:
         if self.current_state == SailboatStates.NORMAL:
             desired_heading = get_bearing(current_pos=cur_position, destination_pos=desired_pos)
 
-            desired_heading, should_tack1 = self.apply_decision_zone_tacking_logic(heading, desired_heading, true_wind_angle, apparent_wind_angle, distance_to_desired_position)
+            desired_heading, should_tack_condition1 = self.apply_decision_zone_tacking_logic(heading, desired_heading, true_wind_angle, apparent_wind_angle, distance_to_desired_position)
             
             global_true_up_wind_angle = (180 + global_true_wind_angle) % 360
-            should_tack2 = is_angle_between_boundaries(global_true_up_wind_angle, heading, desired_heading)
+            should_tack_condition2 = is_angle_between_boundaries(global_true_up_wind_angle, heading, desired_heading)
             
-            if should_tack1 or should_tack2:
+            if should_tack_condition1 or should_tack_condition2:
                 optimal_rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading)
                 
                 self.desired_tacking_angle = desired_heading

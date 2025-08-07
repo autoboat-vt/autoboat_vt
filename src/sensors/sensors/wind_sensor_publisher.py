@@ -2,15 +2,15 @@
 
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+from rclpy.qos import qos_profile_sensor_data
+
+from std_msgs.msg import Bool
+from geometry_msgs.msg import Vector3
 
 import numpy as np
 from collections import deque
 import serial
 from serial.tools import list_ports
-
-from std_msgs.msg import Bool
-from geometry_msgs.msg import Vector3
 
 
 # SERIAL_PORT = "/dev/ttyUSB0"  # temporary for now
@@ -56,13 +56,7 @@ class WindSensorPublisher(Node):
     def __init__(self):
         super().__init__("wind_sensor_publisher")
         
-        sensor_qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
-            history=QoSHistoryPolicy.KEEP_LAST,
-            depth=1
-        )
-        
-        self.apparent_wind_vector_publisher = self.create_publisher(Vector3, '/apparent_wind_vector', sensor_qos_profile)
+        self.apparent_wind_vector_publisher = self.create_publisher(Vector3, '/apparent_wind_vector', qos_profile_sensor_data)
         self.termination_listener = self.create_subscription(msg_type=Bool, topic="/should_terminate", callback=self.should_terminate_callback, qos_profile=10)
         
         self.get_logger().info("creating wind sensor publisher")
