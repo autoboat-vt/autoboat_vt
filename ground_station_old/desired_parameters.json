@@ -1,7 +1,0 @@
-{
-    "heading_p_gain": 0.3,
-    "heading_i_gain": 0,
-    "heading_d_gain": 0,
-    "heading_n_gain": 0,
-    "waypoint_accuracy": 10.0
-}
