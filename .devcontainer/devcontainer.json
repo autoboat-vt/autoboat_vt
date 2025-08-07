@@ -16,7 +16,8 @@
                 "ms-vscode.cmake-tools",
                 "ms-iot.vscode-ros",
                 "smilerobotics.urdf",
-                "yzhang.markdown-all-in-one"
+                "yzhang.markdown-all-in-one",
+                "charliermarsh.ruff"
             ]
         }
     },

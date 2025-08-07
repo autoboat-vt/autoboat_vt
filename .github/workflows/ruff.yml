@@ -1,0 +1,46 @@
+name: Ruff Format
+
+on:
+  push:
+    paths:
+      - '**.py'
+      - 'pyproject.toml'
+  pull_request:
+    paths:
+      - '**.py'
+      - 'pyproject.toml'
+
+jobs:
+  ruff-autofix:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # Required to push changes back to repo
+      pull-requests: write  # Required if you want to comment or update PRs
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed for pushing later
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Run Ruff Autofix
+        run: |
+          ruff check . --fix
+          ruff format .
+
+      - name: Commit and push changes (if any)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --cached --quiet || git commit -m "chore: auto-fix lint issues with Ruff"
+          git push

@@ -997,6 +997,8 @@ class GroundStationWidget(QWidget):
             f"{self.boat_data.get('position', [-69.420, -69.420])[0]:.8f}, "
             f"{self.boat_data.get('position', [-69.420, -69.420])[1]:.8f}\n"
             f"State: {self.boat_data.get('state', 'N/A')}\n"
+            f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
+            f"Velocity Vector: {self.boat_data.get('velocity_vector', [-69.420, -69.420])[0]:.5f}, {self.boat_data.get('velocity_vector', [-69.420, -69.420])[1]:.5f}\n"
             f"Speed: {self.boat_data.get('speed', -69.420):.5f} knots\n"
             f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
             f"Bearing: {self.boat_data.get('bearing', -69.420):.5f}°\n"
