@@ -5,18 +5,15 @@ from rclpy.impl.rcutils_logger import RcutilsLogger
 
 class SailboatAutopilot:
     """
-    Controls the boat based on a hard coded policy.
-    This class contains all of the code to control a sailboat given an observation.
-
-    The main method you should care about is the step method at the very bottom 
-    which takes in all of the observations and outputs the correct sail and rudder angle to navigate to the next waypoint
+    Main control algorithms for sailing using the decision zone tacking algorithm. This class contains all of the code to control a sailboat given sensor data.
+    The main method you should care about is the run_waypoint_mission_step method, which takes in all of the observations and outputs the correct sail and rudder angle to navigate to the next waypoint
 
     This class is used by the autopilot_node to control the boat through a ros topic
     """
     
     def __init__(self, parameters: dict, logger: RcutilsLogger):
         """
-        parameters is a dictionary that contains information from the config/parameters.yaml file.
+        parameters is a dictionary that contains information from the config/sailboat_default_parameters.yaml file.
         For more information on specific parameters you are allow to use, please see that file
         """
 
@@ -27,13 +24,12 @@ class SailboatAutopilot:
         
         self.parameters = parameters
         self.logger = logger
-        self.waypoints: list[Position] = None
-        self.current_waypoint_index = 0
-        
+        self.waypoints: list[Position] = None        
         self.current_state = SailboatStates.NORMAL
         
         self.desired_tacking_angle = 0
-   
+        self.current_waypoint_index = 0
+
    
     def reset(self): 
         self.__init__(parameters=self.parameters, logger=self.logger)
@@ -41,52 +37,7 @@ class SailboatAutopilot:
     def update_waypoints_list(self, waypoints_list: list[Position]):
         self.waypoints = waypoints_list
         self.current_waypoint_index = 0
-        
-
-    def get_optimal_sail_angle(self, apparent_wind_angle: float):
-        """
-        Runs a single step by using the sail lookup table. No side effects. Apparent wind angle is measured ccw from the centerline of the boat.
-        
-        Doesn't return an exit code because there is no reason why this should fail and this part of the code doesn't figure out if the boat has reached the waypoint
-        Returns the desired sail angle and rudder angle as a tuple given the current observations
-        """
     
-        # 180 means wind pushing you backwards, 90 for the sail means let the sails all the way out
-        # these are for close hauled, close reach, beam reach, broad reach and running respectively
-        # the angles were estimated from a sailing position diagram and adam should probably take a look and move things around as he sees fit
-
-        sail_positions = self.parameters['sail_lookup_table_sail_positions']
-        wind_angles = self.parameters['sail_lookup_table_wind_angles']
-        
-        left = max(filter(lambda pos: pos <= float(apparent_wind_angle), wind_angles))
-        right = min(filter(lambda pos: pos >= float(apparent_wind_angle), wind_angles))
-
-        left = wind_angles.index(left)
-        right = wind_angles.index(right)
-        
-        sail_angle = 0
-        if (left == right):
-            for i in range(len(sail_positions)):
-                if float(apparent_wind_angle) == wind_angles[i]:
-                    sail_angle = sail_positions[i]
-        else:
-            slope = (sail_positions[right] - sail_positions[left])/(wind_angles[right] - wind_angles[left])
-            sail_angle = slope * (float(apparent_wind_angle) - wind_angles[left]) + sail_positions[left]
-        
-        return sail_angle
-        
-        
-    def get_optimal_rudder_angle(self, heading, desired_heading):
-        error = get_distance_between_angles(desired_heading, heading)
-        
-        self.rudder_pid_controller.set_gains(
-            Kp=self.parameters['heading_p_gain'], Ki=self.parameters['heading_i_gain'], Kd=self.parameters['heading_d_gain'], 
-            n=self.parameters['heading_n_gain'], sample_period=self.parameters['autopilot_refresh_rate']
-        )
-        
-        rudder_angle = self.rudder_pid_controller(error)
-        rudder_angle = np.clip(rudder_angle, self.parameters['min_rudder_angle'], self.parameters['max_rudder_angle'])
-        return rudder_angle
     
     
     
@@ -266,6 +217,55 @@ class SailboatAutopilot:
         
         return sail_angle, rudder_angle
     
+    
+    
+    
+    
+    def get_optimal_sail_angle(self, apparent_wind_angle: float) -> float:
+        """
+        
+        Runs a single step by using the sail lookup table. No side effects. Apparent wind angle is measured ccw from the centerline of the boat.
+        
+        Doesn't return an exit code because there is no reason why this should fail and this part of the code doesn't figure out if the boat has reached the waypoint
+        Returns the desired sail angle and rudder angle as a tuple given the current observations
+        """
+    
+        # 180 means wind pushing you backwards, 90 for the sail means let the sails all the way out
+        # these are for close hauled, close reach, beam reach, broad reach and running respectively
+        # the angles were estimated from a sailing position diagram and adam should probably take a look and move things around as he sees fit
+
+        sail_positions = self.parameters['sail_lookup_table_sail_positions']
+        wind_angles = self.parameters['sail_lookup_table_wind_angles']
+        
+        left = max(filter(lambda pos: pos <= float(apparent_wind_angle), wind_angles))
+        right = min(filter(lambda pos: pos >= float(apparent_wind_angle), wind_angles))
+
+        left = wind_angles.index(left)
+        right = wind_angles.index(right)
+        
+        sail_angle = 0
+        if (left == right):
+            for i in range(len(sail_positions)):
+                if float(apparent_wind_angle) == wind_angles[i]:
+                    sail_angle = sail_positions[i]
+        else:
+            slope = (sail_positions[right] - sail_positions[left])/(wind_angles[right] - wind_angles[left])
+            sail_angle = slope * (float(apparent_wind_angle) - wind_angles[left]) + sail_positions[left]
+        
+        return sail_angle
+        
+        
+    def get_optimal_rudder_angle(self, heading, desired_heading):
+        error = get_distance_between_angles(desired_heading, heading)
+        
+        self.rudder_pid_controller.set_gains(
+            Kp=self.parameters['heading_p_gain'], Ki=self.parameters['heading_i_gain'], Kd=self.parameters['heading_d_gain'], 
+            n=self.parameters['heading_n_gain'], sample_period=self.parameters['autopilot_refresh_rate']
+        )
+        
+        rudder_angle = self.rudder_pid_controller(error)
+        rudder_angle = np.clip(rudder_angle, self.parameters['min_rudder_angle'], self.parameters['max_rudder_angle'])
+        return rudder_angle
     
     
     
