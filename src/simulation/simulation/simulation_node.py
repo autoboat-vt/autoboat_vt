@@ -2,7 +2,7 @@
 # TODO: Implement a graceful way to handle simulation termination with the control scripts
 
 import random
-import numpy as np, cv2
+import numpy as np
 import gymnasium as gym
 import navpy
 import pandas as pd
@@ -160,8 +160,24 @@ class SimulationNode(Node):
 
 
     def desired_sail_angle_callback(self, desired_sail_angle_message: Float32):
+        
+        """
+        the simulation measures the sail angle from -90 to 90 degrees, and will attempt to move the sail to that angle
+        however, the way our boat in real life works is that we can only tell the sail to go from 0 to 90 degrees,
+        and the direction of the wind will decide whether or not that will be 0 to 90 or 0 to -90.
+        If the wind is blowing to the boat's right hand side, then the sail will automatically go to the right side of the boat,
+        and if the wind is blowing to the boat's left hand side, then the sail will automatically go to the left side of the boat.
+        A visual diagram of this can be found here: https://americansailing.com/articles/points-of-sail/
+        NOTE: the direction the wind is coming from only affects whether the sail is on the left or right and does not affect the exact angle.
+        the exact angle of the sail is determined by the /desired_sail_angle topic.
+        
+        All of this is just a result of how we construct our winch system, and if you would like to know more, then you should ask
+        a Naval Architecture or Mechanical team member.
+        """
+        
         _, true_wind_angle = cartesian_vector_to_polar(self.true_wind_vector.x, self.true_wind_vector.y)
         sail_direction_fix = -1 if 0 < true_wind_angle < 180 else 1
+        
         self.desired_sail_angle = np.array(sail_direction_fix * desired_sail_angle_message.data)
 
         if self.desired_rudder_angle != None:
@@ -188,6 +204,11 @@ class SimulationNode(Node):
         """
         Runs a single frame of the simulation while attempting the move the rudder and sail to the desired_rudder_angle and desired_sail_angle respectively.
         After the frame of the simulation is finished, it will then publish all of the fake sensor data it has collected, so that the autopilot would be able to see it and respond.
+
+
+        Args:
+            desired_rudder_angle (float): what rudder angle you should tell the simulation to try to turn to
+            desired_sail_angle (float): what sail angle you should tell the simulation to try to turn to 
         """
         
         global sim_time
@@ -202,14 +223,23 @@ class SimulationNode(Node):
         
         
     def publish_observation_data(self, observation: Observation) -> None:
-        """
+        """        
         Converts an Observation struct into fake sensor data, which perfectly mimicks the format that sensor data is usually sent in.
+        All of this sensor data is then published through their respective ROS topics, which effectively mimicks things like the gps, wind_sensor, etc nodes
         
-        For example, the simulation "Observation" struct only gives us the pitch, yaw, and roll. We have to extract the actual heading that the boat would measure from that,
+        For example, the simulation "Observation" struct only gives us the pitch, yaw, and roll. 
+        We have to extract the actual heading that the boat would measure from that,
         which is why the math here may seem a little ugly. Another example is converting the global true wind vector into the apparent wind vector. 
+
+
+        Args:
+            observation (Observation): A python struct (technically a typed dictionary) that contains everything that the boat has seen with sensor data. 
+                You can access elements of the struct like a dictionary. For example, if you wanted to access the p_boat element,
+                then you should write observation["p_boat"].
         """
         
-        # converts the position from local ned to longitude, latitude, altitude
+        
+        # converts the position from local NED to longitude, latitude, altitude. For more information about NED, see 
         position = Vector3(x=observation["p_boat"][0].item(), y=observation["p_boat"][1].item(), z=-observation["p_boat"][2].item())
         gps_position = NavSatFix()
         
@@ -244,13 +274,14 @@ class SimulationNode(Node):
 
 
 
-        # calculates the magnitude and direction of the wind velocity both true and apparent
+        # Calculates the magnitude and direction of the wind velocity both true and apparent
+        
         # Approximately 7:30 was most useful for me: https://www.youtube.com/watch?v=ndL1FcTRPwU&t=472s&ab_channel=BasicCruisingwithOwen
         # https://en.wikipedia.org/wiki/Apparent_wind#/media/File:DiagramApparentWind.png 
         # Apparent Wind = True Wind - Velocity
         # Global refers to being measured ccw from true east and not being measured from atop the boat
         # always remember that true wind and apparent wind are measured ccw from the centerline of the boat, 
-        # while the global true wind is measured ccw from true east
+        # while the global true wind is measured ccw from true east. For more information, please view the documentation: https://autoboat-vt.github.io/autoboat_docs/standards_and_definitions/
 
         true_wind_speed, global_true_wind_angle = cartesian_vector_to_polar(observation["wind"][0].item(), observation["wind"][1].item())
         
@@ -262,6 +293,9 @@ class SimulationNode(Node):
         local_velocity_vector = boat_speed * np.array([np.cos(np.deg2rad(local_velocity_angle)), np.sin(np.deg2rad(local_velocity_angle))])
         self.apparent_wind_vector = Vector3(x= (self.true_wind_vector.x - local_velocity_vector[0]), y= (self.true_wind_vector.y - local_velocity_vector[1])) 
         
+        
+        
+        # Publish all of the information that we have extracted from the observation struct
         self.position_publisher.publish(gps_position)
         self.velocity_publisher.publish(global_velocity_twist)
         self.heading_publisher.publish(heading_angle)

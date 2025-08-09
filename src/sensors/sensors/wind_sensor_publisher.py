@@ -13,7 +13,6 @@ import serial
 from serial.tools import list_ports
 
 
-# SERIAL_PORT = "/dev/ttyUSB0"  # temporary for now
 WIND_SENSOR_VID = 0x0403
 WIND_SENSOR_PID = 0x6001
 WIND_SENSOR_SERIAL_NUMBER = "ABSCDYAB"
@@ -41,12 +40,14 @@ class WindSensorPublisher(Node):
     The cartesian angle of that vector is measured counter-clockwise from the centerline of the boat, and that is how we are calculating the vector
     
      
-    So, for example, if the wind is blowing straight into the boat at 1 m/s and you are facing downwind (aka you are running https://lakestclairsailingschool.com/understanding-the-points-of-sail/)
+    So, for example, if the wind is blowing straight into the boat at 1 m/s and you are facing downwind (aka you are "running" https://lakestclairsailingschool.com/understanding-the-points-of-sail/)
     then, the angle is 0 degrees, and the wind vector will be <1, 0>. 
     
     If the wind is blowing towards the left of the boat at 1 m/s, then the angle is 90 degrees, and the wind vector will be <0, 1>
     
-    If you have any other questions about the "apparent wind angle"/ the "true wind angle" or how it is measured, then please ask Chris
+    If you have any other questions about the "apparent wind angle"/ the "true wind angle" or how it is measured, then please please see the related section in the documentation: https://autoboat-vt.github.io/autoboat_docs/standards_and_definitions/
+    
+    
     Remember, the "global true wind angle" is the only angle that does not follow this convention, and instead is measured counter-clockwise from true east on a map, 
     so none of this applies whenever we are talking about the "global true wind angle"
     """

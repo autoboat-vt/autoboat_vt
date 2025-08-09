@@ -4,7 +4,6 @@ from enum import Enum
 import geopy
 import geopy.distance
 import pyproj
-import math
 
 from .position import Position
 
@@ -51,16 +50,32 @@ class MotorboatControls(Enum):
 
   
     
-def check_float_equivalence(float1, float2):
+def check_float_equivalence(float1: float, float2: float) -> bool:
+    """
+    Args:
+        float1 (float) 
+        float2 (float)
+
+    Returns:
+        bool: True if the two floats are within 0.001 of each other and False if these floats are not within 0.001 of each other.
+    """
     return abs(float1 - float2) <= 0.001
 
 
-def cartesian_vector_to_polar(x, y):
+
+def cartesian_vector_to_polar(x: float, y: float) -> tuple:
     """
-        Converts a cartesian vector (x and y coordinates) to polar form (magnitude and direction).
-        Output direction is in degrees from 0 to 360 degrees
-        Outputs a tuple of magnitude and direction of the inputted vector
+    Converts a cartesian vector (x and y coordinates) to polar form (magnitude and direction).
+
+    Args:
+        x (float): x coordinate of the vector
+        y (float): y coordinate of the vector
+
+    Returns:
+        tuple: Outputs a tuple of magnitude and direction (counter-clockwise from the x axis) of the inputted vector.
+            Output direction is between 0 and 360 degrees
     """
+    
     # arctan2 doesn't like when we pass 2 zeros into it so we should cover that case
     if x == 0. and y == 0.:
         return 0., 0.
@@ -71,45 +86,85 @@ def cartesian_vector_to_polar(x, y):
     return magnitude, direction
     
     
-def get_distance_between_angles(angle1: float, angle2: float):
+    
+def get_distance_between_angles(angle1: float, angle2: float) -> float:
+    """
+    Takes two angles in degrees and computes the shortest angular distance between them.
+    For example if angle1 = 30 degrees and angle2 = 50 degrees, then the output of this function would be 20 degrees. 
+    
+    https://stackoverflow.com/questions/1878907/how-can-i-find-the-smallest-difference-between-two-angles-around-a-point
+
+    Args:
+        angle1 (float): any angle measured in degrees
+        angle2 (float): any angle measured in degrees
+
+    Returns:
+        float: the shortest angular distance between the two angles (in degrees) 
+    """
     # https://stackoverflow.com/questions/1878907/how-can-i-find-the-smallest-difference-between-two-angles-around-a-point
     return -1 * ((float(angle1) - float(angle2) + 180) % 360 - 180)
     
 
-def get_bearing(current_pos: Position, destination_pos: Position):
+
+def get_bearing(current_position: Position, destination_position: Position) -> float:
     """
-    utility function to get the bearing towards a specific destination point, from our current location.
-    This returns the bearing as an angle between 0 to 360, counter clockwise, measured from east
+    Gets the bearing towards a specific destination point, from our current location. 
+    The bearing is just the angle between two points on earth (AKA which direction to travel in to get to the destination position from the current position)
+
+    Args:
+        current_position (Position): a Position object that represents the current position
+        destination_position (Position): a Position object that represents the position that you would like to travel towards
+
+    Returns:
+        float: the bearing as an angle between 0 to 360, counter clockwise, measured from east. This value tells you which direction you need to travel in to
+            get to your destination.
     """
     
-    cur_lat, cur_lon = current_pos.get_lat_lon()
-    des_lat, des_lon = destination_pos.get_lat_lon()
-    azimuth_heading, _, _ = pyproj.Geod(ellps='WGS84').inv(cur_lon, cur_lat, des_lon, des_lat)
-    return (-azimuth_heading + 90) % 360      # azimuth is cw from true north while we want ccw from true east
+    current_latitude, current_longitude = current_position.get_longitude_latitude()
+    destination_latitude, destination_longitude = destination_position.get_longitude_latitude()
+    azimuth_heading, _, _ = pyproj.Geod(ellps='WGS84').inv(current_longitude, current_latitude, destination_longitude, destination_latitude)
+    
+    
+    # azimuth is cw from true north while we want counter-clockwise from true east
+    return (-azimuth_heading + 90) % 360
 
 
 
 def get_distance_between_positions(position1: Position, position2: Position):
-    return geopy.distance.geodesic(position1.get_lat_lon(), position2.get_lat_lon()).m
+    return geopy.distance.geodesic(position1.get_longitude_latitude(), position2.get_longitude_latitude()).m
 
 
 
-def does_line_intersect_circle(
-        start_point: list[float, float], 
-        end_point: list[float, float], 
-        obstacle_position: list[float, float], 
-        obstacle_sizes: float
-    ):
+def does_line_segment_intersect_circle(
+        line_segment_start_position: list[float, float], 
+        line_segment_end_position: list[float, float], 
+        circle_position: list[float, float], 
+        circle_radius: float
+    ) -> bool:
     """
+    TODO: NOT FULLY TESTED
+
     Adapted from top answer of this stack overflow post: https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm.
-    It is assumed that all obstacles are spheres with a size of the obstacle_size constant.
-    Sorry if the variables don't have very creative names and if its not well documented, if you would like to understand how this algorithm works, I encourage you to read the page linked above
+    Sorry if the variables don't have very creative names and if its not well documented, 
+    but if you would like to understand how this algorithm works, I encourage you to read the page linked above
+
+
+    Args:
+        line_segment_start_position (list[float, float]): the starting point of the line segment as an array of the [x_coordinate, y_coordinate]
+        line_segment_end_position (list[float, float]): the end point of the line segment as an array of the [x_coordinate, y_coordinate]
+        circle_position (list[float, float]): the position of the circle as an array of the [x_coordinate, y_coordinate]
+        circle_radius (float): the radius of the circle
+
+    Returns:
+        bool: whether or not the 
     """
+    
+    
     # initializing
-    e = np.array(start_point)
-    l = np.array(end_point)
-    c = np.array(obstacle_position)
-    r = obstacle_sizes
+    e = np.array(line_segment_start_position)
+    l = np.array(line_segment_end_position)
+    c = np.array(circle_position)
+    r = circle_radius
     
     d = l - e
     f = e - c
@@ -126,14 +181,33 @@ def does_line_intersect_circle(
 
    
         
-def does_line_violate_no_sail_zone(start_point: list[float, float], end_point: list[float, float], true_wind_angle: float, no_sail_zone_size: float):
-    """wind amgle is measured ccw from true north"""
+def does_line_violate_no_sail_zone(
+        start_point: list[float, float], 
+        end_point: list[float, float], 
+        true_wind_angle: float, 
+        no_sail_zone_size: float
+    ) -> bool:
+    """
+    TODO: NOT FULLY TESTED
+    
+    wind angle is measured counter-clockwise from true north
+
+
+    Args:
+        start_point (list[float, float]): _description_
+        end_point (list[float, float]): _description_
+        true_wind_angle (float): _description_
+        no_sail_zone_size (float): _description_
+
+    Returns:
+        bool: _description_
+    """
     
     displacement = np.array(end_point) - np.array(start_point)
     displacement_magnitude = np.sqrt(displacement[0]**2 + displacement[1]**2 + displacement[2]**2)
     normalized_displacement = displacement/ displacement_magnitude
     
-    true_wind_angle = (true_wind_angle + 90) % 360    # transform to ccw from true east
+    true_wind_angle = (true_wind_angle + 90) % 360    # transform from counter-clockwise from true north to counter-clockwise from true east
     up_wind_angle = (true_wind_angle + 180) % 360
     
     up_wind_vector = np.array(np.cos(up_wind_angle), np.sin(up_wind_angle))
@@ -149,7 +223,7 @@ def does_line_violate_no_sail_zone(start_point: list[float, float], end_point: l
 
 
 
-def angle_between_vectors(v1: np.ndarray, v2: np.ndarray):
+def get_angle_between_vectors(v1: np.ndarray, v2: np.ndarray):
     
     v1_normalized = v1/ np.linalg.norm(v1)
     v2_normalized = v2/ np.linalg.norm(v2)
@@ -160,6 +234,7 @@ def angle_between_vectors(v1: np.ndarray, v2: np.ndarray):
     
     
 def is_angle_between_boundaries(angle: float, boundary1, boundary2):
+    # TODO rename this function to is_angle_between_two_angles or smthn like that
     # TODO make the names of these a little bit less cringeworthy
     angle = np.deg2rad(angle)
     boundary1 = np.deg2rad(boundary1)
@@ -170,23 +245,24 @@ def is_angle_between_boundaries(angle: float, boundary1, boundary2):
     boundary2_vector = np.array([np.cos(boundary2), np.sin(boundary2)])
   
     return check_float_equivalence(
-        angle_between_vectors(boundary1_vector, angle_vector) + angle_between_vectors(angle_vector, boundary2_vector), 
-        angle_between_vectors(boundary1_vector, boundary2_vector)
+        get_angle_between_vectors(boundary1_vector, angle_vector) + get_angle_between_vectors(angle_vector, boundary2_vector), 
+        get_angle_between_vectors(boundary1_vector, boundary2_vector)
     )
     
     
     
-def get_maneuver_from_desired_heading(heading, desired_heading, true_wind_angle):
+def get_maneuver_from_desired_heading(heading: float, desired_heading: float, true_wind_angle: float) -> SailboatManeuvers:
     
-    # wind angle ccw from true east
+    # Wind angle counter-clockwise from true east
     global_true_wind_angle = (true_wind_angle + heading) % 360
     
-    #Calculate upwind angle (nominal angle at which course is heading straight into the wind)
+    # Calculate upwind angle (nominal angle at which course is heading straight into the wind)
     # Global True Wind Angle                    0     45    90   135  179 | 180  225  270  315  360
     # Global True Upwind Angle                  180   225   270  315  359 | 0    45   90   135  180
     global_true_upwind_angle = (global_true_wind_angle + 180) % 360
 
-    if is_angle_between_boundaries(global_true_upwind_angle, heading, desired_heading): 
+
+    if is_angle_between_boundaries(global_true_wind_angle, heading, desired_heading): 
         return SailboatManeuvers.JIBE
     
     elif is_angle_between_boundaries(global_true_upwind_angle, heading, desired_heading): 
