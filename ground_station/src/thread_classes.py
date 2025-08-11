@@ -93,17 +93,13 @@ class LocalWaypointFetcher(QThread):
         """Fetch waypoints from the local server and emit them."""
 
         try:
-            waypoints: list[list[float]] = constants.REQ_SESSION.get(
-                constants.WAYPOINTS_SERVER_URL
-            ).json()
+            waypoints: list[list[float]] = constants.REQ_SESSION.get(constants.WAYPOINTS_SERVER_URL).json()
 
             if not isinstance(waypoints, list):
                 raise TypeError("Waypoints data is not a list")
 
         except requests.exceptions.RequestException as e:
-            print(
-                f"[Warning] Failed to fetch waypoints. Using empty list. Exception: {e}"
-            )
+            print(f"[Warning] Failed to fetch waypoints. Using empty list. Exception: {e}")
             waypoints = []
 
         except TypeError:
@@ -162,9 +158,7 @@ class RemoteWaypointFetcher(QThread):
             self.request_url_change.emit(constants.TelemetryStatus.SUCCESS)
 
         except requests.exceptions.RequestException as e:
-            print(
-                f"[Warning] Failed to fetch waypoints. Using empty list. Exception: {e}"
-            )
+            print(f"[Warning] Failed to fetch waypoints. Using empty list. Exception: {e}")
             waypoints = []
             self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
 

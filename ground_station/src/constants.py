@@ -85,8 +85,7 @@ def __get_icons() -> SimpleNamespace:
 
     for icon_name, icon in icons.items():
         assert isinstance(icon, QIcon), (
-            f"Icon '{icon_name}' is not a valid QIcon. "
-            "Please check the icon name or ensure the icon is available."
+            f"Icon '{icon_name}' is not a valid QIcon. Please check the icon name or ensure the icon is available."
         )
 
     return SimpleNamespace(**icons)
@@ -320,8 +319,7 @@ TELEMETRY_SERVER_ENDPOINTS = {
     "waypoints_test": TELEMETRY_SERVER_URL + "waypoints/test",
     "get_autopilot_parameters": TELEMETRY_SERVER_URL + "autopilot_parameters/get",
     "set_autopilot_parameters": TELEMETRY_SERVER_URL + "autopilot_parameters/set",
-    "get_default_autopilot_parameters": TELEMETRY_SERVER_URL
-    + "autopilot_parameters/get_default",
+    "get_default_autopilot_parameters": TELEMETRY_SERVER_URL + "autopilot_parameters/get_default",
 }
 
 TELEMETRY_TIMEOUT_SECONDS = 30
@@ -344,16 +342,12 @@ try:
     HTML_CAMERA = open(HTML_CAMERA_PATH).read()
 
     if "params_default.jsonc" not in os.listdir(DATA_DIR / "autopilot_params"):
-        raise Exception(
-            "Default autopilot parameters file not found, please redownload the directory from GitHub."
-        )
+        raise Exception("Default autopilot parameters file not found, please redownload the directory from GitHub.")
 
     if "autopilot_params" not in os.listdir(DATA_DIR):
         os.makedirs(DATA_DIR / "autopilot_params")
 
-    _autopilot_param_editor_dir = PurePath(
-        SRC_DIR / "widgets" / "autopilot_param_editor"
-    )
+    _autopilot_param_editor_dir = PurePath(SRC_DIR / "widgets" / "autopilot_param_editor")
     if "params_temp.json" not in os.listdir(_autopilot_param_editor_dir):
         shutil.copyfile(
             PurePath(DATA_DIR / "autopilot_params" / "params_default.jsonc"),
@@ -379,9 +373,7 @@ try:
         os.makedirs(DATA_DIR / "buoy_data")
 
     if "assets" not in os.listdir(DATA_DIR):
-        raise Exception(
-            "Assets directory not found, please redownload the directory from GitHub."
-        )
+        raise Exception("Assets directory not found, please redownload the directory from GitHub.")
 
     ASSETS_DIR = PurePath(DATA_DIR / "assets")
     AUTO_PILOT_PARAMS_DIR = PurePath(DATA_DIR / "autopilot_params")
