@@ -304,7 +304,7 @@ class TelemetryNode(Node):
                 
         
         # requests.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json={"value": list(boat_status_dictionary.values())})
-        requests.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json={"value": boat_status_dictionary})
+        requests.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json=boat_status_dictionary)
 
 
 

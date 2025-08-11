@@ -84,8 +84,24 @@ def cartesian_vector_to_polar(x: float, y: float) -> tuple:
     direction = direction * (180/np.pi)  # angle from -180 to 180 degrees
     direction = direction % 360  # angle from 0 to 360 degrees
     return magnitude, direction
+
+
+
+def get_angle_between_vectors(vector1: np.ndarray, vector2: np.ndarray) -> float:
+    """
+    Args:
+        vector1 (np.ndarray)
+        vector2 (np.ndarray)
+
+    Returns:
+        float: the smallest angle between vector1 and vector2
+    """
     
+    vector1_normalized = vector1/ np.linalg.norm(vector1)
+    vector2_normalized = vector2/ np.linalg.norm(vector2)
     
+    return np.rad2deg(np.arccos(np.clip(np.dot(vector1_normalized, vector2_normalized), -1, 1)))
+
     
 def get_distance_between_angles(angle1: float, angle2: float) -> float:
     """
@@ -125,14 +141,119 @@ def get_bearing(current_position: Position, destination_position: Position) -> f
     azimuth_heading, _, _ = pyproj.Geod(ellps='WGS84').inv(current_longitude, current_latitude, destination_longitude, destination_latitude)
     
     
-    # azimuth is cw from true north while we want counter-clockwise from true east
+    # azimuth is measured clockwise from true north but we want counter-clockwise from true east
     return (-azimuth_heading + 90) % 360
-
+    
 
 
 def get_distance_between_positions(position1: Position, position2: Position):
+    """
+    Args:
+        position1 (Position)
+        position2 (Position)
+
+    Returns:
+        float: distance between position1 and position2 in meters 
+    """
     return geopy.distance.geodesic(position1.get_longitude_latitude(), position2.get_longitude_latitude()).m
 
+
+    
+
+def is_angle1_between_angle2_and_angle3(angle: float, boundary1, boundary2):
+    # TODO TODO TODO TODO TODO
+    pass
+
+
+def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float) -> bool:
+    """
+    TODO TODO TODO TODO TODO
+    Checks whether "angle"
+
+    Args:
+        angle (float): 
+        boundary1 (float): 
+        boundary2 (float): 
+
+    Returns:
+        bool: If "angle" is between "boundary1" and "boundary2", then return True and if not, then return False
+    """
+    # TODO rename this function to is_angle_between_two_angles or smthn like that
+    # TODO make the names of these a little bit less cringeworthy
+    angle = np.deg2rad(angle)
+    boundary1 = np.deg2rad(boundary1)
+    boundary2 = np.deg2rad(boundary2)
+    
+    angle_vector = np.array([np.cos(angle), np.sin(angle)])
+    boundary1_vector = np.array([np.cos(boundary1), np.sin(boundary1)])
+    boundary2_vector = np.array([np.cos(boundary2), np.sin(boundary2)])
+  
+    return check_float_equivalence(
+        get_angle_between_vectors(boundary1_vector, angle_vector) + get_angle_between_vectors(angle_vector, boundary2_vector), 
+        get_angle_between_vectors(boundary1_vector, boundary2_vector)
+    )
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+# ==============================================================================
+# FUNCTIONS THAT ARE NOT FULLY TESTED
+# ==============================================================================
+    
+    
+def does_line_violate_no_sail_zone(
+        current_position: list[float, float], 
+        destination_position: list[float, float], 
+        global_true_wind_angle: float, 
+        no_sail_zone_size: float
+    ) -> bool:
+    """
+    TODO: NOT FULLY TESTED
+    
+    This function takes 
+    wind angle is measured counter-clockwise from true east
+
+
+    Args:
+        current_position (list[float, float]): A list that represents the current position in cartesian coordinates. 
+            For example: [x_coordinate, y_coordinate] is the form that you should use
+        destination_position (list[float, float]): A list that represents the position you want to directly travel to in cartesian coordinates. 
+            For example: [x_coordinate, y_coordinate] is the form that you should use
+        global_true_wind_angle (float): The global true wind angle measured counter-clockwise from true east as an angle in degrees
+        no_sail_zone_size (float): 
+
+    Returns:
+        bool: _description_
+    """
+    
+    displacement = np.array(destination_position) - np.array(current_position)
+    displacement_magnitude = np.sqrt(displacement[0]**2 + displacement[1]**2 + displacement[2]**2)
+    normalized_displacement = displacement/ displacement_magnitude
+    
+    # the upwind angle is the angle that is opposite to the wind angle. For example, if the wind is blowing straight east, 
+    # then the wind angle would be 0 degrees and the upwind angle would be 180 degrees
+    global_true_upwind_angle = (global_true_wind_angle + 180) % 360
+    
+    up_wind_vector = np.array(np.cos(global_true_upwind_angle), np.sin(global_true_upwind_angle))
+    
+    # find the angle between these two vectors
+    angle_between = np.arccos(np.dot(up_wind_vector, normalized_displacement))
+    
+    if -no_sail_zone_size < angle_between < no_sail_zone_size:
+        return True
+    
+    return False
 
 
 def does_line_segment_intersect_circle(
@@ -177,96 +298,3 @@ def does_line_segment_intersect_circle(
     discriminant = b*b-4*a*c
     
     return discriminant >= 0
-
-
-   
-        
-def does_line_violate_no_sail_zone(
-        start_point: list[float, float], 
-        end_point: list[float, float], 
-        true_wind_angle: float, 
-        no_sail_zone_size: float
-    ) -> bool:
-    """
-    TODO: NOT FULLY TESTED
-    
-    wind angle is measured counter-clockwise from true north
-
-
-    Args:
-        start_point (list[float, float]): _description_
-        end_point (list[float, float]): _description_
-        true_wind_angle (float): _description_
-        no_sail_zone_size (float): _description_
-
-    Returns:
-        bool: _description_
-    """
-    
-    displacement = np.array(end_point) - np.array(start_point)
-    displacement_magnitude = np.sqrt(displacement[0]**2 + displacement[1]**2 + displacement[2]**2)
-    normalized_displacement = displacement/ displacement_magnitude
-    
-    true_wind_angle = (true_wind_angle + 90) % 360    # transform from counter-clockwise from true north to counter-clockwise from true east
-    up_wind_angle = (true_wind_angle + 180) % 360
-    
-    up_wind_vector = np.array(np.cos(up_wind_angle), np.sin(up_wind_angle))
-    
-    # find the angle between these two vectors
-    angle_between = np.arccos(np.dot(up_wind_vector, normalized_displacement))
-    
-    if -no_sail_zone_size < angle_between < no_sail_zone_size:
-        return True
-    
-    return False
-
-
-
-
-def get_angle_between_vectors(v1: np.ndarray, v2: np.ndarray):
-    
-    v1_normalized = v1/ np.linalg.norm(v1)
-    v2_normalized = v2/ np.linalg.norm(v2)
-    
-    return np.rad2deg(np.arccos(np.clip(np.dot(v1_normalized, v2_normalized), -1, 1)))
-    
-    
-    
-    
-def is_angle_between_boundaries(angle: float, boundary1, boundary2):
-    # TODO rename this function to is_angle_between_two_angles or smthn like that
-    # TODO make the names of these a little bit less cringeworthy
-    angle = np.deg2rad(angle)
-    boundary1 = np.deg2rad(boundary1)
-    boundary2 = np.deg2rad(boundary2)
-    
-    angle_vector = np.array([np.cos(angle), np.sin(angle)])
-    boundary1_vector = np.array([np.cos(boundary1), np.sin(boundary1)])
-    boundary2_vector = np.array([np.cos(boundary2), np.sin(boundary2)])
-  
-    return check_float_equivalence(
-        get_angle_between_vectors(boundary1_vector, angle_vector) + get_angle_between_vectors(angle_vector, boundary2_vector), 
-        get_angle_between_vectors(boundary1_vector, boundary2_vector)
-    )
-    
-    
-    
-def get_maneuver_from_desired_heading(heading: float, desired_heading: float, true_wind_angle: float) -> SailboatManeuvers:
-    
-    # Wind angle counter-clockwise from true east
-    global_true_wind_angle = (true_wind_angle + heading) % 360
-    
-    # Calculate upwind angle (nominal angle at which course is heading straight into the wind)
-    # Global True Wind Angle                    0     45    90   135  179 | 180  225  270  315  360
-    # Global True Upwind Angle                  180   225   270  315  359 | 0    45   90   135  180
-    global_true_upwind_angle = (global_true_wind_angle + 180) % 360
-
-
-    if is_angle_between_boundaries(global_true_wind_angle, heading, desired_heading): 
-        return SailboatManeuvers.JIBE
-    
-    elif is_angle_between_boundaries(global_true_upwind_angle, heading, desired_heading): 
-        return SailboatManeuvers.TACK
-        
-    else: 
-        return SailboatManeuvers.STANDARD

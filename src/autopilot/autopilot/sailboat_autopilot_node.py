@@ -322,6 +322,10 @@ class SailboatAutopilotNode(Node):
         if self.should_zero_winch_encoder:
             self.zero_winch_encoder_publisher.publish(Bool(data=self.should_zero_winch_encoder))
             self.winch_encoder_has_been_zeroed = True
+            
+        
+        self.get_logger().info(f"{desired_sail_angle}")
+        self.get_logger().info(f"{desired_rudder_angle}")
 
 
 
