@@ -11,6 +11,8 @@
             "extensions": [
                 "ms-azuretools.vscode-docker",
                 "ms-python.python",
+                "ms-python.vscode-pylance",
+                "magicstack.magicpython",
                 "ms-vscode.cpptools",
                 "twxs.cmake",
                 "ms-vscode.cmake-tools",
@@ -18,8 +20,12 @@
                 "smilerobotics.urdf",
                 "yzhang.markdown-all-in-one",
                 "charliermarsh.ruff",
-                "njpwerner.autodocstring" 
-
+                "njpwerner.autodocstring",
+                "tamasfe.even-better-toml",
+                "davidanson.vscode-markdownlint",
+                "rodolphebarbanneau.python-docstring-highlighter",
+                "redhat.vscode-xml",
+                "redhat.vscode-yaml"
             ]
         }
     },
@@ -30,9 +36,12 @@
     },
     "runArgs": [
         "--net=host",
-        "-v", "/dev:/dev",
-        "-e", "DISPLAY=${env:DISPLAY}",
-        "-v", "/var/run/docker.sock:/var/run/docker.sock"
+        "-v",
+        "/dev:/dev",
+        "-e",
+        "DISPLAY=${env:DISPLAY}",
+        "-v",
+        "/var/run/docker.sock:/var/run/docker.sock"
     ],
     "mounts": [
         "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
