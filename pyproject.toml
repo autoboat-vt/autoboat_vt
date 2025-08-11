@@ -37,9 +37,6 @@ indent-width = 4
 # Assume Python 3.10
 target-version = "py310"
 
-# Cache directory
-cache-dir = "~/.cache/ruff"
-
 # Also format files in .gitignore
 respect-gitignore = false
 
@@ -69,6 +66,8 @@ ignore = [
     "E401",    # multiple-imports-on-one-line
     "E501",    # line-too-long
     "E741",    # ambiguous-variable-name
+    "E711",    # Comparison to `None` should be `if cond is None:`
+    "E712",    # Comparison to `True` or `False` should use `is`
     "EM101",   # Exception must not use a string literal, assign to variable first
     "ERA001",  # commented-out-code
     "EXE002",  # The file is executable but no shebang is present
@@ -90,9 +89,11 @@ ignore = [
     "T201",    # Checks for print statements.
     "TD002",   # Missing author in TODO `# TODO(<author_name>): ...`
     "TD003",   # missing-todo-link
+    "TD004",   # todo missing colon
     "TRY002",  # Create your own exception
     "TRY003",  # Avoid specifying long messages outside the exception class
     "TRY301",  # raise-within-try
+    "RET504",  # Unnecessary assignment of `return` value to a variable
     "RET505",  # Unnecessary `else` after `return` statement
     "G004",    # logging-f-string
     "UP015",   # Unnecessary mode argument for `open` function

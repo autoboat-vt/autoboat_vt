@@ -167,9 +167,7 @@ class GroundStationWidget(QWidget):
         self.right_tab1_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.right_tab1_table = QTableWidget()
         self.right_tab1_table.setMinimumWidth(self.right_width)
-        self.right_tab1_table.cellClicked.connect(
-            partial(self.zoom_to_marker, table="waypoints")
-        )
+        self.right_tab1_table.cellClicked.connect(partial(self.zoom_to_marker, table="waypoints"))
         self.can_send_waypoints = True
         self.send_waypoints_button = constants.pushbutton_maker(
             "Send Waypoints",
@@ -222,9 +220,7 @@ class GroundStationWidget(QWidget):
         self.right_tab2_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.right_tab2_table = QTableWidget()
         self.right_tab2_table.setMinimumWidth(self.right_width)
-        self.right_tab2_table.cellClicked.connect(
-            partial(self.zoom_to_marker, table="buoys")
-        )
+        self.right_tab2_table.cellClicked.connect(partial(self.zoom_to_marker, table="buoys"))
 
         self.edit_buoy_data_button = constants.pushbutton_maker(
             "Edit Buoy Data",
@@ -277,23 +273,14 @@ class GroundStationWidget(QWidget):
 
         # updating displays
         self.telemetry_handler.boat_data_fetched.connect(self.update_telemetry_display)
-        self.local_waypoint_handler.waypoints_fetched.connect(
-            self.update_waypoints_display
-        )
+        self.local_waypoint_handler.waypoints_fetched.connect(self.update_waypoints_display)
 
         # telemetry server URL change
-
-        self.telemetry_handler.request_url_change.connect(
-            self.change_telemetry_server_url
-        )
-        self.remote_waypoint_handler.request_url_change.connect(
-            self.change_telemetry_server_url
-        )
+        self.telemetry_handler.request_url_change.connect(self.change_telemetry_server_url)
+        self.remote_waypoint_handler.request_url_change.connect(self.change_telemetry_server_url)
 
         # misc
-        self.remote_waypoint_handler.waypoints_fetched.connect(
-            self.check_telemetry_waypoints
-        )
+        self.remote_waypoint_handler.waypoints_fetched.connect(self.check_telemetry_waypoints)
 
         for timer in self.timers:
             timer.start()
@@ -320,14 +307,10 @@ class GroundStationWidget(QWidget):
 
                 js_code = "map.change_color_waypoints('red')"
                 self.browser.page().runJavaScript(js_code)
-                print(
-                    f"[Info] Waypoints sent successfully. Waypoints: {self.waypoints}"
-                )
+                print(f"[Info] Waypoints sent successfully. Waypoints: {self.waypoints}")
 
             except requests.exceptions.RequestException as e:
-                print(
-                    f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}"
-                )
+                print(f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")
 
         else:
             try:
@@ -339,9 +322,7 @@ class GroundStationWidget(QWidget):
                 response.raise_for_status()
 
             except requests.exceptions.RequestException as e:
-                print(
-                    f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}"
-                )
+                print(f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")
 
     def pull_waypoints(self) -> None:
         """Pull waypoints from the telemetry server and add them to the map."""
@@ -357,14 +338,10 @@ class GroundStationWidget(QWidget):
                 existing_waypoints = self.waypoints.copy()
                 self.browser.page().runJavaScript("map.clear_waypoints()")
                 for waypoint in remote_waypoints:
-                    self.browser.page().runJavaScript(
-                        f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"
-                    )
+                    self.browser.page().runJavaScript(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})")
                 self.browser.page().runJavaScript("map.change_color_waypoints('red')")
                 for waypoint in existing_waypoints:
-                    self.browser.page().runJavaScript(
-                        f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"
-                    )
+                    self.browser.page().runJavaScript(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})")
 
             else:
                 print("[Warning] No waypoints found on the server.")
@@ -393,9 +370,7 @@ class GroundStationWidget(QWidget):
         """
 
         try:
-            file_path = PurePath(
-                constants.BOAT_DATA_DIR / f"boat_data_{time.time_ns()}.json"
-            )
+            file_path = PurePath(constants.BOAT_DATA_DIR / f"boat_data_{time.time_ns()}.json")
             with open(file_path, "w") as f:
                 json.dump(self.boat_data, f, indent=4)
 
@@ -415,13 +390,9 @@ class GroundStationWidget(QWidget):
 
         try:
             initial_config = json.dumps(self.telemetry_data_limits, indent=4)
-            self.text_edit_window = TextEditWindow(
-                highlighter=JsonHighlighter, initial_text=initial_config
-            )
+            self.text_edit_window = TextEditWindow(highlighter=JsonHighlighter, initial_text=initial_config)
             self.text_edit_window.setWindowTitle("Edit Boat Data Limits")
-            self.text_edit_window.user_text_emitter.connect(
-                self.edit_boat_data_limits_callback
-            )
+            self.text_edit_window.user_text_emitter.connect(self.edit_boat_data_limits_callback)
             self.text_edit_window.show()
 
         except Exception as e:
@@ -463,9 +434,7 @@ class GroundStationWidget(QWidget):
                 "*.json",
             )
             if chosen_file == ("", ""):
-                chosen_file = [
-                    PurePath(constants.BOAT_DATA_LIMITS_DIR / "default.json")
-                ]
+                chosen_file = [PurePath(constants.BOAT_DATA_LIMITS_DIR / "default.json")]
             with open(chosen_file[0], "r") as f:
                 self.telemetry_data_limits = json.load(f)
 
@@ -484,8 +453,7 @@ class GroundStationWidget(QWidget):
 
         try:
             file_path = PurePath(
-                constants.BOAT_DATA_LIMITS_DIR
-                / f"boat_data_bounds_{time.time_ns()}.json",
+                constants.BOAT_DATA_LIMITS_DIR / f"boat_data_bounds_{time.time_ns()}.json",
             )
             with open(file_path, "w") as f:
                 json.dump(self.telemetry_data_limits, f, indent=4)
@@ -506,13 +474,9 @@ class GroundStationWidget(QWidget):
 
         try:
             buoy_json = json.dumps(self.buoys, indent=4)
-            self.text_edit_window = TextEditWindow(
-                highlighter=JsonHighlighter, initial_text=buoy_json
-            )
+            self.text_edit_window = TextEditWindow(highlighter=JsonHighlighter, initial_text=buoy_json)
             self.text_edit_window.setWindowTitle("Edit Buoy GPS Coordinates")
-            self.text_edit_window.user_text_emitter.connect(
-                self.edit_buoy_data_callback
-            )
+            self.text_edit_window.user_text_emitter.connect(self.edit_buoy_data_callback)
             self.text_edit_window.show()
 
         except Exception as e:
@@ -553,16 +517,12 @@ class GroundStationWidget(QWidget):
 
         for buoy in self.buoys:
             self.right_tab2_table.insertRow(self.right_tab2_table.rowCount())
-            add_js_buoy = (
-                f"map.add_buoy({self.buoys[buoy]['lat']}, {self.buoys[buoy]['lon']})"
-            )
+            add_js_buoy = f"map.add_buoy({self.buoys[buoy]['lat']}, {self.buoys[buoy]['lon']})"
             self.browser.page().runJavaScript(add_js_buoy)
             for i, coord in enumerate(["lat", "lon"]):
                 item = QTableWidgetItem(f"{float(self.buoys[buoy][coord]):.13f}")
                 item.setFlags(Qt.ItemFlag.ItemIsEnabled)
-                self.right_tab2_table.setItem(
-                    self.right_tab2_table.rowCount() - 1, i, item
-                )
+                self.right_tab2_table.setItem(self.right_tab2_table.rowCount() - 1, i, item)
         self.right_tab2_table.resizeColumnsToContents()
         self.right_tab2_table.resizeRowsToContents()
 
@@ -575,9 +535,7 @@ class GroundStationWidget(QWidget):
         """
 
         try:
-            file_path = PurePath(
-                constants.BUOY_DATA_DIR / f"buoy_data_{time.time_ns()}.json"
-            )
+            file_path = PurePath(constants.BUOY_DATA_DIR / f"buoy_data_{time.time_ns()}.json")
             with open(file_path, "w") as f:
                 json.dump(self.buoys, f, indent=4)
 
@@ -629,9 +587,7 @@ class GroundStationWidget(QWidget):
         else:
             print("[Warning] Boat position not available.")
 
-    def zoom_to_marker(
-        self, row: int, table: Literal["waypoints", "buoys"] = "waypoints"
-    ) -> None:
+    def zoom_to_marker(self, row: int, table: Literal["waypoints", "buoys"] = "waypoints") -> None:
         """
         Center the view on the selected waypoint in the table.
 
@@ -652,10 +608,7 @@ class GroundStationWidget(QWidget):
 
                     lat, lon = None, None
                     for waypoint in self.waypoints:
-                        if (
-                            abs(waypoint[0] - approx_lat) < 1e-6
-                            and abs(waypoint[1] - approx_lon) < 1e-6
-                        ):
+                        if abs(waypoint[0] - approx_lat) < 1e-6 and abs(waypoint[1] - approx_lon) < 1e-6:
                             lat, lon = waypoint
                             break
 
@@ -675,10 +628,7 @@ class GroundStationWidget(QWidget):
 
                     lat, lon = None, None
                     for buoy in self.buoys.values():
-                        if (
-                            abs(buoy["lat"] - approx_lat) < 1e-6
-                            and abs(buoy["lon"] - approx_lon) < 1e-6
-                        ):
+                        if abs(buoy["lat"] - approx_lat) < 1e-6 and abs(buoy["lon"] - approx_lon) < 1e-6:
                             lat, lon = buoy["lat"], buoy["lon"]
                             break
 
@@ -691,9 +641,7 @@ class GroundStationWidget(QWidget):
                 print("[Warning] No buoys available to zoom to.")
 
         else:
-            print(
-                f"[Error] Invalid table specified: {table}. Use 'waypoints' or 'buoys'."
-            )
+            print(f"[Error] Invalid table specified: {table}. Use 'waypoints' or 'buoys'.")
 
     # endregion button functions
 
@@ -750,9 +698,7 @@ class GroundStationWidget(QWidget):
                 for i, coord in enumerate(waypoint):
                     item = QTableWidgetItem(f"{coord:.13f}")
                     item.setFlags(Qt.ItemFlag.ItemIsEnabled)
-                    self.right_tab1_table.setItem(
-                        self.right_tab1_table.rowCount() - 1, i, item
-                    )
+                    self.right_tab1_table.setItem(self.right_tab1_table.rowCount() - 1, i, item)
             self.right_tab1_table.resizeColumnsToContents()
             self.right_tab1_table.resizeRowsToContents()
 
@@ -784,26 +730,18 @@ class GroundStationWidget(QWidget):
                 True,
             )
             if response == QMessageBox.StandardButton.Yes:
-                not_uploaded_waypoints = [
-                    waypoint for waypoint in self.waypoints if waypoint not in waypoints
-                ]
+                not_uploaded_waypoints = [waypoint for waypoint in self.waypoints if waypoint not in waypoints]
                 self.waypoints = waypoints.copy()
                 self.browser.page().runJavaScript("map.clear_waypoints()")
                 for waypoint in self.waypoints:
-                    self.browser.page().runJavaScript(
-                        f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"
-                    )
+                    self.browser.page().runJavaScript(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})")
                 self.browser.page().runJavaScript("map.change_color_waypoints('red')")
                 for waypoint in not_uploaded_waypoints:
-                    self.browser.page().runJavaScript(
-                        f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"
-                    )
+                    self.browser.page().runJavaScript(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})")
                 print("[Info] Local waypoints updated from telemetry server.")
 
             else:
-                self.remember_waypoints_pull_service_status = (
-                    temp_pull_waypoints_reminder
-                )
+                self.remember_waypoints_pull_service_status = temp_pull_waypoints_reminder
                 print("[Info] Local waypoints not updated.")
 
             for timer in self.timers:
@@ -815,13 +753,9 @@ class GroundStationWidget(QWidget):
             )
 
         else:
-            print(
-                "[Info] Local waypoints match telemetry server waypoints, but user has chosen to not be reminded."
-            )
+            print("[Info] Local waypoints match telemetry server waypoints, but user has chosen to not be reminded.")
 
-    def change_telemetry_server_url(
-        self, telemetry_status: constants.TelemetryStatus
-    ) -> None:
+    def change_telemetry_server_url(self, telemetry_status: constants.TelemetryStatus) -> None:
         """
         Prompt the user to change the telemetry server URL if fetching waypoints fails.
 
@@ -834,24 +768,19 @@ class GroundStationWidget(QWidget):
             </ul>
         """
 
-        if (
-            telemetry_status == constants.TelemetryStatus.FAILURE
-            and not self.remember_telemetry_server_url_status
-        ):
+        if telemetry_status == constants.TelemetryStatus.FAILURE and not self.remember_telemetry_server_url_status:
             for timer in self.timers:
                 timer.stop()
 
-            response, temp_remember_telemetry_server_url_status = (
-                constants.show_message_box(
-                    "Failed to fetch waypoints",
-                    "Do you want to change the telemetry server URL?",
-                    constants.ICONS.question,
-                    [
-                        QMessageBox.StandardButton.Yes,
-                        QMessageBox.StandardButton.No,
-                    ],
-                    True,
-                )
+            response, temp_remember_telemetry_server_url_status = constants.show_message_box(
+                "Failed to fetch waypoints",
+                "Do you want to change the telemetry server URL?",
+                constants.ICONS.question,
+                [
+                    QMessageBox.StandardButton.Yes,
+                    QMessageBox.StandardButton.No,
+                ],
+                True,
             )
 
             if response == QMessageBox.StandardButton.Yes:
@@ -863,45 +792,29 @@ class GroundStationWidget(QWidget):
                 )
 
                 if new_url:
-                    print(
-                        f"[Info] Changed telemetry server URL to {new_url}, was {constants.TELEMETRY_SERVER_URL}."
-                    )
+                    print(f"[Info] Changed telemetry server URL to {new_url}, was {constants.TELEMETRY_SERVER_URL}.")
                     constants.TELEMETRY_SERVER_URL = new_url
                     for endpoint in constants.TELEMETRY_SERVER_ENDPOINTS:
-                        path_tail = "/".join(
-                            constants.TELEMETRY_SERVER_ENDPOINTS[endpoint].split("/")[
-                                -2:
-                            ]
-                        )
+                        path_tail = "/".join(constants.TELEMETRY_SERVER_ENDPOINTS[endpoint].split("/")[-2:])
                         new_endpoint_url = constants.TELEMETRY_SERVER_URL + path_tail
-                        constants.TELEMETRY_SERVER_ENDPOINTS[endpoint] = (
-                            new_endpoint_url
-                        )
+                        constants.TELEMETRY_SERVER_ENDPOINTS[endpoint] = new_endpoint_url
 
                 else:
-                    print(
-                        "[Warning] No new telemetry server URL provided, keeping old one."
-                    )
+                    print("[Warning] No new telemetry server URL provided, keeping old one.")
 
             elif response == QMessageBox.StandardButton.No:
-                self.remember_telemetry_server_url_status = (
-                    temp_remember_telemetry_server_url_status
-                )
+                self.remember_telemetry_server_url_status = temp_remember_telemetry_server_url_status
                 print("[Info] Telemetry server URL not changed.")
 
             else:
-                print(
-                    f"[Error] Received unexpected response from user dialog. Got: {response}, expected Yes or No."
-                )
+                print(f"[Error] Received unexpected response from user dialog. Got: {response}, expected Yes or No.")
 
             for timer in self.timers:
                 timer.start()
 
     def update_telemetry_display(
         self,
-        boat_data: dict[
-            str, float | str | tuple[float, float] | list[tuple[float, float]]
-        ],
+        boat_data: dict[str, float | str | tuple[float, float] | list[tuple[float, float]]],
     ) -> None:
         """
         Update telemetry display with boat data.
@@ -940,9 +853,7 @@ class GroundStationWidget(QWidget):
                 The formatted value.
             """
 
-            return (
-                f"{abs(data_item):.5f}" if data_item is not None else f"{-69.420:.5f}"
-            )
+            return f"{abs(data_item):.5f}" if data_item is not None else f"{-69.420:.5f}"
 
         def convert_to_seconds(ms: float) -> float:
             """
@@ -966,21 +877,15 @@ class GroundStationWidget(QWidget):
 
         try:
             if not isinstance(self.boat_data.get("position"), list):
-                raise TypeError(
-                    "Boat position is not a list. Expected format: [latitude, longitude]"
-                )
+                raise TypeError("Boat position is not a list. Expected format: [latitude, longitude]")
             if not isinstance(self.boat_data.get("heading"), float):
                 raise TypeError("Boat heading is not a float. Expected format: float")
 
-            if not all(
-                isinstance(coord, (float, int)) for coord in self.boat_data["position"]
-            ):
+            if not all(isinstance(coord, (float, int)) for coord in self.boat_data["position"]):
                 raise TypeError("Boat position coordinates are not all floats or ints.")
 
             if len(self.boat_data["position"]) != 2:
-                raise ValueError(
-                    "Boat position list does not contain exactly two elements."
-                )
+                raise ValueError("Boat position list does not contain exactly two elements.")
 
             js_code = (
                 f"map.update_boat_location({self.boat_data['position'][0]}, {self.boat_data['position'][1]});"

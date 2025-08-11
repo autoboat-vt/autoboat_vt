@@ -183,9 +183,7 @@ class TextEditWindow(QWidget):
         if dy:
             self.line_number_area.scroll(0, dy)
         else:
-            self.line_number_area.update(
-                0, rect.y(), self.line_number_area.width(), rect.height()
-            )
+            self.line_number_area.update(0, rect.y(), self.line_number_area.width(), rect.height())
 
         if rect.contains(self.editor.viewport().rect()):
             self.update_line_number_area_width()
@@ -202,9 +200,7 @@ class TextEditWindow(QWidget):
 
         super().resizeEvent(event)
         cr = self.editor.contentsRect()
-        self.line_number_area.setGeometry(
-            QRect(cr.left(), cr.top(), self.line_number_area_width(), cr.height())
-        )
+        self.line_number_area.setGeometry(QRect(cr.left(), cr.top(), self.line_number_area_width(), cr.height()))
 
     def line_number_area_paint_event(self, event: QEvent) -> None:
         """
@@ -221,11 +217,7 @@ class TextEditWindow(QWidget):
 
         block = self.editor.firstVisibleBlock()
         block_number = block.blockNumber()
-        top = (
-            self.editor.blockBoundingGeometry(block)
-            .translated(self.editor.contentOffset())
-            .top()
-        )
+        top = self.editor.blockBoundingGeometry(block).translated(self.editor.contentOffset()).top()
         bottom = top + self.editor.blockBoundingRect(block).height()
 
         while block.isValid() and top <= event.rect().bottom():
