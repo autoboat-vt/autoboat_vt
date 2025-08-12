@@ -202,6 +202,10 @@ class TelemetryNode(Node):
         self.vesc_telemetry_data_motor_temperature = 0
         self.vesc_telemetry_data_vesc_temperature = 0
 
+        
+        self.boat_status_session = requests.Session()
+        self.autopilot_parameters_session = requests.Session()
+        self.waypoints_session = requests.Session()
 
 
 
@@ -281,7 +285,7 @@ class TelemetryNode(Node):
 
 
 
-    def get_raw_response_from_telemetry_server(self, route: str) -> any:
+    def get_raw_response_from_telemetry_server(self, route: str, session: requests.Session = None) -> any:
         """
         This is essentially just a helper function to send a GET request to a specific telemetry server route and automatically
         retry if it cannot connect to that route.
@@ -295,7 +299,10 @@ class TelemetryNode(Node):
             Any type: This function returns whatever the JSON payload that was sent over the GET request was.
         """
         try:
-            return requests.get(TELEMETRY_SERVER_URL + route, timeout=10).json()
+            if session == None:
+                return requests.get(TELEMETRY_SERVER_URL + route, timeout=10).json()
+            else:
+                return session.get(TELEMETRY_SERVER_URL + route, timeout=10).json()
 
         except Exception as e:
             print(e)
@@ -313,6 +320,7 @@ class TelemetryNode(Node):
         and then this node makes an API call to send that data over to the groundstation so that it can view what is going on
         """
 
+        
         # TODO TODO THIS IS BUGGED. YOU NEED TO ACCOUNT FOR THE VELOCITY VECTOR BEING MEASURED GLOBALLY RATHER THAN THE APPARENT WIND VECTOR WHICH IS MEASURED LOCALLY
         true_wind_vector = self.apparent_wind_vector + self.velocity_vector
         self.true_wind_speed, self.true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
@@ -375,10 +383,11 @@ class TelemetryNode(Node):
             "current_waypoint_index": self.current_waypoint_index,
             "distance_to_next_waypoint": distance_to_next_waypoint,
         }
-
+        
+        start_time = time.time()
         # requests.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json={"value": list(boat_status_dictionary.values())})
-        requests.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json=boat_status_dictionary)
-
+        self.boat_status_session.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json=boat_status_dictionary)
+        self.get_logger().info(f"{time.time() - start_time}")
 
 
     def update_waypoints_from_telemetry(self):
@@ -387,7 +396,7 @@ class TelemetryNode(Node):
         and then publishes the waypoints over ROS so that the autopilot can see them
         """
 
-        new_waypoints_list = self.get_raw_response_from_telemetry_server("/waypoints/get_new")
+        new_waypoints_list = self.get_raw_response_from_telemetry_server("/waypoints/get_new", session=self.waypoints_session)
 
         if new_waypoints_list == []:
             return
@@ -418,7 +427,7 @@ class TelemetryNode(Node):
         and then publishes the autopilot parameters over ROS so that the autopilot can see them
         """
 
-        new_autopilot_parameters_dictionary = self.get_raw_response_from_telemetry_server("/autopilot_parameters/get_new")
+        new_autopilot_parameters_dictionary = self.get_raw_response_from_telemetry_server("/autopilot_parameters/get_new", session=self.autopilot_parameters_session)
 
         if new_autopilot_parameters_dictionary == {}:
             return
@@ -426,7 +435,7 @@ class TelemetryNode(Node):
         for new_autopilot_parameter_name, new_autopilot_parameters_value in new_autopilot_parameters_dictionary.items():
             self.autopilot_parameters_dictionary[new_autopilot_parameter_name] = new_autopilot_parameters_value
 
-        # if this is a new set of parameters, then update the ros2 topic so that the autopilot actually knows what the new parameters are
+        # if this is a new set of parameters, then update the ROS2 topic so that the autopilot actually knows what the new parameters are
         serialized_autopilot_parameters_string = String(data=json.dumps(self.autopilot_parameters_dictionary))
         self.autopilot_parameters_publisher.publish(serialized_autopilot_parameters_string)
 
