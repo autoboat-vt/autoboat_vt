@@ -125,15 +125,16 @@ def get_distance_between_angles(angle1: float, angle2: float) -> float:
 def get_bearing(current_position: Position, destination_position: Position) -> float:
     """
     Gets the bearing towards a specific destination point, from our current location. 
-    The bearing is just the angle between two points on earth (AKA which direction to travel in to get to the destination position from the current position)
+    The bearing is just the angle between two points on earth 
+    (AKA which direction to travel in to get to the destination position from the current position)
 
     Args:
         current_position (Position): a Position object that represents the current position
         destination_position (Position): a Position object that represents the position that you would like to travel towards
 
     Returns:
-        float: the bearing as an angle between 0 to 360, counter clockwise, measured from east. This value tells you which direction you need to travel in to
-            get to your destination.
+        float: the bearing as an angle between 0 to 360, counter clockwise, measured from east. 
+        This value tells you which direction you need to travel in to get to your destination.
     """
     
     current_latitude, current_longitude = current_position.get_longitude_latitude()
@@ -160,26 +161,19 @@ def get_distance_between_positions(position1: Position, position2: Position):
 
     
 
-def is_angle1_between_angle2_and_angle3(angle: float, boundary1, boundary2):
-    # TODO TODO TODO TODO TODO
-    pass
-
 
 def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float) -> bool:
     """
-    TODO TODO TODO TODO TODO
-    Checks whether "angle"
-
+    TODO Better documentation
+    
     Args:
-        angle (float): 
-        boundary1 (float): 
-        boundary2 (float): 
+        angle (float): an angle measured in degrees counter-clockwise from the x axis
+        boundary1 (float): an angle measured in degrees counter-clockwise from the x axis 
+        boundary2 (float): an angle measured in degrees counter-clockwise from the x axis
 
     Returns:
         bool: If "angle" is between "boundary1" and "boundary2", then return True and if not, then return False
     """
-    # TODO rename this function to is_angle_between_two_angles or smthn like that
-    # TODO make the names of these a little bit less cringeworthy
     angle = np.deg2rad(angle)
     boundary1 = np.deg2rad(boundary1)
     boundary2 = np.deg2rad(boundary2)
@@ -208,7 +202,7 @@ def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float
     
     
 # ==============================================================================
-# FUNCTIONS THAT ARE NOT FULLY TESTED
+# UTIL FUNCTIONS THAT ARE NOT FULLY TESTED
 # ==============================================================================
     
     

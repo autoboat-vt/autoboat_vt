@@ -17,9 +17,12 @@ import json, yaml, os, time
 
 class SailboatAutopilotNode(Node):
     """
-    Handles communications between the autopilot and all of the other nodes/ topics through ros2
-    The autopilot takes in a bunch of sensor data and waypoints (list of gps positions that represent waypoints) and attempts to traverses through the waypoints by continuously publishing to the sail angle and rudder angle topics.
-        
+    Handles communications between the autopilot (autopilot_library/sailboat_autopilot.py) and all of the other nodes/ topics through ROS2
+    The autopilot takes in a bunch of sensor data and waypoints (list of gps positions that represent waypoints) 
+    and attempts to traverses through the waypoints by continuously publishing to the sail angle and rudder angle topics.
+    
+    The main function that you should pay attention to is update_ros_topics, since this is the function that is called periodically on a timer.
+    
     NOTE: All units are in standard SI units and angles are generally measured in degrees unless otherwise specified
     """
     
@@ -93,21 +96,31 @@ class SailboatAutopilotNode(Node):
         
         
         # Send default parameters to the telemetry server so that the groundstation can see what the default parameters are
-        self.autopilot_parameters_publisher = self.create_publisher(String, '/autopilot_parameters', qos_profile=10)
-        self.autopilot_parameters_publisher.publish(String(data = json.dumps(self.parameters)))
+        # self.autopilot_parameters_publisher = self.create_publisher(String, '/autopilot_parameters', qos_profile=10)
+        # self.autopilot_parameters_publisher.publish(String(data = json.dumps(self.parameters)))
         
-        del self.autopilot_parameters_publisher
+        # del self.autopilot_parameters_publisher
         
         
         
-    def rc_data_callback(self, joystick_msg: RCData):
-        
+    def rc_data_callback(self, rc_data_message: RCData):
+        """
+        This callback is called whenever there is new data about what is being pressed on the remote control.
+        Whenever this callback is called, a couple of things happen: first, we check whether or not we are trying to zero
+        the rudder or the winch and if we have, then we should handle that. Second, we need to keep track of if we are entering
+        hold heading mode, and if we are, then we need to keep track of the current heading, since that heading is the one we will need to hold.
+        Finally, we set the SailboatAutopilotMode based on a specific combination of toggles to determine whether we are in full rc mode,
+        full autopilot mode, or one of the semi autonomous modes.
+
+        Args:
+            rc_data_message (RCData): A struct that contains all of the data on what is pressed on the remote control
+        """
         # This means we have entered hold heading mode, so keep track of the current heading since this is the target heading
-        if joystick_msg.toggle_f == 1 and self.toggle_f != 1:
+        if rc_data_message.toggle_f == 1 and self.toggle_f != 1:
             self.heading_to_hold = self.heading     
         
         # Are we trying to zero the rudder?
-        if self.button_d == False and joystick_msg.button_d == True:
+        if self.button_d == False and rc_data_message.button_d == True:
             self.should_zero_rudder_encoder = True
             self.rudder_encoder_has_been_zeroed = False
             
@@ -116,7 +129,7 @@ class SailboatAutopilotNode(Node):
             
             
         # Are we trying to zero the winch?
-        if self.button_a == False and joystick_msg.button_a == True:
+        if self.button_a == False and rc_data_message.button_a == True:
             self.should_zero_winch_encoder = True
             self.winch_encoder_has_been_zeroed = False
             
@@ -125,17 +138,17 @@ class SailboatAutopilotNode(Node):
             
             
             
-        self.joystick_left_x = joystick_msg.joystick_left_x
-        self.joystick_left_y = joystick_msg.joystick_left_y
-        self.joystick_right_x = joystick_msg.joystick_right_x
-        self.joystick_right_y = joystick_msg.joystick_right_y
+        self.joystick_left_x = rc_data_message.joystick_left_x
+        self.joystick_left_y = rc_data_message.joystick_left_y
+        self.joystick_right_x = rc_data_message.joystick_right_x
+        self.joystick_right_y = rc_data_message.joystick_right_y
         
-        self.button_a = joystick_msg.button_a
-        self.toggle_b = joystick_msg.toggle_b
-        self.toggle_c = joystick_msg.toggle_c
-        self.button_d = joystick_msg.button_d
-        self.toggle_e = joystick_msg.toggle_e
-        self.toggle_f = joystick_msg.toggle_f
+        self.button_a = rc_data_message.button_a
+        self.toggle_b = rc_data_message.toggle_b
+        self.toggle_c = rc_data_message.toggle_c
+        self.button_d = rc_data_message.button_d
+        self.toggle_e = rc_data_message.toggle_e
+        self.toggle_f = rc_data_message.toggle_f
         
         # kill switch
         if self.toggle_b != 0:
@@ -172,6 +185,7 @@ class SailboatAutopilotNode(Node):
         Receives a serialized json (as a string) of parameters and sets them as constants.
         Any constant can be set as long as they are in the json
         """
+        
         new_parameters_json: dict = json.loads(new_parameters.data)
         for new_parameter_name, new_parameter_value in new_parameters_json.items():
             if new_parameter_name not in self.parameters.keys():
@@ -182,7 +196,7 @@ class SailboatAutopilotNode(Node):
             self.parameters[new_parameter_name] = new_parameter_value
         
         
-        # special cases to handle since they do not update automatically
+        # SPECIAL CASES TO HANDLE SINCE THEY DO NOT UPDATE AUTOMATICALLY
         if "autopilot_refresh_rate" in new_parameters_json.keys():
             self.destroy_timer(self.autopilot_refresh_timer)
             self.autopilot_refresh_timer = self.create_timer(1 / self.parameters['autopilot_refresh_rate'], self.update_ros_topics)
@@ -191,10 +205,11 @@ class SailboatAutopilotNode(Node):
         
     def waypoints_list_callback(self, waypoint_list: WaypointList):
         """
-        Convert the list of Nav Sat Fix objects (ros2) to a list of Position objects, which are a custom datatype that has some useful helper methods.
+        Convert the list of Nav Sat Fix objects (ROS2) to a list of Position objects, which are a custom datatype that has some useful helper methods.
         The Position object should be simpler to do calculations with, so we would rather deal with them. There are many helper functios in utils.py for using Position objects
+        
+        NavSatFix message documentation: https://docs.ros2.org/foxy/api/sensor_msgs/msg/NavSatFix.html
         """
-        # NavSatFix message documentation: https://docs.ros2.org/foxy/api/sensor_msgs/msg/NavSatFix.html
         
         if len(waypoint_list.waypoints) == 0: return
         
@@ -229,9 +244,12 @@ class SailboatAutopilotNode(Node):
 
 
 
+
+
     def step(self):
         """
-        Computes the best sail and rudder angles for the given mode and state
+        TODO perhaps in the future, make this function state independent (aka using no self.position, self.global_velocity etc and just having them passed in as arguments)
+        Computes the best sail and rudder angles for the current mode and state
         
         Returns (tuple): (sail_angle, rudder_angle)
             sail angle or rudder angle are None if the autopilot doesn't have authority over them 
@@ -266,11 +284,8 @@ class SailboatAutopilotNode(Node):
     
     def update_ros_topics(self):
         """
-        This is the main function that is called constantely by the timer.
-        
+        This is the main function that is called constantely by the timer. 
         Updates the sail_angle and rudder_angle topics based on the output of stepping in the autopilot controller
-        
-        Each call to this function takes around 2 milliseconds as of 5/26/2025 (aka this is not a super important place to find optimizations since it doesn't take that much time from a cpu core)
         """        
         
         desired_rudder_angle, desired_sail_angle = self.step()
@@ -298,6 +313,7 @@ class SailboatAutopilotNode(Node):
             
             # TODO make it so that the bearing is the actual heading the autopilot is trying to follow (this is different when tacking)
             # when tacking, the boat is not trying to head straight towards the waypoint, but rather, it is travelling on a tacking line
+            # maybe add a new ROOS topic specifically for the actual heading that the autopilot is trying to follow
             bearing_to_waypoint = get_bearing(self.position, current_waypoint)
             self.desired_heading_publisher.publish(Float32(data=float(bearing_to_waypoint)))
             
@@ -306,7 +322,7 @@ class SailboatAutopilotNode(Node):
             
             
             
-        # Finally, ensure that we tell the motor driver what we want the rudder angle and the sail angle to do through ros
+        # Ensure that we tell the motor driver what we want the rudder angle and the sail angle to do through ros
         if desired_rudder_angle != None:
             self.desired_rudder_angle_publisher.publish(Float32(data=float(desired_rudder_angle))) # the negative is a correction for how to actually turn the boat
             
@@ -322,10 +338,8 @@ class SailboatAutopilotNode(Node):
         if self.should_zero_winch_encoder:
             self.zero_winch_encoder_publisher.publish(Bool(data=self.should_zero_winch_encoder))
             self.winch_encoder_has_been_zeroed = True
-            
-        
-        self.get_logger().info(f"{desired_sail_angle}")
-        self.get_logger().info(f"{desired_rudder_angle}")
+
+
 
 
 
@@ -338,9 +352,3 @@ def main():
 
     sailboat_autopilot_node.destroy_node()
     rclpy.shutdown()
-
-
-
-
-if __name__ == "__main__": 
-    main()

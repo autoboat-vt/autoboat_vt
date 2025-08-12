@@ -176,14 +176,16 @@ class VESCPublisher(Node):
 
 
 def main(args=None):
+    
     rclpy.init(args=args)
     vesc_publisher = VESCPublisher()
-    
     rclpy.spin(vesc_publisher)
+    
+    # vesc_publisher.destroy_node()
     rclpy.shutdown()
 
-if __name__ == '__main__':
-    main()
+
+
 
 
 #Pragya - Yes, you can play tetris on the phallic ice cream
