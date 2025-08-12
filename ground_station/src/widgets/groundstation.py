@@ -748,9 +748,7 @@ class GroundStationWidget(QWidget):
                 timer.start()
 
         elif not equal_flag and self.remember_waypoints_pull_service_status:
-            print(
-                "[Info] Local waypoints do not match telemetry server waypoints, but user has chosen to not be reminded."
-            )
+            print("[Info] Local waypoints do not match telemetry server waypoints, but user has chosen to not be reminded.")
 
         else:
             print("[Info] Local waypoints match telemetry server waypoints, but user has chosen to not be reminded.")
@@ -914,7 +912,8 @@ class GroundStationWidget(QWidget):
             f"Apparent Wind Angle: {self.boat_data.get('apparent_wind_angle', -69.420):.5f}°\n"
             f"Sail Angle: {self.boat_data.get('sail_angle', -69.420):.5f}°\n"
             f"Rudder Angle: {self.boat_data.get('rudder_angle', -69.420):.5f}°\n"
-            f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index', 'N/A')}"
+            f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index', 'N/A')}\n"
+            f"Current Waypoint: {self.waypoints[self.boat_data.get('current_waypoint_index', -1)] if isinstance(self.boat_data.get('current_waypoint_index'), int) and 0 <= self.boat_data.get('current_waypoint_index', -1) < len(self.waypoints) else 'N/A'}"
         )
 
         self.left_text_section.setText(telemetry_text)

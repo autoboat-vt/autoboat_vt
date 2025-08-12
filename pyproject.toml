@@ -1,3 +1,11 @@
+[project]
+name    = "autoboat_vt"
+version = "67.420.69"
+readme  = "README.md"
+
+[project.urls]
+repository = "https://github.com/autoboat-vt/autoboat_vt"
+
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
 exclude = [
