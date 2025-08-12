@@ -100,9 +100,7 @@ class ConsoleOutputWidget(QWidget):
             formatted_time = now.strftime("(%I:%M:%S %p)")
             cursor = self.console_output.textCursor()
             cursor.movePosition(QTextCursor.End)
-            cursor.insertText(
-                f"{formatted_time} {text}\n" + (int(len(text.splitlines()) > 1) * "\n")
-            )
+            cursor.insertText(f"{formatted_time} {text}\n" + (int(len(text.splitlines()) > 1) * "\n"))
 
             self.console_output.setTextCursor(cursor)
             self.console_output.ensureCursorVisible()

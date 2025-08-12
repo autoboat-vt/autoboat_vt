@@ -8,7 +8,11 @@ class Discrete_PID:
     n is used instead of just calling it the low_pass_filter_cutoff_frequency so the equations are more legible but that is all that term is.
     """
     def __init__(self, sample_period, Kp=1, Ki=0, Kd=0, n=0):
-        """n represents the cutoff frequency for the low pass filter applied to the derivative term of the pid controller"""
+        """
+        n represents the cutoff frequency for the low pass filter applied to the derivative term of the pid controller
+        
+        All of the other parameters should be fairly standard for a PID controller
+        """
         
         self.sample_period = sample_period
         self.Kp = Kp

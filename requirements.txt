@@ -42,3 +42,4 @@ pydict2class
 dataclass_wizard
 click
 pympler
+ruff

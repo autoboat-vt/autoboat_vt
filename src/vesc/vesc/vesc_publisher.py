@@ -1,23 +1,19 @@
 import rclpy
-import pyvesc
-from pyvesc import VESC
-# from pyvesc.VESC.messages import GetValues, SetRPM, SetCurrent, SetRotorPositionMode, GetRotorPosition
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
-from pyvesc.protocol.interface import encode_request, encode, decode
-from pyvesc.VESC.messages import *
-import serial
-import time
-import csv
-from serial.tools import list_ports
-import os, signal
-
+from rclpy.qos import qos_profile_sensor_data
 from rclpy.node import Node
-
-from std_msgs.msg import String, Float32
 
 from autoboat_msgs.msg import VESCTelemetryData, VESCControlData
 
-motorPolePairs = 7
+from pyvesc.VESC.messages import *
+
+from pyvesc import VESC
+import time
+from serial.tools import list_ports
+import os, signal
+
+
+
+MOTOR_POLE_PAIRS = 7
 
 # VESC_VID = 0x0403
 # VESC_PID = 0x6001
@@ -58,15 +54,9 @@ class VESCPublisher(Node):
         self.missed_measurements_in_a_row = 0
         self.last_command_time = 0
         
-        sensor_qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
-            history=QoSHistoryPolicy.KEEP_LAST,
-            depth=1
-        )
+        self.controlTypeSub = self.create_subscription(msg_type= VESCControlData, topic='/propeller_motor_control_struct', callback=self.receive_control_data_callback, qos_profile=qos_profile_sensor_data)
         
-        self.controlTypeSub = self.create_subscription(msg_type= VESCControlData, topic='/propeller_motor_control_struct', callback=self.receive_control_data_callback, qos_profile=sensor_qos_profile)
-        
-        self.vesc_telemetry_data_publisher = self.create_publisher(VESCTelemetryData, "/vesc_telemetry_data", sensor_qos_profile)
+        self.vesc_telemetry_data_publisher = self.create_publisher(VESCTelemetryData, "/vesc_telemetry_data", qos_profile_sensor_data)
         
         
         timer_period = 0.05  # seconds
@@ -81,7 +71,7 @@ class VESCPublisher(Node):
         
         try:
             if(msg.control_type_for_vesc == "rpm"):
-                self.motorVal = msg.desired_vesc_rpm * motorPolePairs
+                self.motorVal = msg.desired_vesc_rpm * MOTOR_POLE_PAIRS
                 self.motor.set_rpm(int(self.motorVal))
             elif(msg.control_type_for_vesc == "duty_cycle"):
                 self.motorVal = msg.desired_vesc_duty_cycle
@@ -145,11 +135,11 @@ class VESCPublisher(Node):
         else:
             self.missed_measurements_in_a_row = 0
         
-        rpm = measurements.rpm/motorPolePairs
+        rpm = measurements.rpm/MOTOR_POLE_PAIRS
         c_motor = measurements.avg_motor_current
         motorData = {
             "time": time.time(),
-            "rpm": measurements.rpm/motorPolePairs,
+            "rpm": measurements.rpm/MOTOR_POLE_PAIRS,
             "duty_cycle": measurements.duty_cycle_now,
             "v_in": measurements.v_in,
             "c_in": measurements.avg_input_current,
@@ -169,11 +159,11 @@ class VESCPublisher(Node):
         #publish vesc data to topic
         self.vesc_telemetry_data_publisher.publish(
             VESCTelemetryData(
-                rpm= motorData["rpm"], duty_cycle= motorData["duty_cycle"], 
-                voltage_to_vesc= motorData["v_in"], current_to_vesc= motorData["c_in"],
+                rpm = motorData["rpm"], duty_cycle = motorData["duty_cycle"], 
+                voltage_to_vesc = motorData["v_in"], current_to_vesc = motorData["c_in"],
                 voltage_to_motor = motorData["v_out"], avg_current_to_motor = motorData["c_motor"],
                 wattage_to_motor = motorData["motor_wattage"], motor_temperature = motorData["temp_motor"],
-                vesc_temperature = motorData["temp_vesc"], time_since_vesc_startup_in_ms= motorData["time_ms"], 
+                vesc_temperature = motorData["temp_vesc"], time_since_vesc_startup_in_ms = motorData["time_ms"], 
                 amp_hours = motorData["amp_hours"], amp_hours_charged = motorData["amp_hours_charged"]  
             )
         )

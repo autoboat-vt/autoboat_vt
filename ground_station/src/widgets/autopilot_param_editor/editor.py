@@ -89,16 +89,12 @@ class AutopilotParamEditor(QWidget):
         # endregion actions button group
 
         try:
-            self.config = JsoncParser.parse_file(
-                constants.AUTO_PILOT_PARAMS_DIR / "params_default.jsonc"
-            )
+            self.config = JsoncParser.parse_file(constants.AUTO_PILOT_PARAMS_DIR / "params_default.jsonc")
             print(
                 f"[Info] Loaded {len(self.config)} parameters from `{constants.AUTO_PILOT_PARAMS_DIR / 'params_default.jsonc'}`."
             )
         except Exception:
-            print(
-                "[Error] Please ensure the file exists in the `app_data/autopilot_params` directory."
-            )
+            print("[Error] Please ensure the file exists in the `app_data/autopilot_params` directory.")
 
         self.params_container = QWidget()
         self.params_layout = QVBoxLayout()
@@ -262,9 +258,7 @@ class AutopilotParamEditor(QWidget):
 
         self.update_status_label(visible_count, search_text)
 
-    def update_status_label(
-        self, visible_count: int | None = None, search_text: str = ""
-    ) -> None:
+    def update_status_label(self, visible_count: int | None = None, search_text: str = "") -> None:
         """
         Update the status label with search results.
 
@@ -286,9 +280,7 @@ class AutopilotParamEditor(QWidget):
         elif visible_count == 0:
             self.status_label.setText(f"No parameters match '{search_text}'")
         else:
-            self.status_label.setText(
-                f"Showing {visible_count} parameters matching '{search_text}'"
-            )
+            self.status_label.setText(f"Showing {visible_count} parameters matching '{search_text}'")
 
 
 class AutopilotParamWidget(QFrame):
@@ -331,9 +323,7 @@ class AutopilotParamWidget(QFrame):
             self.description: str = config["description"]
 
             assert isinstance(self.name, str), "Parameter name must be a string."
-            assert isinstance(self.default_val, self.type), (
-                f"Default value must be of type {self.type.__name__}."
-            )
+            assert isinstance(self.default_val, self.type), f"Default value must be of type {self.type.__name__}."
             assert isinstance(self.description, str), "Description must be a string."
 
         except (KeyError, IndexError):
@@ -436,18 +426,14 @@ class AutopilotParamWidget(QFrame):
             ).json()
 
         except requests.exceptions.RequestException as e:
-            print(
-                f"[Error] Failed to fetch existing autopilot parameters. Cannot send {self.name}: {e}"
-            )
+            print(f"[Error] Failed to fetch existing autopilot parameters. Cannot send {self.name}: {e}")
             return
 
         if isinstance(existing_data, dict):
             if existing_data.get(self.name, None) is not None:
                 existing_data[self.name] = self.value
             else:
-                print(
-                    f"[Warning] {self.name} not found in existing parameters. Adding it."
-                )
+                print(f"[Warning] {self.name} not found in existing parameters. Adding it.")
                 existing_data[self.name] = self.value
 
             try:
@@ -460,9 +446,7 @@ class AutopilotParamWidget(QFrame):
                 print(f"[Info] Successfully sent {self.name} with value {self.value}.")
 
             except requests.exceptions.RequestException as e:
-                print(
-                    f"[Error] Failed to send {self.name} with value {self.value}: {e}"
-                )
+                print(f"[Error] Failed to send {self.name} with value {self.value}: {e}")
                 return
 
         else:
@@ -480,9 +464,7 @@ class AutopilotParamWidget(QFrame):
         """Pull the current value of the parameter from the telemetry endpoint."""
 
         try:
-            response = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"]
-            )
+            response = constants.REQ_SESSION.get(constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"])
             response.raise_for_status()
             data = response.json()
 
@@ -556,9 +538,7 @@ class AutopilotParamWidget(QFrame):
                 json.dump(temp_params, file, indent=4)
 
         except TypeError:
-            print(
-                f"[Error] Invalid value for {self.name}. Resetting to previous value."
-            )
+            print(f"[Error] Invalid value for {self.name}. Resetting to previous value.")
             self.modify_element.setText(str(self.value))
             return
 
@@ -578,13 +558,9 @@ class AutopilotParamWidget(QFrame):
 
         try:
             initial_text = json.dumps(self.value, indent=2)
-            self.text_edit_window = TextEditWindow(
-                highlighter=JsonHighlighter, initial_text=initial_text
-            )
+            self.text_edit_window = TextEditWindow(highlighter=JsonHighlighter, initial_text=initial_text)
             self.text_edit_window.setWindowTitle(f"Edit {self.name}")
-            self.text_edit_window.user_text_emitter.connect(
-                self.edit_sequence_data_callback
-            )
+            self.text_edit_window.user_text_emitter.connect(self.edit_sequence_data_callback)
             self.text_edit_window.show()
 
         except Exception as e:
@@ -612,9 +588,7 @@ class AutopilotParamWidget(QFrame):
                 )
 
         except TypeError:
-            print(
-                f"[Error] Invalid value for {self.name}. Resetting to previous value."
-            )
+            print(f"[Error] Invalid value for {self.name}. Resetting to previous value.")
             self.value_display.setText(str(self.value))
             return
 

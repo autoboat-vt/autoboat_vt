@@ -8,7 +8,7 @@ argv = argv[1:]
 
 
 import rclpy
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+from rclpy.qos import qos_profile_sensor_data
 import time
 import serial
 from serial.tools import list_ports
@@ -59,14 +59,8 @@ class RCPublisher(Node):
         self.crsf_frame_rc_data = None
         self.serial_stream = bytearray()
         self.callback_count = 0
-        
-        sensor_qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
-            history=QoSHistoryPolicy.KEEP_LAST,
-            depth=1
-        )
-        
-        self.rc_data_publisher = self.create_publisher(RCData, '/rc_data', sensor_qos_profile)
+                
+        self.rc_data_publisher = self.create_publisher(RCData, '/rc_data', qos_profile_sensor_data)
         self.termination_listener = self.create_subscription(msg_type=Bool, topic="/should_terminate", callback=self.should_terminate_callback, qos_profile=10)
 
 
