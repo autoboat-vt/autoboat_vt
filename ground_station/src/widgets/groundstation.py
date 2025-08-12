@@ -748,9 +748,7 @@ class GroundStationWidget(QWidget):
                 timer.start()
 
         elif not equal_flag and self.remember_waypoints_pull_service_status:
-            print(
-                "[Info] Local waypoints do not match telemetry server waypoints, but user has chosen to not be reminded."
-            )
+            print("[Info] Local waypoints do not match telemetry server waypoints, but user has chosen to not be reminded.")
 
         else:
             print("[Info] Local waypoints match telemetry server waypoints, but user has chosen to not be reminded.")

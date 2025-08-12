@@ -1,7 +1,7 @@
 [project]
-name         = "autoboat_vt"
-version      = "67.420.69"
-readme       = "README.md"
+name    = "autoboat_vt"
+version = "67.420.69"
+readme  = "README.md"
 
 [project.urls]
 repository = "https://github.com/autoboat-vt/autoboat_vt"
@@ -39,7 +39,7 @@ exclude = [
 ]
 
 # Same as Black.
-line-length  = 120
+line-length  = 135
 indent-width = 4
 
 # Assume Python 3.10
