@@ -40,6 +40,8 @@ class TelemetryNode(Node):
     editing sail angles at different points of sail, etc, etc. The list of the parameters that the groundstation would like to change are sent from the groundstation,
     and it is the telemetry server's responsibility to tell the autopilot through the /autopilot_parameters topic how it should change its autopilot parameters.
 
+    The main functions called on a timer are update_boat_status, update_waypoints_from_telemetry, and update_autopilot_parameters_from_telemetry.
+    These are the main functions you should focus on when trying to understand how this node works. 
 
     **NOTE**: All units are in standard SI units and angle is measured in degrees
     """
