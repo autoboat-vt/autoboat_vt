@@ -33,6 +33,8 @@ class SailboatAutopilot:
         self.current_state = SailboatStates.NORMAL
         
         self.desired_tacking_angle = 0
+
+        self.obstacles = [[0.02237766924, 0.01085355878],[0.02222076003,0.01111239195],[0.02245277109,0.01127198339],[0.02284035026,0.01104399562],[0.0226995343,0.01077443361]]
    
    
     def reset(self): 
@@ -76,7 +78,9 @@ class SailboatAutopilot:
         return sail_angle
         
         
-    def get_optimal_rudder_angle(self, heading, desired_heading):
+    def get_optimal_rudder_angle(self, heading, desired_heading, autopilot=False,obstacle=False):
+        if(autopilot and obstacle):
+            return 90
         error = get_distance_between_angles(desired_heading, heading)
         
         self.rudder_pid_controller.set_gains(
@@ -237,7 +241,7 @@ class SailboatAutopilot:
                     self.current_state = SailboatStates.CCW_TACKING
 
             
-            rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading)
+            rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading,autopilot=True)
             sail_angle = self.get_optimal_sail_angle(apparent_wind_angle)
             
             
