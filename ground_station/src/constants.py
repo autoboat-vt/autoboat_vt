@@ -17,6 +17,8 @@ Constants:
 - TELEMETRY_SERVER_URL: Base URL for the telemetry server.
 - TELEMETRY_SERVER_ENDPOINTS: Dictionary of endpoints for the telemetry server.
 - WAYPOINTS_SERVER_URL: URL for the local waypoints server.
+- TELEMETRY_TIMEOUT_SECONDS: Timeout for telemetry requests.
+- REQ_SESSION: A `requests.Session` object for making HTTP requests.
 - TOP_LEVEL_DIR, SRC_DIR, DATA_DIR: Paths to the main directories of the application.
 - HTML_MAP_PATH, HTML_MAP: Path and content of the HTML file used by the map widget in the ground station.
 - HTML_CAMERA_PATH, HTML_CAMERA: Path and content of the HTML file used by the camera widget.
@@ -348,20 +350,24 @@ try:
         os.makedirs(DATA_DIR / "autopilot_params")
 
     _autopilot_param_editor_dir = PurePath(SRC_DIR / "widgets" / "autopilot_param_editor")
-    if "params_temp.json" not in os.listdir(_autopilot_param_editor_dir):
-        shutil.copyfile(
-            PurePath(DATA_DIR / "autopilot_params" / "params_default.jsonc"),
-            PurePath(_autopilot_param_editor_dir / "params_temp.json"),
-        )
 
-        with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "r") as f:
-            lines = f.readlines()
+    # remove old temp file if it exists
+    if "params_temp.json" in os.listdir(_autopilot_param_editor_dir):
+        os.remove(PurePath(_autopilot_param_editor_dir / "params_temp.json"))
 
-        # remove comments and empty lines
-        with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "w") as f:
-            for line in lines:
-                if not line.strip().startswith("//"):
-                    f.write(line)
+    shutil.copyfile(
+        PurePath(DATA_DIR / "autopilot_params" / "params_default.jsonc"),
+        PurePath(_autopilot_param_editor_dir / "params_temp.json"),
+    )
+
+    with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "r") as f:
+        lines = f.readlines()
+
+    # remove comments and empty lines
+    with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "w") as f:
+        for line in lines:
+            if not line.strip().startswith("//"):
+                f.write(line)
 
     if "boat_data" not in os.listdir(DATA_DIR):
         os.makedirs(DATA_DIR / "boat_data")
