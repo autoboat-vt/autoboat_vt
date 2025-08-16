@@ -1,11 +1,18 @@
 from .discrete_pid import Discrete_PID
 from .utils import *
 from rclpy.impl.rcutils_logger import RcutilsLogger
-
+from typing import Any
 
 class MotorboatAutopilot:
+    """
+    This class contains the main control algorithms to control a motorboat given sensor data.
+    As the person using this class, you generally should not have to worry about any of the functions that start with an underscore such as _function_name.
+    These functions are meant to be private to the class and are essentially helper functions. 
     
-    def __init__(self, parameters, logger):
+    This class is mainly used by the Motorboat Autopilot Node to control the boat through a ROS topic
+    """
+    
+    def __init__(self, autopilot_parameters: dict[str, Any], logger: RcutilsLogger):
         """
         Args:
             parameters (dict): a dictionary that should contain the information from the config/motorboat_default_parameters.yaml file.
@@ -19,11 +26,12 @@ class MotorboatAutopilot:
 
 
         self.rudder_pid_controller = Discrete_PID(
-            sample_period=(1 / parameters['autopilot_refresh_rate']), 
-            Kp=parameters['heading_p_gain'], Ki=parameters['heading_i_gain'], Kd=parameters['heading_d_gain'], n=parameters['heading_n_gain'], 
+            sample_period=(1 / autopilot_parameters['autopilot_refresh_rate']), 
+            Kp=autopilot_parameters['heading_p_gain'], Ki=autopilot_parameters['heading_i_gain'], 
+            Kd=autopilot_parameters['heading_d_gain'], n=autopilot_parameters['heading_n_gain'], 
         )
         
-        self.parameters = parameters
+        self.autopilot_parameters = autopilot_parameters
         self.logger = logger
         self.waypoints: list[Position] = None        
         self.current_state = SailboatStates.NORMAL

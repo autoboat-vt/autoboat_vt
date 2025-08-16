@@ -3,7 +3,7 @@ from .autopilot_library.utils import *
 
 
 import rclpy
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy, qos_profile_sensor_data
 from rclpy.node import Node
 from autoboat_msgs.msg import WaypointList, RCData
 from std_msgs.msg import Float32, String, Int32, Bool
@@ -31,14 +31,21 @@ class SailboatAutopilotNode(Node):
 
         current_folder_path = os.path.dirname(os.path.realpath(__file__))
         with open(current_folder_path + "/config/sailboat_default_parameters.yaml", 'r') as stream:
-            self.parameters: dict = yaml.safe_load(stream)
+            self.autopilot_parameters: dict = yaml.safe_load(stream)
             
-        self.sailboat_autopilot = SailboatAutopilot(parameters=self.parameters, logger=self.get_logger())
+        self.sailboat_autopilot = SailboatAutopilot(self.autopilot_parameters, logger=self.get_logger())
 
 
         # Initialize ros2 subscriptions, publishers, and timers
-        self.autopilot_refresh_timer = self.create_timer(1 / self.parameters['autopilot_refresh_rate'], self.update_ros_topics)
+        qos_profile_transient_local = QoSProfile(
+            depth=1,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            history=QoSHistoryPolicy.KEEP_LAST
+        )
         
+        self.autopilot_refresh_timer = self.create_timer(1 / self.autopilot_parameters['autopilot_refresh_rate'], self.update_ros_topics)
+        
+        self.default_autopilot_parameters_publisher = self.create_publisher(String, "/default_autopilot_parameters", qos_profile_transient_local)
         self.autopilot_parameters_listener = self.create_subscription(String, '/autopilot_parameters', callback=self.autopilot_parameters_callback, qos_profile=10)
         self.waypoints_list_listener = self.create_subscription(WaypointList, '/waypoints_list', self.waypoints_list_callback, 10)
                 
@@ -95,11 +102,8 @@ class SailboatAutopilotNode(Node):
         
         
         
-        # Send default parameters to the telemetry server so that the groundstation can see what the default parameters are
-        # self.autopilot_parameters_publisher = self.create_publisher(String, '/autopilot_parameters', qos_profile=10)
-        # self.autopilot_parameters_publisher.publish(String(data = json.dumps(self.parameters)))
-        
-        # del self.autopilot_parameters_publisher
+        # Publish the default parameters so that the telemetry node/ telemetry server/ groundstation know which parameters it can change
+        self.default_autopilot_parameters_publisher.publish(String(data=json.dumps(self.autopilot_parameters)))   
         
         
         
@@ -188,18 +192,18 @@ class SailboatAutopilotNode(Node):
         
         new_parameters_json: dict = json.loads(new_parameters.data)
         for new_parameter_name, new_parameter_value in new_parameters_json.items():
-            if new_parameter_name not in self.parameters.keys():
+            if new_parameter_name not in self.autopilot_parameters.keys():
                 print("WARNING: Attempted to set an autopilot parameter that the autopilot doesn't know")
                 print("If you would like to make a new autopilot parameter, please edit default_parameters.yaml")
                 continue
             
-            self.parameters[new_parameter_name] = new_parameter_value
+            self.autopilot_parameters[new_parameter_name] = new_parameter_value
         
         
         # SPECIAL CASES TO HANDLE SINCE THEY DO NOT UPDATE AUTOMATICALLY
         if "autopilot_refresh_rate" in new_parameters_json.keys():
             self.destroy_timer(self.autopilot_refresh_timer)
-            self.autopilot_refresh_timer = self.create_timer(1 / self.parameters['autopilot_refresh_rate'], self.update_ros_topics)
+            self.autopilot_refresh_timer = self.create_timer(1 / self.autopilot_parameters['autopilot_refresh_rate'], self.update_ros_topics)
         
         
         

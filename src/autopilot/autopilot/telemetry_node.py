@@ -6,7 +6,7 @@ from .autopilot_library.utils import *
 
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy, qos_profile_sensor_data
 from std_msgs.msg import Float32, Bool, String, Int32
 from geometry_msgs.msg import Vector3, Twist
 from sensor_msgs.msg import NavSatFix, Image
@@ -61,7 +61,22 @@ class TelemetryNode(Node):
         with open(current_folder_path + "/config/sailboat_default_parameters.yaml", "r") as stream:
             self.autopilot_parameters_dictionary: dict = yaml.safe_load(stream)
 
+        
+        qos_profile_transient_local = QoSProfile(
+            depth=1,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            history=QoSHistoryPolicy.KEEP_LAST
+        )
+        
+        
         # DECLARE ROS2 PUBLISHERS AND SUBSCRIBERS
+        self.default_autopilot_parameters_listener = self.create_subscription(
+            msg_type=String,
+            topic="/default_autopilot_parameters",
+            callback=self.default_autopilot_parameters_callback,
+            qos_profile=qos_profile_transient_local
+        )
+
         self.autopilot_parameters_publisher = self.create_publisher(
             msg_type=String, 
             topic="/autopilot_parameters", 
@@ -171,13 +186,15 @@ class TelemetryNode(Node):
 
         # DEFAULT VALUES IN CASE THESE ARE NEVER SENT THROUGH ROS OR THE TELEMETRY SERVER
         # If these values aren't changing then the ros node or telemetry server thats supposed to be sending these values may not be working correctly
+        self.default_autopilot_parameters = ""
+        
         self.current_waypoints_list: list[tuple[float, float]] = []
         self.current_waypoint_index = 0
-        self.position = NavSatFix(latitude=0.0, longitude=0.0)
 
         self.autopilot_mode = "N/A"
         self.full_autonomy_maneuver = "N/A"
 
+        self.position = NavSatFix(latitude=0.0, longitude=0.0)
         self.velocity_vector = np.array([0.0, 0.0])
         self.speed = 0.0
         self.heading = 0.0
@@ -246,6 +263,11 @@ class TelemetryNode(Node):
         self.vesc_telemetry_data_motor_temperature = vesc_telemetry_data.motor_temperature
         self.vesc_telemetry_data_vesc_temperature = vesc_telemetry_data.vesc_temperature
 
+    def default_autopilot_parameters_callback(self, default_autopilot_parameters_string: String):
+        self.default_autopilot_parameters = json.loads(default_autopilot_parameters_string.data)
+        self.get_logger().info(f"{self.default_autopilot_parameters}")
+        self.autopilot_parameters_session.post(url=TELEMETRY_SERVER_URL + "/autopilot_parameters/set_default", json=self.default_autopilot_parameters)
+    
     def current_waypoint_index_callback(self, current_waypoint_index: Int32):
         self.current_waypoint_index = current_waypoint_index.data
 
@@ -386,10 +408,8 @@ class TelemetryNode(Node):
             "distance_to_next_waypoint": distance_to_next_waypoint,
         }
         
-        start_time = time.time()
         # requests.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json={"value": list(boat_status_dictionary.values())})
         self.boat_status_session.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json=boat_status_dictionary)
-        self.get_logger().info(f"{time.time() - start_time}")
 
 
     def update_waypoints_from_telemetry(self):

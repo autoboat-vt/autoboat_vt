@@ -4,7 +4,7 @@ from .autopilot_library.utils import *
 
 
 import rclpy
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy, qos_profile_sensor_data
 from rclpy.node import Node
 from autoboat_msgs.msg import WaypointList, RCData, VESCControlData
 from std_msgs.msg import Float32, String, Int32, Bool 
@@ -32,15 +32,22 @@ class MotorboatAutopilotNode(Node):
 
         cur_folder_path = os.path.dirname(os.path.realpath(__file__))
         with open(cur_folder_path + "/config/motorboat_default_parameters.yaml", 'r') as stream:
-            self.parameters: dict = yaml.safe_load(stream)
+            self.autopilot_parameters: dict = yaml.safe_load(stream)
         
         # this is temporarily using the sailboat autopilot object for now since we still need to implement the motorboat autopilot object
-        self.motorboat_autopilot = MotorboatAutopilot(parameters=self.parameters, logger=self.get_logger())
+        self.motorboat_autopilot = MotorboatAutopilot(parameters=self.autopilot_parameters, logger=self.get_logger())
 
 
-        # Initialize ros2 subscriptions, publishers, and timers
-        self.autopilot_refresh_timer = self.create_timer(1 / self.parameters['autopilot_refresh_rate'], self.update_ros_topics)
+        # Initialize ROS2 subscriptions, publishers, and timers
+        qos_profile_transient_local = QoSProfile(
+            depth=1,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            history=QoSHistoryPolicy.KEEP_LAST
+        )
         
+        self.autopilot_refresh_timer = self.create_timer(1 / self.autopilot_parameters['autopilot_refresh_rate'], self.update_ros_topics)
+        
+        self.default_autopilot_parameters_publisher = self.create_publisher(String, "/default_autopilot_parameters", qos_profile_transient_local)
         self.autopilot_parameters_listener = self.create_subscription(String, '/autopilot_parameters', callback=self.autopilot_parameters_callback, qos_profile=10)
         self.waypoints_list_listener = self.create_subscription(WaypointList, '/waypoints_list', self.waypoints_list_callback, 10)
         
@@ -64,7 +71,7 @@ class MotorboatAutopilotNode(Node):
 
 
 
-        self.heading_pid_controller = Discrete_PID(sample_period=(1 / self.parameters['autopilot_refresh_rate']), Kp=1, Ki=0, Kd=0, n=1)
+        self.heading_pid_controller = Discrete_PID(sample_period=(1 / self.autopilot_parameters['autopilot_refresh_rate']), Kp=1, Ki=0, Kd=0, n=1)
 
         self.max_rpm = 10000
 
@@ -94,7 +101,12 @@ class MotorboatAutopilotNode(Node):
         self.toggle_e = 0
         self.toggle_f = 0
 
-        self.propeller_motor_control_mode = MotorboatControls.RPM        
+        self.propeller_motor_control_mode = MotorboatControls.RPM     
+        
+        
+        
+        # Publish the default parameters so that the telemetry node/ telemetry server/ groundstation know which parameters it can change
+        self.default_autopilot_parameters_publisher.publish(String(data=json.dumps(self.autopilot_parameters)))   
         
         
         
@@ -182,18 +194,18 @@ class MotorboatAutopilotNode(Node):
         """
         new_parameters_json: dict = json.loads(new_parameters.data)
         for new_parameter_name, new_parameter_value in new_parameters_json.items():
-            if new_parameter_name not in self.parameters.keys():
+            if new_parameter_name not in self.autopilot_parameters.keys():
                 print("WARNING: Attempted to set an autopilot parameter that the autopilot doesn't know")
                 print("If you would like to make a new autopilot parameter, please edit default_parameters.yaml")
                 continue
             
-            self.parameters[new_parameter_name] = new_parameter_value
+            self.autopilot_parameters[new_parameter_name] = new_parameter_value
         
         
         # special cases to handle since they do not update automatically
         if "autopilot_refresh_rate" in new_parameters_json.keys():
             self.destroy_timer(self.autopilot_refresh_timer)
-            self.autopilot_refresh_timer = self.create_timer(1 / self.parameters['autopilot_refresh_rate'], self.update_ros_topics)
+            self.autopilot_refresh_timer = self.create_timer(1 / self.autopilot_parameters['autopilot_refresh_rate'], self.update_ros_topics)
 
 
 
@@ -244,12 +256,12 @@ class MotorboatAutopilotNode(Node):
 
         # ensure that the gains are updated properly and if we get a new gain from the telemetry server, it gets properly updated
         self.heading_pid_controller.set_gains(
-            Kp=self.parameters['heading_p_gain'], Ki=self.parameters['heading_i_gain'], Kd=self.parameters['heading_d_gain'], 
-            n=self.parameters['heading_n_gain'], sample_period=self.parameters['autopilot_refresh_rate']
+            Kp=self.autopilot_parameters['heading_p_gain'], Ki=self.autopilot_parameters['heading_i_gain'], Kd=self.autopilot_parameters['heading_d_gain'], 
+            n=self.autopilot_parameters['heading_n_gain'], sample_period=self.autopilot_parameters['autopilot_refresh_rate']
         )
         
         rudder_angle = self.heading_pid_controller(error)
-        rudder_angle = np.clip(rudder_angle, self.parameters['min_rudder_angle'], self.parameters['max_rudder_angle'])
+        rudder_angle = np.clip(rudder_angle, self.autopilot_parameters['min_rudder_angle'], self.autopilot_parameters['max_rudder_angle'])
         return rudder_angle
     
     
@@ -268,10 +280,10 @@ class MotorboatAutopilotNode(Node):
             tuple[float, float]: the desired (sail_angle, rudder_angle) that the boat should use to sail
         """
         
-        min_sail_angle, max_sail_angle = self.parameters['min_sail_angle'], self.parameters['max_sail_angle']
+        min_sail_angle, max_sail_angle = self.autopilot_parameters['min_sail_angle'], self.autopilot_parameters['max_sail_angle']
         sail_angle = (((joystick_left_y - -100) * (max_sail_angle - min_sail_angle)) / (100 - -100)) + min_sail_angle
         
-        min_rudder_angle, max_rudder_angle = self.parameters['min_rudder_angle'], self.parameters['max_rudder_angle']
+        min_rudder_angle, max_rudder_angle = self.autopilot_parameters['min_rudder_angle'], self.autopilot_parameters['max_rudder_angle']
         rudder_angle = (((joystick_right_x - -100) * (max_rudder_angle - min_rudder_angle)) / (100 - -100)) + min_rudder_angle
     
         return sail_angle, rudder_angle

@@ -17,7 +17,7 @@ class SailboatAutopilot:
     This class is mainly used by the Sailboat Autopilot Node to control the boat through a ROS topic
     """
     
-    def __init__(self, parameters: dict[str, Any], logger: RcutilsLogger):
+    def __init__(self, autopilot_parameters: dict[str, Any], logger: RcutilsLogger):
         """
         Args:
             parameters (dict): a dictionary that should contain the information from the config/sailboat_default_parameters.yaml file.
@@ -31,11 +31,12 @@ class SailboatAutopilot:
 
 
         self.rudder_pid_controller = Discrete_PID(
-            sample_period=(1 / parameters['autopilot_refresh_rate']), 
-            Kp=parameters['heading_p_gain'], Ki=parameters['heading_i_gain'], Kd=parameters['heading_d_gain'], n=parameters['heading_n_gain'], 
+            sample_period=(1 / autopilot_parameters['autopilot_refresh_rate']), 
+            Kp=autopilot_parameters['heading_p_gain'], Ki=autopilot_parameters['heading_i_gain'], 
+            Kd=autopilot_parameters['heading_d_gain'], n=autopilot_parameters['heading_n_gain'], 
         )
         
-        self.parameters = parameters
+        self.autopilot_parameters = autopilot_parameters
         self.logger = logger
         self.waypoints: list[Position] = None        
         self.current_state = SailboatStates.NORMAL
@@ -50,7 +51,7 @@ class SailboatAutopilot:
         """
         Reinitializes the SailboatAutopilot with the same parameters and the same logger. This essentially resets things like waypoints. 
         """ 
-        self.__init__(parameters=self.parameters, logger=self.logger)
+        self.__init__(self.autopilot_parameters, logger=self.logger)
     
     def update_waypoints_list(self, waypoints_list: list[Position]) -> None:
         """
@@ -75,8 +76,8 @@ class SailboatAutopilot:
         Returns:
             float: the total size of the decision zone in degrees
         """
-        tack_distance = self.parameters['tack_distance']
-        no_sail_zone_size = self.parameters['no_sail_zone_size']
+        tack_distance = self.autopilot_parameters['tack_distance']
+        no_sail_zone_size = self.autopilot_parameters['no_sail_zone_size']
         
         inner = (tack_distance/distance_to_waypoint) * np.sin(np.deg2rad(no_sail_zone_size/2))
         inner = np.clip(inner, -1, 1)
@@ -151,8 +152,8 @@ class SailboatAutopilot:
 
 
         no_sail_zone_bounds = (
-            (global_apparent_up_wind_angle - self.parameters['no_sail_zone_size']/2) % 360, # lower bound
-            (global_apparent_up_wind_angle + self.parameters['no_sail_zone_size']/2) % 360  # upper bound
+            (global_apparent_up_wind_angle - self.autopilot_parameters['no_sail_zone_size']/2) % 360, # lower bound
+            (global_apparent_up_wind_angle + self.autopilot_parameters['no_sail_zone_size']/2) % 360  # upper bound
         )
 
         decision_zone_size = self._get_decision_zone_size(distance_to_waypoint)
@@ -252,7 +253,7 @@ class SailboatAutopilot:
         
         
         # HAS THE BOAT REACHED THE WAYPOINT?
-        if distance_to_desired_position < self.parameters['waypoint_accuracy']: 
+        if distance_to_desired_position < self.autopilot_parameters['waypoint_accuracy']: 
             
             if len(self.waypoints) <= self.current_waypoint_index + 1:    # Has Reached The Final Waypoint
                 self.reset()
@@ -297,13 +298,13 @@ class SailboatAutopilot:
                 tack_direction = -1
 
 
-            rudder_angle = self.parameters['rudder_hard_over'] * tack_direction
+            rudder_angle = self.autopilot_parameters['rudder_hard_over'] * tack_direction
             
-            if self.parameters['perform_forced_jibe_instead_of_tack']: 
+            if self.autopilot_parameters['perform_forced_jibe_instead_of_tack']: 
                 rudder_angle *= -1
 
 
-            if abs((heading - self.desired_tacking_angle)) % 360 < self.parameters['tack_tolerance']: # if we have finished the tack
+            if abs((heading - self.desired_tacking_angle)) % 360 < self.autopilot_parameters['tack_tolerance']: # if we have finished the tack
                 self.current_state = SailboatStates.NORMAL
             
         
@@ -336,8 +337,8 @@ class SailboatAutopilot:
         # these are for close hauled, close reach, beam reach, broad reach and running respectively
         # the angles were estimated from a sailing position diagram and adam should probably take a look and move things around as he sees fit
 
-        sail_positions = self.parameters['sail_lookup_table_sail_positions']
-        wind_angles = self.parameters['sail_lookup_table_wind_angles']
+        sail_positions = self.autopilot_parameters['sail_lookup_table_sail_positions']
+        wind_angles = self.autopilot_parameters['sail_lookup_table_wind_angles']
         
         left = max(filter(lambda pos: pos <= float(apparent_wind_angle), wind_angles))
         right = min(filter(lambda pos: pos >= float(apparent_wind_angle), wind_angles))
@@ -368,13 +369,13 @@ class SailboatAutopilot:
         """
         # Update the gains of the controller in case they changed. If the gains didn't change, then nothing happens
         self.rudder_pid_controller.set_gains(
-            Kp=self.parameters['heading_p_gain'], Ki=self.parameters['heading_i_gain'], Kd=self.parameters['heading_d_gain'], 
-            n=self.parameters['heading_n_gain'], sample_period=self.parameters['autopilot_refresh_rate']
+            Kp=self.autopilot_parameters['heading_p_gain'], Ki=self.autopilot_parameters['heading_i_gain'], Kd=self.autopilot_parameters['heading_d_gain'], 
+            n=self.autopilot_parameters['heading_n_gain'], sample_period=self.autopilot_parameters['autopilot_refresh_rate']
         )
         
         error = get_distance_between_angles(desired_heading, heading)
         rudder_angle = self.rudder_pid_controller(error)
-        rudder_angle = np.clip(rudder_angle, self.parameters['min_rudder_angle'], self.parameters['max_rudder_angle'])
+        rudder_angle = np.clip(rudder_angle, self.autopilot_parameters['min_rudder_angle'], self.autopilot_parameters['max_rudder_angle'])
         return rudder_angle
     
     
@@ -395,10 +396,10 @@ class SailboatAutopilot:
             tuple[float, float]: the desired (sail_angle, rudder_angle) that the boat should use to sail
         """
         
-        min_sail_angle, max_sail_angle = self.parameters['min_sail_angle'], self.parameters['max_sail_angle']
+        min_sail_angle, max_sail_angle = self.autopilot_parameters['min_sail_angle'], self.autopilot_parameters['max_sail_angle']
         sail_angle = (((joystick_left_y - -100) * (max_sail_angle - min_sail_angle)) / (100 - -100)) + min_sail_angle
         
-        min_rudder_angle, max_rudder_angle = self.parameters['min_rudder_angle'], self.parameters['max_rudder_angle']
+        min_rudder_angle, max_rudder_angle = self.autopilot_parameters['min_rudder_angle'], self.autopilot_parameters['max_rudder_angle']
         rudder_angle = (((joystick_right_x - -100) * (max_rudder_angle - min_rudder_angle)) / (100 - -100)) + min_rudder_angle
     
         return sail_angle, rudder_angle
