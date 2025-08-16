@@ -225,7 +225,8 @@ class TelemetryNode(Node):
         self.boat_status_session = requests.Session()
         self.autopilot_parameters_session = requests.Session()
         self.waypoints_session = requests.Session()
-
+        
+        self.instance_id = requests.get(url=TELEMETRY_SERVER_URL + "/instance_id/generate").json()["id"]
 
 
 
@@ -265,7 +266,7 @@ class TelemetryNode(Node):
 
     def default_autopilot_parameters_callback(self, default_autopilot_parameters_string: String):
         self.default_autopilot_parameters = json.loads(default_autopilot_parameters_string.data)
-        self.get_logger().info(f"{self.default_autopilot_parameters}")
+        self.get_logger().info(f"Default Parameters: {self.default_autopilot_parameters}")
         self.autopilot_parameters_session.post(url=TELEMETRY_SERVER_URL + "/autopilot_parameters/set_default", json=self.default_autopilot_parameters)
     
     def current_waypoint_index_callback(self, current_waypoint_index: Int32):
@@ -359,37 +360,11 @@ class TelemetryNode(Node):
 
         else:
             distance_to_next_waypoint = 0.0
+            
 
-        # boat_status_dict = {
-        #     "position": (self.position.latitude, self.position.longitude),
-        #     "state": self.autopilot_mode,
-        #     "full_autonomy_maneuver": self.full_autonomy_maneuver,
-        #     "speed": self.speed,
-        #     "velocity_vector": (self.velocity_vector[0], self.velocity_vector[1]),
-        #     "bearing": self.desired_heading, "heading": self.heading,
-        #     "true_wind_speed": self.true_wind_speed, "true_wind_angle": self.true_wind_angle,
-        #     "apparent_wind_speed": self.apparent_wind_speed, "apparent_wind_angle": self.apparent_wind_angle,
-        #     "sail_angle": self.desired_sail_angle, "rudder_angle": self.desired_rudder_angle,
-        #     "current_waypoint_index": self.current_waypoint_index,
-        #     "parameters": self.autopilot_parameters_dict,
-        #     "current_camera_image": self.base64_encoded_current_rgb_image,
-
-        #     "vesc_telemetry_data_rpm": self.vesc_telemetry_data_rpm,
-        #     "vesc_telemetry_data_duty_cycle": self.vesc_telemetry_data_duty_cycle,
-        #     "vesc_telemetry_data_amp_hours": self.vesc_telemetry_data_amp_hours,
-        #     "vesc_telemetry_data_amp_hours_charged": self.vesc_telemetry_data_amp_hours_charged,
-        #     "vesc_telemetry_data_current_to_vesc": self.vesc_telemetry_data_current_to_vesc,
-        #     "vesc_telemetry_data_voltage_to_motor": self.vesc_telemetry_data_voltage_to_motor,
-        #     "vesc_telemetry_data_voltage_to_vesc": self.vesc_telemetry_data_voltage_to_vesc,
-        #     "vesc_telemetry_data_wattage_to_motor": self.vesc_telemetry_data_wattage_to_motor,
-        #     "vesc_telemetry_data_time_since_vesc_startup_in_ms": self.vesc_telemetry_data_time_since_vesc_startup_in_ms,
-        #     "vesc_telemetry_data_motor_temperature": self.vesc_telemetry_data_motor_temperature,
-        #     "vesc_telemetry_data_vesc_temperature": self.vesc_telemetry_data_vesc_temperature
-        # }
-
-        # NOTE: Whenever you change this dictionary, make sure that you change how the groundstation interprets the boat status
-        # To compress this dictionary, we will just only take the list of the values of the dictionary (since the keys are very large), and simply properly interpret what the list means on the groundstation
-        # The groundstation must know the order and meaning of all of the parameters ahead of time which is the cost of compressing all of this information so much
+        # TODO: To compress this dictionary, we will just only take the list of the values of the dictionary (since the keys are very large), 
+        # and simply properly interpret what the list means on the groundstation. The groundstation must know the order and meaning of all
+        # of the parameters ahead of time which is the cost of compressing all of this information so much
         boat_status_dictionary = {
             "position": [self.position.latitude, self.position.longitude],
             "state": self.autopilot_mode,
@@ -406,9 +381,23 @@ class TelemetryNode(Node):
             "rudder_angle": self.desired_rudder_angle,
             "current_waypoint_index": self.current_waypoint_index,
             "distance_to_next_waypoint": distance_to_next_waypoint,
+            
+            "current_camera_image": self.base64_encoded_current_rgb_image,
+
+            "vesc_telemetry_data_rpm": self.vesc_telemetry_data_rpm,
+            "vesc_telemetry_data_duty_cycle": self.vesc_telemetry_data_duty_cycle,
+            "vesc_telemetry_data_amp_hours": self.vesc_telemetry_data_amp_hours,
+            "vesc_telemetry_data_amp_hours_charged": self.vesc_telemetry_data_amp_hours_charged,
+            "vesc_telemetry_data_current_to_vesc": self.vesc_telemetry_data_current_to_vesc,
+            "vesc_telemetry_data_voltage_to_motor": self.vesc_telemetry_data_voltage_to_motor,
+            "vesc_telemetry_data_voltage_to_vesc": self.vesc_telemetry_data_voltage_to_vesc,
+            "vesc_telemetry_data_wattage_to_motor": self.vesc_telemetry_data_wattage_to_motor,
+            "vesc_telemetry_data_time_since_vesc_startup_in_ms": self.vesc_telemetry_data_time_since_vesc_startup_in_ms,
+            "vesc_telemetry_data_motor_temperature": self.vesc_telemetry_data_motor_temperature,
+            "vesc_telemetry_data_vesc_temperature": self.vesc_telemetry_data_vesc_temperature
         }
         
-        # requests.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json={"value": list(boat_status_dictionary.values())})
+        # TODO: THIS IS HOW WE DO THE COMPRESSION: requests.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json={"value": list(boat_status_dictionary.values())})
         self.boat_status_session.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json=boat_status_dictionary)
 
 
