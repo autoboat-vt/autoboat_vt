@@ -226,7 +226,7 @@ class TelemetryNode(Node):
         self.autopilot_parameters_session = requests.Session()
         self.waypoints_session = requests.Session()
         
-        self.instance_id = requests.get(url=TELEMETRY_SERVER_URL + "/instance_id/generate").json()["id"]
+        # self.instance_id = requests.get(url=TELEMETRY_SERVER_URL + "/instance_id/generate").json()["id"]
 
 
 
