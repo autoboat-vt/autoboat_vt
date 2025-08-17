@@ -36,3 +36,6 @@ In the autopilot, label what is in degrees and what is in radians in the variabl
 HIGH PRIORITY: in the telemetry node, we are incorrectly calculating the true wind vector. Please fix that
 
 add jetson temperatures to telemetry node through psensor
+
+
+Integrate computer vision with the simulation: have the simulation spawn actual buoy objects, take photos with a camera, and do computer vision/ localization on them.
