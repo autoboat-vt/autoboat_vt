@@ -1,9 +1,6 @@
 import sys
 import constants
-from widgets.groundstation import GroundStationWidget
-from widgets.camera_widget.camera import CameraWidget
-from widgets.autopilot_param_editor.editor import AutopilotParamEditor
-from widgets.console_output import ConsoleOutputWidget
+from widgets import GroundStationWidget, ConsoleOutputWidget, CameraWidget, AutopilotParamEditor
 
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 
