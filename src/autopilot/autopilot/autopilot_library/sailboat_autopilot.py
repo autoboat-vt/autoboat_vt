@@ -3,6 +3,7 @@ from .utils import *
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from typing import Any
+import json
 
 
 
@@ -41,8 +42,17 @@ class SailboatAutopilot:
         self.current_waypoint_index = 0
 
 
-        self.obstacles = [[0.02237766924, 0.01085355878],[0.02222076003,0.01111239195],[0.02245277109,0.01127198339],[0.02284035026,0.01104399562],[0.0226995343,0.01077443361]]
-   
+        with open('/home/ws/ground_station/app_data/buoy_data/buoy_data_1750386896635616848.json', 'r') as buoy_data:
+            loaded = json.load(buoy_data)
+
+
+        self.obstacles = []
+        for v in loaded.values():
+            self.obstacles.append(Position(v["lat"], v["lon"]))
+
+        # self.obstacles = [Position(0.02237766924, 0.01085355878),Position(0.02222076003,0.01111239195),Position(0.02245277109,0.01127198339),Position(0.02284035026,0.01104399562),Position(0.0226995343,0.01077443361)]
+        self.obstacle = False
+
    
     def reset(self) -> None:
         """
@@ -190,8 +200,6 @@ class SailboatAutopilot:
     
     
     
-    
-    
         
         
     def run_waypoint_mission_step(
@@ -265,8 +273,8 @@ class SailboatAutopilot:
                 else: 
                     self.current_state = SailboatStates.CCW_TACKING
 
-            
-            rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading,autopilot=True)
+            self.obstacle_detected(current_position)
+            rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading,autopilot=True, obst_detected=self.obstacle)
             sail_angle = self.get_optimal_sail_angle(apparent_wind_angle)
             
             
@@ -336,7 +344,7 @@ class SailboatAutopilot:
         return sail_angle
         
         
-    def get_optimal_rudder_angle(self, heading: float, desired_heading: float) -> float:
+    def get_optimal_rudder_angle(self, heading: float, desired_heading: float, autopilot=False,obst_detected = False) -> float:
         """
         TODO TODO TODO
 
@@ -347,6 +355,10 @@ class SailboatAutopilot:
         Returns:
             float: _description_
         """
+
+        if(obst_detected):
+            return 90
+        
         # Update the gains of the controller in case they changed. If the gains didn't change, then nothing happens
         self.rudder_pid_controller.set_gains(
             Kp=self.parameters['heading_p_gain'], Ki=self.parameters['heading_i_gain'], Kd=self.parameters['heading_d_gain'], 
@@ -383,3 +395,13 @@ class SailboatAutopilot:
     
         return sail_angle, rudder_angle
     
+
+    
+    def obstacle_detected(self, cur_pos):
+        for x in self.obstacles:
+            diff = get_bearing(cur_pos, x)
+            if(abs(get_distance_between_positions(cur_pos, x)) <= 1.5 and is_angle_between_boundaries(diff,30,330)):
+                self.obstacle = True
+            else:
+                self.obstacle = False
+            

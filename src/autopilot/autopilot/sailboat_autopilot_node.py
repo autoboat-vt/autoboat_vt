@@ -90,7 +90,6 @@ class SailboatAutopilotNode(Node):
         self.toggle_e = 0
         self.toggle_f = 0
 
-        self.obstacle = False
         
         
         
