@@ -356,7 +356,7 @@ class SailboatAutopilot:
             float: _description_
         """
 
-        if(obst_detected):
+        if(obst_detected and autopilot):
             return 90
         
         # Update the gains of the controller in case they changed. If the gains didn't change, then nothing happens
