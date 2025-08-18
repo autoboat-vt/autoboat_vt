@@ -264,7 +264,8 @@ class SailboatAutopilot:
             should_tack_condition2 = is_angle_between_boundaries(global_true_up_wind_angle, heading, desired_heading)
             
             if should_tack_condition1 or should_tack_condition2:
-                optimal_rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading)
+                self.obstacle_detected(current_position)
+                optimal_rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading, autopilot=True,)
                 
                 self.desired_tacking_angle = desired_heading
                 
@@ -274,7 +275,7 @@ class SailboatAutopilot:
                     self.current_state = SailboatStates.CCW_TACKING
 
             self.obstacle_detected(current_position)
-            rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading,autopilot=True, obst_detected=self.obstacle)
+            rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading,autopilot=true_wind_angle)
             sail_angle = self.get_optimal_sail_angle(apparent_wind_angle)
             
             
@@ -344,7 +345,7 @@ class SailboatAutopilot:
         return sail_angle
         
         
-    def get_optimal_rudder_angle(self, heading: float, desired_heading: float, autopilot=False,obst_detected = False) -> float:
+    def get_optimal_rudder_angle(self, heading: float, desired_heading: float, autopilot=False) -> float:
         """
         TODO TODO TODO
 
@@ -356,7 +357,7 @@ class SailboatAutopilot:
             float: _description_
         """
 
-        if(obst_detected and autopilot):
+        if(self.obstacle and autopilot):
             return 90
         
         # Update the gains of the controller in case they changed. If the gains didn't change, then nothing happens
@@ -400,7 +401,7 @@ class SailboatAutopilot:
     def obstacle_detected(self, cur_pos):
         for x in self.obstacles:
             diff = get_bearing(cur_pos, x)
-            if(abs(get_distance_between_positions(cur_pos, x)) <= 1.5 and is_angle_between_boundaries(diff,30,330)):
+            if(abs(get_distance_between_positions(cur_pos, x)) <= 10 and is_angle_between_boundaries(diff,30,330)):
                 self.obstacle = True
             else:
                 self.obstacle = False
