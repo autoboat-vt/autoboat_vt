@@ -154,22 +154,27 @@ class InstanceHandler(QWidget):
         if constants.TELEMETRY_SERVER_INSTANCE_ID == -1:
             self.timer.stop()
 
-            main_window = self.window()
-            tab_widget = main_window.centralWidget()
-            if isinstance(tab_widget, QTabWidget):
-                tab_widget.setCurrentWidget(self)
+            if len(new_ids) == 1:
+                constants.TELEMETRY_SERVER_INSTANCE_ID = new_ids[0]
+                print(f"[Info] Automatically connected to instance {new_ids[0]} as the only available instance.")
 
-            while True:
-                new_id = constants.show_input_dialog(
-                    "Select Instance",
-                    "Please select the instance you want to connect to:",
-                    input_type=int,
-                )
+            else:
+                main_window = self.window()
+                tab_widget = main_window.centralWidget()
+                if isinstance(tab_widget, QTabWidget):
+                    tab_widget.setCurrentWidget(self)
 
-                if new_id is not None and new_id in new_ids:
-                    constants.TELEMETRY_SERVER_INSTANCE_ID = new_id
-                    print(f"[Info] Connected to instance {new_id}")
-                    break
+                while True:
+                    new_id = constants.show_input_dialog(
+                        "Select Instance",
+                        "Please select the instance you want to connect to:",
+                        input_type=int,
+                    )
+
+                    if new_id is not None and new_id in new_ids:
+                        constants.TELEMETRY_SERVER_INSTANCE_ID = new_id
+                        print(f"[Info] Connected to instance {new_id}")
+                        break
 
             self.timer.start()
 
