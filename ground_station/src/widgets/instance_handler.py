@@ -315,6 +315,7 @@ class InstanceWidget(QFrame):
             new_identifier = instance_info["instance_identifier"]
             new_created_at = datetime.fromisoformat(instance_info["created_at"])
             new_updated_at = datetime.fromisoformat(instance_info["updated_at"])
+
         except Exception as e:
             print(f"[Warn] Bad instance_info during update: {e}")
             return
@@ -347,7 +348,7 @@ class InstanceWidget(QFrame):
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
                 self.instance_identifier = new_name
-                print(f"[Info] Instance name updated to {self.instance_identifier}")
+                print(f"[Info] Instance name updated to {self.instance_identifier}.")
 
             except requests.exceptions.RequestException as e:
                 print(f"[Error] Failed to update instance name: {e}")
@@ -361,7 +362,7 @@ class InstanceWidget(QFrame):
 
         try:
             constants.TELEMETRY_SERVER_INSTANCE_ID = self.instance_id
-            print(f"[Info] Connected to instance {self.instance_identifier} ({self.instance_id})")
+            print(f"[Info] Connected to instance {self.instance_identifier} ({self.instance_id}).")
 
         except requests.exceptions.RequestException as e:
             print(f"[Error] Failed to connect to instance {self.instance_identifier}: {e}")
