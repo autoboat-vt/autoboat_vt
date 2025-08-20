@@ -265,7 +265,7 @@ class SailboatAutopilot:
             
             if should_tack_condition1 or should_tack_condition2:
                 self.obstacle_detected(current_position)
-                optimal_rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading, autopilot=True,)
+                optimal_rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading, autopilot=True)
                 
                 self.desired_tacking_angle = desired_heading
                 
