@@ -334,10 +334,11 @@ WAYPOINTS_SERVER_URL = "http://localhost:3001/waypoints"
 # base url for telemetry server (the CIA is inside of my brain...)
 TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
 
-TELEMETRY_SERVER_INSTANCE_ID: int = 1
+TELEMETRY_SERVER_INSTANCE_ID: int = -1
 
 # endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint` + `/`
 instance_manager_endpoints = {
+    "create_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/create"),
     "delete_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/delete/"),
     "set_instance_name": urljoin(TELEMETRY_SERVER_URL, "instance_manager/set_name/"),
     "get_instance_name_from_id": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_name/"),

@@ -30,8 +30,10 @@ class MainWindow(QMainWindow):
             self.main_widget.addTab(InstanceHandler(), "Instance Handler")
             self.main_widget.addTab(AutopilotParamEditor(), "Autopilot Parameters")
             self.main_widget.addTab(CameraWidget(), "Camera Feed")
+
         except Exception as e:
             print(f"Error: {e}")
+
         self.main_widget.setCurrentIndex(1)
 
 

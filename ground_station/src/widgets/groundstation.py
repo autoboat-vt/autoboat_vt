@@ -659,13 +659,13 @@ class GroundStationWidget(QWidget):
     def remote_waypoint_handler_starter(self) -> None:
         """Starts the telemetry waypoint handler thread."""
 
-        if not self.remote_waypoint_handler.isRunning():
+        if not self.remote_waypoint_handler.isRunning() and constants.TELEMETRY_SERVER_INSTANCE_ID != -1:
             self.remote_waypoint_handler.start()
 
     def update_telemetry_starter(self) -> None:
         """Starts the telemetry handler thread."""
 
-        if not self.telemetry_handler.isRunning():
+        if not self.telemetry_handler.isRunning() and constants.TELEMETRY_SERVER_INSTANCE_ID != -1:
             self.telemetry_handler.start()
 
     def update_waypoints_display(self, waypoints: list[list[float]]) -> None:

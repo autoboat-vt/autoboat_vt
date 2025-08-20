@@ -15,7 +15,6 @@ from qtpy.QtWidgets import (
     QLineEdit,
     QLabel,
     QPushButton,
-    QGroupBox,
     QFormLayout,
 )
 
@@ -36,13 +35,13 @@ class InstanceHandler(QWidget):
     def __init__(self) -> None:
         super().__init__()
 
-        # self.instance_info_dicts: list[dict[str, Any]] = []
+        self.startup_flag = False
         self.instance_widgets: list[InstanceWidget] = []
         self.instance_widgets_by_id: dict[int, InstanceWidget] = {}
         self.instance_info_by_id: dict[int, dict[str, Any]] = {}
 
         self.current_search_text: str = ""
-        self.half_second_timer = constants.copy_qtimer(constants.HALF_SECOND_TIMER)
+        self.timer = constants.copy_qtimer(constants.FIVE_SECOND_TIMER)
 
         self.main_layout = QGridLayout()
         self.setLayout(self.main_layout)
@@ -66,45 +65,20 @@ class InstanceHandler(QWidget):
         self.status_label.setStyleSheet("color: #D3D3D3; font-size: 12pt;")
         self.status_label.setAlignment(Qt.AlignCenter)
 
-        # group box for buttons
-        self.button_group_box = QGroupBox()
-        button_layout = QHBoxLayout()
-        refresh_button = QPushButton("Refresh")
-        refresh_button.clicked.connect(self.fetch_instances)
-        button_layout.addWidget(refresh_button)
-        self.button_group_box.setLayout(button_layout)
-
         self.main_layout.addWidget(self.searchbar, 0, 0)
         self.main_layout.addWidget(self.status_label, 1, 0)
         self.main_layout.addWidget(self.scroll, 2, 0)
-        self.main_layout.addWidget(self.button_group_box, 3, 0)
 
         self.instance_fetcher = thread_classes.InstanceFetcher()
-        self.half_second_timer.timeout.connect(self.update_instances_starter)
+        self.timer.timeout.connect(self.update_instances_starter)
         self.instance_fetcher.instances_fetched.connect(self.update_instances)
 
-        self.half_second_timer.start()
-
-    def fetch_instances(self) -> None:
-        """Fetch instances from the telemetry server and update the UI."""
-
-        try:
-            instances: list[int] = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_all_ids"],
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-            ).json()["ids"]
-
-            self.update_instances(instances)
-
-        except requests.exceptions.RequestException as e:
-            print(f"[Warning] Failed to fetch initial instances: {e}")
-            self.status_label.setText("Failed to fetch instances.")
+        self.timer.start()
 
     def update_instances_starter(self) -> None:
         """Start the instance fetcher thread."""
 
         if not self.instance_fetcher.isRunning():
-            self.fetch_instances()
             self.instance_fetcher.start()
 
     def update_instances(self, instances: list[int]) -> None:
@@ -176,6 +150,24 @@ class InstanceHandler(QWidget):
 
         self.instances_container.setUpdatesEnabled(True)
         self.instances_container.update()
+
+        if not self.startup_flag:
+            self.timer.stop()
+            self.startup_flag = True
+
+            while True:
+                new_id = constants.show_input_dialog(
+                    "Select Instance",
+                    "Please select the instance you want to connect to:",
+                    input_type=int,
+                )
+
+                if new_id is not None and new_id in new_ids:
+                    constants.TELEMETRY_SERVER_INSTANCE_ID = new_id
+                    print(f"[Info] Connected to instance {new_id}")
+                    break
+
+            self.timer.start()
 
     def filter_instances(self, text: str) -> None:
         """
@@ -371,10 +363,6 @@ class InstanceWidget(QFrame):
 
         try:
             constants.TELEMETRY_SERVER_INSTANCE_ID = self.instance_id
-            constants.REQ_SESSION.get(
-                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["connect_instance"], str(self.instance_id)),
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-            )
             print(f"[Info] Connected to instance {self.instance_identifier} ({self.instance_id})")
 
         except requests.exceptions.RequestException as e:
@@ -384,7 +372,19 @@ class InstanceWidget(QFrame):
         """Handle the delete button click event."""
 
         if self.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
-            print("[Info] Cannot delete the currently connected instance. Please disconnect first.")
+            new_instance_id = constants.REQ_SESSION.get(
+                constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+            ).json()["id"]
+            constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
+
+            constants.REQ_SESSION.delete(
+                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["delete_instance"], str(self.instance_id)),
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+            )
+            print(
+                f"[Info] Instance {self.instance_id} deleted and new instance created with ID {constants.TELEMETRY_SERVER_INSTANCE_ID}."
+            )
             return
 
         try:
