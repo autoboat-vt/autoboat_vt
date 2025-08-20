@@ -4,6 +4,7 @@ from widgets.popup_edit import TextEditWindow
 from copy import deepcopy
 from yaml import safe_load
 import requests
+from urllib.parse import urljoin
 import json
 from typing import Any
 from pathlib import PurePath
@@ -104,12 +105,11 @@ class AutopilotParamEditor(QWidget):
         self.scroll.setWidget(self.params_container)
 
         self.searchbar = QLineEdit()
+        self.searchbar.setClearButtonEnabled(True)
         self.searchbar.setPlaceholderText("Search parameters...")
         self.searchbar.textChanged.connect(self.filter_parameters)
 
-        self.searchbar.setClearButtonEnabled(True)
-
-        # Status label to show search results
+        # status label to show search results
         self.status_label = QLabel()
         self.status_label.setStyleSheet("color: #D3D3D3; font-size: 12pt;")
         self.status_label.setAlignment(Qt.AlignCenter)
@@ -132,12 +132,11 @@ class AutopilotParamEditor(QWidget):
                 existing_data[widget.name] = widget.value
 
         try:
-            response = constants.REQ_SESSION.post(
-                constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
-                json={"value": existing_data},
+            constants.REQ_SESSION.post(
+                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
+                json={"autopilot_parameters": existing_data},
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             )
-            response.raise_for_status()
             print("[Info] All parameters sent successfully.")
         except requests.exceptions.RequestException as e:
             print(f"[Error] Failed to send all parameters: {e}")
@@ -147,12 +146,10 @@ class AutopilotParamEditor(QWidget):
 
         print("[Info] Pulling all parameters...")
         try:
-            response = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
+            data = constants.REQ_SESSION.get(
+                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-            )
-            response.raise_for_status()
-            data = response.json()
+            ).json()
 
             for widget in self.widgets:
                 if isinstance(widget, AutopilotParamWidget):
@@ -322,8 +319,11 @@ class AutopilotParamWidget(QFrame):
             assert isinstance(self.default_val, self.type), f"Default value must be of type {self.type.__name__}."
             assert isinstance(self.description, str), "Description must be a string."
 
-        except (KeyError, IndexError):
-            print("Invalid configuration for `AutopilotParamWidget`. See `src/widgets/autopilot_param_editor/editor_config.jsonc`.")
+        except (KeyError, AssertionError):
+            raise ValueError(
+                "[Error] Invalid configuration for `AutopilotParamWidget`. See `src/widgets/autopilot_param_editor/editor_config.jsonc`."
+            )
+
         # endregion validate parameter config
 
         # region define layouts
@@ -415,7 +415,7 @@ class AutopilotParamWidget(QFrame):
         print(f"[Info] Sending value for {self.name}: {self.value}")
         try:
             existing_data = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
+                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
 
@@ -431,12 +431,13 @@ class AutopilotParamWidget(QFrame):
                 existing_data[self.name] = self.value
 
             try:
-                response = constants.REQ_SESSION.post(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
-                    json={"value": existing_data},
+                constants.REQ_SESSION.post(
+                    urljoin(
+                        constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)
+                    ),
+                    json={"autopilot_parameters": existing_data},
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
-                response.raise_for_status()
                 print(f"[Info] Successfully sent {self.name} with value {self.value}.")
 
             except requests.exceptions.RequestException as e:
@@ -455,9 +456,10 @@ class AutopilotParamWidget(QFrame):
         """Pull the current value of the parameter from the telemetry endpoint."""
 
         try:
-            response = constants.REQ_SESSION.get(constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"])
-            response.raise_for_status()
-            data = response.json()
+            data = constants.REQ_SESSION.get(
+                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+            ).json()
 
             if self.name in data:
                 self.value = data[self.name]

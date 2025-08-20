@@ -1,9 +1,6 @@
 import sys
 import constants
-from widgets.groundstation import GroundStationWidget
-from widgets.camera_widget.camera import CameraWidget
-from widgets.autopilot_param_editor.editor import AutopilotParamEditor
-from widgets.console_output import ConsoleOutputWidget
+from widgets import GroundStationWidget, ConsoleOutputWidget, AutopilotParamEditor, CameraWidget, InstanceHandler
 
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 
@@ -30,6 +27,7 @@ class MainWindow(QMainWindow):
             self.main_widget.addTab(ConsoleOutputWidget(), "Console Output")
 
             self.main_widget.addTab(GroundStationWidget(), "Ground Station")
+            self.main_widget.addTab(InstanceHandler(), "Instance Handler")
             self.main_widget.addTab(AutopilotParamEditor(), "Autopilot Parameters")
             self.main_widget.addTab(CameraWidget(), "Camera Feed")
         except Exception as e:

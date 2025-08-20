@@ -3,6 +3,7 @@ Module containing classes for handling background tasks in the ground station ap
 
 Contains:
 - TelemetryUpdater: Fetches telemetry data from the telemetry server.
+- InstanceFetcher: Fetches the currently available instances from the telemetry server.
 - LocalWaypointFetcher: Fetches waypoints from the local server.
 - RemoteWaypointFetcher: Fetches waypoints from the telemetry server.
 - ImageFetcher: Fetches images from the telemetry server.
@@ -10,6 +11,7 @@ Contains:
 
 import requests
 import constants
+from urllib.parse import urljoin
 from qtpy.QtCore import QThread, Signal
 
 
@@ -46,7 +48,7 @@ class TelemetryUpdater(QThread):
         try:
             boat_status: dict[str, str | float | list[float] | list[list[float]]]
             boat_status = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_boat_status"],
+                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_boat_status"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
             self.request_url_change.emit(constants.TelemetryStatus.SUCCESS)
@@ -62,6 +64,67 @@ class TelemetryUpdater(QThread):
         """Run the thread to fetch boat data from the telemetry server."""
 
         self.get_boat_data()
+
+
+class InstanceFetcher(QThread):
+    """
+    Thread to fetch the currently available instances from the telemetry server.
+
+    Inherits
+    -------
+    `QThread`
+
+    Attributes
+    ----------
+    instances_fetched: `Signal`
+        Signal to send instances to the main thread. Emits a list of instances.
+
+    request_url_change: `Signal`
+        Signal to request a change in the telemetry server URL.
+        <ul>
+        <li> <code>SUCCESS</code> indicates that the telemetry server is reachable and waypoints were fetched successfully.</li>
+        <li> <code>FAILURE</code> indicates that the telemetry server is not reachable and waypoints could not be fetched.</li>
+        </ul>
+    """
+
+    instances_fetched: list[int] = Signal(list)
+    request_url_change: constants.TelemetryStatus = Signal(constants.TelemetryStatus)
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def run(self) -> None:
+        """Run the thread to fetch instances from the telemetry server."""
+
+        self.get_instances()
+
+    def get_instances(self) -> None:
+        """Fetch instances from the telemetry server and emit them."""
+
+        try:
+            instances: list[int] = constants.REQ_SESSION.get(
+                constants.TELEMETRY_SERVER_ENDPOINTS["get_all_ids"],
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+            ).json()["ids"]
+
+            if not isinstance(instances, list):
+                raise TypeError("Instances data is not a list")
+
+            self.request_url_change.emit(constants.TelemetryStatus.SUCCESS)
+
+        except requests.exceptions.RequestException as e:
+            print(f"[Warning] Failed to fetch instances. Using empty list. Exception: {e}")
+            instances = []
+            self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
+
+        except TypeError:
+            print(
+                f"[Warning] Instances data is not in expected format. Using empty list.\nExpected: {list[int]}, Received: {instances}",
+            )
+            instances = []
+            self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
+
+        self.instances_fetched.emit(instances)
 
 
 class LocalWaypointFetcher(QThread):
@@ -148,7 +211,7 @@ class RemoteWaypointFetcher(QThread):
         try:
             waypoints: list[list[float]]
             waypoints = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"],
+                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
 
@@ -201,7 +264,7 @@ class ImageFetcher(QThread):
 
         try:
             image_data = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
+                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
             base64_encoded_image = image_data.get("current_camera_image")

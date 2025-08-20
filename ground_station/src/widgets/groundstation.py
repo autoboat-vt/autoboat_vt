@@ -11,6 +11,7 @@ from widgets.popup_edit import TextEditWindow
 
 from pathlib import PurePath
 from functools import partial
+from urllib.parse import urljoin
 from typing import Literal, Any
 
 from qtpy.QtCore import Qt
@@ -60,10 +61,13 @@ class GroundStationWidget(QWidget):
         # dialog that asks if the user wants to pull waypoints from the telemetry server?
         self.remember_waypoints_pull_service_status: bool = False
 
+        self.instance_id: int = 0
+        self.instance_name: str = ""
+
         # region timers
-        self.ten_ms_timer = constants.TEN_MS_TIMER
-        self.one_ms_timer = constants.ONE_MS_TIMER
-        self.ten_second_timer = constants.TEN_SECOND_TIMER
+        self.ten_ms_timer = constants.copy_qtimer(constants.TEN_MS_TIMER)
+        self.one_ms_timer = constants.copy_qtimer(constants.ONE_MS_TIMER)
+        self.ten_second_timer = constants.copy_qtimer(constants.TEN_SECOND_TIMER)
         self.timers = [self.ten_second_timer, self.ten_ms_timer, self.one_ms_timer]
 
         # region define layouts
@@ -299,8 +303,8 @@ class GroundStationWidget(QWidget):
         if not test:
             try:
                 response = constants.REQ_SESSION.post(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["set_waypoints"],
-                    json={"value": self.waypoints},
+                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["set_waypoints"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
+                    json={"waypoints": self.waypoints},
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
                 response.raise_for_status()
@@ -315,8 +319,8 @@ class GroundStationWidget(QWidget):
         else:
             try:
                 response = constants.REQ_SESSION.post(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["waypoints_test"],
-                    json={"value": self.waypoints},
+                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["waypoints_test"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
+                    json={"waypoints": self.waypoints},
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
                 response.raise_for_status()
@@ -329,7 +333,7 @@ class GroundStationWidget(QWidget):
 
         try:
             remote_waypoints: list[list[float]] = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"],
+                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
 

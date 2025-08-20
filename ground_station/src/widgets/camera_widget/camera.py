@@ -47,7 +47,7 @@ class CameraWidget(QWidget):
         self.image_fetcher = thread_classes.ImageFetcher()
         self.image_fetcher.image_fetched.connect(self.update_camera_feed)
 
-        self.timer = constants.HALF_SECOND_TIMER
+        self.timer = constants.copy_qtimer(constants.HALF_SECOND_TIMER)
         self.timer.timeout.connect(self.image_fetcher.get_image)
 
     def unpause_timer(self) -> None:

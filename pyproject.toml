@@ -1,7 +1,7 @@
 [project]
-name = "autoboat_vt"
+name    = "autoboat_vt"
 version = "67.420.69"
-readme = "README.md"
+readme  = "README.md"
 
 [project.urls]
 repository = "https://github.com/autoboat-vt/autoboat_vt"
@@ -39,7 +39,7 @@ exclude = [
 ]
 
 # Same as Black.
-line-length = 135
+line-length  = 135
 indent-width = 4
 
 # Assume Python 3.10
@@ -93,6 +93,7 @@ ignore = [
     "PLR0913", # Too many arguments for function (... > 5)
     "PLR0915", # too-many-statements
     "PLR2004", # Magic value used in comparison
+    "PERF203", # `try`-`except` within a loop incurs performance overhead
     "PTH",     # use of functions that can be replaced by pathlib module.
     "T201",    # Checks for print statements.
     "TD002",   # Missing author in TODO `# TODO(<author_name>): ...`
@@ -110,7 +111,7 @@ ignore = [
     "ANN204",  # Requiring type annotation for functions
     "ANN201",  # Requiring type annotation for functions
     "FIX002",  # Anotating TODO lines
-    "B904",
+    "B904",    # Checks for raise statements in exception handlers that lack a from clause
     "D103",    # Missing docstring in public function
 ]
 

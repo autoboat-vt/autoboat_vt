@@ -24,9 +24,9 @@ Constants:
 """
 
 import os
-import sys
 import shutil
 import requests
+from urllib.parse import urljoin
 from pathlib import PurePath
 from qtpy.QtCore import Qt, QRect, QTimer
 from qtpy.QtGui import QColor, QIcon, QPalette
@@ -226,6 +226,27 @@ def show_input_dialog(
         return None
 
 
+def copy_qtimer(original: QTimer) -> QTimer:
+    """
+    Create a copy of a QTimer with the same interval and single-shot status but without copying connections.
+
+    Parameters
+    ----------
+    original
+        The original QTimer to copy.
+
+    Returns
+    -------
+    QTimer
+        A new QTimer instance with the same interval and single-shot status as the original.
+    """
+
+    new_timer = QTimer()
+    new_timer.setInterval(original.interval())
+    new_timer.setSingleShot(original.isSingleShot())
+    return new_timer
+
+
 # endregion functions
 
 
@@ -294,6 +315,9 @@ WINDOW_BOX = QRect(100, 100, 800, 600)
 TEN_SECOND_TIMER = QTimer()
 TEN_SECOND_TIMER.setInterval(10_000)
 
+FIVE_SECOND_TIMER = QTimer()
+FIVE_SECOND_TIMER.setInterval(5_000)
+
 HALF_SECOND_TIMER = QTimer()
 HALF_SECOND_TIMER.setInterval(500)
 
@@ -308,21 +332,49 @@ ONE_MS_TIMER.setInterval(1)
 WAYPOINTS_SERVER_URL = "http://localhost:3001/waypoints"
 
 # base url for telemetry server (the CIA is inside of my brain...)
-TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk/"
+# TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
+TELEMETRY_SERVER_URL = "http://127.0.0.1:5000"
 
-# endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint`
-TELEMETRY_SERVER_ENDPOINTS = {
-    "get_boat_status": TELEMETRY_SERVER_URL + "boat_status/get",
-    "get_new_boat_status": TELEMETRY_SERVER_URL + "boat_status/get_new",
-    "get_waypoints": TELEMETRY_SERVER_URL + "waypoints/get",
-    "set_waypoints": TELEMETRY_SERVER_URL + "waypoints/set",
-    "waypoints_test": TELEMETRY_SERVER_URL + "waypoints/test",
-    "get_autopilot_parameters": TELEMETRY_SERVER_URL + "autopilot_parameters/get",
-    "set_autopilot_parameters": TELEMETRY_SERVER_URL + "autopilot_parameters/set",
-    "get_default_autopilot_parameters": TELEMETRY_SERVER_URL + "autopilot_parameters/get_default",
+TELEMETRY_SERVER_INSTANCE_ID: int = 1
+
+# endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint` + `/`
+instance_manager_endpoints = {
+    "delete_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/delete/"),
+    "set_instance_name": urljoin(TELEMETRY_SERVER_URL, "instance_manager/set_name/"),
+    "get_instance_name_from_id": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_name/"),
+    "get_instance_id_from_name": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_id/"),
+    "get_instance_info": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_instance_info/"),
+    "get_all_ids": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_ids"),
 }
 
+boat_status_endpoints = {
+    "get_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/get/"),
+    "get_new_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/get_new/"),
+    "test_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/test/"),
+}
+
+autopilot_parameters_endpoints = {
+    "get_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get/"),
+    "get_new_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_new/"),
+    "set_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set/"),
+    "test_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/test/"),
+}
+
+waypoints_endpoints = {
+    "get_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/get/"),
+    "set_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/set/"),
+    "test_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/test/"),
+}
+
+TELEMETRY_SERVER_ENDPOINTS = dict(
+    **instance_manager_endpoints,
+    **boat_status_endpoints,
+    **autopilot_parameters_endpoints,
+    **waypoints_endpoints,
+)
+
 TELEMETRY_TIMEOUT_SECONDS = 30
+TELEMETRY_RETRY_ATTEMPTS = 3
 
 REQ_SESSION = requests.Session()
 
@@ -341,39 +393,40 @@ try:
     HTML_CAMERA_PATH = PurePath(CAMERA_DIR / "camera.html")
     HTML_CAMERA = open(HTML_CAMERA_PATH).read()
 
-    if "params_default.jsonc" not in os.listdir(DATA_DIR / "autopilot_params"):
-        raise Exception("Default autopilot parameters file not found, please redownload the directory from GitHub.")
+    if __name__ == "__main__":
+        if "params_default.jsonc" not in os.listdir(DATA_DIR / "autopilot_params"):
+            raise Exception("Default autopilot parameters file not found, please redownload the directory from GitHub.")
 
-    if "autopilot_params" not in os.listdir(DATA_DIR):
-        os.makedirs(DATA_DIR / "autopilot_params")
+        if "autopilot_params" not in os.listdir(DATA_DIR):
+            os.makedirs(DATA_DIR / "autopilot_params")
 
-    _autopilot_param_editor_dir = PurePath(SRC_DIR / "widgets" / "autopilot_param_editor")
-    if "params_temp.json" not in os.listdir(_autopilot_param_editor_dir):
-        shutil.copyfile(
-            PurePath(DATA_DIR / "autopilot_params" / "params_default.jsonc"),
-            PurePath(_autopilot_param_editor_dir / "params_temp.json"),
-        )
+        _autopilot_param_editor_dir = PurePath(SRC_DIR / "widgets" / "autopilot_param_editor")
+        if "params_temp.json" not in os.listdir(_autopilot_param_editor_dir):
+            shutil.copyfile(
+                PurePath(DATA_DIR / "autopilot_params" / "params_default.jsonc"),
+                PurePath(_autopilot_param_editor_dir / "params_temp.json"),
+            )
 
-        with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "r") as f:
-            lines = f.readlines()
+            with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "r") as f:
+                lines = f.readlines()
 
-        # remove comments and empty lines
-        with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "w") as f:
-            for line in lines:
-                if not line.strip().startswith("//"):
-                    f.write(line)
+            # remove comments and empty lines
+            with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "w") as f:
+                for line in lines:
+                    if not line.strip().startswith("//"):
+                        f.write(line)
 
-    if "boat_data" not in os.listdir(DATA_DIR):
-        os.makedirs(DATA_DIR / "boat_data")
+        if "boat_data" not in os.listdir(DATA_DIR):
+            os.makedirs(DATA_DIR / "boat_data")
 
-    if "boat_data_bounds" not in os.listdir(DATA_DIR):
-        os.makedirs(DATA_DIR / "boat_data_bounds")
+        if "boat_data_bounds" not in os.listdir(DATA_DIR):
+            os.makedirs(DATA_DIR / "boat_data_bounds")
 
-    if "buoy_data" not in os.listdir(DATA_DIR):
-        os.makedirs(DATA_DIR / "buoy_data")
+        if "buoy_data" not in os.listdir(DATA_DIR):
+            os.makedirs(DATA_DIR / "buoy_data")
 
-    if "assets" not in os.listdir(DATA_DIR):
-        raise Exception("Assets directory not found, please redownload the directory from GitHub.")
+        if "assets" not in os.listdir(DATA_DIR):
+            raise Exception("Assets directory not found, please redownload the directory from GitHub.")
 
     ASSETS_DIR = PurePath(DATA_DIR / "assets")
     AUTO_PILOT_PARAMS_DIR = PurePath(DATA_DIR / "autopilot_params")
@@ -382,5 +435,4 @@ try:
     BUOY_DATA_DIR = PurePath(DATA_DIR / "buoy_data")
 
 except Exception as e:
-    print(f"[Error] {e}")
-    sys.exit(1)
+    raise RuntimeError(f"Initialization error: {e}") from e
