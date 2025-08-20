@@ -35,7 +35,6 @@ class InstanceHandler(QWidget):
     def __init__(self) -> None:
         super().__init__()
 
-        self.startup_flag = False
         self.instance_widgets: list[InstanceWidget] = []
         self.instance_widgets_by_id: dict[int, InstanceWidget] = {}
         self.instance_info_by_id: dict[int, dict[str, Any]] = {}
@@ -151,9 +150,8 @@ class InstanceHandler(QWidget):
         self.instances_container.setUpdatesEnabled(True)
         self.instances_container.update()
 
-        if not self.startup_flag:
+        if constants.TELEMETRY_SERVER_INSTANCE_ID == -1:
             self.timer.stop()
-            self.startup_flag = True
 
             while True:
                 new_id = constants.show_input_dialog(
