@@ -16,6 +16,7 @@ from qtpy.QtWidgets import (
     QLabel,
     QPushButton,
     QFormLayout,
+    QTabWidget,
 )
 
 
@@ -152,6 +153,11 @@ class InstanceHandler(QWidget):
 
         if constants.TELEMETRY_SERVER_INSTANCE_ID == -1:
             self.timer.stop()
+
+            main_window = self.window()  # QMainWindow
+            tab_widget = main_window.centralWidget()  # should be QTabWidget
+            if isinstance(tab_widget, QTabWidget):
+                tab_widget.setCurrentWidget(self)
 
             while True:
                 new_id = constants.show_input_dialog(
