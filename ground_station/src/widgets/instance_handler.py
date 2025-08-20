@@ -41,7 +41,7 @@ class InstanceHandler(QWidget):
         self.instance_info_by_id: dict[int, dict[str, Any]] = {}
 
         self.current_search_text: str = ""
-        self.timer = constants.copy_qtimer(constants.FIVE_SECOND_TIMER)
+        self.timer = constants.copy_qtimer(constants.ONE_SECOND_TIMER)
 
         self.main_layout = QGridLayout()
         self.setLayout(self.main_layout)
