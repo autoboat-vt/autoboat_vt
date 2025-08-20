@@ -188,9 +188,11 @@ class TelemetryNode(Node):
         self.waypoints_session = requests.Session()
 
         self.container_owner_user_name = os.environ["CONTAINER_OWNER_USER_NAME"]
-        self.instance_id = requests.post(
-            url=TELEMETRY_SERVER_URL + "/instance_manager/create" + self.container_owner_user_name
-        ).json()["id"]
+        self.instance_id = requests.post(url=TELEMETRY_SERVER_URL + "/instance_manager/create").json()["id"]
+
+        requests.post(
+            url=TELEMETRY_SERVER_URL + "/instance_manager/set_name/" + self.instance_id + "/" + self.container_owner_user_name
+        )
 
     def position_callback(self, position: NavSatFix) -> None:
         self.position = position
@@ -262,9 +264,8 @@ class TelemetryNode(Node):
         self.desired_rudder_angle = desired_rudder_angle.data
 
     def should_terminate_callback(self, msg: Bool):
-        if msg.data == False:
-            return
-        rclpy.shutdown()
+        if msg.data == True:
+            rclpy.shutdown()
 
     def get_raw_response_from_telemetry_server(self, route: str, session: requests.Session = None) -> any:
         """
@@ -345,7 +346,7 @@ class TelemetryNode(Node):
             "vesc_telemetry_data_vesc_temperature": self.vesc_telemetry_data_vesc_temperature,
         }
 
-        # TODO: THIS IS HOW WE DO THE COMPRESSION: requests.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json={"value": list(boat_status_dictionary.values())})
+        # TODO: THIS IS HOW WE DO THE COMPRESSION: requests.post(url=TELEMETRY_SERVER_URL + "/boat_status/set/" + self.instance_id, json={"value": list(boat_status_dictionary.values())})
         self.boat_status_session.post(url=TELEMETRY_SERVER_URL + "/boat_status/set/" + self.instance_id, json=boat_status_dictionary)
 
     def update_waypoints_from_telemetry(self):
@@ -354,7 +355,9 @@ class TelemetryNode(Node):
         and then publishes the waypoints over ROS so that the autopilot can see them
         """
 
-        new_waypoints_list = self.get_raw_response_from_telemetry_server("/waypoints/get_new", session=self.waypoints_session)
+        new_waypoints_list = self.get_raw_response_from_telemetry_server(
+            "/waypoints/get_new/" + self.instance_id, session=self.waypoints_session
+        )
 
         if new_waypoints_list == []:
             return
@@ -384,7 +387,7 @@ class TelemetryNode(Node):
         """
 
         new_autopilot_parameters_dictionary = self.get_raw_response_from_telemetry_server(
-            "/autopilot_parameters/get_new", session=self.autopilot_parameters_session
+            "/autopilot_parameters/get_new/" + self.instance_id, session=self.autopilot_parameters_session
         )
 
         if new_autopilot_parameters_dictionary == {}:
