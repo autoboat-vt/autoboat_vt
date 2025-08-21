@@ -356,14 +356,15 @@ class TelemetryNode(Node):
         and then publishes the waypoints over ROS so that the autopilot can see them
         """
 
-        new_waypoints_list = self.get_raw_response_from_telemetry_server(
+        new_waypoints_route_response = self.get_raw_response_from_telemetry_server(
             "/waypoints/get_new/" + self.instance_id, session=self.waypoints_session
-        )["waypoints"]
+        )
 
-        if new_waypoints_list == []:
+        if new_waypoints_route_response == {}:
             return
 
-        # parse waypoints
+        # Parse Waypoints
+        new_waypoints_list = new_waypoints_route_response["waypoints"]
         waypoints_nav_sat_fix_list = []
         for waypoint in new_waypoints_list:
             if not waypoint:
