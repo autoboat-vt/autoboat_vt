@@ -719,7 +719,7 @@ class GroundStationWidget(QWidget):
 
         equal_flag = sorted(self.waypoints) == sorted(waypoints)
 
-        if not equal_flag and not self.remember_waypoints_pull_service_status:
+        if not equal_flag and not self.remember_waypoints_pull_service_status and self.can_pull_waypoints:
             for timer in self.timers:
                 timer.stop()
 
@@ -752,10 +752,10 @@ class GroundStationWidget(QWidget):
                 timer.start()
 
         elif not equal_flag and self.remember_waypoints_pull_service_status:
-            print("[Info] Local waypoints do not match telemetry server waypoints, but user has chosen to not be reminded.")
+            print("[Info] Local waypoints do not match telemetry server waypoints, but not prompting user.")
 
         else:
-            print("[Info] Local waypoints match telemetry server waypoints, but user has chosen to not be reminded.")
+            print("[Info] Local waypoints match telemetry server waypoints, but not prompting user.")
 
     def change_telemetry_server_url(self, telemetry_status: constants.TelemetryStatus) -> None:
         """
