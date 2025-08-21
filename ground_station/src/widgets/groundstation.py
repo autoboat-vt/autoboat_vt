@@ -67,8 +67,8 @@ class GroundStationWidget(QWidget):
         # region timers
         self.ten_ms_timer = constants.copy_qtimer(constants.TEN_MS_TIMER)
         self.one_ms_timer = constants.copy_qtimer(constants.ONE_MS_TIMER)
-        self.ten_second_timer = constants.copy_qtimer(constants.TEN_SECOND_TIMER)
-        self.timers = [self.ten_second_timer, self.ten_ms_timer, self.one_ms_timer]
+        self.thirty_second_timer = constants.copy_qtimer(constants.THIRTY_SECOND_TIMER)
+        self.timers = [self.thirty_second_timer, self.ten_ms_timer, self.one_ms_timer]
 
         # region define layouts
         self.main_layout = QGridLayout()
@@ -271,7 +271,7 @@ class GroundStationWidget(QWidget):
         self.local_waypoint_handler = thread_classes.LocalWaypointFetcher()
         self.remote_waypoint_handler = thread_classes.RemoteWaypointFetcher()
 
-        self.ten_second_timer.timeout.connect(self.remote_waypoint_handler_starter)
+        self.thirty_second_timer.timeout.connect(self.remote_waypoint_handler_starter)
         self.ten_ms_timer.timeout.connect(self.update_telemetry_starter)
         self.one_ms_timer.timeout.connect(self.local_waypoint_handler_starter)
 

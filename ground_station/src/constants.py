@@ -26,6 +26,7 @@ Constants:
 import os
 import shutil
 import requests
+from requests.adapters import HTTPAdapter
 from urllib.parse import urljoin
 from pathlib import PurePath
 from qtpy.QtCore import Qt, QRect, QTimer
@@ -312,6 +313,9 @@ STYLE_SHEET = """
 WINDOW_BOX = QRect(100, 100, 800, 600)
 
 # timers
+THIRTY_SECOND_TIMER = QTimer()
+THIRTY_SECOND_TIMER.setInterval(30_000)
+
 TEN_SECOND_TIMER = QTimer()
 TEN_SECOND_TIMER.setInterval(10_000)
 
@@ -380,6 +384,7 @@ TELEMETRY_TIMEOUT_SECONDS = 30
 TELEMETRY_RETRY_ATTEMPTS = 3
 
 REQ_SESSION = requests.Session()
+REQ_SESSION.mount(TELEMETRY_SERVER_URL, HTTPAdapter(max_retries=TELEMETRY_RETRY_ATTEMPTS))
 
 try:
     # should be the path to wherever `ground_station` is located
