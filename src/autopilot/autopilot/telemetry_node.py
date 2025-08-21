@@ -358,7 +358,7 @@ class TelemetryNode(Node):
 
         new_waypoints_list = self.get_raw_response_from_telemetry_server(
             "/waypoints/get_new/" + self.instance_id, session=self.waypoints_session
-        )
+        )["waypoints"]
 
         if new_waypoints_list == []:
             return
