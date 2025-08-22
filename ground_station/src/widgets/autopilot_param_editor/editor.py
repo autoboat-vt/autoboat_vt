@@ -134,7 +134,7 @@ class AutopilotParamEditor(QWidget):
         try:
             constants.REQ_SESSION.post(
                 urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
-                json={"autopilot_parameters": existing_data},
+                json=existing_data,
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             )
             print("[Info] All parameters sent successfully.")
@@ -435,7 +435,7 @@ class AutopilotParamWidget(QFrame):
                     urljoin(
                         constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)
                     ),
-                    json={"autopilot_parameters": existing_data},
+                    json=existing_data,
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
                 print(f"[Info] Successfully sent {self.name} with value {self.value}.")

@@ -3,7 +3,6 @@ import thread_classes
 import requests
 from urllib.parse import urljoin
 from datetime import datetime
-from typing import Any
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QWidget,
@@ -36,9 +35,8 @@ class InstanceHandler(QWidget):
     def __init__(self) -> None:
         super().__init__()
 
-        self.instance_widgets: list[InstanceWidget] = []
-        self.instance_widgets_by_id: dict[int, InstanceWidget] = {}
-        self.instance_info_by_id: dict[int, dict[str, Any]] = {}
+        self.widgets: list[InstanceWidget] = []
+        self.ids: list[int] = []
 
         self.current_search_text: str = ""
         self.timer = constants.copy_qtimer(constants.ONE_SECOND_TIMER)
@@ -81,70 +79,35 @@ class InstanceHandler(QWidget):
         if not self.instance_fetcher.isRunning():
             self.instance_fetcher.start()
 
-    def update_instances(self, instances: list[int]) -> None:
+    def update_instances(self, instances: list[dict]) -> None:
         """
         Update the instance widgets based on the fetched instances.
 
         Parameters
         ----------
         instances
-            A list of instance IDs fetched from the telemetry server.
+            A list of dictionaries containing instance data.
         """
 
-        new_ids = list(instances)  # keep order from server
-
-        new_id_set = set(new_ids)
-        old_id_set = set(self.instance_widgets_by_id.keys())
-
-        # Avoid repaint churn while we rearrange
         self.instances_container.setUpdatesEnabled(False)
 
-        # 1) Remove widgets that disappeared
-        for removed_id in old_id_set - new_id_set:
-            w = self.instance_widgets_by_id.pop(removed_id, None)
-            if w is not None:
-                self.instances_layout.removeWidget(w)
-                w.deleteLater()
-            self.instance_info_by_id.pop(removed_id, None)
+        for widget in self.widgets:
+            widget.deleteLater()
+        self.widgets = []
 
-        # 2) Fetch info for all current IDs and create/update widgets
-        for iid in new_ids:
+        for instance in instances:
             try:
-                info = constants.REQ_SESSION.get(
-                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_instance_info"], str(iid)),
-                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-                ).json()
-            except requests.exceptions.RequestException as e:
-                print(f"[Warning] Failed to fetch instance info for {iid}: {e}")
-                # If fetch fails and widget already exists, keep the old UI; if not, skip.
-                continue
+                instance_widget = InstanceWidget(instance)
+                self.instances_layout.addWidget(instance_widget)
+                self.widgets.append(instance_widget)
 
-            self.instance_info_by_id[iid] = info
+            except ValueError as e:
+                print(f"[Warning] Skipping invalid instance data: {e}")
 
-            if iid in self.instance_widgets_by_id:
-                # Update existing widget in-place (no flicker)
-                self.instance_widgets_by_id[iid].update_from_info(info)
-            else:
-                # Create new widget
-                w = InstanceWidget(info)
-                self.instance_widgets_by_id[iid] = w
-                self.instances_layout.addWidget(w)
-
-        # 3) Reorder widgets to match server order (cheap remove+add without destroying)
-        for iid in new_ids:
-            w = self.instance_widgets_by_id.get(iid)
-            if w is not None:
-                self.instances_layout.removeWidget(w)
-                self.instances_layout.addWidget(w)
-
-        # Keep a list version for filtering convenience (preserve order)
-        self.instance_widgets = [self.instance_widgets_by_id[iid] for iid in new_ids if iid in self.instance_widgets_by_id]
-
-        # 4) Re-apply search or update status label
         if self.current_search_text:
             self.filter_instances(self.current_search_text)
-        elif self.instance_widgets:
-            self.status_label.setText(f"{len(self.instance_widgets)} instances found")
+        elif self.widgets:
+            self.status_label.setText(f"{len(self.widgets)} instances found")
         else:
             self.status_label.setText("No instances found")
 
@@ -154,15 +117,20 @@ class InstanceHandler(QWidget):
         if constants.TELEMETRY_SERVER_INSTANCE_ID == -1:
             self.timer.stop()
 
-            if len(new_ids) == 1:
-                constants.TELEMETRY_SERVER_INSTANCE_ID = new_ids[0]
-                print(f"[Info] Automatically connected to instance {new_ids[0]} as the only available instance.")
+            if len(instances) == 1:
+                new_id = instances[0]["instance_id"]
+                constants.TELEMETRY_SERVER_INSTANCE_ID = new_id
+                print(f"[Info] Automatically connected to instance {new_id} as the only available instance.")
 
             else:
                 main_window = self.window()
                 tab_widget = main_window.centralWidget()
                 if isinstance(tab_widget, QTabWidget):
                     tab_widget.setCurrentWidget(self)
+
+                self.ids = constants.REQ_SESSION.get(
+                    constants.TELEMETRY_SERVER_ENDPOINTS["get_all_ids"], timeout=constants.TELEMETRY_TIMEOUT_SECONDS
+                ).json()
 
                 while True:
                     new_id = constants.show_input_dialog(
@@ -171,7 +139,7 @@ class InstanceHandler(QWidget):
                         input_type=int,
                     )
 
-                    if new_id is not None and new_id in new_ids:
+                    if new_id is not None and new_id in self.ids:
                         constants.TELEMETRY_SERVER_INSTANCE_ID = new_id
                         print(f"[Info] Connected to instance {new_id}")
                         break
@@ -190,17 +158,17 @@ class InstanceHandler(QWidget):
 
         self.current_search_text = text
 
-        for widget in self.instance_widgets:
+        for widget in self.widgets:
             if text.lower() in widget.instance_identifier.lower():
                 widget.show()
             else:
                 widget.hide()
 
-        visible_count = sum(widget.isVisible() for widget in self.instance_widgets)
+        visible_count = sum(widget.isVisible() for widget in self.widgets)
         if text:
             self.status_label.setText(f"{visible_count} instances found matching '{text}'")
         else:
-            self.status_label.setText(f"{len(self.instance_widgets)} instances found")
+            self.status_label.setText(f"{len(self.widgets)} instances found")
 
 
 class InstanceWidget(QFrame):
@@ -318,7 +286,6 @@ class InstanceWidget(QFrame):
         """Update labels/fields without recreating the widget."""
 
         try:
-            # ID should be stable; keep a sanity check but don't overwrite.
             if int(instance_info["instance_id"]) != self.instance_id:
                 print(
                     f"[Warn] Instance ID changed for widget (old {self.instance_id} != new {instance_info['instance_id']}). Ignoring ID change."
@@ -331,14 +298,14 @@ class InstanceWidget(QFrame):
             print(f"[Warn] Bad instance_info during update: {e}")
             return
 
-        # Update identifier (affects filtering)
+        # update identifier (affects filtering)
         if new_identifier != self.instance_identifier:
             self.instance_identifier = new_identifier
-            # Only update the edit if the user isn't actively editing
+            # only update the edit if the user isn't actively editing
             if not self.instance_name_edit.isModified():
                 self.instance_name_edit.setText(new_identifier)
 
-        # Update timestamps if changed
+        # update timestamps if changed
         if new_created_at != getattr(self, "created_at", None):
             self.created_at = new_created_at
             self.created_at_label.setText(self.created_at.strftime("%Y-%m-%d %H:%M:%S"))
@@ -385,7 +352,7 @@ class InstanceWidget(QFrame):
             new_instance_id = constants.REQ_SESSION.get(
                 constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-            ).json()["id"]
+            ).json()
             constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
 
             constants.REQ_SESSION.delete(

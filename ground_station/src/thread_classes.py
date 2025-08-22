@@ -77,7 +77,7 @@ class InstanceFetcher(QThread):
     Attributes
     ----------
     instances_fetched: `Signal`
-        Signal to send instances to the main thread. Emits a list of instances.
+        Signal to send instances to the main thread. Emits a list of dictionaries containing instance data.
 
     request_url_change: `Signal`
         Signal to request a change in the telemetry server URL.
@@ -87,7 +87,7 @@ class InstanceFetcher(QThread):
         </ul>
     """
 
-    instances_fetched: list[int] = Signal(list)
+    instances_fetched: list[dict] = Signal(list)
     request_url_change: constants.TelemetryStatus = Signal(constants.TelemetryStatus)
 
     def __init__(self) -> None:
@@ -102,10 +102,9 @@ class InstanceFetcher(QThread):
         """Fetch instances from the telemetry server and emit them."""
 
         try:
-            instances: list[int] = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_all_ids"],
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-            ).json()["ids"]
+            instances: list[dict] = constants.REQ_SESSION.get(
+                constants.TELEMETRY_SERVER_ENDPOINTS["get_all_instance_info"], timeout=constants.TELEMETRY_TIMEOUT_SECONDS
+            ).json()
 
             if not isinstance(instances, list):
                 raise TypeError("Instances data is not a list")
@@ -119,7 +118,7 @@ class InstanceFetcher(QThread):
 
         except TypeError:
             print(
-                f"[Warning] Instances data is not in expected format. Using empty list.\nExpected: {list[int]}, Received: {instances}",
+                f"[Warning] Instances data is not in expected format. Using empty list.\nExpected: {list[dict]}, Received: {instances}",
             )
             instances = []
             self.request_url_change.emit(constants.TelemetryStatus.FAILURE)

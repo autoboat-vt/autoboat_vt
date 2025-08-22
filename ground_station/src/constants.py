@@ -351,6 +351,7 @@ instance_manager_endpoints = {
     "get_instance_name_from_id": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_name/"),
     "get_instance_id_from_name": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_id/"),
     "get_instance_info": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_instance_info/"),
+    "get_all_instance_info": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_all_instance_info"),
     "get_all_ids": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_ids"),
 }
 
@@ -363,12 +364,15 @@ boat_status_endpoints = {
 autopilot_parameters_endpoints = {
     "get_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get/"),
     "get_new_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_new/"),
+    "get_default_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_default/"),
     "set_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set/"),
+    "set_default_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set_default/"),
     "test_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/test/"),
 }
 
 waypoints_endpoints = {
     "get_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/get/"),
+    "get_new_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/get_new/"),
     "set_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/set/"),
     "test_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/test/"),
 }
