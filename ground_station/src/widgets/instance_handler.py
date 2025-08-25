@@ -3,6 +3,7 @@ import thread_classes
 import requests
 from urllib.parse import urljoin
 from datetime import datetime
+from typing import Any
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QWidget,
@@ -36,8 +37,8 @@ class InstanceHandler(QWidget):
     def __init__(self) -> None:
         super().__init__()
 
-        self.widgets: list[InstanceWidget] = []
         self.ids: list[int] = []
+        self.widgets_by_id: dict[int, InstanceWidget] = {}
 
         self.current_search_text: str = ""
         self.timer = constants.copy_qtimer(constants.ONE_SECOND_TIMER)
@@ -95,99 +96,158 @@ class InstanceHandler(QWidget):
 
         self.instances_container.setUpdatesEnabled(False)
 
-        for widget in self.widgets:
+        new_ids = {instance["instance_id"] for instance in instances if instance.get("instance_id") is not None}
+        existing_ids = set(self.widgets_by_id.keys())
+
+        # only remove widgets that are no longer present in the fetched instances
+        for removed_id in existing_ids - new_ids:
+            widget = self.widgets_by_id.pop(removed_id)
+            self.instances_layout.removeWidget(widget)
             widget.deleteLater()
-        self.widgets = []
 
-        num_proper_instances = len(self.widgets)
+        for instance in instances:
+            instance_id: int = instance.get("instance_id")
+            updated_at: str = instance.get("updated_at")
+            instance_identifier: str = instance.get("instance_identifier")
 
-        while num_proper_instances == 0:
-            for instance in instances:
+            if None in (instance_id, updated_at, instance_identifier):
+                print(f"[Warning] Skipping instance with missing data: {instance}")
+                continue
+
+            widget = self.widgets_by_id.get(instance_id)
+
+            if widget is not None:
+                widget.updated_at_label.setText(updated_at)
+                if widget.instance_identifier != instance_identifier:
+                    widget.instance_name_edit.setText(instance_identifier)
+
+            else:
                 try:
-                    instance_widget = InstanceWidget(instance)
-                    if instance_widget.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
-                        instance_widget.setStyleSheet(instance_widget.activated_style_sheet)
-                    self.instances_layout.addWidget(instance_widget)
-                    self.widgets.append(instance_widget)
+                    new_widget = InstanceWidget(instance)
+                    self.instances_layout.addWidget(new_widget)
+                    self.widgets_by_id[instance_id] = new_widget
 
                 except ValueError as e:
                     print(f"[Warning] Skipping invalid instance data: {e}")
 
-            num_proper_instances = len(self.widgets)
+        if not self.widgets_by_id:
+            self.instances_container.setUpdatesEnabled(True)
+            self.instances_container.update()
+            self.handle_no_instances()
 
-            if num_proper_instances == 0:
-                create_new_instance = constants.show_message_box(
-                    "No Valid Instances",
-                    "No valid instances found. Would you like to create a new instance?",
-                    constants.ICONS.question,
-                    [
-                        QMessageBox.StandardButton.Yes,
-                        QMessageBox.StandardButton.No,
-                    ],
-                )
-                if create_new_instance == QMessageBox.StandardButton.Yes:
-                    try:
-                        new_instance_id = constants.REQ_SESSION.get(
-                            constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
-                            timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-                        ).json()
-                        print(f"[Info] Created new instance with ID {new_instance_id}.")
-
-                        instances = constants.REQ_SESSION.get(
-                            constants.TELEMETRY_SERVER_ENDPOINTS["get_all_instance_info"],
-                            timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-                        ).json()
-
-                    except requests.exceptions.RequestException as e:
-                        print(f"[Error] Failed to create a new instance: {e}")
+        elif len(self.widgets_by_id) == 1 and constants.TELEMETRY_SERVER_INSTANCE_ID == -1:
+            only_id = next(iter(self.widgets_by_id))
+            constants.TELEMETRY_SERVER_INSTANCE_ID = only_id
+            self.widgets_by_id[only_id].setStyleSheet(self.widgets_by_id[only_id].activated_style_sheet)
+            print(f"[Info] Only one instance found. Automatically connected to instance {only_id}.")
+        
+        elif len(self.widgets_by_id) > 1 and constants.TELEMETRY_SERVER_INSTANCE_ID == -1:
+            self.instances_container.setUpdatesEnabled(True)
+            self.instances_container.update()
+            self.handle_multiple_instances()
+            
+        for widget in self.widgets_by_id.values():
+            if widget.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
+                widget.setStyleSheet(widget.activated_style_sheet)
+            else:
+                widget.setStyleSheet(widget.style_sheet)
 
         if self.current_search_text:
             self.filter_instances(self.current_search_text)
-        elif self.widgets:
-            self.status_label.setText(f"{len(self.widgets)} instances found")
         else:
-            self.status_label.setText("No instances found")
+            self.status_label.setText(f"{len(self.widgets_by_id)} instances found")
 
         self.instances_container.setUpdatesEnabled(True)
         self.instances_container.update()
 
-        if constants.TELEMETRY_SERVER_INSTANCE_ID == -1:
-            self.timer.stop()
+    def handle_no_instances(self) -> None:
+        """Handle scenario when no valid instances exist."""
 
-            if len(instances) == 1:
-                new_id = instances[0]["instance_id"]
-                constants.TELEMETRY_SERVER_INSTANCE_ID = new_id
-                for instance_widget in self.widgets:
-                    if instance_widget.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
-                        instance_widget.setStyleSheet(instance_widget.activated_style_sheet)
-                print(f"[Info] Automatically connected to instance {new_id} as the only available instance.")
-
-            else:
-                main_window = self.window()
-                tab_widget = main_window.centralWidget()
-                if isinstance(tab_widget, QTabWidget):
-                    tab_widget.setCurrentWidget(self)
-
-                self.ids = constants.REQ_SESSION.get(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["get_all_ids"], timeout=constants.TELEMETRY_TIMEOUT_SECONDS
+        self.timer.stop()
+        create_new_instance = constants.show_message_box(
+            "No Valid Instances",
+            "No valid instances found. Would you like to create a new instance?",
+            constants.ICONS.question,
+            [
+                QMessageBox.StandardButton.Yes,
+                QMessageBox.StandardButton.No,
+            ],
+        )
+        if create_new_instance == QMessageBox.StandardButton.Yes:
+            try:
+                new_instance_id: int = constants.REQ_SESSION.get(
+                    constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
+                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 ).json()
 
-                while True:
-                    new_id = constants.show_input_dialog(
-                        "Select Instance",
-                        "Please select the instance you want to connect to:",
-                        input_type=int,
-                    )
+                constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
+                instance_info: dict[str, Any] = constants.REQ_SESSION.get(
+                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_instance_info"], str(new_instance_id)),
+                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                ).json()
 
-                    if new_id is not None and new_id in self.ids:
-                        constants.TELEMETRY_SERVER_INSTANCE_ID = new_id
-                        for instance_widget in self.widgets:
-                            if instance_widget.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
-                                instance_widget.setStyleSheet(instance_widget.activated_style_sheet)
-                        print(f"[Info] Connected to instance {new_id}")
-                        break
+                new_widget = InstanceWidget(instance_info)
+                self.instances_layout.addWidget(new_widget)
+                self.widgets_by_id[new_instance_id] = new_widget
+                new_widget.setStyleSheet(new_widget.activated_style_sheet)
+                print(f"[Info] Created new instance with ID {new_instance_id}.")
 
-            self.timer.start()
+            except requests.exceptions.RequestException as e:
+                print(f"[Error] Failed to create a new instance: {e}")
+
+        else:
+            print("[Info] User chose not to create a new instance even though none were found.")
+
+        self.timer.start()
+
+    def handle_multiple_instances(self) -> None:
+        """Handle scenario when multiple instances exist but none is selected."""
+
+        self.timer.stop()
+
+        # focus the instance handler tab so we can see the instances
+        main_window = self.window()
+        tab_widget = main_window.centralWidget()
+        if isinstance(tab_widget, QTabWidget):
+            tab_widget.setCurrentWidget(self)
+        
+        while constants.TELEMETRY_SERVER_INSTANCE_ID == -1:
+            new_id = constants.show_input_dialog(
+                "Select Instance",
+                "Please select the instance you want to connect to.",
+                input_type=int,
+            )
+
+            if new_id in self.widgets_by_id and new_id is not None:
+                constants.TELEMETRY_SERVER_INSTANCE_ID = new_id
+                self.widgets_by_id[new_id].setStyleSheet(self.widgets_by_id[new_id].activated_style_sheet)
+                print(f"[Info] Connected to instance {new_id}")
+
+        self.timer.start()
+
+    def filter_instances(self, text: str) -> None:
+        """
+        Filter the displayed instances based on the search text.
+
+        Parameters
+        ----------
+        text
+            The text to filter instances by.
+        """
+
+        self.current_search_text = text
+
+        for widget in self.widgets_by_id.values():
+            if text.lower() in widget.instance_identifier.lower():
+                widget.show()
+            else:
+                widget.hide()
+
+        visible_count = sum(widget.isVisible() for widget in self.widgets_by_id.values())
+        if text:
+            self.status_label.setText(f"{visible_count} instances found matching '{text}'")
+        else:
+            self.status_label.setText(f"{len(self.widgets_by_id)} instances found")
 
     def instance_fetch_failure(self, telemetry_status: constants.TelemetryStatus) -> None:
         """
@@ -204,30 +264,6 @@ class InstanceHandler(QWidget):
 
         if telemetry_status == constants.TelemetryStatus.FAILURE:
             print("[Warning] Failed to fetch instances from the telemetry server.")
-
-    def filter_instances(self, text: str) -> None:
-        """
-        Filter the displayed instances based on the search text.
-
-        Parameters
-        ----------
-        text
-            The text to filter instances by.
-        """
-
-        self.current_search_text = text
-
-        for widget in self.widgets:
-            if text.lower() in widget.instance_identifier.lower():
-                widget.show()
-            else:
-                widget.hide()
-
-        visible_count = sum(widget.isVisible() for widget in self.widgets)
-        if text:
-            self.status_label.setText(f"{visible_count} instances found matching '{text}'")
-        else:
-            self.status_label.setText(f"{len(self.widgets)} instances found")
 
 
 class InstanceWidget(QFrame):

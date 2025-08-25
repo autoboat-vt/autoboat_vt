@@ -53,6 +53,9 @@ class GroundStationWidget(QWidget):
         self.boat_data: dict[str, Any] = {}
         self.telemetry_data_limits: dict[str, float] = {}
 
+        # used to detect if the telemetry server instance ID has changed
+        self.old_instance_id: int = constants.TELEMETRY_SERVER_INSTANCE_ID
+
         # should we remember the status of the user's last response to the
         # dialog that asks if the telemetry server URL should be changed?
         self.remember_telemetry_server_url_status: bool = False
@@ -60,9 +63,6 @@ class GroundStationWidget(QWidget):
         # should we remember the status of the user's last response to the
         # dialog that asks if the user wants to pull waypoints from the telemetry server?
         self.remember_waypoints_pull_service_status: bool = False
-
-        self.instance_id: int = 0
-        self.instance_name: str = ""
 
         # region timers
         self.ten_ms_timer = constants.copy_qtimer(constants.TEN_MS_TIMER)
@@ -676,10 +676,17 @@ class GroundStationWidget(QWidget):
             List of waypoints fetched from the server.
         """
 
+        if self.old_instance_id != constants.TELEMETRY_SERVER_INSTANCE_ID:
+            self.waypoints.clear()
+            js_code = "map.clear_waypoints()"
+            self.browser.page().runJavaScript(js_code)
+            self.old_instance_id = constants.TELEMETRY_SERVER_INSTANCE_ID
+
         self.waypoints = waypoints
         self.send_waypoints_button.setDisabled(not self.can_send_waypoints)
         self.clear_waypoints_button.setDisabled(not self.can_reset_waypoints)
         self.pull_waypoints_button.setDisabled(not self.can_pull_waypoints)
+
         if self.num_waypoints != len(self.waypoints):
             self.num_waypoints = len(self.waypoints)
             if self.num_waypoints == 0:
