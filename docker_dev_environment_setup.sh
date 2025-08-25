@@ -48,6 +48,7 @@ sudo echo ACTION=="add", ATTRS{idVendor}=="2E8A", ATTRS{idProduct}=="0005", SYML
 sudo echo ACTION=="add", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", SYMLINK+="gps" >> /etc/udev/rules.d/99-autoboat-udev.rules
 sudo echo ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="A9001WL3", SYMLINK+="rc" >> /etc/udev/rules.d/99-autoboat-udev.rules
 sudo echo ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="ABSCDYAB", SYMLINK+="wind_sensor" >> /etc/udev/rules.d/99-autoboat-udev.rules
+sudo echo ACTION=="add", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740", SYMLINK+="vesc" >> /etc/udev/rules.d/99-autoboat-udev.rules
 
 sudo udevadm trigger
 

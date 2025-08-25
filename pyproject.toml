@@ -1,7 +1,7 @@
 [project]
-name    = "autoboat_vt"
+name = "autoboat_vt"
 version = "67.420.69"
-readme  = "README.md"
+readme = "README.md"
 
 [project.urls]
 repository = "https://github.com/autoboat-vt/autoboat_vt"
@@ -36,10 +36,11 @@ exclude = [
     "node_modules",
     "site-packages",
     "venv",
+    "src",
 ]
 
 # Same as Black.
-line-length  = 135
+line-length = 150
 indent-width = 4
 
 # Assume Python 3.10
@@ -113,6 +114,8 @@ ignore = [
     "FIX002",  # Anotating TODO lines
     "B904",    # Checks for raise statements in exception handlers that lack a from clause
     "D103",    # Missing docstring in public function
+    "PERF401", # Force list comprehension
+    "SIM118",  # in-dict-keys
 ]
 
 unfixable = [

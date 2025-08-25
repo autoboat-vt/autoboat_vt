@@ -198,9 +198,6 @@ def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float
     
     
     
-    
-    
-    
 # ==============================================================================
 # UTIL FUNCTIONS THAT ARE NOT FULLY TESTED
 # ==============================================================================
@@ -244,6 +241,7 @@ def does_line_violate_no_sail_zone(
     # find the angle between these two vectors
     angle_between = np.arccos(np.dot(up_wind_vector, normalized_displacement))
     
+    # TODO I AM PRETTY SURE THAT WE NEED TO USE THE IS ANGLE BETWEEN BOUNDARIES FUNCTION FOR THIS?
     if -no_sail_zone_size < angle_between < no_sail_zone_size:
         return True
     

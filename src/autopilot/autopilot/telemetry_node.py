@@ -6,7 +6,7 @@ from .autopilot_library.utils import *
 
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy, qos_profile_sensor_data
+from rclpy.qos import qos_profile_sensor_data
 from std_msgs.msg import Float32, Bool, String, Int32
 from geometry_msgs.msg import Vector3, Twist
 from sensor_msgs.msg import NavSatFix, Image
@@ -49,9 +49,9 @@ class TelemetryNode(Node):
     def __init__(self):
         super().__init__("telemetry")
 
-        self.create_timer(0.01, self.update_boat_status)
-        self.create_timer(0.5, self.update_waypoints_from_telemetry)
-        self.create_timer(0.5, self.update_autopilot_parameters_from_telemetry)
+        self.update_boat_status_timer = self.create_timer(0.01, self.update_boat_status)
+        self.update_waypoints_from_telemetry_timer = self.create_timer(0.5, self.update_waypoints_from_telemetry)
+        self.update_autopilot_parameters_from_telemetry_timer = self.create_timer(0.5, self.update_autopilot_parameters_from_telemetry)
 
         self.cv_bridge = CvBridge()
 
@@ -59,92 +59,33 @@ class TelemetryNode(Node):
         with open(current_folder_path + "/config/sailboat_default_parameters.yaml", "r") as stream:
             self.autopilot_parameters_dictionary: dict = yaml.safe_load(stream)
 
-        qos_profile_transient_local = QoSProfile(
-            depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL, history=QoSHistoryPolicy.KEEP_LAST
-        )
-
         # DECLARE ROS2 PUBLISHERS AND SUBSCRIBERS
-        self.default_autopilot_parameters_listener = self.create_subscription(
-            msg_type=String,
-            topic="/default_autopilot_parameters",
-            callback=self.default_autopilot_parameters_callback,
-            qos_profile=qos_profile_transient_local,
-        )
-
+        self.default_autopilot_parameters_listener = self.create_subscription(msg_type=String, topic="/default_autopilot_parameters", callback=self.default_autopilot_parameters_callback, qos_profile=1)
+        self.default_autopilot_parameters_acknowledgement_publisher = self.create_publisher(msg_type=Bool, topic="/default_autopilot_parameters_acknowledgement", qos_profile=1)
         self.autopilot_parameters_publisher = self.create_publisher(msg_type=String, topic="/autopilot_parameters", qos_profile=10)
 
         self.sensors_parameters_publisher = self.create_publisher(msg_type=String, topic="/sensors_parameters", qos_profile=10)
 
         self.waypoints_list_publisher = self.create_publisher(msg_type=WaypointList, topic="/waypoints_list", qos_profile=10)
 
-        self.desired_heading_listener = self.create_subscription(
-            msg_type=Float32, topic="/desired_heading", callback=self.desired_heading_callback, qos_profile=10
-        )
+        self.desired_heading_listener = self.create_subscription(msg_type=Float32, topic="/desired_heading", callback=self.desired_heading_callback, qos_profile=10)
 
-        self.current_waypoint_index_listener = self.create_subscription(
-            msg_type=Int32, topic="/current_waypoint_index", callback=self.current_waypoint_index_callback, qos_profile=10
-        )
+        self.current_waypoint_index_listener = self.create_subscription(msg_type=Int32, topic="/current_waypoint_index", callback=self.current_waypoint_index_callback, qos_profile=10)
 
-        self.full_autonomy_maneuver_listener = self.create_subscription(
-            msg_type=String,
-            topic="/full_autonomy_maneuver",
-            callback=self.full_autonomy_maneuver_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
+        self.full_autonomy_maneuver_listener = self.create_subscription(msg_type=String, topic="/full_autonomy_maneuver", callback=self.full_autonomy_maneuver_callback, qos_profile=qos_profile_sensor_data)
 
-        self.autopilot_mode_listener = self.create_subscription(
-            msg_type=String,
-            topic="/autopilot_mode",
-            callback=self.autopilot_mode_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
+        self.autopilot_mode_listener = self.create_subscription(msg_type=String, topic="/autopilot_mode", callback=self.autopilot_mode_callback, qos_profile=qos_profile_sensor_data)
+        
+        self.position_listener = self.create_subscription(msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=qos_profile_sensor_data)
+        self.velocity_listener = self.create_subscription(msg_type=Twist, topic="/velocity", callback=self.velocity_callback, qos_profile=qos_profile_sensor_data)
+        self.heading_listener = self.create_subscription(msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=qos_profile_sensor_data)
+        self.apparent_wind_vector_listener = self.create_subscription(msg_type=Vector3, topic="/apparent_wind_vector", callback=self.apparent_wind_vector_callback, qos_profile=qos_profile_sensor_data)
+        self.camera_rgb_image_listener = self.create_subscription(msg_type=Image, topic="/camera/camera/color/image_raw", callback=self.camera_rgb_image_callback, qos_profile=qos_profile_sensor_data)
+        self.vesc_telemetry_data_listener = self.create_subscription(msg_type=VESCTelemetryData, topic="/vesc_telemetry_data", callback=self.vesc_telemetry_data_callback, qos_profile=qos_profile_sensor_data)
 
-        self.position_listener = self.create_subscription(
-            msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=qos_profile_sensor_data
-        )
+        self.desired_sail_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_sail_angle", callback=self.desired_sail_angle_callback, qos_profile=qos_profile_sensor_data)
+        self.desired_rudder_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_rudder_angle", callback=self.desired_rudder_angle_callback, qos_profile=qos_profile_sensor_data)
 
-        self.velocity_listener = self.create_subscription(
-            msg_type=Twist, topic="/velocity", callback=self.velocity_callback, qos_profile=qos_profile_sensor_data
-        )
-
-        self.heading_listener = self.create_subscription(
-            msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=qos_profile_sensor_data
-        )
-
-        self.apparent_wind_vector_listener = self.create_subscription(
-            msg_type=Vector3,
-            topic="/apparent_wind_vector",
-            callback=self.apparent_wind_vector_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
-
-        self.camera_rgb_image_listener = self.create_subscription(
-            msg_type=Image,
-            topic="/camera/camera/color/image_raw",
-            callback=self.camera_rgb_image_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
-
-        self.vesc_telemetry_data_listener = self.create_subscription(
-            msg_type=VESCTelemetryData,
-            topic="/vesc_telemetry_data",
-            callback=self.vesc_telemetry_data_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
-
-        self.desired_sail_angle_listener = self.create_subscription(
-            msg_type=Float32,
-            topic="/desired_sail_angle",
-            callback=self.desired_sail_angle_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
-
-        self.desired_rudder_angle_listener = self.create_subscription(
-            msg_type=Float32,
-            topic="/desired_rudder_angle",
-            callback=self.desired_rudder_angle_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
 
         # DEFAULT VALUES IN CASE THESE ARE NEVER SENT THROUGH ROS OR THE TELEMETRY SERVER
         # If these values aren't changing then the ros node or telemetry server thats supposed to be sending these values may not be working correctly
@@ -190,9 +131,12 @@ class TelemetryNode(Node):
         self.container_owner_user_name = os.environ["CONTAINER_OWNER_USER_NAME"]
         self.instance_id = str(requests.get(url=TELEMETRY_SERVER_URL + "/instance_manager/create").json())
 
-        requests.post(
-            url=TELEMETRY_SERVER_URL + "/instance_manager/set_name/" + self.instance_id + "/" + self.container_owner_user_name
-        )
+        requests.post(url=TELEMETRY_SERVER_URL + "/instance_manager/set_name/" + self.instance_id + "/" + self.container_owner_user_name)
+
+
+
+
+
 
     def position_callback(self, position: NavSatFix) -> None:
         self.position = position
@@ -231,6 +175,7 @@ class TelemetryNode(Node):
         self.autopilot_parameters_session.post(
             url=TELEMETRY_SERVER_URL + "/autopilot_parameters/set_default/" + self.instance_id, json=self.default_autopilot_parameters
         )
+        self.default_autopilot_parameters_acknowledgement_publisher.publish(Bool(data=True))
 
     def current_waypoint_index_callback(self, current_waypoint_index: Int32):
         self.current_waypoint_index = current_waypoint_index.data
@@ -267,6 +212,10 @@ class TelemetryNode(Node):
         if msg.data == True:
             rclpy.shutdown()
 
+
+
+
+
     def get_raw_response_from_telemetry_server(self, route: str, session: requests.Session = None) -> any:
         """
         This is essentially just a helper function to send a GET request to a specific telemetry server route and automatically
@@ -287,9 +236,9 @@ class TelemetryNode(Node):
                 return session.get(TELEMETRY_SERVER_URL + route, timeout=10).json()
 
         except Exception as e:
-            print(e)
+            self.get_logger().info(f"Error on route: {route}: {e}")
             time.sleep(0.5)
-            print("retrying connection")
+            self.get_logger().info("Retrying connection to telemetry server...")
             return self.get_raw_response_from_telemetry_server(route)
 
     def update_boat_status(self):
@@ -297,17 +246,14 @@ class TelemetryNode(Node):
         Gathers data from the autopilot and sensors through ROS,
         and then this node makes an API call to send that data over to the groundstation so that it can view what is going on
         """
-
+        
         # TODO TODO THIS IS BUGGED. YOU NEED TO ACCOUNT FOR THE VELOCITY VECTOR BEING MEASURED GLOBALLY RATHER THAN THE APPARENT WIND VECTOR WHICH IS MEASURED LOCALLY
         true_wind_vector = self.apparent_wind_vector + self.velocity_vector
         self.true_wind_speed, self.true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
 
         if self.current_waypoints_list != []:
             current_position = Position(self.position.latitude, self.position.longitude)
-            next_waypoint_position = Position(
-                self.current_waypoints_list[self.current_waypoint_index][0],
-                self.current_waypoints_list[self.current_waypoint_index][1],
-            )
+            next_waypoint_position = Position(self.current_waypoints_list[self.current_waypoint_index][0], self.current_waypoints_list[self.current_waypoint_index][1])
             distance_to_next_waypoint = get_distance_between_positions(current_position, next_waypoint_position)
 
         else:
@@ -318,21 +264,23 @@ class TelemetryNode(Node):
         # of the parameters ahead of time which is the cost of compressing all of this information so much
         boat_status_dictionary = {
             "position": [self.position.latitude, self.position.longitude],
-            "state": self.autopilot_mode,
-            "full_autonomy_maneuver": self.full_autonomy_maneuver,
-            "speed": self.speed,
             "velocity_vector": (self.velocity_vector[0], self.velocity_vector[1]),
-            "bearing": self.desired_heading,
+            "speed": self.speed,
             "heading": self.heading,
             "true_wind_speed": self.true_wind_speed,
             "true_wind_angle": self.true_wind_angle,
             "apparent_wind_speed": self.apparent_wind_speed,
             "apparent_wind_angle": self.apparent_wind_angle,
+            "current_camera_image": self.base64_encoded_current_rgb_image,
             "sail_angle": self.desired_sail_angle,
             "rudder_angle": self.desired_rudder_angle,
+
+            "state": self.autopilot_mode,
+            "full_autonomy_maneuver": self.full_autonomy_maneuver,
+            "bearing": self.desired_heading,
             "current_waypoint_index": self.current_waypoint_index,
             "distance_to_next_waypoint": distance_to_next_waypoint,
-            "current_camera_image": self.base64_encoded_current_rgb_image,
+
             "vesc_telemetry_data_rpm": self.vesc_telemetry_data_rpm,
             "vesc_telemetry_data_duty_cycle": self.vesc_telemetry_data_duty_cycle,
             "vesc_telemetry_data_amp_hours": self.vesc_telemetry_data_amp_hours,
@@ -345,19 +293,19 @@ class TelemetryNode(Node):
             "vesc_telemetry_data_motor_temperature": self.vesc_telemetry_data_motor_temperature,
             "vesc_telemetry_data_vesc_temperature": self.vesc_telemetry_data_vesc_temperature,
         }
-
+        
+        start_time = time.time()
         # TODO: THIS IS HOW WE DO THE COMPRESSION: requests.post(url=TELEMETRY_SERVER_URL + "/boat_status/set/" + self.instance_id, json={"value": list(boat_status_dictionary.values())})
         self.boat_status_session.post(url=TELEMETRY_SERVER_URL + "/boat_status/set/" + self.instance_id, json=boat_status_dictionary)
-
+        self.get_logger().info(f"time: {time.time() - start_time}")
+        
     def update_waypoints_from_telemetry(self):
         """
         Makes an API call to gather the waypoints that the groundstation set,
         and then publishes the waypoints over ROS so that the autopilot can see them
         """
 
-        new_waypoints_route_response = self.get_raw_response_from_telemetry_server(
-            "/waypoints/get_new/" + self.instance_id, session=self.waypoints_session
-        )
+        new_waypoints_route_response = self.get_raw_response_from_telemetry_server("/waypoints/get_new/" + self.instance_id, session=self.waypoints_session)
 
         if new_waypoints_route_response == {}:
             return
@@ -390,9 +338,12 @@ class TelemetryNode(Node):
         and then publishes the autopilot parameters over ROS so that the autopilot can see them
         """
 
+
         new_autopilot_parameters_dictionary = self.get_raw_response_from_telemetry_server(
             "/autopilot_parameters/get_new/" + self.instance_id, session=self.autopilot_parameters_session
         )
+        
+        self.get_logger().info(f"{new_autopilot_parameters_dictionary}")
 
         if new_autopilot_parameters_dictionary == {}:
             return
