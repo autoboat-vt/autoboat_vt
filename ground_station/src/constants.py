@@ -344,7 +344,7 @@ TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
 TELEMETRY_SERVER_INSTANCE_ID: int = -1
 
 # endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint` + `/`
-instance_manager_endpoints = {
+_instance_manager_endpoints = {
     "create_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/create"),
     "delete_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/delete/"),
     "set_instance_name": urljoin(TELEMETRY_SERVER_URL, "instance_manager/set_name/"),
@@ -355,13 +355,13 @@ instance_manager_endpoints = {
     "get_all_ids": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_ids"),
 }
 
-boat_status_endpoints = {
+_boat_status_endpoints = {
     "get_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/get/"),
     "get_new_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/get_new/"),
     "test_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/test/"),
 }
 
-autopilot_parameters_endpoints = {
+_autopilot_parameters_endpoints = {
     "get_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get/"),
     "get_new_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_new/"),
     "get_default_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_default/"),
@@ -370,7 +370,7 @@ autopilot_parameters_endpoints = {
     "test_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/test/"),
 }
 
-waypoints_endpoints = {
+_waypoints_endpoints = {
     "get_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/get/"),
     "get_new_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/get_new/"),
     "set_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/set/"),
@@ -378,10 +378,10 @@ waypoints_endpoints = {
 }
 
 TELEMETRY_SERVER_ENDPOINTS = dict(
-    **instance_manager_endpoints,
-    **boat_status_endpoints,
-    **autopilot_parameters_endpoints,
-    **waypoints_endpoints,
+    **_instance_manager_endpoints,
+    **_boat_status_endpoints,
+    **_autopilot_parameters_endpoints,
+    **_waypoints_endpoints,
 )
 
 TELEMETRY_TIMEOUT_SECONDS = 30

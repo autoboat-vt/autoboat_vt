@@ -46,6 +46,7 @@ class InstanceHandler(QWidget):
 
         self.instances_container = QWidget()
         self.instances_layout = QVBoxLayout()
+
         self.instances_layout.setAlignment(Qt.AlignTop)
         self.instances_container.setLayout(self.instances_layout)
 
@@ -69,7 +70,9 @@ class InstanceHandler(QWidget):
 
         self.instance_fetcher = thread_classes.InstanceFetcher()
         self.timer.timeout.connect(self.update_instances_starter)
+
         self.instance_fetcher.instances_fetched.connect(self.update_instances)
+        self.instance_fetcher.request_url_change.connect(self.instance_fetch_failure)
 
         self.timer.start()
 
@@ -98,6 +101,8 @@ class InstanceHandler(QWidget):
         for instance in instances:
             try:
                 instance_widget = InstanceWidget(instance)
+                if instance_widget.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
+                    instance_widget.setStyleSheet(instance_widget.activated_style_sheet)
                 self.instances_layout.addWidget(instance_widget)
                 self.widgets.append(instance_widget)
 
@@ -120,6 +125,9 @@ class InstanceHandler(QWidget):
             if len(instances) == 1:
                 new_id = instances[0]["instance_id"]
                 constants.TELEMETRY_SERVER_INSTANCE_ID = new_id
+                for instance_widget in self.widgets:
+                    if instance_widget.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
+                        instance_widget.setStyleSheet(instance_widget.activated_style_sheet)
                 print(f"[Info] Automatically connected to instance {new_id} as the only available instance.")
 
             else:
@@ -141,10 +149,29 @@ class InstanceHandler(QWidget):
 
                     if new_id is not None and new_id in self.ids:
                         constants.TELEMETRY_SERVER_INSTANCE_ID = new_id
+                        for instance_widget in self.widgets:
+                            if instance_widget.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
+                                instance_widget.setStyleSheet(instance_widget.activated_style_sheet)
                         print(f"[Info] Connected to instance {new_id}")
                         break
 
             self.timer.start()
+
+    def instance_fetch_failure(self, telemetry_status: constants.TelemetryStatus) -> None:
+        """
+        Handles the case where the instance fetched fails.
+
+        Parameters
+        ----------
+        telemetry_status
+            <ul>
+            <li> <code>SUCCESS</code> indicates that the telemetry server is reachable and instances were fetched successfully.</li>
+            <li> <code>FAILURE</code> indicates that the telemetry server is not reachable and instances could not be fetched.</li>
+            </ul>
+        """
+
+        if telemetry_status == constants.TelemetryStatus.FAILURE:
+            print("[Warning] Failed to fetch instances from the telemetry server.")
 
     def filter_instances(self, text: str) -> None:
         """
@@ -211,9 +238,14 @@ class InstanceWidget(QFrame):
         except (KeyError, AssertionError) as e:
             raise ValueError(f"Invalid instance information provided: {e}. Ensure the instance info contains the required fields.")
 
+        self.main_layout = QHBoxLayout()
+        self.main_layout.setContentsMargins(10, 10, 10, 10)
+
+        # region setup widget style
         self.setFrameShape(QFrame.StyledPanel)
         self.setFrameShadow(QFrame.Raised)
-        self.setStyleSheet("""
+
+        self.style_sheet = """
             QFrame { background-color: #2E2E2E; border-radius: 0px; border: 1px solid #444; }
             QLabel { color: white; font-size: 12pt; }
             QLineEdit { background-color: #3E3E3E; color: white; border: 1px solid #555; border-radius: 3px; padding: 5px; }
@@ -221,13 +253,21 @@ class InstanceWidget(QFrame):
             QPushButton:hover { background-color: #45A049; }
             QPushButton#deleteButton { background-color: #F44336; }
             QPushButton#deleteButton:hover { background-color: #D32F2F; }
-        """)
+        """
 
-        self.main_layout = QHBoxLayout()
-        self.setLayout(self.main_layout)
-        self.main_layout.setContentsMargins(10, 10, 10, 10)
+        # used if this instance is currently selected
+        self.activated_style_sheet = """
+            QFrame { background-color: #2E2E2E; border-radius: 0px; border: 1px solid #999; }
+            QLabel { color: white; font-size: 12pt; }
+            QLineEdit { background-color: #3E3E3E; color: white; border: 1px solid #555; border-radius: 3px; padding: 5px; }
+            QPushButton { background-color: #4CAF50; color: white; font-weight: bold; padding: 6px 12px; border-radius: 5px; }
+            QPushButton:hover { background-color: #45A049; }
+            QPushButton#deleteButton { background-color: #F44336; }
+            QPushButton#deleteButton:hover { background-color: #D32F2F; }
+        """
 
-        # Form layout for instance info
+        self.setStyleSheet(self.style_sheet)
+
         self.form_layout = QFormLayout()
         self.instance_id_label = QLabel(str(self.instance_id))
         self.instance_name_edit = QLineEdit(self.instance_identifier)
@@ -239,8 +279,9 @@ class InstanceWidget(QFrame):
         self.form_layout.addRow("Instance Name", self.instance_name_edit)
         self.form_layout.addRow("Created At", self.created_at_label)
         self.form_layout.addRow("Updated At", self.updated_at_label)
+        # endregion setup widget style
 
-        # Buttons
+        # region buttons
         self.button_layout = QVBoxLayout()
 
         self.connect_button = QPushButton("Connect")
@@ -278,41 +319,11 @@ class InstanceWidget(QFrame):
 
         self.button_layout.addWidget(self.connect_button)
         self.button_layout.addWidget(self.delete_button)
+        # endregion buttons
 
         self.main_layout.addLayout(self.form_layout)
         self.main_layout.addLayout(self.button_layout)
-
-    def update_from_info(self, instance_info: dict) -> None:
-        """Update labels/fields without recreating the widget."""
-
-        try:
-            if int(instance_info["instance_id"]) != self.instance_id:
-                print(
-                    f"[Warn] Instance ID changed for widget (old {self.instance_id} != new {instance_info['instance_id']}). Ignoring ID change."
-                )
-            new_identifier = instance_info["instance_identifier"]
-            new_created_at = datetime.fromisoformat(instance_info["created_at"])
-            new_updated_at = datetime.fromisoformat(instance_info["updated_at"])
-
-        except Exception as e:
-            print(f"[Warn] Bad instance_info during update: {e}")
-            return
-
-        # update identifier (affects filtering)
-        if new_identifier != self.instance_identifier:
-            self.instance_identifier = new_identifier
-            # only update the edit if the user isn't actively editing
-            if not self.instance_name_edit.isModified():
-                self.instance_name_edit.setText(new_identifier)
-
-        # update timestamps if changed
-        if new_created_at != getattr(self, "created_at", None):
-            self.created_at = new_created_at
-            self.created_at_label.setText(self.created_at.strftime("%Y-%m-%d %H:%M:%S"))
-
-        if new_updated_at != getattr(self, "updated_at", None):
-            self.updated_at = new_updated_at
-            self.updated_at_label.setText(self.updated_at.strftime("%Y-%m-%d %H:%M:%S"))
+        self.setLayout(self.main_layout)
 
     def on_instance_name_changed(self) -> None:
         """Handle the instance name change event."""
@@ -336,40 +347,46 @@ class InstanceWidget(QFrame):
 
         if self.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
             print("[Info] Already connected to this instance.")
-            return
 
-        try:
-            constants.TELEMETRY_SERVER_INSTANCE_ID = self.instance_id
-            print(f"[Info] Connected to instance {self.instance_identifier} ({self.instance_id}).")
+        else:
+            try:
+                constants.REQ_SESSION.get(urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_instance_info"], str(self.instance_id)))
 
-        except requests.exceptions.RequestException as e:
-            print(f"[Error] Failed to connect to instance {self.instance_identifier}: {e}")
+                constants.TELEMETRY_SERVER_INSTANCE_ID = self.instance_id
+                print(f"[Info] Connected to instance {self.instance_identifier} ({self.instance_id}).")
+
+            except requests.exceptions.RequestException as e:
+                print(f"[Error] Failed to connect to instance {self.instance_identifier}: {e}")
 
     def on_delete_clicked(self) -> None:
         """Handle the delete button click event."""
 
         if self.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
-            new_instance_id = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-            ).json()
-            constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
+            try:
+                new_instance_id = constants.REQ_SESSION.get(
+                    constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
+                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                ).json()
+                constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
 
-            constants.REQ_SESSION.delete(
-                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["delete_instance"], str(self.instance_id)),
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-            )
-            print(
-                f"[Info] Instance {self.instance_id} deleted and new instance created with ID {constants.TELEMETRY_SERVER_INSTANCE_ID}."
-            )
-            return
+                constants.REQ_SESSION.delete(
+                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["delete_instance"], str(self.instance_id)),
+                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                )
+                print(
+                    f"[Info] Instance {self.instance_id} deleted and new instance created with ID {constants.TELEMETRY_SERVER_INSTANCE_ID}."
+                )
 
-        try:
-            constants.REQ_SESSION.delete(
-                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["delete_instance"], str(self.instance_id)),
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-            )
-            print(f"[Info] Instance {self.instance_id} deleted successfully.")
+            except requests.exceptions.RequestException as e:
+                print(f"[Error] Failed to delete instance {self.instance_id}: {e}")
 
-        except requests.exceptions.RequestException as e:
-            print(f"[Error] Failed to delete instance {self.instance_id}: {e}")
+        else:
+            try:
+                constants.REQ_SESSION.delete(
+                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["delete_instance"], str(self.instance_id)),
+                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                )
+                print(f"[Info] Instance {self.instance_id} deleted successfully.")
+
+            except requests.exceptions.RequestException as e:
+                print(f"[Error] Failed to delete instance {self.instance_id}: {e}")
