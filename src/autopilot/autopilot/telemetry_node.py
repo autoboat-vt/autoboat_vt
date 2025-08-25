@@ -188,7 +188,7 @@ class TelemetryNode(Node):
         self.waypoints_session = requests.Session()
 
         self.container_owner_user_name = os.environ["CONTAINER_OWNER_USER_NAME"]
-        self.instance_id = str(requests.get(url=TELEMETRY_SERVER_URL + "/instance_manager/create").json()["id"])
+        self.instance_id = str(requests.get(url=TELEMETRY_SERVER_URL + "/instance_manager/create").json())
 
         requests.post(
             url=TELEMETRY_SERVER_URL + "/instance_manager/set_name/" + self.instance_id + "/" + self.container_owner_user_name
@@ -302,7 +302,6 @@ class TelemetryNode(Node):
         true_wind_vector = self.apparent_wind_vector + self.velocity_vector
         self.true_wind_speed, self.true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
 
-        self.get_logger().info(f"{self.current_waypoints_list}")
         if self.current_waypoints_list != []:
             current_position = Position(self.position.latitude, self.position.longitude)
             next_waypoint_position = Position(
@@ -363,8 +362,11 @@ class TelemetryNode(Node):
         if new_waypoints_route_response == {}:
             return
 
+        if type(new_waypoints_route_response) is str:
+            raise Exception(f"Error when receiving waypoints from the telemetry server. Response: {new_waypoints_route_response}")
+
         # Parse Waypoints
-        new_waypoints_list = new_waypoints_route_response["waypoints"]
+        new_waypoints_list = new_waypoints_route_response
         waypoints_nav_sat_fix_list = []
         for waypoint in new_waypoints_list:
             if not waypoint:
