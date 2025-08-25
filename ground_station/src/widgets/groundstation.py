@@ -302,12 +302,11 @@ class GroundStationWidget(QWidget):
 
         if not test:
             try:
-                response = constants.REQ_SESSION.post(
+                constants.REQ_SESSION.post(
                     urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["set_waypoints"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
                     json=self.waypoints,
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
-                response.raise_for_status()
 
                 js_code = "map.change_color_waypoints('red')"
                 self.browser.page().runJavaScript(js_code)
@@ -318,12 +317,11 @@ class GroundStationWidget(QWidget):
 
         else:
             try:
-                response = constants.REQ_SESSION.post(
+                constants.REQ_SESSION.post(
                     urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["waypoints_test"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
                     json=self.waypoints,
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
-                response.raise_for_status()
 
             except requests.exceptions.RequestException as e:
                 print(f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")

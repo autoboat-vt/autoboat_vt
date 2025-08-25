@@ -221,8 +221,17 @@ def show_input_dialog(
     """
 
     text, ok = QInputDialog.getText(None, title, label, text=default_value)
+
     if ok:
-        return input_type(text)
+        try:
+            converted_value: T = input_type(text)
+
+        except ValueError:
+            print(f"[Error] Failed to convert {text} to {input_type}. Returning None.")
+            return None
+
+        return converted_value
+
     else:
         return None
 

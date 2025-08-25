@@ -16,6 +16,7 @@ from qtpy.QtWidgets import (
     QPushButton,
     QFormLayout,
     QTabWidget,
+    QMessageBox,
 )
 
 
@@ -98,16 +99,47 @@ class InstanceHandler(QWidget):
             widget.deleteLater()
         self.widgets = []
 
-        for instance in instances:
-            try:
-                instance_widget = InstanceWidget(instance)
-                if instance_widget.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
-                    instance_widget.setStyleSheet(instance_widget.activated_style_sheet)
-                self.instances_layout.addWidget(instance_widget)
-                self.widgets.append(instance_widget)
+        num_proper_instances = len(self.widgets)
 
-            except ValueError as e:
-                print(f"[Warning] Skipping invalid instance data: {e}")
+        while num_proper_instances == 0:
+            for instance in instances:
+                try:
+                    instance_widget = InstanceWidget(instance)
+                    if instance_widget.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
+                        instance_widget.setStyleSheet(instance_widget.activated_style_sheet)
+                    self.instances_layout.addWidget(instance_widget)
+                    self.widgets.append(instance_widget)
+
+                except ValueError as e:
+                    print(f"[Warning] Skipping invalid instance data: {e}")
+
+            num_proper_instances = len(self.widgets)
+
+            if num_proper_instances == 0:
+                create_new_instance = constants.show_message_box(
+                    "No Valid Instances",
+                    "No valid instances found. Would you like to create a new instance?",
+                    constants.ICONS.question,
+                    [
+                        QMessageBox.StandardButton.Yes,
+                        QMessageBox.StandardButton.No,
+                    ],
+                )
+                if create_new_instance == QMessageBox.StandardButton.Yes:
+                    try:
+                        new_instance_id = constants.REQ_SESSION.get(
+                            constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
+                            timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                        ).json()
+                        print(f"[Info] Created new instance with ID {new_instance_id}.")
+
+                        instances = constants.REQ_SESSION.get(
+                            constants.TELEMETRY_SERVER_ENDPOINTS["get_all_instance_info"],
+                            timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                        ).json()
+
+                    except requests.exceptions.RequestException as e:
+                        print(f"[Error] Failed to create a new instance: {e}")
 
         if self.current_search_text:
             self.filter_instances(self.current_search_text)
