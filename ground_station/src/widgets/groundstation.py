@@ -28,6 +28,7 @@ from qtpy.QtWidgets import (
     QWidget,
     QFileDialog,
     QMessageBox,
+    QCheckBox
 )
 # endregion imports
 
@@ -53,12 +54,12 @@ class GroundStationWidget(QWidget):
         self.boat_data: dict[str, Any] = {}
         self.telemetry_data_limits: dict[str, float] = {}
 
-        # used to detect if the telemetry server instance ID has changed
-        self.old_instance_id: int = constants.TELEMETRY_SERVER_INSTANCE_ID
-
         # should we remember the status of the user's last response to the
         # dialog that asks if the telemetry server URL should be changed?
         self.remember_telemetry_server_url_status: bool = False
+
+        # should we check for changes in the telemetry server waypoints?
+        self.waypoints_checker_status: bool = False
 
         # should we remember the status of the user's last response to the
         # dialog that asks if the user wants to pull waypoints from the telemetry server?
@@ -159,7 +160,18 @@ class GroundStationWidget(QWidget):
         self.browser.setHtml(constants.HTML_MAP)
         self.browser.setMinimumWidth(700)
         self.browser.setMinimumHeight(700)
+
+        self.waypoints_checker_toggle = QCheckBox("Enable popup when waypoints change?")
+        self.waypoints_checker_toggle.setChecked(False)
+        self.waypoints_checker_toggle.setToolTip(
+            "If enabled, a popup will appear when the waypoints on the telemetry server change.",
+        )
+        self.waypoints_checker_toggle.stateChanged.connect(
+            lambda state: setattr(self, "waypoints_checker_status", state == Qt.CheckState.Checked),
+        )
+
         self.middle_layout.addWidget(self.browser, 0, 1)
+        self.middle_layout.addWidget(self.waypoints_checker_toggle, 1, 1, Qt.AlignCenter)
         self.main_layout.addLayout(self.middle_layout, 0, 1)
         # endregion middle section
 
@@ -657,11 +669,19 @@ class GroundStationWidget(QWidget):
     def remote_waypoint_handler_starter(self) -> None:
         """Starts the telemetry waypoint handler thread."""
 
+        if not self.waypoints_checker_status:
+            self.remember_waypoints_pull_service_status = False
+            print("[Info] Waypoint checker disabled, not checking for waypoint updates.")
+            return
+
         if not self.remote_waypoint_handler.isRunning() and constants.TELEMETRY_SERVER_INSTANCE_ID != -1:
             self.remote_waypoint_handler.start()
 
     def update_telemetry_starter(self) -> None:
         """Starts the telemetry handler thread."""
+
+        if constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
+            self.clear_waypoints()
 
         if not self.telemetry_handler.isRunning() and constants.TELEMETRY_SERVER_INSTANCE_ID != -1:
             self.telemetry_handler.start()
@@ -675,12 +695,6 @@ class GroundStationWidget(QWidget):
         waypoints
             List of waypoints fetched from the server.
         """
-
-        if self.old_instance_id != constants.TELEMETRY_SERVER_INSTANCE_ID:
-            self.waypoints.clear()
-            js_code = "map.clear_waypoints()"
-            self.browser.page().runJavaScript(js_code)
-            self.old_instance_id = constants.TELEMETRY_SERVER_INSTANCE_ID
 
         self.waypoints = waypoints
         self.send_waypoints_button.setDisabled(not self.can_send_waypoints)
