@@ -146,7 +146,7 @@ class InstanceHandler(QWidget):
             widget = self.widgets_by_id[next(iter(self.widgets_by_id))]
             constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = widget.instance_id != constants.TELEMETRY_SERVER_INSTANCE_ID
             constants.TELEMETRY_SERVER_INSTANCE_ID = widget.instance_id
-            print(f"[Info] Only one instance found. Automatically connected to instance {widget.instance_id}.")
+            print(f"[Info] Only one instance found. Automatically connected to instance #{widget.instance_id}.")
         
         elif len(self.widgets_by_id) > 1 and constants.TELEMETRY_SERVER_INSTANCE_ID == -1:
             self.instances_container.setUpdatesEnabled(True)
@@ -200,7 +200,7 @@ class InstanceHandler(QWidget):
                 
                 constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = new_instance_id != constants.TELEMETRY_SERVER_INSTANCE_ID
                 constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
-                print(f"[Info] Created new instance with ID {new_instance_id}.")
+                print(f"[Info] Created new instance with ID #{new_instance_id}.")
 
             except requests.exceptions.RequestException as e:
                 print(f"[Error] Failed to create a new instance: {e}")
@@ -441,10 +441,10 @@ class InstanceWidget(QFrame):
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
                 self.instance_identifier = new_name
-                print(f"[Info] Instance name updated to {self.instance_identifier}.")
+                print(f"[Info] Instance #{self.instance_id} name updated to {self.instance_identifier}.")
 
             except requests.exceptions.RequestException as e:
-                print(f"[Error] Failed to update instance name: {e}")
+                print(f"[Error] Failed to update identifier for instance #{self.instance_id}: {e}")
 
         else:
             self.instance_name_edit.setText(self.instance_identifier)
@@ -462,17 +462,17 @@ class InstanceWidget(QFrame):
 
                 constants.TELEMETRY_SERVER_INSTANCE_ID = self.instance_id
                 constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
-                print(f"[Info] Connected to instance {self.instance_identifier} ({self.instance_id}).")
+                print(f"[Info] Connected to instance #{self.instance_id} ({self.instance_identifier}).")
 
             except requests.exceptions.RequestException as e:
-                print(f"[Error] Failed to connect to instance {self.instance_identifier}: {e}")
+                print(f"[Error] Failed to connect to instance #{self.instance_id}: {e}")
 
     def on_delete_clicked(self) -> None:
         """Handle the delete button click event."""
 
         if self.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
             try:
-                new_instance_id = constants.REQ_SESSION.get(
+                new_instance_id: int = constants.REQ_SESSION.get(
                     constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 ).json()
@@ -483,12 +483,13 @@ class InstanceWidget(QFrame):
                     urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["delete_instance"], str(self.instance_id)),
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
+
                 print(
-                    f"[Info] Instance {self.instance_id} deleted and new instance created with ID {constants.TELEMETRY_SERVER_INSTANCE_ID}."
+                    f"[Info] Instance #{self.instance_id} deleted and new instance created with ID #{constants.TELEMETRY_SERVER_INSTANCE_ID}."
                 )
 
             except requests.exceptions.RequestException as e:
-                print(f"[Error] Failed to delete instance {self.instance_id}: {e}")
+                print(f"[Error] Failed to delete instance #{self.instance_id}: {e}")
 
         else:
             try:
@@ -496,7 +497,7 @@ class InstanceWidget(QFrame):
                     urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["delete_instance"], str(self.instance_id)),
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
-                print(f"[Info] Instance {self.instance_id} deleted successfully.")
+                print(f"[Info] Instance #{self.instance_id} deleted successfully.")
 
             except requests.exceptions.RequestException as e:
-                print(f"[Error] Failed to delete instance {self.instance_id}: {e}")
+                print(f"[Error] Failed to delete instance #{self.instance_id}: {e}")
