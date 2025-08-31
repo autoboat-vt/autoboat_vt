@@ -300,7 +300,7 @@ class GroundStationWidget(QWidget):
             try:
                 response = constants.REQ_SESSION.post(
                     constants.TELEMETRY_SERVER_ENDPOINTS["set_waypoints"],
-                    json={"value": self.waypoints},
+                    json=self.waypoints,
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
                 response.raise_for_status()
@@ -316,7 +316,7 @@ class GroundStationWidget(QWidget):
             try:
                 response = constants.REQ_SESSION.post(
                     constants.TELEMETRY_SERVER_ENDPOINTS["waypoints_test"],
-                    json={"value": self.waypoints},
+                    json=self.waypoints,
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
                 response.raise_for_status()

@@ -134,7 +134,7 @@ class AutopilotParamEditor(QWidget):
         try:
             response = constants.REQ_SESSION.post(
                 constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
-                json={"value": existing_data},
+                json=existing_data,
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             )
             response.raise_for_status()
@@ -433,7 +433,7 @@ class AutopilotParamWidget(QFrame):
             try:
                 response = constants.REQ_SESSION.post(
                     constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
-                    json={"value": existing_data},
+                    json=existing_data,
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
                 response.raise_for_status()
