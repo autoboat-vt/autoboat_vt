@@ -21,7 +21,7 @@ import os
 import base64
 
 
-TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk/"
+TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk:8443/"
 
 
 class TelemetryNode(Node):
