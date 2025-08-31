@@ -1,4 +1,3 @@
-from hmac import new
 import constants
 import thread_classes
 import requests
@@ -15,7 +14,6 @@ from qtpy.QtWidgets import (
     QScrollArea,
     QLineEdit,
     QLabel,
-    QPushButton,
     QFormLayout,
     QTabWidget,
     QMessageBox,
@@ -116,7 +114,7 @@ class InstanceHandler(QWidget):
             if None in (instance_id, updated_at, instance_identifier):
                 print(f"[Warning] Skipping instance with missing data: {instance}")
                 continue
-            
+
             # checking if we have seen this instance before
             widget = self.widgets_by_id.get(instance_id)
             if widget:
@@ -144,10 +142,11 @@ class InstanceHandler(QWidget):
 
         elif len(self.widgets_by_id) == 1:
             widget = self.widgets_by_id[next(iter(self.widgets_by_id))]
-            constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = widget.instance_id != constants.TELEMETRY_SERVER_INSTANCE_ID
-            constants.TELEMETRY_SERVER_INSTANCE_ID = widget.instance_id
-            print(f"[Info] Only one instance found. Automatically connected to instance #{widget.instance_id}.")
-        
+            if widget.instance_id != constants.TELEMETRY_SERVER_INSTANCE_ID:
+                constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
+                constants.TELEMETRY_SERVER_INSTANCE_ID = widget.instance_id
+                print(f"[Info] Only one instance found. Automatically connected to instance #{widget.instance_id}.")
+
         elif len(self.widgets_by_id) > 1 and constants.TELEMETRY_SERVER_INSTANCE_ID == -1:
             self.instances_container.setUpdatesEnabled(True)
             self.instances_container.update()
@@ -197,8 +196,10 @@ class InstanceHandler(QWidget):
                 new_widget = InstanceWidget(instance_info)
                 self.instances_layout.addWidget(new_widget)
                 self.widgets_by_id[new_instance_id] = new_widget
-                
-                constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = new_instance_id != constants.TELEMETRY_SERVER_INSTANCE_ID
+
+                constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = (
+                    new_instance_id != constants.TELEMETRY_SERVER_INSTANCE_ID
+                )
                 constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
                 print(f"[Info] Created new instance with ID #{new_instance_id}.")
 
@@ -212,7 +213,7 @@ class InstanceHandler(QWidget):
 
     def handle_multiple_instances(self) -> None:
         """
-        Handles the scenario when multiple instances exist but none is selected. 
+        Handles the scenario when multiple instances exist but none is selected.
         This scenario should only occur when the appiclation is started for the first time
         as no instance is selected by default.
         """
@@ -226,7 +227,7 @@ class InstanceHandler(QWidget):
             tab_widget.setCurrentWidget(self)
 
         dialog_text = "Please select the instance you want to connect to."
-        
+
         while True:
             new_id = constants.show_input_dialog(
                 "Select Instance",
@@ -332,7 +333,7 @@ class InstanceWidget(QFrame):
             QPushButton#deleteButton { background-color: #F44336; }
             QPushButton#deleteButton:hover { background-color: #D32F2F; }
             """
-    
+
     activated_style_sheet = """
             QFrame { background-color: #2E2E2E; border-radius: 0px; border: 1px solid #999; }
             QLabel { color: white; font-size: 12pt; }
@@ -342,7 +343,7 @@ class InstanceWidget(QFrame):
             QPushButton#deleteButton { background-color: #F44336; }
             QPushButton#deleteButton:hover { background-color: #D32F2F; }
         """
-    
+
     connect_button_stylesheet = """
             QPushButton {
             background-color: #4CAF50;  /* green */
@@ -355,7 +356,7 @@ class InstanceWidget(QFrame):
             background-color: #45A049;
             }
         """
-    
+
     delete_button_stylesheet = """
             QPushButton#deleteButton {
                 background-color: #F44336;  /* red */
@@ -386,7 +387,9 @@ class InstanceWidget(QFrame):
             assert isinstance(self.updated_at, datetime), "Updated at must be a datetime object."
 
         except (KeyError, AssertionError) as e:
-            raise ValueError(f"Invalid instance information provided: {e}. Ensure the instance info contains the required fields.")
+            raise ValueError(
+                f"Invalid instance information provided: {e}. Ensure the instance info contains the required fields."
+            )
 
         self.main_layout = QHBoxLayout()
         self.main_layout.setContentsMargins(10, 10, 10, 10)
@@ -412,14 +415,20 @@ class InstanceWidget(QFrame):
         # region buttons
         self.button_layout = QVBoxLayout()
 
-        self.connect_button = QPushButton("Connect")
-        self.connect_button.setStyleSheet(InstanceWidget.connect_button_stylesheet)
-        self.connect_button.clicked.connect(self.on_connect_clicked)
+        self.connect_button = constants.pushbutton_maker(
+            "Connect",
+            constants.ICONS.connect,
+            self.on_connect_clicked,
+            style_sheet=InstanceWidget.connect_button_stylesheet,
+        )
 
-        self.delete_button = QPushButton("Delete")
+        self.delete_button = constants.pushbutton_maker(
+            "Delete",
+            constants.ICONS.delete,
+            self.on_delete_clicked,
+            style_sheet=InstanceWidget.delete_button_stylesheet,
+        )
         self.delete_button.setObjectName("deleteButton")
-        self.delete_button.setStyleSheet(InstanceWidget.delete_button_stylesheet)
-        self.delete_button.clicked.connect(self.on_delete_clicked)
 
         self.button_layout.addWidget(self.connect_button)
         self.button_layout.addWidget(self.delete_button)
@@ -437,7 +446,9 @@ class InstanceWidget(QFrame):
         if new_name not in ("", self.instance_identifier):
             try:
                 constants.REQ_SESSION.post(
-                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["set_instance_name"], f"{self.instance_id}/{new_name}"),
+                    urljoin(
+                        constants.TELEMETRY_SERVER_ENDPOINTS["set_instance_name"], f"{self.instance_id}/{new_name}"
+                    ),
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
                 self.instance_identifier = new_name
@@ -458,7 +469,9 @@ class InstanceWidget(QFrame):
 
         else:
             try:
-                constants.REQ_SESSION.get(urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_instance_info"], str(self.instance_id)))
+                constants.REQ_SESSION.get(
+                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_instance_info"], str(self.instance_id))
+                )
 
                 constants.TELEMETRY_SERVER_INSTANCE_ID = self.instance_id
                 constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True

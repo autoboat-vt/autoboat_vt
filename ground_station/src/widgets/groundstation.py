@@ -28,7 +28,7 @@ from qtpy.QtWidgets import (
     QWidget,
     QFileDialog,
     QMessageBox,
-    QCheckBox
+    QCheckBox,
 )
 # endregion imports
 
@@ -103,16 +103,16 @@ class GroundStationWidget(QWidget):
             "Save Boat Data to File",
             constants.ICONS.save,
             self.save_boat_data,
-            self.left_width,
-            50,
+            max_width=self.left_width,
+            min_height=50,
         )
 
         self.edit_boat_data_limits_button = constants.pushbutton_maker(
             "Edit Limits",
             constants.ICONS.cog,
             self.edit_boat_data_limits,
-            self.left_width // 2,
-            50,
+            max_width=self.left_width // 2,
+            min_height=50,
         )
 
         self.side_buttons_layout = QVBoxLayout()
@@ -121,16 +121,16 @@ class GroundStationWidget(QWidget):
             "Load Limits from File",
             constants.ICONS.hard_drive,
             self.load_boat_data_limits,
-            self.left_width // 2,
-            25,
+            max_width=self.left_width // 2,
+            min_height=25,
         )
 
         self.save_boat_data_limits_button = constants.pushbutton_maker(
             "Save Limits to File",
             constants.ICONS.save,
             self.save_boat_data_limits,
-            self.left_width // 2,
-            25,
+            max_width=self.left_width // 2,
+            min_height=25,
         )
 
         self.side_buttons_layout.addWidget(self.load_boat_data_limits_button)
@@ -189,9 +189,9 @@ class GroundStationWidget(QWidget):
             "Send Waypoints",
             constants.ICONS.upload,
             self.send_waypoints,
-            self.right_width // 2,
-            50,
-            self.can_send_waypoints,
+            max_width=self.right_width // 2,
+            min_height=50,
+            is_clickable=self.can_send_waypoints,
         )
 
         self.can_reset_waypoints = False
@@ -199,9 +199,9 @@ class GroundStationWidget(QWidget):
             "Clear Waypoints",
             constants.ICONS.delete,
             self.clear_waypoints,
-            self.right_width // 2,
-            50,
-            self.can_send_waypoints,
+            max_width=self.right_width // 2,
+            min_height=50,
+            is_clickable=self.can_send_waypoints,
         )
 
         self.can_pull_waypoints = True
@@ -209,17 +209,17 @@ class GroundStationWidget(QWidget):
             "Pull Waypoints",
             constants.ICONS.download,
             self.pull_waypoints,
-            self.right_width // 2,
-            50,
-            self.can_pull_waypoints,
+            max_width=self.right_width // 2,
+            min_height=50,
+            is_clickable=self.can_pull_waypoints,
         )
 
         self.focus_boat_button = constants.pushbutton_maker(
             "Zoom to Boat",
             constants.ICONS.boat,
             self.zoom_to_boat,
-            self.right_width // 2,
-            50,
+            max_width=self.right_width // 2,
+            min_height=50,
         )
 
         self.right_tab1_layout.addWidget(self.right_tab1_label, 0, 0, 1, 2)
@@ -242,24 +242,24 @@ class GroundStationWidget(QWidget):
             "Edit Buoy Data",
             constants.ICONS.cog,
             self.edit_buoy_data,
-            self.right_width,
-            50,
+            max_width=self.right_width,
+            min_height=50,
         )
 
         self.save_buoy_data_button = constants.pushbutton_maker(
             "Save Buoy Data",
             constants.ICONS.save,
             self.save_buoy_data,
-            self.right_width // 2,
-            50,
+            max_width=self.right_width // 2,
+            min_height=50,
         )
 
         self.load_buoy_data_button = constants.pushbutton_maker(
             "Load Buoy Data",
             constants.ICONS.hard_drive,
             self.load_buoy_data,
-            self.right_width // 2,
-            50,
+            max_width=self.right_width // 2,
+            min_height=50,
         )
 
         self.right_tab2_layout.addWidget(self.right_tab2_label, 0, 0, 1, 2)
@@ -315,7 +315,10 @@ class GroundStationWidget(QWidget):
         if not test:
             try:
                 constants.REQ_SESSION.post(
-                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["set_waypoints"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
+                    urljoin(
+                        constants.TELEMETRY_SERVER_ENDPOINTS["set_waypoints"],
+                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                    ),
                     json=self.waypoints,
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
@@ -330,7 +333,10 @@ class GroundStationWidget(QWidget):
         else:
             try:
                 constants.REQ_SESSION.post(
-                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["waypoints_test"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
+                    urljoin(
+                        constants.TELEMETRY_SERVER_ENDPOINTS["waypoints_test"],
+                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                    ),
                     json=self.waypoints,
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
@@ -343,7 +349,9 @@ class GroundStationWidget(QWidget):
 
         try:
             remote_waypoints: list[list[float]] = constants.REQ_SESSION.get(
-                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
+                urljoin(
+                    constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)
+                ),
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
 

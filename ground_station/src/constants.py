@@ -71,6 +71,8 @@ def __get_icons() -> SimpleNamespace:
     icons: dict[str, QIcon] = {
         "upload": qta.icon("mdi.upload", color="white"),
         "download": qta.icon("mdi.download", color="white"),
+        "connect": qta.icon("mdi.connection", color="white"),
+        "disconnect": qta.icon("fa6s.plug-circle-xmark", color="white"),
         "delete": qta.icon("mdi.trash-can", color="white"),
         "save": qta.icon("mdi.content-save", color="white"),
         "cog": qta.icon("mdi.cog", color="white"),
@@ -96,6 +98,7 @@ def pushbutton_maker(
     button_text: str,
     icon: QIcon,
     function: Callable,
+    style_sheet: str | None = None,
     max_width: int | None = None,
     min_height: int | None = None,
     is_clickable: bool = True,
@@ -111,6 +114,8 @@ def pushbutton_maker(
         The icon to display on the button.
     function
         The function to connect to the button's clicked signal.
+    style_sheet
+        An optional style sheet to apply to the button. If not specified, the default style is used.
     max_width
         The maximum width of the button. If not specified, not used.
     min_height
@@ -124,14 +129,25 @@ def pushbutton_maker(
         The created button.
     """
 
-    button = QPushButton(button_text)
-    button.setIcon(icon)
-    if max_width is not None:
-        button.setMaximumWidth(max_width)
-    if min_height is not None:
-        button.setMinimumHeight(min_height)
-    button.clicked.connect(function)
-    button.setDisabled(not is_clickable)
+    try:
+        button = QPushButton(button_text)
+        button.setIcon(icon)
+        button.clicked.connect(function)
+
+        if style_sheet is not None:
+            button.setStyleSheet(style_sheet)
+
+        if max_width is not None:
+            button.setMaximumWidth(max_width)
+
+        if min_height is not None:
+            button.setMinimumHeight(min_height)
+
+        button.setDisabled(not is_clickable)
+
+    except Exception as e:
+        raise RuntimeError(f"Failed to create button '{button_text}': {e}") from e
+
     return button
 
 
@@ -350,7 +366,7 @@ WAYPOINTS_SERVER_URL = "http://localhost:3001/waypoints"
 # base url for telemetry server (the CIA is inside of my brain...)
 TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk:8443"
 
-TELEMETRY_SERVER_INSTANCE_ID: int = -1 # -1 means no instance selected
+TELEMETRY_SERVER_INSTANCE_ID: int = -1  # -1 means no instance selected
 HAS_TELEMETRY_SERVER_INSTANCE_CHANGED: bool = False
 
 # endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint` + `/`
