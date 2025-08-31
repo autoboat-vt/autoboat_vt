@@ -48,7 +48,9 @@ class TelemetryUpdater(QThread):
         try:
             boat_status: dict[str, str | float | list[float] | list[list[float]]]
             boat_status = constants.REQ_SESSION.get(
-                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_boat_status"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
+                urljoin(
+                    constants.TELEMETRY_SERVER_ENDPOINTS["get_boat_status"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)
+                ),
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
             self.request_url_change.emit(constants.TelemetryStatus.SUCCESS)
@@ -103,7 +105,8 @@ class InstanceFetcher(QThread):
 
         try:
             instances: list[dict] = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_all_instance_info"], timeout=constants.TELEMETRY_TIMEOUT_SECONDS
+                constants.TELEMETRY_SERVER_ENDPOINTS["get_all_instance_info"],
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
 
             if not isinstance(instances, list):
@@ -210,7 +213,9 @@ class RemoteWaypointFetcher(QThread):
         try:
             waypoints: list[list[float]]
             waypoints = constants.REQ_SESSION.get(
-                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
+                urljoin(
+                    constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)
+                ),
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
 
@@ -263,7 +268,10 @@ class ImageFetcher(QThread):
 
         try:
             image_data = constants.REQ_SESSION.get(
-                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)),
+                urljoin(
+                    constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
+                    str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                ),
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
             base64_encoded_image = image_data.get("current_camera_image")
