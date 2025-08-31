@@ -128,7 +128,11 @@ class TelemetryNode(Node):
         self.autopilot_parameters_session = requests.Session()
         self.waypoints_session = requests.Session()
 
-        self.container_owner_user_name = os.environ["CONTAINER_OWNER_USER_NAME"]
+        try:
+            self.container_owner_user_name = os.environ["CONTAINER_OWNER_USER_NAME"]
+        except Exception:
+            self.container_owner_user_name = "No Name"
+            
         self.instance_id = str(requests.get(url=TELEMETRY_SERVER_URL + "/instance_manager/create").json())
 
         requests.post(url=TELEMETRY_SERVER_URL + "/instance_manager/set_name/" + self.instance_id + "/" + self.container_owner_user_name)
