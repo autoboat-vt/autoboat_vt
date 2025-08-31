@@ -144,9 +144,10 @@ class InstanceHandler(QWidget):
 
         elif len(self.widgets_by_id) == 1:
             widget = self.widgets_by_id[next(iter(self.widgets_by_id))]
-            constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = widget.instance_id != constants.TELEMETRY_SERVER_INSTANCE_ID
-            constants.TELEMETRY_SERVER_INSTANCE_ID = widget.instance_id
-            print(f"[Info] Only one instance found. Automatically connected to instance #{widget.instance_id}.")
+            if widget.instance_id != constants.TELEMETRY_SERVER_INSTANCE_ID:
+                constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
+                constants.TELEMETRY_SERVER_INSTANCE_ID = widget.instance_id
+                print(f"[Info] Only one instance found. Automatically connected to instance #{widget.instance_id}.")
         
         elif len(self.widgets_by_id) > 1 and constants.TELEMETRY_SERVER_INSTANCE_ID == -1:
             self.instances_container.setUpdatesEnabled(True)

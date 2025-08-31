@@ -34,7 +34,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"Error: {e}")
 
-        self.main_widget.setCurrentIndex(1)
+        self.main_widget.setCurrentIndex(2)
 
 
 if __name__ == "__main__":

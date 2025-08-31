@@ -348,7 +348,7 @@ ONE_MS_TIMER.setInterval(1)
 WAYPOINTS_SERVER_URL = "http://localhost:3001/waypoints"
 
 # base url for telemetry server (the CIA is inside of my brain...)
-TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
+TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk:8443"
 
 TELEMETRY_SERVER_INSTANCE_ID: int = -1 # -1 means no instance selected
 HAS_TELEMETRY_SERVER_INSTANCE_CHANGED: bool = False
