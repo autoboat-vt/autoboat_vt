@@ -1,7 +1,8 @@
 # This is very unsafe lol but I need this to be able to access docker from inside of the dev container for the sim. 
 # Do not remove unless we are releasing this software as a product
 echo sudo chmod 777 /var/run/docker.sock >> "/home/autoboat_user/.bashrc"
-echo sudo chmod -R 777 /home/ >> "/home/autoboat_user/.bashrc"
+# echo sudo chmod -R 777 /home/ >> "/home/autoboat_user/.bashrc"
+echo sudo find /home/ -path "/home/ws/.git" -prune -o -exec chmod 777 {} + >> "/home/autoboat_user/.bashrc"
 echo sudo chmod -R 777 /etc/udev/ >> "/home/autoboat_user/.bashrc"
 sudo chmod -R 777 /etc/udev/
 
