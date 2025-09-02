@@ -17,6 +17,7 @@ from qtpy.QtWidgets import (
     QFormLayout,
     QTabWidget,
     QMessageBox,
+    QGroupBox,
 )
 
 
@@ -65,9 +66,30 @@ class InstanceHandler(QWidget):
         self.status_label.setStyleSheet("color: #D3D3D3; font-size: 12pt;")
         self.status_label.setAlignment(Qt.AlignCenter)
 
+        self.button_groupbox = QGroupBox()
+        self.button_layout = QHBoxLayout()
+
+        self.delete_all_button = constants.pushbutton_maker(
+            "Delete All Instances",
+            constants.ICONS.delete,
+            self.delete_all_instances,
+            max_width=constants.WINDOW_BOX.width() // 2,
+        )
+        self.create_instance_button = constants.pushbutton_maker(
+            "Create New Instance",
+            constants.ICONS.add,
+            self.create_new_instance,
+            max_width=constants.WINDOW_BOX.width() // 2,
+        )
+
+        self.button_layout.addWidget(self.delete_all_button)
+        self.button_layout.addWidget(self.create_instance_button)
+        self.button_groupbox.setLayout(self.button_layout)
+
         self.main_layout.addWidget(self.searchbar, 0, 0)
         self.main_layout.addWidget(self.status_label, 1, 0)
         self.main_layout.addWidget(self.scroll, 2, 0)
+        self.main_layout.addWidget(self.button_groupbox, 3, 0)
 
         self.instance_fetcher = thread_classes.InstanceFetcher()
         self.timer.timeout.connect(self.update_instances_starter)
@@ -197,14 +219,15 @@ class InstanceHandler(QWidget):
                 self.instances_layout.addWidget(new_widget)
                 self.widgets_by_id[new_instance_id] = new_widget
 
-                constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = (
-                    new_instance_id != constants.TELEMETRY_SERVER_INSTANCE_ID
-                )
+                constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
                 constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
                 print(f"[Info] Created new instance with ID #{new_instance_id}.")
 
             except requests.exceptions.RequestException as e:
                 print(f"[Error] Failed to create a new instance: {e}")
+
+            except ValueError as e:
+                print(f"[Error] Failed to create instance widget: {e}")
 
         else:
             print("[Info] User chose not to create a new instance even though none were found.")
@@ -272,6 +295,52 @@ class InstanceHandler(QWidget):
             self.status_label.setText(f"{visible_count} instances found matching '{text}'")
         else:
             self.status_label.setText(f"{len(self.widgets_by_id)} instances found")
+
+    def create_new_instance(self) -> None:
+        """Create a new instance on the telemetry server."""
+
+        try:
+            new_instance_id: int = constants.REQ_SESSION.get(
+                constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+            ).json()
+
+            instance_info: dict[str, Any] = constants.REQ_SESSION.get(
+                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_instance_info"], str(new_instance_id)),
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+            ).json()
+
+            new_widget = InstanceWidget(instance_info)
+            self.instances_layout.addWidget(new_widget)
+            self.widgets_by_id[new_instance_id] = new_widget
+            print(f"[Info] Created new instance with ID #{new_instance_id}.")
+
+        except requests.exceptions.RequestException as e:
+            print(f"[Error] Failed to create a new instance: {e}")
+
+        except ValueError as e:
+            print(f"[Error] Failed to create instance widget: {e}")
+
+    def delete_all_instances(self) -> None:
+        """Delete all instances from the telemetry server."""
+
+        try:
+            constants.REQ_SESSION.delete(
+                constants.TELEMETRY_SERVER_ENDPOINTS["delete_all_instances"],
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+            )
+
+            new_instance_id: int = constants.REQ_SESSION.get(
+                constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+            ).json()
+
+            print(f"[Info] All instances deleted. New instance created with ID #{new_instance_id}.")
+            constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
+            constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
+
+        except requests.exceptions.RequestException as e:
+            print(f"[Error] Failed to delete all instances: {e}")
 
     def instance_fetch_failure(self, telemetry_status: constants.TelemetryStatus) -> None:
         """

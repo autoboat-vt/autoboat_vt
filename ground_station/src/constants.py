@@ -74,6 +74,7 @@ def __get_icons() -> SimpleNamespace:
         "connect": qta.icon("mdi.connection", color="white"),
         "disconnect": qta.icon("fa6s.plug-circle-xmark", color="white"),
         "delete": qta.icon("mdi.trash-can", color="white"),
+        "add": qta.icon("mdi.plus", color="white"),
         "save": qta.icon("mdi.content-save", color="white"),
         "cog": qta.icon("mdi.cog", color="white"),
         "pencil": qta.icon("ei.pencil", color="white"),
@@ -373,6 +374,7 @@ HAS_TELEMETRY_SERVER_INSTANCE_CHANGED: bool = False
 _instance_manager_endpoints = {
     "create_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/create"),
     "delete_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/delete/"),
+    "delete_all_instances": urljoin(TELEMETRY_SERVER_URL, "instance_manager/delete_all"),
     "set_instance_name": urljoin(TELEMETRY_SERVER_URL, "instance_manager/set_name/"),
     "get_instance_name_from_id": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_name/"),
     "get_instance_id_from_name": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_id/"),
