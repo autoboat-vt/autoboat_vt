@@ -13,6 +13,7 @@ src/object_detection/
 src/object_detection/object_detection/weights/**.pt
 **.pt
 src/microros/dependencies/**
+devcontainer_environment_variables
 
 # groundstation
 ground_station/bin
