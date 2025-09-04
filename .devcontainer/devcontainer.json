@@ -30,7 +30,6 @@
         }
     },
     "containerEnv": {
-        "DISPLAY": "DISPLAY=${localEnv:DISPLAY}",
         "ROS_AUTOMATIC_DISCOVERY_RANGE": "LOCALHOST",
         "ROS_DOMAIN_ID": "42"
     },
@@ -38,8 +37,7 @@
         "--net=host",
         "-v",
         "/dev:/dev",
-        "-e",
-        "DISPLAY=${localEnv:DISPLAY}",
+        "--env-file=.devcontainer/devcontainer_environment_variables",
         "-v",
         "/var/run/docker.sock:/var/run/docker.sock"
     ],
