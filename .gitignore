@@ -13,7 +13,9 @@ src/object_detection/
 src/object_detection/object_detection/weights/**.pt
 **.pt
 src/microros/dependencies/**
-.devcontainer/devcontainer_environment_variables
+.devcontainer
+!.devcontainer/devcontainer.json
+!.devcontainer/Dockerfile
 
 # groundstation
 ground_station/bin
