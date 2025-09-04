@@ -37,7 +37,7 @@
         "--net=host",
         "-v",
         "/dev:/dev",
-        "--env-file=.devcontainer/devcontainer_environment_variables",
+        "--env-file=devcontainer_environment_variables",
         "-v",
         "/var/run/docker.sock:/var/run/docker.sock"
     ],
