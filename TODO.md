@@ -39,3 +39,7 @@ add jetson temperatures to telemetry node through psensor
 
 
 Integrate computer vision with the simulation: have the simulation spawn actual buoy objects, take photos with a camera, and do computer vision/ localization on them.
+
+Rewrite rc node and maybe autopilot in c++
+
+Write a keyboard control node
