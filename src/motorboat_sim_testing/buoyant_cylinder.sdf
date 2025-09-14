@@ -9,6 +9,9 @@
 
       gz topic -t /model/motorboat/joint/propeller_joint/cmd_thrust \
       -m gz.msgs.Double -p 'data: 2'
+
+      got from:
+      https://gazebosim.org/api/sim/8/classgz_1_1sim_1_1systems_1_1Thruster.html
 -->
 
 <sdf version="1.7">
