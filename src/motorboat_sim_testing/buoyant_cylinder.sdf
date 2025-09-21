@@ -297,40 +297,39 @@
 
         <inertial>
           <pose>0 0 0 0 0 0</pose>
-          <mass>3</mass>
+          <mass>20</mass>
           <inertia>
-            <ixx>0.35032999999999995</ixx>
+            <ixx>0.35</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.35032999999999995</iyy>
+            <iyy>0.35</iyy>
             <iyz>0</iyz>
-            <izz>0.61250000000000006</izz>
+            <izz>0.6125</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>1 1 0.01</size>
+              <size>.7 .7 0.3</size>
             </box>
           </geometry>
         </collision>
 
         <visual name='visual'>
-          <pose>0.08 0 0.05 0 0 0</pose>
+          <pose>0 0 0 0 0 0</pose>
           <geometry>
-            <cylinder>
-            <radius>0.35</radius>
-              <length>0.23</length>
-            </cylinder>
+            <box>
+              <size>.7 .7 0.3</size>
+            </box>
           </geometry>
         </visual>
       </link>
 
-      <link name='propeller_link'>
-
+      <!--link name='propeller_link'>
+        <pose>-.375 0 0 0 0 0</pose>
         <inertial>
-          <pose>-1 0 0 0 0 0</pose>
+          <pose>0 0 0 0 0 0</pose>
           <mass>0.000001</mass>
           <inertia>
             <ixx>0.0001</ixx>
@@ -345,13 +344,13 @@
         <collision name='collision'>
           <geometry>
             <box>
-              <size>0.1 0.1 0.01</size>
+              <size>0.05 0.05 0.15</size>
             </box>
           </geometry>
         </collision>
 
         <visual name='visual'>
-          <pose>-.3 0 0 0 0 0</pose>
+          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
               <size>0.05 0.05 .15</size>
@@ -371,7 +370,54 @@
             <upper>1e+12</upper>
           </limit>
         </axis>
-      </joint>
+      </joint-->
+
+      <!--link name='rudder_link'>
+        <pose>-.1 0 -.1 0 0 0</pose>
+
+        <inertial>
+          <pose>0 0 0 0 0 0</pose>
+          <mass>0.000001</mass>
+          <inertia>
+            <ixx>0.0001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.0001</iyy>
+            <iyz>0</iyz>
+            <izz>0.0001</izz>
+          </inertia>
+        </inertial>
+
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>0.1 0.05 .1</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name='visual'>
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.1 0.05 .1</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+
+      <joint name="rudder_joint" type="revolute">
+        <pose>0 0 0 0 0 0</pose>
+        <parent>base_link</parent>
+        <child>rudder_link</child>
+        <axis>
+          <xyz>1 0 0</xyz>
+          <limit>
+            <lower>-1e+12</lower>
+            <upper>1e+12</upper>
+          </limit>
+        </axis>
+      </joint-->
 
 
       <!-- Uncomment to generate a trajectory -->
@@ -397,20 +443,14 @@
         <namespace>motorboat</namespace>
         <joint_name>propeller_joint</joint_name>
         <fluid_density>1025</fluid_density>
-        <propeller_diameter>0.075</propeller_diameter>
+        <propeller_diameter>0.3</propeller_diameter>
       </plugin>
 
       <!-- Uncomment to add hydrodynamics -->
-      <plugin
+      <!--plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>base_link</link_name>
-        <!--xDotU>-0.04876161</xDotU>
-        <yDotV>-1.26324739</yDotV>
-        <zDotW>-1.26324739</zDotW>
-        <kDotP>0</kDotP>
-        <mDotQ>-0.3346</mDotQ>
-        <nDotR>-0.3346</nDotR-->
         <xUabsU>-0.62282</xUabsU>
         <xU>-5</xU>
         <yVabsV>-60.127</yVabsV>
@@ -423,7 +463,7 @@
         <mQ>-1</mQ>
         <nRabsR>-6.32698957</nRabsR>
         <nR>-1</nR>
-      </plugin>
+      </plugin-->
 
     </model>
 
