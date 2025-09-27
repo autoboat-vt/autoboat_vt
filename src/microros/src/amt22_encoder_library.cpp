@@ -18,7 +18,7 @@
 #define READ_TURNS 0xA0
 
 
-class amt22 {
+class amt22: public spi_device {
 public:
 
     spi_inst_t *spi_port;
@@ -44,22 +44,6 @@ public:
 
     int get_turn_count(){
         return turn_count;
-    }
-
-    static inline void cs_select() {
-        asm volatile("nop \n nop \n nop");
-        asm volatile("nop \n nop \n nop");
-        gpio_put(PICO_SPI_CSN_PIN, 0);  // Active low
-        asm volatile("nop \n nop \n nop");
-        asm volatile("nop \n nop \n nop");
-    }
-
-    static inline void cs_deselect() {
-        asm volatile("nop \n nop \n nop");
-        asm volatile("nop \n nop \n nop");
-        gpio_put(PICO_SPI_CSN_PIN, 1);
-        asm volatile("nop \n nop \n nop");
-        asm volatile("nop \n nop \n nop");
     }
 
     void zero_encoder_value() {
