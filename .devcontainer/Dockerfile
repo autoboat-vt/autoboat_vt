@@ -40,8 +40,8 @@ RUN sudo apt install curl
 RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
 
 # install camera ros drivers
-#RUN sudo apt install ros-humble-librealsense2* -y
-#RUN sudo apt install ros-humble-realsense2-* -y
+RUN sudo apt install ros-humble-librealsense2* -y
+RUN sudo apt install ros-humble-realsense2-* -y
 
 #Used to automate tasks
 RUN sudo apt-get install cron --fix-missing
