@@ -4,13 +4,8 @@
 build
 install
 log
-src/object_detection/object_detection/datasets
 output
-src/object_detection/object_detection/weights/**.pt
-src/object_detection
-src/object_detection/object_detection/
-src/object_detection/
-src/object_detection/object_detection/weights/**.pt
+
 **.pt
 src/microros/dependencies/**
 .devcontainer/devcontainer_environment_variables
@@ -31,3 +26,7 @@ ground_station/app_data/
 !ground_station/app_data/buoy_data/default.json
 !ground_station/app_data/autopilot_params/
 !ground_station/app_data/autopilot_params/params_default.jsonc
+
+
+
+src/object_detection/
