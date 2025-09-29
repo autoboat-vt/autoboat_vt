@@ -27,6 +27,4 @@ ground_station/app_data/
 !ground_station/app_data/autopilot_params/
 !ground_station/app_data/autopilot_params/params_default.jsonc
 
-
-
-src/object_detection/**
+src/objection_detection
