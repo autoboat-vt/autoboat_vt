@@ -21,7 +21,6 @@ pydantic
 multiexit
 
 # Image processing/ Object Detection
-opencv-python
 Pillow
 imageio-ffmpeg
 

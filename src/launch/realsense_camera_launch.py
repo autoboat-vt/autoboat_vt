@@ -10,7 +10,16 @@ def generate_launch_description():
 
     included_python_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(my_package_share_dir, "launch", "rs_launch.py")),
-        launch_arguments=[("color_qos", "SENSOR_DATA"), ("depth_qos", "SENSOR_DATA"), ("enable_depth", "false")],
+        launch_arguments=[
+            ("color_qos", "SENSOR_DATA"),
+            ("depth_qos", "SENSOR_DATA"),
+            ("enable_depth", "false"),
+            ("spatial_filter.enable", "false"),
+            ("temporal_filter.enable", "false"),
+            ("pointcloud.enable", "false"),
+            ("hole_filling_filter.enable", "false"),
+            ("depth_module.emitter_enabled", "false"),
+        ],
     )
 
     return LaunchDescription(
