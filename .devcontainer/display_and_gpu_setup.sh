@@ -6,6 +6,7 @@ EXTRA_ARGS=""
 
 if [[ "$OS" == "Linux" ]]; then
     
+    # SETUP THE DISPLAY ENVIRONMENT VARIABLES
     echo -e "devcontainer_environment_variables\n\nDISPLAY=:0" > .devcontainer/devcontainer_environment_variables
 
     if command -v nvidia-smi &>/dev/null; then
