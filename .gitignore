@@ -29,4 +29,4 @@ ground_station/app_data/
 
 
 
-src/object_detection/
+src/object_detection/**
