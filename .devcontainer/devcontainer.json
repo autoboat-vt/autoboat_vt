@@ -31,7 +31,9 @@
     },
     "containerEnv": {
         "ROS_AUTOMATIC_DISCOVERY_RANGE": "LOCALHOST",
-        "ROS_DOMAIN_ID": "42"
+        "ROS_DOMAIN_ID": "42",
+        "DOCKER_RUNTIME_RUN_ARGS": "${localEnv:DOCKER_RUNTIME_RUN_ARGS:}",
+        "DOCKER_GPU_RUN_ARGS": "${localEnv:DOCKER_GPU_RUN_ARGS:}"
     },
     "runArgs": [
         "--net=host",
@@ -39,7 +41,9 @@
         "/dev:/dev",
         "--env-file=.devcontainer/devcontainer_environment_variables",
         "-v",
-        "/var/run/docker.sock:/var/run/docker.sock"
+        "/var/run/docker.sock:/var/run/docker.sock",
+        "${localEnv:DOCKER_RUNTIME_RUN_ARGS:}",
+        "${localEnv:DOCKER_GPU_RUN_ARGS:}"
     ],
     "mounts": [
         "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"

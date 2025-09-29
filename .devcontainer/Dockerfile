@@ -80,6 +80,10 @@ RUN sudo apt-get install -y --fix-missing \
 RUN sudo apt install docker -y
 RUN sudo apt install docker.io -y
 
+# Including this here so that we don't have to manually install torch everytime we rebuild the container 
+# with the docker_dev_environment_setup.sh since torch installations generally take a while
+# RUN pip install torch 
+RUN sudo apt install git-lfs -y
 
 USER $USERNAME
 # [Optional] Set the default user. Omit if you want to keep the default as root.
