@@ -69,7 +69,7 @@ setup(
         "gymnasium==0.28.1",
         "msgpack_python==0.5.6",
         "pyzmq==25.0.2",
-        "numpy",
+        "numpy==1.26.4",
         "pydantic",
         "tqdm",
         "imageio-ffmpeg",

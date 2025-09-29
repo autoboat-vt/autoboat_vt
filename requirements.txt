@@ -32,7 +32,7 @@ mkdocs
 mkdocs-material
 
 # Misc
-numpy
+numpy==1.26.4
 tqdm
 pandas
 docker
