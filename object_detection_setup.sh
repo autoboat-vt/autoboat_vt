@@ -1,6 +1,6 @@
 sudo apt install git-lfs
 
-# TODO add commands for pulling the object detection code/ datasets from the huggingface repository
+git-lfs clone https://huggingface.co/datasets/Aanimated/autoboat_vt_object_detection
 
 
 pip install ultralytics
@@ -11,4 +11,8 @@ pip install numpy==1.26.4
 
 
 # For a similar reason, we also need to uninstall python-opencv, since it is not compatible with ros's cv-bridge
-pip uninstall python-opencv
+pip uninstall opencv-python
+
+
+# Make sure that we rebuild, so colcon sees the object detection node as an actual ros node
+colon build --symlink-install

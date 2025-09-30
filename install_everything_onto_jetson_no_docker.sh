@@ -1,3 +1,5 @@
+# TODO: make it so that we only have 1 ros installation script in here because its weird that there are duplicate scripts for installing ros????
+
 # install ros2 humble
 locale  # check for UTF-8
 
@@ -75,14 +77,15 @@ source /opt/ros/humble/setup.bash
 sudo apt install ros-humble-realsense2-*
 
 
-# setup crontab 
+# fix .bashrc and add all of the ROS stuff to the bashrc 
+# TODO
+
+
+# setup crontab (not actually needed for the jetson if we have the correct udev rules)
 
 
 # setup systemctl stuff
 
-
-# fix .bashrc 
-# TODO
 
 
 # setup udev rule stuff for the pico and other devices
