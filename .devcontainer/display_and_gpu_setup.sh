@@ -93,11 +93,17 @@ if [[ "$OS" == "Linux" ]]; then
 
 
 elif [[ "$OS" == "Darwin" ]]; then
+
+
+    # Setup Display Environment Variables for MACOS
     echo -e "devcontainer_environment_variables\n\nDISPLAY=docker.for.mac.host.internal:0" >> .devcontainer/devcontainer_environment_variables
+    
     echo "[INFO] macOS detected. GPU passthrough not supported in Docker Desktop."
 
 
 else
+    # Setup Display Environment Variables for Unknown OS
     echo -e "devcontainer_environment_variables\n\nDISPLAY=:0" > .devcontainer/devcontainer_environment_variables
-    echo "[WARN] Unsupported OS: $OS. Running CPU-only."
+    
+    echo "[WARN] Unsupported OS: $OS. Running CPU-only and Display may not work properly."
 fi
