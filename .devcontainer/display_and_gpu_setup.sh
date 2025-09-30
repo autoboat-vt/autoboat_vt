@@ -6,9 +6,10 @@ EXTRA_ARGS=""
 
 if [[ "$OS" == "Linux" ]]; then
     
-    # SETUP THE DISPLAY ENVIRONMENT VARIABLES
+    # SETUP THE DISPLAY ENVIRONMENT VARIABLES FOR LINUX/ WSL
     echo -e "devcontainer_environment_variables\n\nDISPLAY=:0" > .devcontainer/devcontainer_environment_variables
 
+    # SETUP THE GPU SUPPORT FOR LINUX/ WSL
     if command -v nvidia-smi &>/dev/null; then
         echo "[INFO] NVIDIA GPU detected. Ensuring nvidia-container-toolkit is installed..."
 
@@ -95,14 +96,14 @@ if [[ "$OS" == "Linux" ]]; then
 elif [[ "$OS" == "Darwin" ]]; then
 
 
-    # Setup Display Environment Variables for MACOS
+    # SETUP THE DISPLAY ENVIRONMENT VARIABLES FOR MACOS
     echo -e "devcontainer_environment_variables\n\nDISPLAY=docker.for.mac.host.internal:0" >> .devcontainer/devcontainer_environment_variables
     
     echo "[INFO] macOS detected. GPU passthrough not supported in Docker Desktop."
 
 
 else
-    # Setup Display Environment Variables for Unknown OS
+    # SETUP THE DISPLAY ENVIRONMENT VARIABLES FOR AN UNKNOWN OS
     echo -e "devcontainer_environment_variables\n\nDISPLAY=:0" > .devcontainer/devcontainer_environment_variables
     
     echo "[WARN] Unsupported OS: $OS. Running CPU-only and Display may not work properly."
