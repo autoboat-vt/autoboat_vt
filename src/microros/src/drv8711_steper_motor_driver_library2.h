@@ -46,18 +46,7 @@ typedef enum {
 class drv8711: public spi_device {
     
     public: 
-        spi_inst_t *spi_port;
-        uint8_t cs_pin;
-        uint8_t slp_pin;
-        uint16_t ctrl_reg;
-        uint16_t torque_reg;
-        uint16_t off_reg;
-        uint16_t blank_reg;
-        uint16_t decay_reg;
-        uint16_t stall_reg;
-        uint16_t drive_reg;
-        uint16_t status_reg;
-
+        
         drv8711(
             spi_inst_t *spi_port, 
             uint8_t cs_pin,
@@ -113,6 +102,19 @@ class drv8711: public spi_device {
 
         //INCORRECT
         bool drv8711_getDirection();
+
+    private: 
+        spi_inst_t *spi_port;
+        uint8_t cs_pin;
+        uint8_t slp_pin;
+        uint16_t ctrl_reg;
+        uint16_t torque_reg;
+        uint16_t off_reg;
+        uint16_t blank_reg;
+        uint16_t decay_reg;
+        uint16_t stall_reg;
+        uint16_t drive_reg;
+        uint16_t status_reg;
 
 };
 

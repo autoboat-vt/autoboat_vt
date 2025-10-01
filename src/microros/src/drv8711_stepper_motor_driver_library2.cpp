@@ -47,18 +47,6 @@ typedef enum {
 class drv8711: public spi_device {
     
     public: 
-        spi_inst_t *spi_port;
-        uint8_t cs_pin;
-        uint8_t slp_pin;
-        uint16_t ctrl_reg;
-        uint16_t torque_reg;
-        uint16_t off_reg;
-        uint16_t blank_reg;
-        uint16_t decay_reg;
-        uint16_t stall_reg;
-        uint16_t drive_reg;
-        uint16_t status_reg;
-
         drv8711(
             spi_inst_t *spi_port, 
             uint8_t cs_pin,
@@ -236,35 +224,47 @@ class drv8711: public spi_device {
                 case MicroStep128: sm = 0b0111; break;
                 case MicroStep256: sm = 0b1000; break;
             }
-        ctrl_reg = (ctrl_reg & 0b111110000111) | (sm << 3);
-        drv8711_writeReg(CTRL_REG_ADDRESS, ctrl_reg);
-    }
+            ctrl_reg = (ctrl_reg & 0b111110000111) | (sm << 3);
+            drv8711_writeReg(CTRL_REG_ADDRESS, ctrl_reg);
+        }
 
-    void drv8711_setDecayMode(DRV8711_decayMode mode) {
-        decay_reg = (decay_reg & 0b00011111111) | (((uint8_t)mode & 0b111) << 8);
-        drv8711_writeReg(DECAY_REG_ADDRESS, decay_reg);
-    }
+        void drv8711_setDecayMode(DRV8711_decayMode mode) {
+            decay_reg = (decay_reg & 0b00011111111) | (((uint8_t)mode & 0b111) << 8);
+            drv8711_writeReg(DECAY_REG_ADDRESS, decay_reg);
+        }
 
-    uint8_t drv8711_readStatus() {
-        return drv8711_readReg(STATUS_REG_ADDRESS);
-    }
+        uint8_t drv8711_readStatus() {
+            return drv8711_readReg(STATUS_REG_ADDRESS);
+        }
 
-    void drv8711_clearStatus() {
-        drv8711_writeReg(STATUS_REG_ADDRESS, 0x00);
-    }
+        void drv8711_clearStatus() {
+            drv8711_writeReg(STATUS_REG_ADDRESS, 0x00);
+        }
 
-    uint8_t drv8711_readFaults() {
-        return drv8711_readReg(STATUS_REG_ADDRESS);
-    }
+        uint8_t drv8711_readFaults() {
+            return drv8711_readReg(STATUS_REG_ADDRESS);
+        }
 
-    void drv8711_clearFaults() {
-        drv8711_writeReg(STATUS_REG_ADDRESS, status_reg & 0xF00);
-    }
+        void drv8711_clearFaults() {
+            drv8711_writeReg(STATUS_REG_ADDRESS, status_reg & 0xF00);
+        }
 
-    //INCORRECT
-    bool drv8711_getDirection() {
-        return (ctrl_reg & (1 << DRV8711_DIRECTION_BIT)) != 0;
-    }
-
+        //INCORRECT
+        bool drv8711_getDirection() {
+            return (ctrl_reg & (1 << DRV8711_DIRECTION_BIT)) != 0;
+        }
+        
+        private: 
+            spi_inst_t *spi_port;
+            uint8_t cs_pin;
+            uint8_t slp_pin;
+            uint16_t ctrl_reg;
+            uint16_t torque_reg;
+            uint16_t off_reg;
+            uint16_t blank_reg;
+            uint16_t decay_reg;
+            uint16_t stall_reg;
+            uint16_t drive_reg;
+            uint16_t status_reg;
 };
 

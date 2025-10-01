@@ -1,3 +1,0 @@
-repository='https://github.com/raspberrypi/picotool.git'
-module=''
-tag='origin'
