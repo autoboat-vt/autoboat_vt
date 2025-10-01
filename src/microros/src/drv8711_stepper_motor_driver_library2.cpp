@@ -3,6 +3,8 @@
 
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
+#include "spi_device.h"
+#include "drv8711_steper_motor_driver_library2.h"
 
 
 #define DRV8711_ENABLE_BIT 0
@@ -65,12 +67,6 @@ class drv8711: public spi_device {
             DRV8711_stepMode step_mode,
             uint16_t max_winch_current
         ) {
-            spi_port = spi_port;
-            this->cs_pin = cs_pin; // Pulled low by default
-            gpio_init(cs_pin);
-            gpio_set_dir(cs_pin, GPIO_OUT);
-            gpio_put(cs_pin, 0);   
-
             this->slp_pin = slp_pin; // Pulled low by default
             gpio_init(slp_pin);
             gpio_set_dir(slp_pin, GPIO_OUT);
@@ -270,6 +266,5 @@ class drv8711: public spi_device {
         return (ctrl_reg & (1 << DRV8711_DIRECTION_BIT)) != 0;
     }
 
-}
+};
 
-#endif

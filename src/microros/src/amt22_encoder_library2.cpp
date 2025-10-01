@@ -1,11 +1,10 @@
-#ifndef AMT22_ENCODER_LIBRARY_H
-#define AMT22_ENCODER_LIBRARY_H
-
 #include "hardware/spi.h"
 #include "pico/stdlib.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include "spi_device.h"
+#include "amt22_encoder_library2.h"
 
 
 #define READ_BIT 0x00
@@ -139,9 +138,7 @@ public:
         return cur_angle;
     }
 
-
-#endif
-}
+};
 
 
 

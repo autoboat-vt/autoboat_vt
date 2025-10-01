@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <cstddef>
 #include "pico/stdlib.h"
+#include "spi_device.h"
 
 class spi_device {
 
@@ -46,4 +47,4 @@ class spi_device {
             asm volatile("nop \n nop \n nop");
         }
 
-}
+};
