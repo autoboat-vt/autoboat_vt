@@ -4,6 +4,7 @@
 build
 install
 log
+pkg
 src/object_detection/object_detection/datasets
 output
 src/object_detection/object_detection/weights/**.pt

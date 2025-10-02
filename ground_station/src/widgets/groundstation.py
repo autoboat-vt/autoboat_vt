@@ -434,8 +434,7 @@ class GroundStationWidget(QWidget):
         """
 
         try:
-            edited_config = text
-            self.telemetry_data_limits = json.loads(edited_config)
+            self.telemetry_data_limits = json.loads(text)
 
         except Exception as e:
             print(f"[Error] Failed to edit boat data limits: {e}")
@@ -518,9 +517,9 @@ class GroundStationWidget(QWidget):
         """
 
         try:
-            edited_bouys = text
-            if self.buoys != json.loads(edited_bouys):
-                self.buoys = json.loads(edited_bouys)
+            edited_bouys = json.loads(text)
+            if self.buoys != edited_bouys:
+                self.buoys = edited_bouys
                 self.update_buoy_table()
 
         except Exception as e:
@@ -541,10 +540,12 @@ class GroundStationWidget(QWidget):
             self.right_tab2_table.insertRow(self.right_tab2_table.rowCount())
             add_js_buoy = f"map.add_buoy({self.buoys[buoy]['lat']}, {self.buoys[buoy]['lon']})"
             self.browser.page().runJavaScript(add_js_buoy)
+
             for i, coord in enumerate(["lat", "lon"]):
                 item = QTableWidgetItem(f"{float(self.buoys[buoy][coord]):.13f}")
                 item.setFlags(Qt.ItemFlag.ItemIsEnabled)
                 self.right_tab2_table.setItem(self.right_tab2_table.rowCount() - 1, i, item)
+
         self.right_tab2_table.resizeColumnsToContents()
         self.right_tab2_table.resizeRowsToContents()
 
@@ -696,7 +697,7 @@ class GroundStationWidget(QWidget):
 
     def update_waypoints_display(self, waypoints: list[list[float]]) -> None:
         """
-        Update waypoints display with fetched waypoints.
+        Update waypoints display with waypoints fetched from the local server.
 
         Parameters
         ----------
@@ -705,18 +706,28 @@ class GroundStationWidget(QWidget):
         """
 
         self.waypoints = waypoints
+        num_new_waypoints = len(waypoints)
+
         self.send_waypoints_button.setDisabled(not self.can_send_waypoints)
         self.clear_waypoints_button.setDisabled(not self.can_reset_waypoints)
         self.pull_waypoints_button.setDisabled(not self.can_pull_waypoints)
 
-        if self.num_waypoints != len(self.waypoints):
-            self.num_waypoints = len(self.waypoints)
+        if self.num_waypoints != num_new_waypoints:
+            self.num_waypoints = num_new_waypoints
+
+            # if we have no local waypoints, we can't reset them
             if self.num_waypoints == 0:
                 self.can_pull_waypoints = True
                 self.can_reset_waypoints = False
+
+            # if we have local waypoints, we cannot pull from the
+            # remote server until we send them or reset them
+            # as we cannot pull without overwriting local waypoints
             else:
                 self.can_pull_waypoints = False
                 self.can_reset_waypoints = True
+
+            # we can always send waypoints to the remote server
             self.can_send_waypoints = True
 
             self.right_tab1_table.clear()
