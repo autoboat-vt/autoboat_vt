@@ -78,9 +78,9 @@ if [[ "$OS" == "Linux" ]]; then
 
 
 
-        export DOCKER_RUNTIME_RUN_ARGS="--runtime=nvidia --gpus=all"
-        echo 'export DOCKER_RUNTIME_RUN_ARGS="--runtime=nvidia --gpus=all"' >> ~/.bashrc
-        echo 'export DOCKER_RUNTIME_RUN_ARGS="--runtime=nvidia --gpus=all"' >> ~/.profile
+        export DOCKER_RUNTIME_GPU_ARGS="--runtime=nvidia --gpus=all"
+        echo 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia --gpus=all"' >> ~/.bashrc
+        echo 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia --gpus=all"' >> ~/.profile
 
 
     else
