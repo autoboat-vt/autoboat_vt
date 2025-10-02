@@ -11,6 +11,7 @@ src/microros/dependencies/**
 .devcontainer/devcontainer_environment_variables
 
 # groundstation
+pkg
 ground_station/bin
 ground_station/go.sum
 ground_station/last_build_time.txt
