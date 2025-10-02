@@ -451,7 +451,7 @@
       </joint>
 
       <link name='propeller_link'>
-        <pose>-.4 0 -.1 0 0 0</pose>
+        <pose>-.25 0 -.1 0 0 0</pose>
         <inertial>
           <pose>0 0 0 0 0 0</pose>
           <mass>0.13</mass>
@@ -501,10 +501,10 @@
       </joint>
 
       <link name='rudder_link'>
-        <pose>-.3 0 -.11 0 0 0</pose>
+        <pose>-.35 0 -.11 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 -.15 0 0 0</pose>
+          <pose>0 0 -.1 0 0 0</pose>
           <mass>0.42</mass>
           <inertia>
             <ixx>0.0007924568755</ixx>
@@ -575,6 +575,7 @@
         filename="gz-sim-joint-position-controller-system"
         name="gz::sim::systems::JointPositionController">
         <joint_name>rudder_joint</joint_name>
+        <p_gain>1</p_gain>
         <topic>rudder</topic>
       </plugin>
 
@@ -594,17 +595,17 @@
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>5</cla>
+        <cla>1.5</cla>
         <cla_stall>-1.1</cla_stall>
-        <cda>0.2</cda>
+        <cda>2</cda>
         <cda_stall>0.03</cda_stall>
         <alpha_stall>0.17</alpha_stall>
         <a0>0</a0>
-        <area>.052</area>
+        <area>1</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>rudder_link</link_name>
-        <cp>0 0 -0.15</cp>
+        <cp>0 0 -0.1</cp>
       </plugin>
 
       <!-- Hydrodynamics system -->
