@@ -3,7 +3,7 @@ sudo apt install git-lfs
 git-lfs clone https://huggingface.co/datasets/Aanimated/autoboat_vt_object_detection src/object_detection
 
 
-pip install ultralytics
+pip install ultralytics sahi
 
 # ultralytics upgrades our numpy version to 2.x.x but we don't actually want that because it will conflict with other packages, 
 # specifically ros cv-bridge (https://github.com/ros-perception/vision_opencv/issues/535)
