@@ -2,32 +2,8 @@
 
 
 
-
-#
-# This script runs on the host machine (not in the devcontainer but on your actual wsl/ linux/ mac computer) 
-# before the devcontainer actually starts building itself. 
-# This is started by the initializeCommand argument in the devcontainer.json  (https://containers.dev/implementors/json_reference/)
-#
-# The main jobs of the script are the following:
-#   Make sure that the user has the most recent version of the autoboat_docker_dev_image
-#   Make sure that the user has the correct environment variables configured so that the devcontainer knows how to deal with their display and GPU 
-#
-#
-#
-# The devcontainer_environment_variables file is handed to the devcontainer and it will set all of the environment variables inside of the docker container automatically
-# If you want an environment variable to be on the host machine, then you should append it to the ~/.profile or ~/.bashrc files 
-# (https://www.digitalocean.com/community/tutorials/bashrc-file-in-linux) (https://www.ibm.com/docs/en/aix/7.1.0?topic=files-profile-file)
-#
-
-
-
 OS="$(uname -s)"
 EXTRA_ARGS=""
-
-
-
-# Ensure that you have the latest version of the devcontainer docker image by pulling it from docker hub
-docker pull vtautoboat/autoboat_docker_dev_image
 
 
 
@@ -40,6 +16,13 @@ if [[ "$OS" == "Linux" ]]; then
     # Ensure that the devcontainer can actually access the display
     xhost +localhost
     echo 'xhost +localhost' >> ~/.profile
+
+
+    export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"
+    export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"
+
+    echo 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' >> ~/.profile
+    echo 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"' >> ~/.profile
 
 
 
@@ -111,26 +94,13 @@ if [[ "$OS" == "Linux" ]]; then
         fi
 
 
-
-        export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"
-        export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"
-
-        echo 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' >> ~/.bashrc
-        echo 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"' >> ~/.bashrc
-
-        echo 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' >> ~/.profile
-        echo 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"' >> ~/.profile
-
-
     else
-        echo "[INFO] No GPU found, running CPU-only."
+        echo "[INFO] No GPU found, running CPU-only on Linux."
 
 
         export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"
         export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"
 
-        echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.bashrc
-        echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.bashrc
         
         echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.profile
         echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.profile
@@ -145,14 +115,12 @@ elif [[ "$OS" == "Darwin" ]]; then
     
     echo "[INFO] macOS detected. GPU passthrough not supported in Docker Desktop."
 
+
     export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"
     export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"
-
-    echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.zshrc
-    echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.zshrc
     
-    echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.profile
-    echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.profile
+    launchctl setenv DOCKER_GPU_RUN_ARGS "--env IGNORE_THIS=hi"
+    launchctl setenv DOCKER_RUNTIME_RUN_ARGS "--env IGNORE_THIS2=hi2"
 
 
     # Ensure that the devcontainer can actually access the display
@@ -168,9 +136,6 @@ else
 
     export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"
     export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"
-
-    echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.bashrc
-    echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.bashrc
     
     echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.profile
     echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.profile
