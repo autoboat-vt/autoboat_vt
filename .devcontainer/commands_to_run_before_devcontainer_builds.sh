@@ -38,6 +38,13 @@ if [[ "$OS" == "Linux" ]]; then
     # SETUP THE DISPLAY ENVIRONMENT VARIABLES FOR LINUX/ WSL
     echo -e "devcontainer_environment_variables\n\nDISPLAY=:0" > .devcontainer/devcontainer_environment_variables
 
+
+    # Ensure that the devcontainer can actually access the display
+    xhost +localhost
+    echo 'xhost +localhost' >> ~/.profile
+
+
+
     # SETUP THE GPU SUPPORT FOR LINUX/ WSL
     if command -v nvidia-smi &>/dev/null; then
         echo "[INFO] NVIDIA GPU detected. Ensuring nvidia-container-toolkit is installed..."
@@ -132,6 +139,11 @@ elif [[ "$OS" == "Darwin" ]]; then
     export DOCKER_RUNTIME_GPU_ARGS="--env IGNORE_THIS=hi"
     echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.bashrc
     echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.profile
+
+
+    # Ensure that the devcontainer can actually access the display
+    xhost +localhost
+    echo 'xhost +localhost' >> ~/.profile
 
 
 else
