@@ -114,7 +114,7 @@ if [[ "$OS" == "Linux" ]]; then
 
 
 
-        export DOCKER_RUNTIME_GPU_ARGS="--runtime=nvidia"
+        export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"
         export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"
 
         echo 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' >> ~/.bashrc
@@ -128,7 +128,7 @@ if [[ "$OS" == "Linux" ]]; then
         echo "[INFO] No GPU found, running CPU-only."
 
 
-        export DOCKER_RUNTIME_GPU_ARGS="--env IGNORE_THIS=hi"
+        export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"
         export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"
 
         echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.bashrc
@@ -147,7 +147,7 @@ elif [[ "$OS" == "Darwin" ]]; then
     
     echo "[INFO] macOS detected. GPU passthrough not supported in Docker Desktop."
 
-    export DOCKER_RUNTIME_GPU_ARGS="--env IGNORE_THIS=hi"
+    export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"
     export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"
 
     echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.bashrc
@@ -168,7 +168,7 @@ else
     
     echo "[WARN] Unsupported OS: $OS. Running CPU-only and Display may not work properly."
 
-    export DOCKER_RUNTIME_GPU_ARGS="--env IGNORE_THIS=hi"
+    export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"
     export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"
 
     echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.bashrc
