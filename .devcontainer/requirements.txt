@@ -27,7 +27,7 @@ imageio-ffmpeg
 # Telemetry/ Internet
 requests
 
-# documentation
+# Documentation
 mkdocs
 mkdocs-material
 
@@ -42,3 +42,21 @@ dataclass_wizard
 click
 pympler
 ruff
+
+
+
+# Groundstation
+urllib3
+QtAwesome
+python-dateutil
+PyQtWebEngine
+PyQt5
+QtPy
+packaging
+idna
+charset-normalizer
+jsonc-parser
+requests
+PyYAML
+pytz
+strenum

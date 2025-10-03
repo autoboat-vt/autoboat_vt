@@ -85,6 +85,11 @@ RUN sudo apt install docker.io -y
 # RUN pip install torch 
 RUN sudo apt install git-lfs -y
 
+
 USER $USERNAME
+COPY requirements.txt /tmp/requirements.txt 
+RUN pip install -r /tmp/requirements.txt
+
+
 # [Optional] Set the default user. Omit if you want to keep the default as root.
 CMD ["/bin/bash"]

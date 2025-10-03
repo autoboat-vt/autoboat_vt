@@ -114,17 +114,28 @@ if [[ "$OS" == "Linux" ]]; then
 
 
 
-        export DOCKER_RUNTIME_GPU_ARGS="--runtime=nvidia --gpus=all"
-        echo 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia --gpus=all"' >> ~/.bashrc
-        echo 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia --gpus=all"' >> ~/.profile
+        export DOCKER_RUNTIME_GPU_ARGS="--runtime=nvidia"
+        export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"
+
+        echo 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' >> ~/.bashrc
+        echo 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"' >> ~/.bashrc
+
+        echo 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' >> ~/.profile
+        echo 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"' >> ~/.profile
 
 
     else
         echo "[INFO] No GPU found, running CPU-only."
 
+
         export DOCKER_RUNTIME_GPU_ARGS="--env IGNORE_THIS=hi"
+        export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"
+
         echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.bashrc
+        echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.bashrc
+        
         echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.profile
+        echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.profile
     fi
 
 
@@ -137,8 +148,13 @@ elif [[ "$OS" == "Darwin" ]]; then
     echo "[INFO] macOS detected. GPU passthrough not supported in Docker Desktop."
 
     export DOCKER_RUNTIME_GPU_ARGS="--env IGNORE_THIS=hi"
+    export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"
+
     echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.bashrc
+    echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.bashrc
+    
     echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.profile
+    echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.profile
 
 
     # Ensure that the devcontainer can actually access the display
@@ -153,6 +169,11 @@ else
     echo "[WARN] Unsupported OS: $OS. Running CPU-only and Display may not work properly."
 
     export DOCKER_RUNTIME_GPU_ARGS="--env IGNORE_THIS=hi"
+    export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"
+
     echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.bashrc
+    echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.bashrc
+    
     echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.profile
+    echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.profile
 fi
