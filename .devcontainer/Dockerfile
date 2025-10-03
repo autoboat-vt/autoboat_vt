@@ -87,7 +87,7 @@ RUN sudo apt install git-lfs -y
 
 
 USER $USERNAME
-COPY requirements.txt /tmp/requirements.txt 
+COPY required_pip_packages.txt /tmp/requirements.txt 
 RUN pip install -r /tmp/requirements.txt
 
 
