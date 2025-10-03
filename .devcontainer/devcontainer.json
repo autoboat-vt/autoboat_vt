@@ -1,7 +1,7 @@
 {
-    "name": "VT AutoBoat Development Container v1.0.2",
+    "name": "VT AutoBoat Development Container v1.0.3",
     "image": "vtautoboat/autoboat_docker_dev_image",
-    "initializeCommand": "docker pull vtautoboat/autoboat_docker_dev_image",
+    "initializeCommand": ".devcontainer/commands_to_run_before_devcontainer_builds.sh",
     "privileged": true,
     "remoteUser": "",
     "containerUser": "",
