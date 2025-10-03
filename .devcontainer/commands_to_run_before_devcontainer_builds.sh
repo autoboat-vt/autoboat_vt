@@ -21,8 +21,6 @@
 
 
 
-set -euo pipefail
-
 OS="$(uname -s)"
 EXTRA_ARGS=""
 
@@ -150,8 +148,8 @@ elif [[ "$OS" == "Darwin" ]]; then
     export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"
     export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"
 
-    echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.bashrc
-    echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.bashrc
+    echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.zshrc
+    echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.zshrc
     
     echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.profile
     echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.profile
