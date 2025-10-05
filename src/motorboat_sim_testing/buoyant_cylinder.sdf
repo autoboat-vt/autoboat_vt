@@ -1,20 +1,48 @@
 <?xml version="1.0" ?>
 <!--
 
-1. Move the rudder:
+Without ros2:
 
-      gz topic -t "/rudder" -m gz.msgs.Double -p 'data: 1'
+  0. Start the simulation:
+
+    gz sim buoyant_cylinder.sdf
+
+  1. Move the rudder:
+
+    gz topic -t /rudder -m gz.msgs.Double -p 'data: .61'
     
   1a. View rudder position:
 
-      gz topic -e -t /world/buoyant_cylinder/model/my_ship/joint_state
+    gz topic -e -t /world/buoyant_cylinder/model/my_ship/joint_state
 
-2. Propel the vehicle:
+  2. Propel the vehicle:
 
-      gz topic -t motorboat/propeller_topic -m gz.msgs.Double -p 'data: 2'
+    gz topic -t motorboat/propeller_topic -m gz.msgs.Double -p 'data: 2'
 
-      got from:
+    got from:
       https://gazebosim.org/api/sim/8/classgz_1_1sim_1_1systems_1_1Thruster.html
+
+
+With ros2:
+
+  0. Start the simulation:
+
+    ros2 launch ros_gz_sim gz_sim.launch.py gz_args:=buoyant_cylinder.sdf
+
+  0a. Open the bridges (in separate terminals):
+
+    ros2 run ros_gz_bridge parameter_bridge /rudder@std_msgs/msg/Float64@gz.msgs.Double
+    ros2 run ros_gz_bridge parameter_bridge motorboat/propeller_topic@std_msgs/msg/Float65@gz.msgs.Double
+
+  1. Move the rudder:
+
+    ros2 topic pub /rudder std_msgs/msg/Float64 'data: .61'
+  
+  
+  2. Propel the vehicle:
+
+    ros2 topic pub motorboat/propeller_topic std_msgs/msg/Float64 'data: 5'
+
 -->
 
 <sdf version="1.7">
@@ -528,7 +556,7 @@
           <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>0.1 0.02 .2</size>
+              <size>0.15 0.02 .2</size>
             </box>
           </geometry>
         </visual>
@@ -541,8 +569,8 @@
         <axis>
           <xyz>0 0 1</xyz>
           <limit>
-            <lower>-1</lower>
-            <upper>1</upper>
+            <lower>-.61</lower>
+            <upper>.61</upper>
           </limit>
         </axis>
       </joint>
@@ -601,7 +629,7 @@
         <cda_stall>0.03</cda_stall>
         <alpha_stall>0.17</alpha_stall>
         <a0>0</a0>
-        <area>1</area>
+        <area>1.5</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>rudder_link</link_name>
