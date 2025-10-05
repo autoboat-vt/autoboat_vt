@@ -35,7 +35,7 @@ RUN echo "${USERNAME} ALL=(ALL) NOPASSWD: /usr/bin/chmod" >> /etc/sudoers
 RUN echo "${USERNAME} ALL=(ALL) NOPASSWD: /usr/sbin/service" >> /etc/sudoers
 
 # The following is to set up ubuntu repositories to download ros packages
-RUN sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+RUN sudo sh -c 'echo "deb http://packages.ros.org/ros2/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
 RUN sudo apt install curl
 RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
 
@@ -76,9 +76,20 @@ RUN sudo apt-get install -y --fix-missing \
     libasound2
 
 
+#installation for gazebo 
+RUN sudo apt-get update
+RUN sudo apt-get install curl lsb-release gnupg
+RUN sudo curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
+RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] https://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null
+RUN sudo apt-get update
+RUN sudo apt-get install gz-harmonic -y
+
+#installation for ros gazebo bridge
+RUN  sudo sh -c 'echo "deb [arch=$(dpkg --print-architecture)] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" > /etc/apt/sources.list.d/ros2-latest.list' curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -sudo apt-get update
+RUN sudo apt install ros-humble-ros-gz
 # installations to allow the user to pull docker images from inside of this docker image
-RUN sudo apt install docker -y
-RUN sudo apt install docker.io -y
+RUN apt install docker -y
+RUN apt install docker.io -y
 
 
 USER $USERNAME
