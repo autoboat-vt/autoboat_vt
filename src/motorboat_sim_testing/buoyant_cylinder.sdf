@@ -19,20 +19,12 @@ Without ros2:
 
     gz topic -t motorboat/propeller_topic -m gz.msgs.Double -p 'data: 2'
 
-    got from:
-      https://gazebosim.org/api/sim/8/classgz_1_1sim_1_1systems_1_1Thruster.html
-
 
 With ros2:
 
-  0. Start the simulation:
+  0. Start the simulation (in ../launch/):
 
-    ros2 launch ros_gz_sim gz_sim.launch.py gz_args:=buoyant_cylinder.sdf
-
-  0a. Open the bridges (in separate terminals):
-
-    ros2 run ros_gz_bridge parameter_bridge /rudder@std_msgs/msg/Float64@gz.msgs.Double
-    ros2 run ros_gz_bridge parameter_bridge motorboat/propeller_topic@std_msgs/msg/Float65@gz.msgs.Double
+    ros2 launch simtest.launch.py
 
   1. Move the rudder:
 
@@ -325,25 +317,34 @@ With ros2:
     <!-- Model to load -->
     <model name="my_ship">
       <link name='base_link'>
+      </link>
+
+      <plugin
+        filename="gz-sim-odometry-publisher-system"
+        name="gz::sim::systems::OdometryPublisher">
+        <odom_topic>odometry</odom_topic>
+      </plugin>
+
+      <link name='left_front_link'>
         <pose>.15 .15 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 -.05 0 0 0</pose>
-          <mass>2.3</mass>
+          <pose>0 0 -.075 0 0 0</pose>
+          <mass>6.9</mass>
           <inertia>
-            <ixx>0.7</ixx>
+            <ixx>0.065</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.7</iyy>
+            <iyy>0.065</iyy>
             <iyz>0</iyz>
-            <izz>0.6125</izz>
+            <izz>0.104</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>.3 .3 .05</size>
+              <size>.3 .3 .15</size>
             </box>
           </geometry>
         </collision>
@@ -352,7 +353,7 @@ With ros2:
           <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>.3 .3 .05</size>
+              <size>.3 .3 .15</size>
             </box>
           </geometry>
         </visual>
@@ -362,22 +363,22 @@ With ros2:
         <pose>-.15 .15 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 -.05 0 0 0</pose>
-          <mass>2.3</mass>
+          <pose>0 0 -.075 0 0 0</pose>
+          <mass>6.9</mass>
           <inertia>
-            <ixx>0.7</ixx>
+            <ixx>0.065</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.7</iyy>
+            <iyy>0.065</iyy>
             <iyz>0</iyz>
-            <izz>0.6125</izz>
+            <izz>0.104</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>.3 .3 .05</size>
+              <size>.3 .3 .15</size>
             </box>
           </geometry>
         </collision>
@@ -386,7 +387,7 @@ With ros2:
           <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>.3 .3 .05</size>
+              <size>.3 .3 .15</size>
             </box>
           </geometry>
         </visual>
@@ -396,22 +397,22 @@ With ros2:
         <pose>-.15 -.15 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 -.05 0 0 0</pose>
-          <mass>2.3</mass>
+          <pose>0 0 -.075 0 0 0</pose>
+          <mass>6.9</mass>
           <inertia>
-            <ixx>0.7</ixx>
+            <ixx>0.065</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.7</iyy>
+            <iyy>0.065</iyy>
             <iyz>0</iyz>
-            <izz>0.6125</izz>
+            <izz>0.104</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>.3 .3 .05</size>
+              <size>.3 .3 .15</size>
             </box>
           </geometry>
         </collision>
@@ -420,7 +421,7 @@ With ros2:
           <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>.3 .3 .05</size>
+              <size>.3 .3 .15</size>
             </box>
           </geometry>
         </visual>
@@ -430,22 +431,22 @@ With ros2:
         <pose>.15 -.15 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 -.05 0 0 0</pose>
-          <mass>2.3</mass>
+          <pose>0 0 -.075 0 0 0</pose>
+          <mass>6.9</mass>
           <inertia>
-            <ixx>0.7</ixx>
+            <ixx>0.065</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.7</iyy>
+            <iyy>0.065</iyy>
             <iyz>0</iyz>
-            <izz>0.6125</izz>
+            <izz>0.104</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>.3 .3 .05</size>
+              <size>.3 .3 .15</size>
             </box>
           </geometry>
         </collision>
@@ -454,11 +455,17 @@ With ros2:
           <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>.3 .3 .05</size>
+              <size>.3 .3 .15</size>
             </box>
           </geometry>
         </visual>
       </link>
+      
+      <joint name="left_front_joint" type="fixed">
+        <pose>0 0 0 0 0 0</pose>
+        <parent>base_link</parent>
+        <child>left_front_link</child>
+      </joint>
 
       <joint name="right_front_joint" type="fixed">
         <pose>0 0 0 0 0 0</pose>
@@ -482,14 +489,14 @@ With ros2:
         <pose>-.25 0 -.1 0 0 0</pose>
         <inertial>
           <pose>0 0 0 0 0 0</pose>
-          <mass>0.13</mass>
+          <mass>0.2</mass>
           <inertia>
-            <ixx>0.0001</ixx>
+            <ixx>0.00005</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.0001</iyy>
+            <iyy>0.00005</iyy>
             <iyz>0</iyz>
-            <izz>0.0001</izz>
+            <izz>0.00005</izz>
           </inertia>
         </inertial>
 
@@ -518,8 +525,6 @@ With ros2:
         <axis>
           <xyz>1 0 0</xyz>
           <dynamics>
-            <damping>0.5</damping>
-            <friction>0.0</friction>
           </dynamics>
           <limit>
             <lower>-1e+12</lower>
@@ -532,15 +537,15 @@ With ros2:
         <pose>-.35 0 -.11 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 -.1 0 0 0</pose>
-          <mass>0.42</mass>
+          <pose>0 0 0 0 0 0</pose>
+          <mass>0.5</mass>
           <inertia>
-            <ixx>0.0007924568755</ixx>
+            <ixx>0.00141</ixx>
           <ixy>-0.0000000002674</ixy>
-          <ixz>0.0003978158176</ixz>
-          <iyy>0.0010546736475</iyy>
+          <ixz>0.0000000000076</ixz>
+          <iyy>0.00174</iyy>
           <iyz>-0.0000000006729</iyz>
-          <izz>0.0002633558262</izz>
+          <izz>0.00036</izz>
           </inertia>
         </inertial>
 
@@ -556,7 +561,7 @@ With ros2:
           <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>0.15 0.02 .2</size>
+              <size>0.1 0.02 .2</size>
             </box>
           </geometry>
         </visual>
@@ -575,28 +580,17 @@ With ros2:
         </axis>
       </joint>
 
-
-      <!-- Uncomment to generate a trajectory -->
-      <!--plugin filename="gz-sim-trajectory-follower-system"
-              name="gz::sim::systems::TrajectoryFollower">
-        <link_name>base_link</link_name>
-        <force>5</force>
-        <torque>3</torque>
-        <range_tolerance>0.1</range_tolerance>
-        <waypoints>
-          <waypoint>2 2</waypoint>
-          <waypoint>-2 2</waypoint>
-          <waypoint>-2 -2</waypoint>
-          <waypoint>2 -2</waypoint>
-        </waypoints>
-        <loop>true</loop>
-      </plugin-->
-
       <!-- Joint state publisher for the rudder -->
       <plugin
         filename="gz-sim-joint-state-publisher-system"
         name="gz::sim::systems::JointStatePublisher">
         <joint_name>rudder_joint</joint_name>
+      </plugin>
+
+      <plugin
+        filename="gz-sim-pose-publisher-system"
+        name="gz::sim::systems::PosePublisher">
+        <publish_link_pose>true</publish_link_pose>
       </plugin>
 
       <plugin
@@ -640,7 +634,7 @@ With ros2:
       <plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
-        <link_name>base_link</link_name>
+        <link_name>left_front_link</link_name>
         <xUabsU>-0.62282</xUabsU>
         <xU>0</xU>
         <yVabsV>-6</yVabsV>
