@@ -89,6 +89,7 @@ if [[ "$OS" == "Linux" ]]; then
             echo "[INFO] Configuring Docker runtime..."
             sudo nvidia-ctk runtime configure --runtime=docker
             sudo systemctl restart docker
+            
         else
             echo "[INFO] NVIDIA Container Toolkit already installed."
         fi
@@ -99,17 +100,21 @@ if [[ "$OS" == "Linux" ]]; then
     fi
 
 
+
+
 elif [[ "$OS" == "Darwin" ]]; then
 
 
     # SETUP THE DISPLAY ENVIRONMENT VARIABLES FOR MACOS
     echo -e "devcontainer_environment_variables\n\nDISPLAY=docker.for.mac.host.internal:0" >> .devcontainer/devcontainer_environment_variables
-    
-    echo "[INFO] macOS detected. GPU passthrough not supported in Docker Desktop."
 
     # Ensure that the devcontainer can actually access the display
     xhost +localhost
-    echo 'xhost +localhost' >> ~/.profile
+    echo 'xhost +localhost' >> ~/.zshrc
+
+
+    echo "[INFO] macOS detected. GPU passthrough not supported in Docker Desktop."
+
 
 
 else
