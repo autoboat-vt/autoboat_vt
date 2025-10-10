@@ -40,15 +40,15 @@ RUN sudo apt install curl
 RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
 
 # install camera ros drivers
-#RUN sudo apt install ros-humble-librealsense2* -y
-#RUN sudo apt install ros-humble-realsense2-* -y
+RUN sudo apt install ros-humble-librealsense2* -y
+RUN sudo apt install ros-humble-realsense2-* -y
 
 #Used to automate tasks
 RUN sudo apt-get install cron --fix-missing
 
 # MISC necessary things
-RUN sudo apt-get install usbutils --fix-missing
-RUN sudo apt-get install ros-humble-cv-bridge -y --fix-missing --fix-broken
+RUN sudo apt install usbutils --fix-missing
+RUN sudo apt install ros-humble-vision-opencv python3-opencv -y --fix-missing --fix-broken
 RUN sudo apt install udev -y --fix-missing
 RUN sudo apt install nano -y --fix-missing
 

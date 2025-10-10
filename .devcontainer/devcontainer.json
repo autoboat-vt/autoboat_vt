@@ -1,6 +1,6 @@
 {
     "name": "VT AutoBoat Development Container",
-    "image": "autoboatvt/autoboat_docker_dev_image",
+    "image": "vtautoboat/autoboat_docker_dev_image",
     "privileged": true,
     "remoteUser": "",
     "containerUser": "",
@@ -11,7 +11,7 @@
             "extensions": [
                 "ms-azuretools.vscode-docker",
                 "ms-python.python",
-                "ms-python.vscode-pylance",
+                "ms-python.vscodylance",
                 "magicstack.magicpython",
                 "ms-vscode.cpptools",
                 "twxs.cmake",
@@ -30,7 +30,6 @@
         }
     },
     "containerEnv": {
-        "DISPLAY": "unix:0",
         "ROS_AUTOMATIC_DISCOVERY_RANGE": "LOCALHOST",
         "ROS_DOMAIN_ID": "42",
         "CONTAINER_OWNER_USER_NAME": "${localEnv:USER}"
@@ -39,8 +38,7 @@
         "--net=host",
         "-v",
         "/dev:/dev",
-        "-e",
-        "DISPLAY=${env:DISPLAY}",
+        "--env-file=.devcontainer/devcontainer_environment_variables",
         "-v",
         "/var/run/docker.sock:/var/run/docker.sock"
     ],
