@@ -329,7 +329,7 @@ With ros2:
         <pose>.15 .15 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 -.075 0 0 0</pose>
+          <pose>0 0 0 0 0 0</pose>
           <mass>6.9</mass>
           <inertia>
             <ixx>0.065</ixx>
@@ -360,10 +360,10 @@ With ros2:
       </link>
 
       <link name='right_front_link'>
-        <pose>-.15 .15 0 0 0 0</pose>
+        <pose>.15 -.15 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 -.075 0 0 0</pose>
+          <pose>0 0 0 0 0 0</pose>
           <mass>6.9</mass>
           <inertia>
             <ixx>0.065</ixx>
@@ -397,8 +397,8 @@ With ros2:
         <pose>-.15 -.15 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 -.075 0 0 0</pose>
-          <mass>6.9</mass>
+          <pose>0 0 0 0 0 0</pose>
+          <mass>6.8</mass>
           <inertia>
             <ixx>0.065</ixx>
             <ixy>0</ixy>
@@ -428,11 +428,11 @@ With ros2:
       </link>
 
       <link name='left_back_link'>
-        <pose>.15 -.15 0 0 0 0</pose>
+        <pose>-.15 .15 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 -.075 0 0 0</pose>
-          <mass>6.9</mass>
+          <pose>0 0 0 0 0 0</pose>
+          <mass>6.8</mass>
           <inertia>
             <ixx>0.065</ixx>
             <ixy>0</ixy>
@@ -541,10 +541,10 @@ With ros2:
           <mass>0.5</mass>
           <inertia>
             <ixx>0.00141</ixx>
-          <ixy>-0.0000000002674</ixy>
+          <ixy>0.0000000000076</ixy>
           <ixz>0.0000000000076</ixz>
           <iyy>0.00174</iyy>
-          <iyz>-0.0000000006729</iyz>
+          <iyz>0.0000000000076</iyz>
           <izz>0.00036</izz>
           </inertia>
         </inertial>
@@ -577,6 +577,9 @@ With ros2:
             <lower>-.61</lower>
             <upper>.61</upper>
           </limit>
+          <dynamics>
+            <damping>1</damping>
+          </dynamics>
         </axis>
       </joint>
 
@@ -617,20 +620,19 @@ With ros2:
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>1.5</cla>
-        <cla_stall>-1.1</cla_stall>
-        <cda>2</cda>
-        <cda_stall>0.03</cda_stall>
-        <alpha_stall>0.17</alpha_stall>
+        <cla>.1</cla>
+        <cla_stall>0</cla_stall>
+        <cda>6</cda>
+        <cda_stall>0</cda_stall>
+        <alpha_stall>5</alpha_stall>
         <a0>0</a0>
-        <area>1.5</area>
+        <area>2.0</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>rudder_link</link_name>
-        <cp>0 0 -0.1</cp>
+        <cp>0 0 0</cp>
       </plugin>
 
-      <!-- Hydrodynamics system -->
       <plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
@@ -641,11 +643,11 @@ With ros2:
         <yV>0</yV>
         <zWabsW>-6.0127</zWabsW>
         <zW>0</zW>
-        <kPabsP>-0.002</kPabsP>
+        <kPabsP>-0.5</kPabsP>
         <kP>0</kP>
         <mQabsQ>-6.32698957</mQabsQ>
         <mQ>0</mQ>
-        <nRabsR>-0.3</nRabsR>
+        <nRabsR>-0.6</nRabsR>
         <nR>0</nR>
       </plugin>
       <plugin
@@ -658,11 +660,11 @@ With ros2:
         <yV>0</yV>
         <zWabsW>-6.0127</zWabsW>
         <zW>0</zW>
-        <kPabsP>-0.002</kPabsP>
+        <kPabsP>-0.5</kPabsP>
         <kP>0</kP>
         <mQabsQ>-6.32698957</mQabsQ>
         <mQ>0</mQ>
-        <nRabsR>-0.3</nRabsR>
+        <nRabsR>-0.6</nRabsR>
         <nR>0</nR>
       </plugin>
       <plugin
@@ -675,11 +677,11 @@ With ros2:
         <yV>0</yV>
         <zWabsW>-6.0127</zWabsW>
         <zW>0</zW>
-        <kPabsP>-0.002</kPabsP>
+        <kPabsP>-0.5</kPabsP>
         <kP>0</kP>
         <mQabsQ>-6.32698957</mQabsQ>
         <mQ>0</mQ>
-        <nRabsR>-0.3</nRabsR>
+        <nRabsR>-0.6</nRabsR>
         <nR>0</nR>
       </plugin>
       <plugin
@@ -692,11 +694,11 @@ With ros2:
         <yV>0</yV>
         <zWabsW>-6.0127</zWabsW>
         <zW>0</zW>
-        <kPabsP>-0.002</kPabsP>
+        <kPabsP>-0.5</kPabsP>
         <kP>0</kP>
         <mQabsQ>-6.32698957</mQabsQ>
         <mQ>0</mQ>
-        <nRabsR>-0.3</nRabsR>
+        <nRabsR>-0.6</nRabsR>
         <nR>0</nR>
       </plugin>
 
