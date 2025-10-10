@@ -41,8 +41,8 @@
         "--env-file=.devcontainer/devcontainer_environment_variables",
         "-v",
         "/var/run/docker.sock:/var/run/docker.sock",
-        "${localEnv:DOCKER_GPU_RUN_ARGS2:--env}",
-        "${localEnv:DOCKER_RUNTIME_RUN_ARGS2:IGNORE_THIS=hi}"
+        "${localEnv:DOCKER_GPU_RUN_ARGS:--env}",
+        "${localEnv:DOCKER_RUNTIME_RUN_ARGS:IGNORE_THIS=hi}"
     ],
     "mounts": [
         "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
