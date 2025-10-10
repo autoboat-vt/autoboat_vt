@@ -93,11 +93,29 @@ def generate_launch_description():
         Node(
             package='ros_gz_bridge',
             executable='parameter_bridge',
-            arguments=['/model/motorboat/joint/propeller_joint/cmd_thrust@std_msgs/msg/Float64@gz.msgs.Double',],
+            arguments=['motorboat/propeller_topic@std_msgs/msg/Float64]gz.msgs.Double',],
             # remappings=[('/example_imu_topic',
             #              '/remapped_imu_topic'),],
             output='screen'
         ),
+
+        Node(
+            package='ros_gz_bridge',
+            executable='parameter_bridge',
+            arguments=['/rudder@std_msgs/msg/Float64]gz.msgs.Double',],
+            # remappings=[('/example_imu_topic',
+            #              '/remapped_imu_topic'),],
+            output='screen'
+        ),
+
+        Node(
+            package='ros_gz_bridge',
+            executable='parameter_bridge',
+            arguments=['/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',],
+            # remappings=[('/example_imu_topic',
+            #              '/remapped_imu_topic'),],
+            output='screen'
+        )
     ]
     
     
