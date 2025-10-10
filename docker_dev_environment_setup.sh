@@ -21,7 +21,7 @@ echo source /opt/ros/humble/setup.bash >> "/home/autoboat_user/.bashrc"
 source /home/autoboat_user/.bashrc
 colcon build --symlink-install
 
-echo source install/setup.bash >> "/home/autoboat_user/.bashrc"
+echo source /home/ws/install/setup.bash >> "/home/autoboat_user/.bashrc"
 
 
 
