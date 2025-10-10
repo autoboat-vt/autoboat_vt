@@ -96,14 +96,6 @@ if [[ "$OS" == "Linux" ]]; then
 
     else
         echo "[INFO] No GPU found, running CPU-only on Linux."
-
-
-        export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"
-        export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"
-
-        
-        echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.profile
-        echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.profile
     fi
 
 
@@ -115,14 +107,6 @@ elif [[ "$OS" == "Darwin" ]]; then
     
     echo "[INFO] macOS detected. GPU passthrough not supported in Docker Desktop."
 
-
-    export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"
-    export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"
-    
-    launchctl setenv DOCKER_GPU_RUN_ARGS "--env IGNORE_THIS=hi"
-    launchctl setenv DOCKER_RUNTIME_RUN_ARGS "--env IGNORE_THIS2=hi2"
-
-
     # Ensure that the devcontainer can actually access the display
     xhost +localhost
     echo 'xhost +localhost' >> ~/.profile
@@ -133,10 +117,4 @@ else
     echo -e "devcontainer_environment_variables\n\nDISPLAY=:0" > .devcontainer/devcontainer_environment_variables
     
     echo "[WARN] Unsupported OS: $OS. Running CPU-only and Display may not work properly."
-
-    export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"
-    export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"
-    
-    echo 'export DOCKER_GPU_RUN_ARGS="--env IGNORE_THIS=hi"' >> ~/.profile
-    echo 'export DOCKER_RUNTIME_RUN_ARGS="--env IGNORE_THIS2=hi"' >> ~/.profile
 fi
