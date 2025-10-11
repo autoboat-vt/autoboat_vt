@@ -1,23 +1,15 @@
 #!/usr/bin/env bash
-
-
-
 OS="$(uname -s)"
 EXTRA_ARGS=""
-
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 
 if [[ "$OS" == "Linux" ]]; then
-    
     # SETUP THE DISPLAY ENVIRONMENT VARIABLES FOR LINUX/ WSL
-    echo -e "devcontainer_environment_variables\n\nDISPLAY=:0" > .devcontainer/devcontainer_environment_variables
+    echo -e "devcontainer_environment_variables\n\nDISPLAY=:0" > $SCRIPT_DIR/devcontainer_environment_variables
 
 
     # Ensure that the devcontainer can actually access the display
-    xhost +localhost
-    echo 'xhost +localhost' >> ~/.profile
-
-
     export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"
     export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"
 
@@ -103,15 +95,8 @@ if [[ "$OS" == "Linux" ]]; then
 
 
 elif [[ "$OS" == "Darwin" ]]; then
-
-
     # SETUP THE DISPLAY ENVIRONMENT VARIABLES FOR MACOS
-    echo -e "devcontainer_environment_variables\n\nDISPLAY=docker.for.mac.host.internal:0" >> .devcontainer/devcontainer_environment_variables
-
-    # Ensure that the devcontainer can actually access the display
-    xhost +localhost
-    echo 'xhost +localhost' >> ~/.zshrc
-
+    echo -e "devcontainer_environment_variables\n\nDISPLAY=docker.for.mac.host.internal:0" >> $SCRIPT_DIR/devcontainer_environment_variables
 
     echo "[INFO] macOS detected. GPU passthrough not supported in Docker Desktop."
 
@@ -119,7 +104,7 @@ elif [[ "$OS" == "Darwin" ]]; then
 
 else
     # SETUP THE DISPLAY ENVIRONMENT VARIABLES FOR AN UNKNOWN OS
-    echo -e "devcontainer_environment_variables\n\nDISPLAY=:0" > .devcontainer/devcontainer_environment_variables
+    echo -e "devcontainer_environment_variables\n\nDISPLAY=:0" > $SCRIPT_DIR/devcontainer_environment_variables
     
     echo "[WARN] Unsupported OS: $OS. Running CPU-only and Display may not work properly."
 fi
