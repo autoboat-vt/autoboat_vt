@@ -6,7 +6,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
-#include "spi_device.h"
+#include "spi_device.hpp"
 
 #define READ_BIT 0x00
 

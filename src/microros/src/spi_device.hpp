@@ -2,8 +2,8 @@
 #define SPI_DEVICE_H
 
 
-#include <cstdint>
-#include <cstddef>
+#include <stdint.h>
+#include <stddef.h>
 #include "pico/stdlib.h"
 
 

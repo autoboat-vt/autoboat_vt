@@ -1,7 +1,6 @@
-#include <cstdint>
-#include <cstddef>
+
 #include "pico/stdlib.h"
-#include "spi_device.h"
+#include "spi_device.hpp"
 
 
 class spi_device {

@@ -3,7 +3,7 @@
 
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
-#include "spi_device.h"
+#include "spi_device.hpp"
 
 #define DRV8711_ENABLE_BIT 0
 #define DRV8711_DIRECTION_BIT 1
