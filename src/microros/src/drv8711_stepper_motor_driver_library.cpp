@@ -5,7 +5,7 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "spi_device.h"
-#include "drv8711_steper_motor_driver_library2.h"
+#include "drv8711_steper_motor_driver_library.h"
 
 
 

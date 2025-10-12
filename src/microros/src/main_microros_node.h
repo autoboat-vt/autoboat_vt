@@ -62,41 +62,41 @@ const int MAX_RUDDER_ERROR = (float)(MAX_RUDDER_ANGLE - MIN_RUDDER_ANGLE);
 const int MAX_WINCH_ERROR = (float)(MAX_WINCH_ANGLE - MIN_RUDDER_ANGLE);
 const int MAX_SAIL_ERROR = (float)(MAX_SAIL_ANGLE - MIN_SAIL_ANGLE);
 
-
-
 // -----------------------------------------------------
 // Polynomials
 // -----------------------------------------------------
 
-inline float get_rudder_angle_from_motor_angle(float motor_angle) {
-    #if BOAT_MODE == Theseus
+inline float get_rudder_angle_from_motor_angle(float motor_angle)
+{
+#if BOAT_MODE == Theseus
     return -0.00002094 * pow(motor_angle, 3) + 0.001259 * pow(motor_angle, 2) + 0.4159 * motor_angle - 8.373;
-    #endif
+#endif
 
-    #if BOAT_MODE == Lumpy
+#if BOAT_MODE == Lumpy
     return motor_angle;
-    #endif
+#endif
 }
 
-inline float get_motor_angle_from_rudder_angle(float rudder_angle) {
-    #if BOAT_MODE == Theseus
+inline float get_motor_angle_from_rudder_angle(float rudder_angle)
+{
+#if BOAT_MODE == Theseus
     return 0.001345 * pow(rudder_angle, 3) + 0.003741 * pow(rudder_angle, 2) + 2.142 * rudder_angle + 19.71;
-    #endif
+#endif
 
-    #if BOAT_MODE == Lumpy
+#if BOAT_MODE == Lumpy
     return rudder_angle;
-    #endif
+#endif
 }
 
-inline float get_sail_angle_from_winch_angle(float winch_motor_angle) {
+inline float get_sail_angle_from_winch_angle(float winch_motor_angle)
+{
     return (winch_motor_angle - WINCH_ZERO_POINT) * 0.08087;
 }
 
-inline float get_winch_angle_from_sail_angle(float sail_angle) {
+inline float get_winch_angle_from_sail_angle(float sail_angle)
+{
     return (sail_angle / 0.08087) + WINCH_ZERO_POINT;
 }
-
-
 
 // This period is the length of the delay between steps, which controls the
 // stepper motor's speed.  You can increase the delay to make the stepper motor
@@ -104,14 +104,13 @@ inline float get_winch_angle_from_sail_angle(float sail_angle) {
 // there is a limit to how fast it can go before it starts missing steps.
 #define MIN_TIME_BETWEEN_MOTOR_STEPS_MICROSECONDS 2000 // microseconds
 
-
 /**
  * @brief Initializes the microros node, publisher, and timer.
- * 
+ *
  * @param allocator The allocator to be used for memory allocation.
  * @param support   The ROS 2 support structure.
  * @param executor  The ROS 2 executor responsible for executing tasks.
-*/
+ */
 
 void application_init(rcl_allocator_t *allocator, rclc_support_t *support, rclc_executor_t *executor);
 
@@ -128,6 +127,5 @@ void should_propeller_motor_be_powered_callback(const void *msg_in);
 void zero_rudder_encoder_callback(const void *msg_in);
 
 void zero_winch_encoder_callback(const void *msg_in);
-
 
 #endif

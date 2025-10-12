@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "spi_device.h"
-#include "amt22_encoder_library2.h"
+#include "amt22_encoder_library.h"
 
 
 
