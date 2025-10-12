@@ -1,4 +1,4 @@
-<?xml version="1.0" ?>
+<?xml version="1.0"?>
 <!--
 
 Without ros2:
@@ -61,6 +61,15 @@ With ros2:
       <direction>-0.5 0.1 -0.9</direction>
     </light>
 
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <world_frame_orientation>ENU</world_frame_orientation>
+      <latitude_deg>0</latitude_deg>
+      <longitude_deg>0</longitude_deg>
+      <elevation>0</elevation>
+      <heading_deg>0</heading_deg>
+    </spherical_coordinates>
+
     <plugin
       filename="gz-sim-physics-system"
       name="gz::sim::systems::Physics">
@@ -93,6 +102,11 @@ With ros2:
       name="gz::sim::systems::Sensors">
     </plugin>
 
+    <plugin
+      filename="gz-sim-navsat-system"
+      name="gz::sim::systems::NavSat">
+    </plugin>
+
     <gui fullscreen="0">
       <!-- 3D scene -->
       <plugin filename="MinimalScene" name="3D View">
@@ -108,7 +122,8 @@ With ros2:
         <!-- looking at robot -->
         <camera_pose>0 6 6 0 0.5 -1.57</camera_pose>
         <!-- looking at all science data for 2003080103_mb_l3_las.csv -->
-        <!--camera_pose>-50000 -30000 250000 0 1.1 1.58</camera_pose-->
+        <!--camera_pose>-50000
+        -30000 250000 0 1.1 1.58</camera_pose-->
         <camera_clip>
           <!-- ortho view needs low near clip -->
           <!-- but a very low near clip messes orbit's far clip ?! -->
@@ -129,8 +144,8 @@ With ros2:
       <plugin filename="GzSceneManager" name="Scene Manager">
         <gz-gui>
           <anchors target="3D View">
-            <line own="right" target="right"/>
-            <line own="top" target="top"/>
+            <line own="right" target="right" />
+            <line own="top" target="top" />
           </anchors>
           <property key="resizable" type="bool">false</property>
           <property key="width" type="double">5</property>
@@ -142,8 +157,8 @@ With ros2:
       <plugin filename="InteractiveViewControl" name="Interactive view control">
         <gz-gui>
           <anchors target="3D View">
-            <line own="right" target="right"/>
-            <line own="top" target="top"/>
+            <line own="right" target="right" />
+            <line own="top" target="top" />
           </anchors>
           <property key="resizable" type="bool">false</property>
           <property key="width" type="double">5</property>
@@ -155,8 +170,8 @@ With ros2:
       <plugin filename="CameraTracking" name="Camera Tracking">
         <gz-gui>
           <anchors target="3D View">
-            <line own="right" target="right"/>
-            <line own="top" target="top"/>
+            <line own="right" target="right" />
+            <line own="top" target="top" />
           </anchors>
           <property key="resizable" type="bool">false</property>
           <property key="width" type="double">5</property>
@@ -168,8 +183,8 @@ With ros2:
       <plugin filename="MarkerManager" name="Marker manager">
         <gz-gui>
           <anchors target="3D View">
-            <line own="right" target="right"/>
-            <line own="top" target="top"/>
+            <line own="right" target="right" />
+            <line own="top" target="top" />
           </anchors>
           <property key="resizable" type="bool">false</property>
           <property key="width" type="double">5</property>
@@ -182,8 +197,8 @@ With ros2:
       <plugin filename="SelectEntities" name="Select Entities">
         <gz-gui>
           <anchors target="Select entities">
-            <line own="right" target="right"/>
-            <line own="top" target="top"/>
+            <line own="right" target="right" />
+            <line own="top" target="top" />
           </anchors>
           <property key="resizable" type="bool">false</property>
           <property key="width" type="double">5</property>
@@ -195,8 +210,8 @@ With ros2:
       <plugin filename="VisualizationCapabilities" name="Visualization Capabilities">
         <gz-gui>
           <anchors target="Select entities">
-            <line own="right" target="right"/>
-            <line own="top" target="top"/>
+            <line own="right" target="right" />
+            <line own="top" target="top" />
           </anchors>
           <property key="resizable" type="bool">false</property>
           <property key="width" type="double">5</property>
@@ -208,8 +223,8 @@ With ros2:
       <plugin filename="Spawn" name="Spawn Entities">
         <gz-gui>
           <anchors target="Select entities">
-            <line own="right" target="right"/>
-            <line own="top" target="top"/>
+            <line own="right" target="right" />
+            <line own="top" target="top" />
           </anchors>
           <property key="resizable" type="bool">false</property>
           <property key="width" type="double">5</property>
@@ -229,8 +244,8 @@ With ros2:
           <property type="double" key="z">1</property>
           <property type="string" key="state">floating</property>
           <anchors target="3D View">
-            <line own="left" target="left"/>
-            <line own="bottom" target="bottom"/>
+            <line own="left" target="left" />
+            <line own="bottom" target="bottom" />
           </anchors>
         </gz-gui>
         <play_pause>true</play_pause>
@@ -248,8 +263,8 @@ With ros2:
           <property type="double" key="z">1</property>
           <property type="string" key="state">floating</property>
           <anchors target="3D View">
-            <line own="right" target="right"/>
-            <line own="bottom" target="bottom"/>
+            <line own="right" target="right" />
+            <line own="bottom" target="bottom" />
           </anchors>
         </gz-gui>
         <sim_time>true</sim_time>
@@ -273,7 +288,7 @@ With ros2:
           <vertical_cell_count>0</vertical_cell_count>
           <!-- 50 km -->
           <cell_length>50000</cell_length>
-          <pose>0 100000 0  0 0 0.32</pose>
+          <pose>0 100000 0 0 0 0.32</pose>
           <color>0 1 0 1</color>
         </insert>
         <insert>
@@ -282,7 +297,7 @@ With ros2:
           <vertical_cell_count>0</vertical_cell_count>
           <!-- 1 m -->
           <cell_length>1</cell_length>
-          <pose>0 0 0  0 0 0</pose>
+          <pose>0 0 0 0 0 0</pose>
           <color>0.5 0.5 0.5 1</color>
         </insert>
       </plugin>
@@ -317,6 +332,11 @@ With ros2:
     <!-- Model to load -->
     <model name="my_ship">
       <link name='base_link'>
+        <sensor name="navsat" type="navsat">
+          <always_on>1</always_on>
+          <update_rate>50</update_rate>
+          <topic>navsat</topic>
+        </sensor>
       </link>
 
       <plugin
@@ -460,7 +480,7 @@ With ros2:
           </geometry>
         </visual>
       </link>
-      
+
       <joint name="left_front_joint" type="fixed">
         <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
@@ -541,11 +561,11 @@ With ros2:
           <mass>0.5</mass>
           <inertia>
             <ixx>0.00141</ixx>
-          <ixy>0.0000000000076</ixy>
-          <ixz>0.0000000000076</ixz>
-          <iyy>0.00174</iyy>
-          <iyz>0.0000000000076</iyz>
-          <izz>0.00036</izz>
+            <ixy>0.0000000000076</ixy>
+            <ixz>0.0000000000076</ixz>
+            <iyy>0.00174</iyy>
+            <iyz>0.0000000000076</iyz>
+            <izz>0.00036</izz>
           </inertia>
         </inertial>
 
@@ -605,7 +625,7 @@ With ros2:
       </plugin>
 
       <!-- Propeller thruster -->
-      <plugin 
+      <plugin
         filename="gz-sim-thruster-system"
         name="gz::sim::systems::Thruster">
         <namespace>motorboat</namespace>
@@ -614,7 +634,7 @@ With ros2:
         <fluid_density>1025</fluid_density>
         <propeller_diameter>0.3</propeller_diameter>
       </plugin>
-      
+
       <!-- Drag on the rudder to make it function -->
       <plugin
         filename="gz-sim-lift-drag-system"
@@ -622,17 +642,87 @@ With ros2:
         <air_density>1025</air_density>
         <cla>.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>6</cda>
+        <cda>1</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>5</alpha_stall>
         <a0>0</a0>
-        <area>2.0</area>
+        <area>.052</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>rudder_link</link_name>
         <cp>0 0 0</cp>
       </plugin>
 
+      <!-- Drag on the hull parts -->
+      <plugin
+        filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+        <air_density>1025</air_density>
+        <cla>.1</cla>
+        <cla_stall>0</cla_stall>
+        <cda>1</cda>
+        <cda_stall>0</cda_stall>
+        <alpha_stall>5</alpha_stall>
+        <a0>0</a0>
+        <area>0.135</area>
+        <upward>0 0 1</upward>
+        <forward>1 0 0</forward>
+        <link_name>left_front_link</link_name>
+        <cp>0 0 0</cp>
+      </plugin>
+
+      <plugin
+        filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+        <air_density>1025</air_density>
+        <cla>.1</cla>
+        <cla_stall>0</cla_stall>
+        <cda>1</cda>
+        <cda_stall>0</cda_stall>
+        <alpha_stall>5</alpha_stall>
+        <a0>0</a0>
+        <area>0.135</area>
+        <upward>0 0 1</upward>
+        <forward>1 0 0</forward>
+        <link_name>right_front_link</link_name>
+        <cp>0 0 0</cp>
+      </plugin>
+
+      <plugin
+        filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+        <air_density>1025</air_density>
+        <cla>.1</cla>
+        <cla_stall>0</cla_stall>
+        <cda>1</cda>
+        <cda_stall>0</cda_stall>
+        <alpha_stall>5</alpha_stall>
+        <a0>0</a0>
+        <area>0.135</area>
+        <upward>0 0 1</upward>
+        <forward>1 0 0</forward>
+        <link_name>right_back_link</link_name>
+        <cp>0 0 0</cp>
+      </plugin>
+
+      <plugin
+        filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+        <air_density>1025</air_density>
+        <cla>.1</cla>
+        <cla_stall>0</cla_stall>
+        <cda>1</cda>
+        <cda_stall>0</cda_stall>
+        <alpha_stall>5</alpha_stall>
+        <a0>0</a0>
+        <area>0.135</area>
+        <upward>0 0 1</upward>
+        <forward>1 0 0</forward>
+        <link_name>left_back_link</link_name>
+        <cp>0 0 0</cp>
+      </plugin>
+
+      <!-- Hydrodynamics on the hull parts -->
       <plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
