@@ -1,6 +1,5 @@
-import constants
-import thread_classes
 import requests
+from utils import constants, thread_classes, misc
 from urllib.parse import urljoin
 from datetime import datetime
 from typing import Any
@@ -41,7 +40,7 @@ class InstanceHandler(QWidget):
         self.widgets_by_id: dict[int, InstanceWidget] = {}
 
         self.current_search_text: str = ""
-        self.timer = constants.copy_qtimer(constants.ONE_SECOND_TIMER)
+        self.timer = misc.copy_qtimer(constants.ONE_SECOND_TIMER)
 
         self.main_layout = QGridLayout()
         self.setLayout(self.main_layout)
@@ -69,13 +68,13 @@ class InstanceHandler(QWidget):
         self.button_groupbox = QGroupBox()
         self.button_layout = QHBoxLayout()
 
-        self.delete_all_button = constants.pushbutton_maker(
+        self.delete_all_button = misc.pushbutton_maker(
             "Delete All Instances",
             constants.ICONS.delete,
             self.delete_all_instances,
             max_width=constants.WINDOW_BOX.width() // 2,
         )
-        self.create_instance_button = constants.pushbutton_maker(
+        self.create_instance_button = misc.pushbutton_maker(
             "Create New Instance",
             constants.ICONS.add,
             self.create_new_instance,
@@ -194,7 +193,7 @@ class InstanceHandler(QWidget):
         """Handle scenario when no valid instances exist."""
 
         self.timer.stop()
-        create_new_instance = constants.show_message_box(
+        create_new_instance = misc.show_message_box(
             "No Valid Instances",
             "No valid instances found. Would you like to create a new instance?",
             constants.ICONS.question,
@@ -252,7 +251,7 @@ class InstanceHandler(QWidget):
         dialog_text = "Please select the instance you want to connect to."
 
         while True:
-            new_id = constants.show_input_dialog(
+            new_id = misc.show_input_dialog(
                 "Select Instance",
                 dialog_text,
                 input_type=int,
@@ -484,14 +483,14 @@ class InstanceWidget(QFrame):
         # region buttons
         self.button_layout = QVBoxLayout()
 
-        self.connect_button = constants.pushbutton_maker(
+        self.connect_button = misc.pushbutton_maker(
             "Connect",
             constants.ICONS.connect,
             self.on_connect_clicked,
             style_sheet=InstanceWidget.connect_button_stylesheet,
         )
 
-        self.delete_button = constants.pushbutton_maker(
+        self.delete_button = misc.pushbutton_maker(
             "Delete",
             constants.ICONS.delete,
             self.on_delete_clicked,

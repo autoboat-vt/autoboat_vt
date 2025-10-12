@@ -10,7 +10,7 @@ Contains:
 """
 
 import requests
-import constants
+from utils import constants
 from urllib.parse import urljoin
 from qtpy.QtCore import QThread, Signal
 

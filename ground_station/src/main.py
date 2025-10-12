@@ -1,5 +1,5 @@
 import sys
-import constants
+from utils import constants, misc
 from widgets import GroundStationWidget, ConsoleOutputWidget, AutopilotParamEditor, CameraWidget, InstanceHandler
 
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    constants.ICONS = constants.__get_icons()
+    constants.ICONS = misc.__get_icons()
     window = MainWindow()
     app.setStyleSheet(constants.STYLE_SHEET)
     app.setPalette(constants.PALLETTE)

@@ -4,8 +4,7 @@ import time
 import requests
 import json
 
-import constants
-import thread_classes
+from utils import constants, thread_classes, misc
 from syntax_highlighters.json import JsonHighlighter
 from widgets.popup_edit import TextEditWindow
 
@@ -66,9 +65,9 @@ class GroundStationWidget(QWidget):
         self.remember_waypoints_pull_service_status: bool = False
 
         # region timers
-        self.ten_ms_timer = constants.copy_qtimer(constants.TEN_MS_TIMER)
-        self.one_ms_timer = constants.copy_qtimer(constants.ONE_MS_TIMER)
-        self.thirty_second_timer = constants.copy_qtimer(constants.THIRTY_SECOND_TIMER)
+        self.ten_ms_timer = misc.copy_qtimer(constants.TEN_MS_TIMER)
+        self.one_ms_timer = misc.copy_qtimer(constants.ONE_MS_TIMER)
+        self.thirty_second_timer = misc.copy_qtimer(constants.THIRTY_SECOND_TIMER)
         self.timers = [self.thirty_second_timer, self.ten_ms_timer, self.one_ms_timer]
 
         # region define layouts
@@ -99,7 +98,7 @@ class GroundStationWidget(QWidget):
         self.left_text_section.setReadOnly(True)
         self.left_text_section.setText("Awaiting telemetry data...")
 
-        self.save_boat_data_button = constants.pushbutton_maker(
+        self.save_boat_data_button = misc.pushbutton_maker(
             "Save Boat Data to File",
             constants.ICONS.save,
             self.save_boat_data,
@@ -107,7 +106,7 @@ class GroundStationWidget(QWidget):
             min_height=50,
         )
 
-        self.edit_boat_data_limits_button = constants.pushbutton_maker(
+        self.edit_boat_data_limits_button = misc.pushbutton_maker(
             "Edit Limits",
             constants.ICONS.cog,
             self.edit_boat_data_limits,
@@ -117,7 +116,7 @@ class GroundStationWidget(QWidget):
 
         self.side_buttons_layout = QVBoxLayout()
 
-        self.load_boat_data_limits_button = constants.pushbutton_maker(
+        self.load_boat_data_limits_button = misc.pushbutton_maker(
             "Load Limits from File",
             constants.ICONS.hard_drive,
             self.load_boat_data_limits,
@@ -125,7 +124,7 @@ class GroundStationWidget(QWidget):
             min_height=25,
         )
 
-        self.save_boat_data_limits_button = constants.pushbutton_maker(
+        self.save_boat_data_limits_button = misc.pushbutton_maker(
             "Save Limits to File",
             constants.ICONS.save,
             self.save_boat_data_limits,
@@ -185,7 +184,7 @@ class GroundStationWidget(QWidget):
         self.right_tab1_table.setMinimumWidth(self.right_width)
         self.right_tab1_table.cellClicked.connect(partial(self.zoom_to_marker, table="waypoints"))
         self.can_send_waypoints = True
-        self.send_waypoints_button = constants.pushbutton_maker(
+        self.send_waypoints_button = misc.pushbutton_maker(
             "Send Waypoints",
             constants.ICONS.upload,
             self.send_waypoints,
@@ -195,7 +194,7 @@ class GroundStationWidget(QWidget):
         )
 
         self.can_reset_waypoints = False
-        self.clear_waypoints_button = constants.pushbutton_maker(
+        self.clear_waypoints_button = misc.pushbutton_maker(
             "Clear Waypoints",
             constants.ICONS.delete,
             self.clear_waypoints,
@@ -205,7 +204,7 @@ class GroundStationWidget(QWidget):
         )
 
         self.can_pull_waypoints = True
-        self.pull_waypoints_button = constants.pushbutton_maker(
+        self.pull_waypoints_button = misc.pushbutton_maker(
             "Pull Waypoints",
             constants.ICONS.download,
             self.pull_waypoints,
@@ -214,7 +213,7 @@ class GroundStationWidget(QWidget):
             is_clickable=self.can_pull_waypoints,
         )
 
-        self.focus_boat_button = constants.pushbutton_maker(
+        self.focus_boat_button = misc.pushbutton_maker(
             "Zoom to Boat",
             constants.ICONS.boat,
             self.zoom_to_boat,
@@ -238,7 +237,7 @@ class GroundStationWidget(QWidget):
         self.right_tab2_table.setMinimumWidth(self.right_width)
         self.right_tab2_table.cellClicked.connect(partial(self.zoom_to_marker, table="buoys"))
 
-        self.edit_buoy_data_button = constants.pushbutton_maker(
+        self.edit_buoy_data_button = misc.pushbutton_maker(
             "Edit Buoy Data",
             constants.ICONS.cog,
             self.edit_buoy_data,
@@ -246,7 +245,7 @@ class GroundStationWidget(QWidget):
             min_height=50,
         )
 
-        self.save_buoy_data_button = constants.pushbutton_maker(
+        self.save_buoy_data_button = misc.pushbutton_maker(
             "Save Buoy Data",
             constants.ICONS.save,
             self.save_buoy_data,
@@ -254,7 +253,7 @@ class GroundStationWidget(QWidget):
             min_height=50,
         )
 
-        self.load_buoy_data_button = constants.pushbutton_maker(
+        self.load_buoy_data_button = misc.pushbutton_maker(
             "Load Buoy Data",
             constants.ICONS.hard_drive,
             self.load_buoy_data,
@@ -761,7 +760,7 @@ class GroundStationWidget(QWidget):
             for timer in self.timers:
                 timer.stop()
 
-            response, temp_pull_waypoints_reminder = constants.show_message_box(
+            response, temp_pull_waypoints_reminder = misc.show_message_box(
                 "Local Waypoints Mismatch",
                 "The local waypoints are different from the telemetry server waypoints. Do you want to update the local waypoints?",
                 constants.ICONS.warning,
@@ -812,7 +811,7 @@ class GroundStationWidget(QWidget):
             for timer in self.timers:
                 timer.stop()
 
-            response, temp_remember_telemetry_server_url_status = constants.show_message_box(
+            response, temp_remember_telemetry_server_url_status = misc.show_message_box(
                 "Failed to fetch waypoints",
                 "Do you want to change the telemetry server URL?",
                 constants.ICONS.question,
@@ -824,7 +823,7 @@ class GroundStationWidget(QWidget):
             )
 
             if response == QMessageBox.StandardButton.Yes:
-                new_url = constants.show_input_dialog(
+                new_url = misc.show_input_dialog(
                     "Change Telemetry Server URL",
                     "Enter the new telemetry server URL:",
                     default_value=constants.TELEMETRY_SERVER_URL,
