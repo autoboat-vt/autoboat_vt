@@ -1,5 +1,3 @@
-
-#include "pico/stdlib.h"
 #include "spi_device.hpp"
 
 
@@ -7,7 +5,10 @@ class spi_device {
 
 
     public:
-        SPI_Device(uint csPin) : csPin(csPin) {
+        spi_device(uint csPin) {
+            
+            this->csPin = csPin; 
+
             gpio_init(csPin);
             gpio_set_dir(csPin, GPIO_OUT);
             // TODO: replace with decoder
@@ -15,7 +16,7 @@ class spi_device {
         }
 
 
-        uint8_t transfer(uint8_t data) {
+        uint8_t transfer(uint8_t data) : csPin(csPin) {
             cs_select();
             uint8_t rx = bus.transfer(data);
             cs_deselect();
@@ -33,7 +34,7 @@ class spi_device {
     private:
        
        
-        SPIBus& bus;
+        SPIBus bus;
         uint csPin;
 
 

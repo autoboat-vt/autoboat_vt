@@ -30,10 +30,10 @@ std_srvs__srv__Empty_Request  empty_request_msg;
 std_srvs__srv__Empty_Response empty_response_msg;
 std_msgs__msg__Float32        test_msg;
 
-static drv8711 rudderStepperMotorDriver;
-static drv8711 winchStepperMotorDriver;
-static amt22   rudderEncoder;
-static amt22   winchEncoder;
+drv8711 drv8711::rudderStepperMotorDriver;
+drv8711 drv8711::winchStepperMotorDriver;
+amt22   amt22::rudderEncoder;
+amt22   amt22::winchEncoder;
 static cmps14  compass;
 
 

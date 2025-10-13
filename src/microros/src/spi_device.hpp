@@ -13,7 +13,7 @@ class spi_device {
 
 
     public:
-        spi_Device(uint csPin) : csPin(csPin);
+        spi_device(uint csPin) {}
 
 
         uint8_t transfer(uint8_t data);
@@ -23,7 +23,7 @@ class spi_device {
 
 
     private:
-        SPIBus& bus;
+        SPIBus bus;
         uint csPin;
 
 
