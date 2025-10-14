@@ -103,8 +103,6 @@ public:
     bool drv8711_getDirection();
 
 private:
-    spi_inst_t *spi_port;
-    uint8_t cs_pin;
     uint8_t slp_pin;
     uint16_t ctrl_reg;
     uint16_t torque_reg;

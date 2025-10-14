@@ -5,9 +5,7 @@ class spi_device {
 
 
     public:
-        spi_device(uint csPin) {
-            
-            this->csPin = csPin; 
+        spi_device(spi_inst_t* spi_port, uint csPin) : csPin(csPin), spi_port(spi_port) {
 
             gpio_init(csPin);
             gpio_set_dir(csPin, GPIO_OUT);
@@ -15,30 +13,27 @@ class spi_device {
             gpio_put(csPin, 0); // idle (inactive) for DRV8711 (active high)
         }
 
-
-        uint8_t transfer(uint8_t data) : csPin(csPin) {
+        // Transfer a single byte
+        uint8_t transfer(uint8_t data) {
+            uint8_t rx;
             cs_select();
-            uint8_t rx = bus.transfer(data);
+            spi_write_read_blocking(spi_port, &data, &rx, 1);
             cs_deselect();
             return rx;
         }
 
-
+        // Transfer multiple bytes
         void transfer(const uint8_t* tx, uint8_t* rx, size_t len) {
             cs_select();
-            bus.transfer(tx, rx, len);
+            spi_write_read_blocking(spi_port, tx, rx, len);
             cs_deselect();
         }
-
 
     private:
        
        
-        SPIBus bus;
+        spi_inst_t *spi_port;
         uint csPin;
-
-
-
 
         static inline void cs_select() {
             asm volatile("nop \n nop \n nop");

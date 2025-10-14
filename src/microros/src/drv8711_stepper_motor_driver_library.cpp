@@ -61,8 +61,8 @@ class drv8711: public spi_device {
             DRV8711_decayMode decay_mode,
             DRV8711_stepMode step_mode,
             uint16_t max_winch_current
-        ) {
-            this->slp_pin = slp_pin; // Pulled low by default
+        ) : spi_device(*spi_port, cs_pin), slp_pin(slp_pin)  {
+           
             gpio_init(slp_pin);
             gpio_set_dir(slp_pin, GPIO_OUT);
             gpio_put(slp_pin, 1);
@@ -74,7 +74,6 @@ class drv8711: public spi_device {
             drv8711_setStepMode(step_mode);
             drv8711_enableDriver();
             drv8711_setAwake();
-
 
             sleep_ms(50);
             // drv8711_resetSettings(driver); // Disables DRV8711 by default
@@ -285,9 +284,7 @@ class drv8711: public spi_device {
         }
        
         private:
-            spi_inst_t *spi_port;
-            uint8_t cs_pin;
-            uint8_t slp_pin;
+            uint8_t slp_pin; // Pulled low by default
             uint16_t ctrl_reg;
             uint16_t torque_reg;
             uint16_t off_reg;

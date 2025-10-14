@@ -27,19 +27,13 @@ class amt22: public spi_device {
 public:
 
 
-    amt22(int cs_pin, spi_inst_t *spi_port) {
-       
-        this->spi_port = spi_port;
-
-
-        PICO_SPI_CSN_PIN = cs_pin;
-
+    amt22(int cs_pin, spi_inst_t *spi_port) : spi_device(*spi_port, cs_pin) {
 
         // Chip select is active-low, so we'll initialise it to a driven-high state
-        gpio_init(PICO_SPI_CSN_PIN);
-        gpio_set_dir(PICO_SPI_CSN_PIN, GPIO_OUT);
-        gpio_put(PICO_SPI_CSN_PIN, 1);
-        gpio_pull_up(PICO_SPI_CSN_PIN);
+        gpio_init(cs_pin);
+        gpio_set_dir(cs_pin, GPIO_OUT);
+        gpio_put(cs_pin, 1);
+        gpio_pull_up(cs_pin);
         // sleep_us(10);
         // Make the CS pin available to picotool
         // bi_decl(bi_1pin_with_name(PICO_SPI_CSN_PIN, "SPI CS"));

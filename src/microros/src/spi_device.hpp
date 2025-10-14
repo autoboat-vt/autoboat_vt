@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "pico/stdlib.h"
+#include "hardware/spi.h"
 
 
 
@@ -13,17 +14,18 @@ class spi_device {
 
 
     public:
-        spi_device(uint csPin) {}
+        spi_device(spi_inst_t* spi_port, uint csPin) {}
 
 
+        // Transfer a single byte
         uint8_t transfer(uint8_t data);
 
-
+        // Transfer multiple bytes
         void transfer(const uint8_t* tx, uint8_t* rx, size_t len);
 
 
     private:
-        SPIBus bus;
+        spi_inst_t *spi_port;
         uint csPin;
 
 

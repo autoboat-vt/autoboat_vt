@@ -21,8 +21,6 @@ class amt22 : public spi_device
 {
 
 public:
-    spi_inst_t *spi_port;
-    int PICO_SPI_CSN_PIN;
     float turn_count;
     float cur_angle;
 
