@@ -1,67 +1,13 @@
-#ifndef DRV8711_STEPPER_MOTOR_DRIVER_LIBRARY_H
-#define DRV8711_STEPPER_MOTOR_DRIVER_LIBRARY_H
+#include "drv8711_stepper_motor_driver_library.h"
 
-
-#include "pico/stdlib.h"
-#include "hardware/spi.h"
-#include "drv8711_steper_motor_driver_library.h"
-
-
-
-
-#define DRV8711_ENABLE_BIT 0
-#define DRV8711_DIRECTION_BIT 1
-#define DRV8711_STEP_BIT 2
-
-
-
-
-typedef enum {
-    CTRL_REG_ADDRESS   = 0x00,
-    TORQUE_REG_ADDRESS = 0x01,
-    OFF_REG_ADDRESS    = 0x02,
-    BLANK_REG_ADDRESS  = 0x03,
-    DECAY_REG_ADDRESS  = 0x04,
-    STALL_REG_ADDRESS  = 0x05,
-    DRIVE_REG_ADDRESS  = 0x06,
-    STATUS_REG_ADDRESS = 0x07,
-} DRV8711_registerAddress;
-
-
-typedef enum {
-    MicroStep256 = 256,
-    MicroStep128 = 128,
-    MicroStep64  =  64,
-    MicroStep32  =  32,
-    MicroStep16  =  16,
-    MicroStep8   =   8,
-    MicroStep4   =   4,
-    MicroStep2   =   2,
-    MicroStep1   =   1,
-} DRV8711_stepMode;
-
-
-typedef enum {
-    Slow                = 0b000,
-    SlowIncMixedDec     = 0b001,
-    Fast                = 0b010,
-    Mixed               = 0b011,
-    SlowIncAutoMixedDec = 0b100,
-    AutoMixed           = 0b101,
-} DRV8711_decayMode;
-
-
-class drv8711: public spi_device {
-   
-    public:
-        drv8711(
+        drv8711::drv8711(
             spi_inst_t *spi_port,
             uint8_t cs_pin,
             uint8_t slp_pin,
             DRV8711_decayMode decay_mode,
             DRV8711_stepMode step_mode,
             uint16_t max_winch_current
-        ) : spi_device(*spi_port, cs_pin), slp_pin(slp_pin)  {
+        ) : spi_device(spi_port, cs_pin), slp_pin(slp_pin)  {
            
             gpio_init(slp_pin);
             gpio_set_dir(slp_pin, GPIO_OUT);
@@ -84,7 +30,7 @@ class drv8711: public spi_device {
    
 
 
-        uint16_t drv8711_readReg(DRV8711_registerAddress address) {
+        uint16_t drv8711::drv8711_readReg(DRV8711_registerAddress address) {
             // Bit  0    - Read
             // Bits 1:3  - Register address
             // Bits 4:15 - Irrelevant
@@ -104,7 +50,7 @@ class drv8711: public spi_device {
         }
 
 
-        void drv8711_writeReg(DRV8711_registerAddress address, uint16_t value) {
+        void drv8711::drv8711_writeReg(DRV8711_registerAddress address, uint16_t value) {
             // Bit  0    - Write
             // Bits 1:3  - Register address
             // Bits 4:15 - Data to write
@@ -116,7 +62,7 @@ class drv8711: public spi_device {
         }
 
 
-        void drv8711_applySettings() {
+        void drv8711::drv8711_applySettings() {
             drv8711_writeReg(TORQUE_REG_ADDRESS, torque_reg);
             drv8711_writeReg(OFF_REG_ADDRESS, off_reg);
             drv8711_writeReg(BLANK_REG_ADDRESS, blank_reg);
@@ -128,7 +74,7 @@ class drv8711: public spi_device {
         }
 
 
-        void drv8711_resetSettings() {
+        void drv8711::drv8711_resetSettings() {
             ctrl_reg   = 0xF11; //C10
             torque_reg = 0x1DF; //1FF
             off_reg    = 0x030;
@@ -140,7 +86,7 @@ class drv8711: public spi_device {
         }
 
 
-        bool drv8711_verifySettings() {
+        bool drv8711::drv8711_verifySettings() {
             return drv8711_readReg(CTRL_REG_ADDRESS) == ctrl_reg   &&
                 drv8711_readReg(TORQUE_REG_ADDRESS) ==(torque_reg & ~(1 << 10)) &&
                 drv8711_readReg(OFF_REG_ADDRESS)    == off_reg    &&
@@ -151,29 +97,29 @@ class drv8711: public spi_device {
         }
 
 
-        void drv8711_enableDriver() {
+        void drv8711::drv8711_enableDriver() {
             ctrl_reg |= (1 << DRV8711_ENABLE_BIT);
             drv8711_writeReg(CTRL_REG_ADDRESS, ctrl_reg);
         }
 
 
-        void drv8711_disableDriver() {
+        void drv8711::drv8711_disableDriver() {
             ctrl_reg &= ~(1 << DRV8711_ENABLE_BIT);
             drv8711_writeReg(CTRL_REG_ADDRESS, ctrl_reg);
         }
 
 
-        void drv8711_setAwake() {
+        void drv8711::drv8711_setAwake() {
             gpio_put(slp_pin, 1);
         }
 
 
-        void drv8711_setAsleep() {
+        void drv8711::drv8711_setAsleep() {
             gpio_put(slp_pin, 0);
         }
 
 
-        void drv8711_setDirection(bool direction) {
+        void drv8711::drv8711_setDirection(bool direction) {
             // Direction is set as either alighning with DIR pin or aligning with its inverse
             // Clockwise is 1, counter-clockwise is 0 for DIR tied to ground
             if (direction) ctrl_reg |= (1 << DRV8711_DIRECTION_BIT);
@@ -182,7 +128,7 @@ class drv8711: public spi_device {
         }
 
 
-        void drv8711_setCurrent(uint16_t current) {
+        void drv8711::drv8711_setCurrent(uint16_t current) {
             // Drawing more than 8 amps is a bad idea
             if (current > 8000) {
             current = 8000;
@@ -221,7 +167,7 @@ class drv8711: public spi_device {
         }  
 
 
-        void drv8711_step() {
+        void drv8711::drv8711_step() {
             // Not writing into drv8711 struct because step is immediately cleared internally
             drv8711_writeReg(CTRL_REG_ADDRESS, ctrl_reg | (1 << DRV8711_STEP_BIT));
         }
@@ -233,7 +179,7 @@ class drv8711: public spi_device {
         // }
 
 
-        void drv8711_setStepMode(DRV8711_stepMode mode) {
+        void drv8711::drv8711_setStepMode(DRV8711_stepMode mode) {
             // Pick 1/4 micro-step by default.
             uint8_t sm = 0b0010;
             switch (mode) {
@@ -252,45 +198,33 @@ class drv8711: public spi_device {
         }
 
 
-        void drv8711_setDecayMode(DRV8711_decayMode mode) {
+        void drv8711::drv8711_setDecayMode(DRV8711_decayMode mode) {
             decay_reg = (decay_reg & 0b00011111111) | (((uint8_t)mode & 0b111) << 8);
             drv8711_writeReg(DECAY_REG_ADDRESS, decay_reg);
         }
 
 
-        uint8_t drv8711_readStatus() {
+        uint8_t drv8711::drv8711_readStatus() {
             return drv8711_readReg(STATUS_REG_ADDRESS);
         }
 
 
-        void drv8711_clearStatus() {
+        void drv8711::drv8711_clearStatus() {
             drv8711_writeReg(STATUS_REG_ADDRESS, 0x00);
         }
 
 
-        uint8_t drv8711_readFaults() {
+        uint8_t drv8711::drv8711_readFaults() {
             return drv8711_readReg(STATUS_REG_ADDRESS);
         }
 
 
-        void drv8711_clearFaults() {
+        void drv8711::drv8711_clearFaults() {
             drv8711_writeReg(STATUS_REG_ADDRESS, status_reg & 0xF00);
         }
 
 
         //INCORRECT
-        bool drv8711_getDirection() {
+        bool drv8711::drv8711_getDirection() {
             return (ctrl_reg & (1 << DRV8711_DIRECTION_BIT)) != 0;
         }
-       
-        private:
-            uint8_t slp_pin; // Pulled low by default
-            uint16_t ctrl_reg;
-            uint16_t torque_reg;
-            uint16_t off_reg;
-            uint16_t blank_reg;
-            uint16_t decay_reg;
-            uint16_t stall_reg;
-            uint16_t drive_reg;
-            uint16_t status_reg;
-};

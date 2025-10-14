@@ -30,13 +30,13 @@ public:
 
     void zero_encoder_value();
 
-    static inline uint8_t *read_position(uint8_t *bytes_read);
+    inline uint8_t *read_position(uint8_t *bytes_read);
 
-    static inline bool get_bit(uint8_t byte, int index);
+    inline bool get_bit(uint8_t byte, int index);
 
     bool verify_packet(uint8_t packet_contents[2]);
 
-    static inline float parse_angle(uint8_t packet_contents[2]);
+    inline float parse_angle(uint8_t packet_contents[2]);
 
     float get_motor_angle();
 

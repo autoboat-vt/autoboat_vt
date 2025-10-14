@@ -20,14 +20,7 @@
 #define SET_ZERO_POINT 0x70
 #define READ_TURNS 0xA0
 
-
-
-
-class amt22: public spi_device {
-public:
-
-
-    amt22(int cs_pin, spi_inst_t *spi_port) : spi_device(*spi_port, cs_pin) {
+    amt22::amt22(int cs_pin, spi_inst_t *spi_port) : spi_device(spi_port, cs_pin) {
 
         // Chip select is active-low, so we'll initialise it to a driven-high state
         gpio_init(cs_pin);
@@ -40,12 +33,12 @@ public:
     }
 
 
-    int get_turn_count(){
+    int amt22::get_turn_count(){
         return turn_count;
     }
 
 
-    void zero_encoder_value() {
+    void amt22::zero_encoder_value() {
         sleep_us(40);
         cs_select();
         sleep_us(3);
@@ -56,7 +49,7 @@ public:
     }
 
 
-    static inline uint8_t* read_position(uint8_t * bytes_read) {
+    inline uint8_t* amt22::read_position(uint8_t * bytes_read) {
         sleep_us(40);
         cs_select();
         sleep_us(3);
@@ -71,12 +64,12 @@ public:
     }
 
 
-    static inline bool get_bit(uint8_t byte, int index){
+    inline bool amt22::get_bit(uint8_t byte, int index){
         return (byte & 1 << (index)) != 0;
     }
 
 
-    bool verify_packet(uint8_t packet_contents[2]){
+    bool amt22::verify_packet(uint8_t packet_contents[2]){
         uint8_t first_byte = packet_contents[0];
         uint8_t second_byte = packet_contents[1];
 
@@ -118,7 +111,7 @@ public:
 
 
    
-    static inline float parse_angle(uint8_t packet_contents[2]){
+    inline float amt22::parse_angle(uint8_t packet_contents[2]){
 
 
         packet_contents[0] = packet_contents[0] & ~0b11000000;
@@ -135,7 +128,7 @@ public:
     }
 
 
-    float get_motor_angle() {
+    float amt22::get_motor_angle() {
         sleep_us(READ_RATE);
 
 
@@ -154,11 +147,7 @@ public:
     }
 
 
-    private:
-        spi_inst_t *spi_port;
-        int PICO_SPI_CSN_PIN;
-        float turn_count;
-        float cur_angle;
+   
 
 
-};
+

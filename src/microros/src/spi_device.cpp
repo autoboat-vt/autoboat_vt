@@ -1,11 +1,6 @@
 #include "spi_device.hpp"
 
-
-class spi_device {
-
-
-    public:
-        spi_device(spi_inst_t* spi_port, uint csPin) : csPin(csPin), spi_port(spi_port) {
+        spi_device::spi_device(spi_inst_t* spi_port, uint csPin) : csPin(csPin), spi_port(spi_port) {
 
             gpio_init(csPin);
             gpio_set_dir(csPin, GPIO_OUT);
@@ -14,7 +9,7 @@ class spi_device {
         }
 
         // Transfer a single byte
-        uint8_t transfer(uint8_t data) {
+        uint8_t spi_device::transfer(uint8_t data) {
             uint8_t rx;
             cs_select();
             spi_write_read_blocking(spi_port, &data, &rx, 1);
@@ -23,34 +18,27 @@ class spi_device {
         }
 
         // Transfer multiple bytes
-        void transfer(const uint8_t* tx, uint8_t* rx, size_t len) {
+        void spi_device::transfer(const uint8_t* tx, uint8_t* rx, size_t len) {
             cs_select();
             spi_write_read_blocking(spi_port, tx, rx, len);
             cs_deselect();
         }
 
-    private:
-       
-       
-        spi_inst_t *spi_port;
-        uint csPin;
-
-        static inline void cs_select() {
+        inline void spi_device::cs_select() {
             asm volatile("nop \n nop \n nop");
             asm volatile("nop \n nop \n nop");
-            gpio_put(PICO_SPI_CSN_PIN, 0);  // Active low
+            gpio_put(csPin, 0);  // Active low
             asm volatile("nop \n nop \n nop");
             asm volatile("nop \n nop \n nop");
         }
 
 
-        static inline void cs_deselect() {
+        inline void spi_device::cs_deselect() {
             asm volatile("nop \n nop \n nop");
             asm volatile("nop \n nop \n nop");
-            gpio_put(PICO_SPI_CSN_PIN, 1);  //Activate high
+            gpio_put(csPin, 1);  //Activate high
             asm volatile("nop \n nop \n nop");
             asm volatile("nop \n nop \n nop");
         }
 
 
-};

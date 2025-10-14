@@ -14,7 +14,7 @@ class spi_device {
 
 
     public:
-        spi_device(spi_inst_t* spi_port, uint csPin) {}
+        spi_device(spi_inst_t* spi_port, uint csPin);
 
 
         // Transfer a single byte
@@ -24,17 +24,13 @@ class spi_device {
         void transfer(const uint8_t* tx, uint8_t* rx, size_t len);
 
 
-    private:
+    protected:
         spi_inst_t *spi_port;
         uint csPin;
 
+        inline void cs_select();
 
-
-
-        static inline void cs_select();
-
-
-        static inline void cs_deselect();
+        inline void cs_deselect();
 
 
 };
