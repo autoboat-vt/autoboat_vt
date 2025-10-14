@@ -16,6 +16,9 @@
             type="text/javascript"
             src="https://rawgit.com/bbecquet/Leaflet.RotatedMarker/master/leaflet.rotatedMarker.js"
         ></script>
+        <script src="./leaflet-grids.js"></script>
+        <script src="./leaflet-control.js"></script>
+        <script src="./mgrs.js"></script>
         <style>
             #map {
                 position: absolute;
@@ -81,6 +84,12 @@
                         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
                         { minZoom: this.min_zoom, maxZoom: this.max_zoom }
                     ).addTo(this.map);
+
+                    var options = { gridType: "distance", showMetric: false };
+                    var scale = L.control.gridscale(options);
+                    scale.addTo(this.map);
+
+                    L.grids.distance.imperial().addTo(this.map);
 
                     this.map.on("move", e => {
                         if (
