@@ -30,10 +30,10 @@ std_srvs__srv__Empty_Request  empty_request_msg;
 std_srvs__srv__Empty_Response empty_response_msg;
 std_msgs__msg__Float32        test_msg;
 
-static drv8711 rudderStepperMotorDriver;
-static drv8711 winchStepperMotorDriver;
-static amt22   rudderEncoder;
-static amt22   winchEncoder;
+static drv8711* rudderStepperMotorDriver = nullptr;
+static drv8711* winchStepperMotorDriver = nullptr;
+static amt22*   rudderEncoder = nullptr;
+static amt22*   winchEncoder = nullptr;
 static cmps14  compass;
 
 
@@ -146,7 +146,7 @@ void application_init(rcl_allocator_t *allocator, rclc_support_t *support, rclc_
 
 
     #if BOAT_MODE == Theseus
-    initialize_contactor_driver(CONTACTOR_DRIVER_SEL0_PIN, CONTACTOR_DRIVER_PWM_PIN, CONTACTOR_DRIVER_IN_A_PIN, CONTACTOR_DRIVER_IN_B_PIN);
+    initialize_contactor_driver(CONTATOR_DRIVER_SEL0_PIN, CONTACTOR_DRIVER_PWM_PIN, CONTACTOR_DRIVER_IN_A_PIN, CONTACTOR_DRIVER_IN_B_PIN);
     #endif
 
 
@@ -204,7 +204,7 @@ void zero_rudder_encoder_callback(const void *msg_in) {
     const std_msgs__msg__Bool *zero_msg = (const std_msgs__msg__Bool *)msg_in;
     
     if (zero_msg->data) {  // If message is true, zero the encoder
-        rudderEncoder.zero_encoder_value();
+        rudderEncoder->zero_encoder_value();
     }   
 }
 
@@ -212,7 +212,7 @@ void zero_winch_encoder_callback(const void *msg_in) {
     const std_msgs__msg__Bool *zero_msg = (const std_msgs__msg__Bool *)msg_in;
     
     if (zero_msg->data) {  // If message is true, zero the encoder
-        winchEncoder.zero_encoder_value();
+        winchEncoder->zero_encoder_value();
     }
 }
 
@@ -222,12 +222,12 @@ void zero_winch_encoder_callback(const void *msg_in) {
 // MAIN APPLICATION LOOP
 // -----------------------------------------------------
 
-void application_loop() {
+void application_loop(rcl_timer_t * timer, int64_t last_call_time) {
 
     // -----------------------------------------------------
     // RUDDER CLOSED LOOP CONTROl
     // -----------------------------------------------------
-    float current_rudder_motor_angle = rudderEncoder.get_motor_angle() + RUDDER_ANGLE_OFFSET;     // motor_angle % 360
+    float current_rudder_motor_angle = rudderEncoder->get_motor_angle() + RUDDER_ANGLE_OFFSET;     // motor_angle % 360
     if (current_rudder_motor_angle >= 180) {
         current_rudder_motor_angle -= 360;
     }
@@ -242,10 +242,10 @@ void application_loop() {
         rudder_step_enabled = true;
 
         if (((int)rudder_error % 360) > 0 && ((int)rudder_error % 360) < 180) 
-            rudderStepperMotorDriver.drv8711_setDirection(COUNTER_CLOCKWISE);
+            rudderStepperMotorDriver->drv8711_setDirection(COUNTER_CLOCKWISE);
     
         else 
-            rudderStepperMotorDriver.drv8711_setDirection(CLOCKWISE);
+            rudderStepperMotorDriver->drv8711_setDirection(CLOCKWISE);
 
             // number_of_steps_rudder = RUDDER_GAIN * abs(rudder_error) + RUDDER_GAIN_Q * pow(abs(rudder_error), 2);
             number_of_steps_rudder = (int)(abs(rudder_error) * RUDDER_GAIN / MAX_RUDDER_ERROR);
@@ -264,7 +264,7 @@ void application_loop() {
     bool winch_step_enabled = false;
 
     #if BOAT_MODE == Lumpy
-    float current_winch_angle = winchEncoder.get_motor_angle() + WINCH_ANGLE_OFFSET + 360 * winchEncoder.get_turn_count();
+    float current_winch_angle = winchEncoder->get_motor_angle() + WINCH_ANGLE_OFFSET + 360 * winchEncoder->get_turn_count();
     float current_sail_angle = get_sail_angle_from_winch_angle(current_winch_angle);
     float winch_error = desired_winch_angle - current_winch_angle;
 
@@ -277,10 +277,10 @@ void application_loop() {
         winch_step_enabled = true;
         
         if (winch_error > 0) {
-            winchStepperMotorDriver.drv8711_setDirection(CLOCKWISE);
+            winchStepperMotorDriver->drv8711_setDirection(CLOCKWISE);
         }
         else {
-            winchStepperMotorDriver.drv8711_setDirection(COUNTER_CLOCKWISE);
+            winchStepperMotorDriver->drv8711_setDirection(COUNTER_CLOCKWISE);
         }
 
         // number of steps is some linear function that maps the error of the rudder to a number of steps we want to take per loop.
@@ -303,11 +303,11 @@ void application_loop() {
 
     for (int i = 0; i < max_steps; i++) {
         if (rudder_step_enabled && i < number_of_steps_rudder)
-            rudderStepperMotorDriver.drv8711_step();
+            rudderStepperMotorDriver->drv8711_step();
 
         #if BOAT_MODE == Lumpy
         if (winch_step_enabled && i < number_of_steps_winch)
-            winchStepperMotorDriver.drv8711_step();
+            winchStepperMotorDriver->drv8711_step();
         #endif
 
         sleep_us(MIN_TIME_BETWEEN_MOTOR_STEPS_MICROSECONDS);
