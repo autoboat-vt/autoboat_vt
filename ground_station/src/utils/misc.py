@@ -13,7 +13,7 @@ from collections.abc import Callable
 T = TypeVar("T")
 
 
-def __get_icons() -> SimpleNamespace:
+def get_icons() -> SimpleNamespace:
     """
     Load and return a set of icons for the application.
 
