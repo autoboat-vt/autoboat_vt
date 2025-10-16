@@ -22,7 +22,8 @@ setup(
         'console_scripts': [
             "gps = sensors.gps_publisher:main",
             'wind_sensor = sensors.wind_sensor_publisher:main',
-            'rc = sensors.rc_publisher:main'
+            'rc = sensors.rc_publisher:main',
+            'jetson_stats = sensors.temp_power_stats_publisher:main'
         ],
     },
 )
