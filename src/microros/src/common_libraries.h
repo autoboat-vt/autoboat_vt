@@ -17,7 +17,10 @@
 
 // Pico SDK libraries
 #include <pico/stdlib.h>
+
+extern "C" {
 #include <pico_uart_transports.h>
+}
 
 // Configuration files
 #include "config.h"

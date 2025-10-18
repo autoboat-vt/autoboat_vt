@@ -135,7 +135,7 @@ void application_init(rcl_allocator_t *allocator, rclc_support_t *support, rclc_
 
 
     amt22 rudderEncoder(RUDDER_ENCODER_CS_PIN, SPI_PORT);
-    drv8711 rudderStepperMotorDriver( SPI_PORT, RUDDER_MOTOR_CS_PIN, RUDDER_MOTOR_SLEEP_PIN, AutoMixed, RUDDER_MICROSTEP, MAX_RUDDER_CURRENT);
+    drv8711 rudderStepperMotorDriver(SPI_PORT, RUDDER_MOTOR_CS_PIN, RUDDER_MOTOR_SLEEP_PIN, AutoMixed, RUDDER_MICROSTEP, MAX_RUDDER_CURRENT);
 
     cmps14_init(&compass, I2C_PORT, 0x60);
 

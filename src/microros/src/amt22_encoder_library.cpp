@@ -33,32 +33,32 @@
     }
 
 
-    int amt22::get_turn_count(){
+    uint8_t amt22::get_turn_count(){
         return turn_count;
     }
 
 
     void amt22::zero_encoder_value() {
         sleep_us(40);
-        cs_select();
+        this->cs_select();
         sleep_us(3);
         uint8_t send[2] = {NO_OP, SET_ZERO_POINT};  
         spi_write_blocking(spi_port, send, 2);
         sleep_us(3);  
-        cs_deselect();
+        this->cs_deselect();
     }
 
 
     inline uint8_t* amt22::read_position(uint8_t * bytes_read) {
         sleep_us(40);
-        cs_select();
+        this->cs_select();
         sleep_us(3);
         uint8_t send[2] = {NO_OP, NO_OP};    
         spi_write_read_blocking(spi_port, send, bytes_read, 2);
         sleep_us(3);
 
 
-        cs_deselect();
+        this->cs_deselect();
    
         return bytes_read;
     }

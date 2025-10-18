@@ -28,9 +28,9 @@ class spi_device {
         spi_inst_t *spi_port;
         uint csPin;
 
-        inline void cs_select();
+        void cs_select();
 
-        inline void cs_deselect();
+        void cs_deselect();
 
 
 };

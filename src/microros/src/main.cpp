@@ -1,5 +1,6 @@
 // Include the microros nodes
 #include "main_microros_node.cpp"
+#include "common_libraries.h"
 
 // Change when adding new nodes
 #define NUMBER_OF_NODES 1

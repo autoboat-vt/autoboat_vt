@@ -49,6 +49,8 @@ target_include_directories(pico_microros PUBLIC
     $ENV{PICO_SDK_PATH}/src/rp2_common/hardware_pwm/include
 )
 
+target_compile_options(pico_microros PRIVATE -Wno-unused-result)
+
 SET(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections")
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -ffunction-sections -fdata-sections")
 

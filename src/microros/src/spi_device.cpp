@@ -24,7 +24,7 @@
             cs_deselect();
         }
 
-        inline void spi_device::cs_select() {
+        void spi_device::cs_select() {
             asm volatile("nop \n nop \n nop");
             asm volatile("nop \n nop \n nop");
             gpio_put(csPin, 0);  // Active low
@@ -33,7 +33,7 @@
         }
 
 
-        inline void spi_device::cs_deselect() {
+        void spi_device::cs_deselect() {
             asm volatile("nop \n nop \n nop");
             asm volatile("nop \n nop \n nop");
             gpio_put(csPin, 1);  //Activate high

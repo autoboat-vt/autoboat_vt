@@ -26,7 +26,7 @@ public:
 
     amt22(int cs_pin, spi_inst_t *spi_port);
 
-    int get_turn_count();
+    uint8_t get_turn_count();
 
     void zero_encoder_value();
 

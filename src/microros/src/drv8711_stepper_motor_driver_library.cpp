@@ -38,9 +38,9 @@
             uint8_t tx[2] = {(send & 0x00FF), (send & 0xFF00) >> 8};
             uint8_t rx[2] = {};
    
-            cs_select();
+            this->cs_select();
             spi_write_read_blocking(spi_port, tx, rx, 2);
-            cs_deselect();
+            this->cs_deselect();
             uint16_t rx0 = rx[0];
             uint16_t rx1 = rx[1];
             uint16_t whatIsRead = ((rx0 & 0x0F) >> 8) | rx1;
@@ -56,9 +56,9 @@
             // Bits 4:15 - Data to write
             uint16_t send = ((address & 0b111) << 12) | (value & 0xFFF);
             uint8_t tx[2] = {send >> 8, send & 0x00FF};
-            cs_select();
+            this->cs_select();
             spi_write_blocking(spi_port, tx, 2);
-            cs_deselect();
+            this->cs_deselect();
         }
 
 
