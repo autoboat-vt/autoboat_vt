@@ -60,10 +60,11 @@ class InstanceHandler(QWidget):
         self.searchbar.setPlaceholderText("Search instances...")
         self.searchbar.textChanged.connect(self.filter_instances)
 
-        # status label to show search results
+        # status label to show search results and connection status
         self.status_label = QLabel()
         self.status_label.setStyleSheet("color: #D3D3D3; font-size: 12pt;")
         self.status_label.setAlignment(Qt.AlignCenter)
+        self.update_status_label()
 
         self.button_groupbox = QGroupBox()
         self.button_layout = QHBoxLayout()
@@ -161,17 +162,9 @@ class InstanceHandler(QWidget):
             self.instances_container.update()
             self.handle_no_instances()
 
-        elif len(self.widgets_by_id) == 1:
-            widget = self.widgets_by_id[next(iter(self.widgets_by_id))]
-            if widget.instance_id != constants.TELEMETRY_SERVER_INSTANCE_ID:
-                constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
-                constants.TELEMETRY_SERVER_INSTANCE_ID = widget.instance_id
-                print(f"[Info] Only one instance found. Automatically connected to instance #{widget.instance_id}.")
-
-        elif len(self.widgets_by_id) > 1 and constants.TELEMETRY_SERVER_INSTANCE_ID == -1:
+        elif constants.TELEMETRY_SERVER_INSTANCE_ID == -1:
             self.instances_container.setUpdatesEnabled(True)
             self.instances_container.update()
-            self.handle_multiple_instances()
 
         # endregion instance selection logic
 
@@ -184,7 +177,7 @@ class InstanceHandler(QWidget):
         if self.current_search_text:
             self.filter_instances(self.current_search_text)
         else:
-            self.status_label.setText(f"{len(self.widgets_by_id)} instances found")
+            self.update_status_label()
 
         self.instances_container.setUpdatesEnabled(True)
         self.instances_container.update()
@@ -233,6 +226,28 @@ class InstanceHandler(QWidget):
 
         self.timer.start()
 
+    def update_status_label(self) -> None:
+        """Update the status label with current connection status and instance count."""
+
+        instance_count = len(self.widgets_by_id)
+
+        if constants.TELEMETRY_SERVER_INSTANCE_ID == -1:
+            status_prefix = "NOT CONNECTED - Please select an instance | "
+        else:
+            connected_widget = self.widgets_by_id.get(constants.TELEMETRY_SERVER_INSTANCE_ID)
+            if connected_widget:
+                status_prefix = f"✓ Connected to: {connected_widget.instance_identifier} (ID: {constants.TELEMETRY_SERVER_INSTANCE_ID}) | "
+            else:
+                status_prefix = f"✓ Connected to instance #{constants.TELEMETRY_SERVER_INSTANCE_ID} | "
+
+        if self.current_search_text:
+            visible_count = sum(widget.isVisible() for widget in self.widgets_by_id.values())
+            self.status_label.setText(
+                f"{status_prefix}{visible_count} instances found matching '{self.current_search_text}'"
+            )
+        else:
+            self.status_label.setText(f"{status_prefix}{instance_count} instances found")
+
     def handle_multiple_instances(self) -> None:
         """
         Handles the scenario when multiple instances exist but none is selected.
@@ -241,13 +256,6 @@ class InstanceHandler(QWidget):
         """
 
         self.timer.stop()
-
-        # focus the instance handler tab so we can see the instances
-        main_window = self.window()
-        tab_widget = main_window.centralWidget()
-        if isinstance(tab_widget, QTabWidget):
-            tab_widget.setCurrentWidget(self)
-
         dialog_text = "Please select the instance you want to connect to."
 
         while True:
@@ -289,11 +297,7 @@ class InstanceHandler(QWidget):
             else:
                 widget.hide()
 
-        visible_count = sum(widget.isVisible() for widget in self.widgets_by_id.values())
-        if text:
-            self.status_label.setText(f"{visible_count} instances found matching '{text}'")
-        else:
-            self.status_label.setText(f"{len(self.widgets_by_id)} instances found")
+        self.update_status_label()
 
     def create_new_instance(self) -> None:
         """Create a new instance on the telemetry server."""

@@ -21,19 +21,46 @@ class MainWindow(QMainWindow):
         self.main_widget = QTabWidget()
         self.setCentralWidget(self.main_widget)
 
+        self.tabs_loaded = False
+
         try:
             # load console first to capture any startup messages
-            self.main_widget.addTab(ConsoleOutputWidget(), "Console Output")
+            self.console_widget = ConsoleOutputWidget()
+            self.instance_handler = InstanceHandler()
+            self.main_widget.addTab(self.console_widget, "Console Output")
 
-            self.main_widget.addTab(GroundStationWidget(), "Ground Station")
-            self.main_widget.addTab(InstanceHandler(), "Instance Handler")
-            self.main_widget.addTab(AutopilotParamEditor(), "Autopilot Parameters")
-            self.main_widget.addTab(CameraWidget(), "Camera Feed")
+            if constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
+                self.load_main_tabs()
+            else:
+                self.main_widget.addTab(self.instance_handler, "Instance Handler")
+                self.check_timer = misc.copy_qtimer(constants.TEN_MS_TIMER)
+                self.check_timer.timeout.connect(self.check_instance_connection)
+                self.check_timer.start()
 
         except Exception as e:
             print(f"Error: {e}")
 
-        self.main_widget.setCurrentIndex(2)
+    def load_main_tabs(self) -> None:
+        """Load the main application tabs after an instance is connected."""
+
+        if not self.tabs_loaded:
+            try:
+                self.main_widget.addTab(GroundStationWidget(), "Ground Station")
+                self.main_widget.addTab(self.instance_handler, "Instance Handler")
+                self.main_widget.addTab(AutopilotParamEditor(), "Autopilot Parameters")
+                self.main_widget.addTab(CameraWidget(), "Camera Feed")
+                self.tabs_loaded = True
+                print("[Info] Main application tabs loaded.")
+
+            except Exception as e:
+                print(f"Error loading main tabs: {e}")
+
+    def check_instance_connection(self) -> None:
+        """Check if an instance has been connected and load tabs if needed."""
+
+        if constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED and not self.tabs_loaded:
+            self.check_timer.stop()
+            self.load_main_tabs()
 
 
 if __name__ == "__main__":
