@@ -14,7 +14,6 @@ from qtpy.QtWidgets import (
     QLineEdit,
     QLabel,
     QFormLayout,
-    QTabWidget,
     QMessageBox,
     QGroupBox,
 )
