@@ -1,0 +1,1 @@
+docker build -t vtautoboat/autoboat_docker_dev_image -f /home/ws/.devcontainer/Dockerfile .
