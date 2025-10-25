@@ -43,6 +43,9 @@ RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sud
 RUN sudo apt install ros-humble-librealsense2* -y
 RUN sudo apt install ros-humble-realsense2-* -y
 
+RUN sudo rm /etc/apt/sources.list.d/ros-latest.list
+RUN sudo apt update
+
 #Used to automate tasks
 RUN sudo apt-get install cron --fix-missing
 
