@@ -255,7 +255,6 @@ class InstanceHandler(QWidget):
             # checking if we have seen this instance before
             widget = self.widgets_by_id.get(instance_info.instance_id)
             if widget:
-                # Update the widget's updated_at attribute for sorting
                 widget.updated_at = instance_info.updated_at
                 new_updated_at = instance_info.updated_at.strftime("%Y-%m-%d %I:%M:%S %p")
                 widget.updated_at_label.setText(new_updated_at)
