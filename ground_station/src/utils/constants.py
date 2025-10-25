@@ -46,37 +46,49 @@ class TelemetryStatus(StrEnum):
     `StrEnum`
     """
 
-    SUCCESS: str = auto()
-    FAILURE: str = auto()
+    SUCCESS = auto()
+    FAILURE = auto()
 
 
 # see `main.py` for where this is set
 ICONS: SimpleNamespace
 
 # colors (monokai pro color scheme)
+RED = QColor("#ff6188")
+ORANGE = QColor("#fc9867")
 YELLOW = QColor("#ffd866")
+GREEN = QColor("#a9dc76")
 PURPLE = QColor("#ab9df2")
 BLUE = QColor("#78dce8")
 WHITE = QColor("#f8f8f2")
-RED = QColor("#f76c7c")
 GREY = QColor("#82878b")
-GREEN = QColor("#9CD57B")
+
+WEB_LINK_COLOR = QColor("#2a82da")
+BACKGROUND_COLOR = QColor("#333333")
+DARK_BASE = QColor("#252525")
+ACCENT_COLOR = QColor("#AAAAAA")
+FONT_COLOR = QColor("#F5F5F5")
+
+WEB_LINK_COLOR = QColor("#2a82da")
+BACKGROUND_COLOR = QColor("#333333")
+ACCENT_COLOR = QColor("#AAAAAA")
+FONT_COLOR = QColor("#F5F5F5")
 
 # pallette and style sheet
 PALLETTE = QPalette()
 
-PALLETTE.setColor(QPalette.Window, QColor(53, 53, 53))
-PALLETTE.setColor(QPalette.WindowText, Qt.white)
-PALLETTE.setColor(QPalette.Base, QColor(25, 25, 25))
-PALLETTE.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
-PALLETTE.setColor(QPalette.ToolTipBase, Qt.white)
-PALLETTE.setColor(QPalette.ToolTipText, Qt.white)
-PALLETTE.setColor(QPalette.Text, Qt.white)
-PALLETTE.setColor(QPalette.Button, QColor(53, 53, 53))
-PALLETTE.setColor(QPalette.ButtonText, Qt.white)
+PALLETTE.setColor(QPalette.Window, BACKGROUND_COLOR)
+PALLETTE.setColor(QPalette.WindowText, FONT_COLOR)
+PALLETTE.setColor(QPalette.Base, BACKGROUND_COLOR)
+PALLETTE.setColor(QPalette.AlternateBase, ACCENT_COLOR)
+PALLETTE.setColor(QPalette.ToolTipBase, FONT_COLOR)
+PALLETTE.setColor(QPalette.ToolTipText, FONT_COLOR)
+PALLETTE.setColor(QPalette.Text, FONT_COLOR)
+PALLETTE.setColor(QPalette.Button, BACKGROUND_COLOR)
+PALLETTE.setColor(QPalette.ButtonText, FONT_COLOR)
 PALLETTE.setColor(QPalette.BrightText, Qt.red)
-PALLETTE.setColor(QPalette.Link, QColor(42, 130, 218))
-PALLETTE.setColor(QPalette.Highlight, Qt.white)
+PALLETTE.setColor(QPalette.Link, WEB_LINK_COLOR)
+PALLETTE.setColor(QPalette.Highlight, FONT_COLOR)
 PALLETTE.setColor(QPalette.HighlightedText, Qt.black)
 
 STYLE_SHEET = """

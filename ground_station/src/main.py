@@ -26,6 +26,7 @@ class MainWindow(QMainWindow):
         try:
             # load console first to capture any startup messages
             self.console_widget = ConsoleOutputWidget()
+            print(f"[Info] Starting the {self.windowTitle()}...")
             self.instance_handler = InstanceHandler()
             self.main_widget.addTab(self.console_widget, "Console Output")
 

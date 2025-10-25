@@ -170,7 +170,9 @@ class GroundStationWidget(QWidget):
         )
 
         self.middle_layout.addWidget(self.browser, 0, 1)
+        self.middle_layout.setRowStretch(0, 1)
         self.middle_layout.addWidget(self.waypoints_checker_toggle, 1, 1, Qt.AlignCenter)
+        self.middle_layout.setRowStretch(1, 0)
         self.main_layout.addLayout(self.middle_layout, 0, 1)
         # endregion middle section
 
