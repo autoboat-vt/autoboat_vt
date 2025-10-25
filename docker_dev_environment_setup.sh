@@ -9,12 +9,6 @@ sudo chmod -R 777 /etc/udev/
 # Make sure that you can just type python and you don't have to type python3 because people will get confused
 echo 'alias python="python3"' >> /home/autoboat_user/.bashrc
 
-
-# Install all python packages
-pip install -r requirements.txt
-pip install -r ground_station/requirements.txt
-
-
 # Install all of the pip packages
 pip install -e /home/ws/src/vesc/pyvesc/
 pip install -e /home/ws/src/simulation/sailboat_gym/
@@ -27,7 +21,7 @@ echo source /opt/ros/humble/setup.bash >> "/home/autoboat_user/.bashrc"
 source /home/autoboat_user/.bashrc
 colcon build --symlink-install
 
-echo source install/setup.bash >> "/home/autoboat_user/.bashrc"
+echo source /home/ws/install/setup.bash >> "/home/autoboat_user/.bashrc"
 
 
 
@@ -52,3 +46,5 @@ sudo echo ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTR
 sudo udevadm trigger
 
 
+
+source ~/.bashrc

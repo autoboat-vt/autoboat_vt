@@ -6,8 +6,10 @@ Contains:
 - InstanceFetcher: Fetches the currently available instances from the telemetry server.
 - LocalWaypointFetcher: Fetches waypoints from the local server.
 - RemoteWaypointFetcher: Fetches waypoints from the telemetry server.
-- ImageFetcher: Fetches images from the telemetry server.
+- TelemetryUpdater: Fetches telemetry data from the telemetry server.
 """
+
+__all__ = ["ImageFetcher", "LocalWaypointFetcher", "RemoteWaypointFetcher", "TelemetryUpdater"]
 
 import requests
 from utils import constants

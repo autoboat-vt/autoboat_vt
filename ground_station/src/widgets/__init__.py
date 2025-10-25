@@ -10,7 +10,14 @@ Contains:
 - TextEditWindow: Popup window for editing text.
 """
 
-__all__ = ["AutopilotParamEditor", "CameraWidget", "ConsoleOutputWidget", "GroundStationWidget", "InstanceHandler", "TextEditWindow"]
+__all__ = [
+    "AutopilotParamEditor",
+    "CameraWidget",
+    "ConsoleOutputWidget",
+    "GroundStationWidget",
+    "InstanceHandler",
+    "TextEditWindow",
+]
 
 from .autopilot_param_editor.editor import AutopilotParamEditor
 from .camera_widget.camera import CameraWidget

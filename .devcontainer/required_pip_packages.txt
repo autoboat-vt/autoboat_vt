@@ -1,3 +1,6 @@
+# This file is primarily for building new docker images, and it is what the Dockerfile references when it preinstalls all of its pip packages
+# If you would like to add a new python dependency, you should add it to this 
+
 # Coordinate Conversions
 navpy
 pygeodesy
@@ -27,7 +30,7 @@ imageio-ffmpeg
 # Telemetry/ Internet
 requests
 
-# documentation
+# Documentation
 mkdocs
 mkdocs-material
 
@@ -42,3 +45,21 @@ dataclass_wizard
 click
 pympler
 ruff
+
+
+
+# Groundstation
+urllib3
+QtAwesome
+python-dateutil
+PyQtWebEngine
+PyQt5
+QtPy
+packaging
+idna
+charset-normalizer
+jsonc-parser
+requests
+PyYAML
+pytz
+strenum
