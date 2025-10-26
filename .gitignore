@@ -35,3 +35,5 @@ src/object_detection/object_detection/runs/**
 src/object_detection/object_detection/test_results/**
 src/object_detection/object_detection/weights/**
 src/object_detection/object_detection/dataset/**
+src/object_detection/object_detection/dataset/**
+src/object_detection/object_detection/hard_images/**

@@ -13,9 +13,13 @@ mkdir src/object_detection/object_detection/dataset
 
 # Download pre trained model weights
 git-lfs clone https://huggingface.co/datasets/Aanimated/autoboat_vt_models src/object_detection/object_detection/weights
+rm -rf src/object_detection/object_detection/weights/.git
+rm src/object_detection/object_detection/weights/.gitattributes
 
 # Download the hard test images
 git-lfs clone https://huggingface.co/datasets/Aanimated/autoboat_vt_hard_images src/object_detection/object_detection/hard_images
+rm -rf src/object_detection/object_detection/hard_images/.git
+rm src/object_detection/object_detection/hard_images/.gitattributes
 
 # Download the dataset
 cd src/object_detection/object_detection/dataset
