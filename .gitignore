@@ -29,4 +29,9 @@ ground_station/app_data/
 !ground_station/app_data/autopilot_params/params_default.jsonc
 
 
-src/object_detection
+# src/object_detection
+
+src/object_detection/object_detection/runs/**
+src/object_detection/object_detection/test_results/**
+src/object_detection/object_detection/weights/**
+src/object_detection/object_detection/dataset/**
