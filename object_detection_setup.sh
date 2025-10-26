@@ -4,6 +4,12 @@ sudo apt install unzip
 
 # git-lfs clone https://huggingface.co/datasets/Aanimated/autoboat_vt_object_detection src/object_detection
 
+mkdir src/object_detection/object_detection/weights
+mkdir src/object_detection/object_detection/runs
+mkdir src/object_detection/object_detection/hard_images
+mkdir src/object_detection/object_detection/test_results
+mkdir src/object_detection/object_detection/dataset
+
 
 # Download pre trained model weights
 git-lfs clone https://huggingface.co/datasets/Aanimated/autoboat_vt_models src/object_detection/object_detection/weights
