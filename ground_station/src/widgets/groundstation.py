@@ -684,7 +684,7 @@ class GroundStationWidget(QWidget):
             print("[Info] Waypoint checker disabled, not checking for waypoint updates.")
             return
 
-        if not self.remote_waypoint_handler.isRunning() and constants.TELEMETRY_SERVER_INSTANCE_ID != -1:
+        if not self.remote_waypoint_handler.isRunning():
             self.remote_waypoint_handler.start()
 
     def update_telemetry_starter(self) -> None:
@@ -692,8 +692,9 @@ class GroundStationWidget(QWidget):
 
         if constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
             self.clear_waypoints()
+            constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = False
 
-        if not self.telemetry_handler.isRunning() and constants.TELEMETRY_SERVER_INSTANCE_ID != -1:
+        if not self.telemetry_handler.isRunning():
             self.telemetry_handler.start()
 
     def update_waypoints_display(self, waypoints: list[list[float]]) -> None:

@@ -67,7 +67,7 @@ def get_icons() -> SimpleNamespace:
 def pushbutton_maker(
     button_text: str,
     icon: QIcon,
-    function: Callable,
+    function: Callable[[], None],
     style_sheet: str | None = None,
     max_width: int | None = None,
     min_height: int | None = None,
@@ -180,10 +180,7 @@ def show_message_box(
 
 
 def show_input_dialog(
-    title: str,
-    label: str,
-    default_value: str | None = None,
-    input_type: T = str,
+    title: str, label: str, default_value: str | None = None, input_type: Callable[[str], T] = str
 ) -> T | None:
     """
     Show an input dialog to get user input.
@@ -202,11 +199,15 @@ def show_input_dialog(
 
     Returns
     -------
-    Union[T, None]
+    T | None
         The user input converted to the specified type, or `None` if the dialog was cancelled.
     """
 
-    text, ok = QInputDialog.getText(None, title, label, text=default_value)
+    if default_value is not None:
+        text, ok = QInputDialog.getText(None, title, label, text=default_value)
+
+    else:
+        text, ok = QInputDialog.getText(None, title, label)
 
     if ok:
         try:
@@ -264,31 +265,3 @@ def copy_qtimer(original: QTimer) -> QTimer:
     new_timer.setInterval(original.interval())
     new_timer.setSingleShot(original.isSingleShot())
     return new_timer
-
-
-def verify_paths_exist() -> bool:
-    """
-    Verify that all required file paths exist.
-
-    Returns
-    -------
-    bool
-        `True` if all required paths exist, `False` otherwise.
-    """
-
-    import os
-    import constants
-
-    required_paths = [
-        constants.LOG_DIR,
-        constants.CONFIG_DIR,
-        constants.CAMERA_DIR,
-        constants.WAYPOINTS_DIR,
-    ]
-
-    for path in required_paths:
-        if not os.path.exists(path):
-            print(f"[Error] Required path does not exist: {path}")
-            return False
-
-    return True
