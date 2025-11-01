@@ -45,6 +45,7 @@ static float desired_winch_angle  = 0;
 
 void application_init(rcl_allocator_t *allocator, rclc_support_t *support, rclc_executor_t *executor) {
 
+    
     // -----------------------------------------------------
     // INITIALIZE THE MICROROS NODE
     // -----------------------------------------------------
@@ -118,6 +119,8 @@ void application_init(rcl_allocator_t *allocator, rclc_support_t *support, rclc_
     gpio_pull_up(SDA_PIN);
     gpio_pull_up(SCL_PIN);
 
+    
+
 
     // -----------------------------------------------------
     //  INITIALIZE ALL CONNECTED DEVICES (SUCH AS COMPASS, ENCODER, CONTACTOR_DRIVER, STEPPER MOTOR DRIVER)
@@ -156,6 +159,7 @@ void application_init(rcl_allocator_t *allocator, rclc_support_t *support, rclc_
     desired_rudder_angle_msg.data = 0.0;
     current_rudder_angle_msg.data = 0.0;
     compass_angle_msg.data = 0.0;
+
 }
 
 
@@ -214,6 +218,7 @@ void zero_winch_encoder_callback(const void *msg_in) {
     if (zero_msg->data) {  // If message is true, zero the encoder
         winchEncoder->zero_encoder_value();
     }
+
 }
 
 
@@ -224,13 +229,14 @@ void zero_winch_encoder_callback(const void *msg_in) {
 
 void application_loop(rcl_timer_t * timer, int64_t last_call_time) {
 
+
     // -----------------------------------------------------
     // RUDDER CLOSED LOOP CONTROl
     // -----------------------------------------------------
     float current_rudder_motor_angle = rudderEncoder->get_motor_angle() + RUDDER_ANGLE_OFFSET;     // motor_angle % 360
-    if (current_rudder_motor_angle >= 180) {
-        current_rudder_motor_angle -= 360;
-    }
+    // if (current_rudder_motor_angle >= 180) {
+    //     current_rudder_motor_angle -= 360;
+    // }
 
     float current_rudder_angle = get_rudder_angle_from_motor_angle(current_rudder_motor_angle);
     float rudder_error = current_rudder_angle - desired_rudder_angle;
@@ -256,6 +262,7 @@ void application_loop(rcl_timer_t * timer, int64_t last_call_time) {
 
     }
 
+    
 
     // -----------------------------------------------------
     // SAIL CLOSED LOOP CONTROl
@@ -290,6 +297,9 @@ void application_loop(rcl_timer_t * timer, int64_t last_call_time) {
         if (number_of_steps_winch > WINCH_NUMBER_OF_STEPS_TO_CLIP_AT) {
             number_of_steps_winch = WINCH_NUMBER_OF_STEPS_TO_CLIP_AT;
         }
+        
+        
+
     }
     
 
@@ -321,8 +331,8 @@ void application_loop(rcl_timer_t * timer, int64_t last_call_time) {
     
     // counter clockwise from true east
     compass_angle_msg.data = fmod((-cmps14_getBearing(&compass) / 10.0 + COMPASS_OFFSET + 360), 360.0);
-    current_rudder_angle_msg.data = current_rudder_angle;
-    current_rudder_motor_angle_msg.data = current_rudder_motor_angle;
+    current_rudder_angle_msg.data = 0.0;//current_rudder_angle;
+    current_rudder_motor_angle_msg.data = 0.0;//current_rudder_motor_angle;
 
     test_msg.data = rudder_error;
 
@@ -330,7 +340,6 @@ void application_loop(rcl_timer_t * timer, int64_t last_call_time) {
     rcl_publish(&current_rudder_motor_angle_publisher, &current_rudder_motor_angle_msg, NULL);
     rcl_publish(&current_rudder_angle_publisher, &current_rudder_angle_msg, NULL);
     rcl_publish(&compass_angle_publisher, &compass_angle_msg, NULL);
-
 
     #endif
 }

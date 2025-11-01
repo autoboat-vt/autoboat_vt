@@ -6,7 +6,7 @@
 #include "spi_device.hpp"
 #include "amt22_encoder_library.h"
 
-
+#define LED_PIN 25
 
 
 #define READ_BIT 0x00
@@ -50,11 +50,23 @@
 
 
     inline uint8_t* amt22::read_position(uint8_t * bytes_read) {
+        
+        gpio_init(LED_PIN);
+        gpio_set_dir(LED_PIN, 1);
+        
         sleep_us(40);
         this->cs_select();
+
+        
+
         sleep_us(3);
         uint8_t send[2] = {NO_OP, NO_OP};    
-        spi_write_read_blocking(spi_port, send, bytes_read, 2);
+
+        // source of error
+        spi_write_read_blocking(this->spi_port, send, bytes_read, 2);
+
+        gpio_put(LED_PIN, 1);
+
         sleep_us(3);
 
 
@@ -129,12 +141,21 @@
 
 
     float amt22::get_motor_angle() {
-        sleep_us(READ_RATE);
+        
+        
+
+        // sleep_us(READ_RATE);
+
+        
 
 
         uint8_t* packet_array = (uint8_t*) malloc(2*sizeof(uint8_t));
    
-        read_position(packet_array) ;
+        
+
+        read_position(packet_array);
+
+        
         if (verify_packet(packet_array) != 1) return cur_angle; // get_motor_angle(encoder);
         float next_angle = parse_angle(packet_array);
         free(packet_array);
