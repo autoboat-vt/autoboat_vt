@@ -1,5 +1,4 @@
-#ifndef CMPS14_I2CSENSOR_H  
-#define CMPS14_I2CSENSOR_H 
+
 
 #include "hardware/i2c.h"
 #include <cmath>
@@ -26,14 +25,16 @@
 #define GYROSCOPE_SCALE 1.0 / 16.0              // 1 Dps
 #define MAGNETOMETER_SCALE 1.0                   // No clue
 
-class cmps14 : public I2CDevice { 
-public:
+#include "cmps14_Subclass.h"
 
-cmps14(i2c_inst_t* port, uint8_t address) : I2CDevice(port,address) {
+
+
+cmps14::cmps14(i2c_inst_t* port, uint8_t address) : I2CDevice(port,address) {
+
 
 }
 
-int16_t getBearing() {
+int16_t cmps14::getBearing() {
     uint8_t buffer[2];
     if (readBytes(BEARING_Register, buffer, 2) != 2) { //0x02
         return -1;}
@@ -42,7 +43,7 @@ int16_t getBearing() {
     return result;
 }
 
-int8_t getPitch() {
+int8_t cmps14::getPitch() {
     uint8_t buffer; 
     if (readBytes(PITCH_Register, &buffer, 1) != 1) {
         return 0;
@@ -50,7 +51,7 @@ int8_t getPitch() {
     return (int8_t)buffer;
 }
 
-int8_t getRoll() {
+int8_t cmps14::getRoll() {
     uint8_t buffer;
     if (readBytes(ROLL_Register, &buffer, 1) != 1) {
         return 0;
@@ -59,7 +60,7 @@ int8_t getRoll() {
 }
 
 //accellXYZ is never stored or sent anywhere.
-void readAccelerator(float *accelX, float *accelY, float *accelZ) {
+void cmps14::readAccelerator(float *accelX, float *accelY, float *accelZ) {
     uint8_t buffer[6];
     if (readBytes(ACCELEROX_Register, buffer, 6) != 6) {
         *accelX = 0;
@@ -71,7 +72,7 @@ void readAccelerator(float *accelX, float *accelY, float *accelZ) {
     *accelY = ((int16_t)(buffer[2] << 8 | buffer[3])) * ACCELEROMETER_SCALE;
     *accelZ = ((int16_t)(buffer[4] << 8 | buffer[5])) * ACCELEROMETER_SCALE;
 }
-void readGyro(float *gyroX, float *gyroY, float *gyroZ) {
+void cmps14::readGyro(float *gyroX, float *gyroY, float *gyroZ) {
     uint8_t buffer[6];
     if (readBytes(GYROX_Register, buffer, 6) != 6) {
         *gyroX = 0;
@@ -84,7 +85,7 @@ void readGyro(float *gyroX, float *gyroY, float *gyroZ) {
     *gyroZ = ((int16_t)(buffer[4] << 8 | buffer[5])) * GYROSCOPE_SCALE;
 }
 
-void readMagnet(float *magnetX, float *magnetY, float *magnetZ) {
+void cmps14::readMagnet(float *magnetX, float *magnetY, float *magnetZ) {
     uint8_t buffer[6];
     if (readBytes(MAGNETX_Register, buffer, 6) != 6) {
         *magnetX = 0;
@@ -97,13 +98,6 @@ void readMagnet(float *magnetX, float *magnetY, float *magnetZ) {
     *magnetZ = ((int16_t)(buffer[4] << 8 | buffer[5])) * MAGNETOMETER_SCALE;
 }
 
-    ~I2CDevice(){
+    cmps14::~cmps14(){
         //Cleanup Code, only primitives and no pointers[?], nothing needed
     }
-
-};//end cmps14      
-
-#endif   
-
-
-

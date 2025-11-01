@@ -5,7 +5,7 @@
 #include "common_libraries.h"
 
 // Specific device libraries
-#include "cmps14_compass_library.h"
+#include "cmps14_Subclass.h"
 #include "contactor_driver_library.h"
 #include "amt22_encoder_library.h"
 #include "drv8711_stepper_motor_driver_library.h"
@@ -53,7 +53,8 @@
 #define RUDDER_ANGLE_OFFSET -85
 #define WINCH_ANGLE_OFFSET 0
 // #define COMPASS_OFFSET -13.7 // Magnetic Declination at WPI
-#define COMPASS_OFFSET 180
+//#define COMPASS_OFFSET 180
+#define COMPASS_OFFSET 260
 
 const float MID_RUDDER_ANGLE = (MAX_RUDDER_ANGLE + MIN_RUDDER_ANGLE) / 2;
 const float MID_WINCH_MOTOR_ANGLE = (MAX_WINCH_ANGLE + MIN_WINCH_ANGLE) / 2;

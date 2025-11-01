@@ -23,14 +23,6 @@
 #define Calibration_Register 0x1E
 
 // Variables
-typedef struct
-{
-    int bearing;
-    signed char pitch;
-    signed char roll;
-    uint8_t i2cAddress;
-    i2c_inst_t i2cPort;
-} cmps14;
 
 #define ACCELEROMETER_SCALE 9.80592991914 / 1000.0 // 1 m/s^2
 #define GYROSCOPE_SCALE 1.0 / 16.0                 // 1 Dps

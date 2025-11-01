@@ -17,7 +17,17 @@
 
 // Pico SDK libraries
 #include <pico/stdlib.h>
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #include <pico_uart_transports.h>
+
+#ifdef __cplusplus
+}
+#endif
 
 // Configuration files
 #include "config.h"
@@ -25,14 +35,15 @@
 // Misc libraries
 #include <math.h>
 
+
 // Checks whether the ros client (rclc) functions throw an error and if they do then turn on the light on the pico
-#define RCCHECK(fn)                  \
-    {                                \
-        rcl_ret_t temp_rc = fn;      \
-        if ((temp_rc != RCL_RET_OK)) \
-        {                            \
-            gpio_put(LED_PIN, 1);    \
-        }                            \
-    } // Ask Elias or micheal
+#define RCCHECK(fn) {                   \
+    rcl_ret_t temp_rc = fn;             \
+    if ((temp_rc != RCL_RET_OK))        \
+    {                                   \
+        gpio_put(LED_PIN, 1);           \
+    }                                   \
+}
+
 
 #endif
