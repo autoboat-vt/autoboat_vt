@@ -481,6 +481,40 @@ With ros2:
         </visual>
       </link>
 
+      <link name='keel_link'>
+        <pose>0 0 -1.075 0 0 0</pose>
+
+        <inertial>
+          <pose>0 0 0 0 0 0</pose>
+          <mass>35</mass>
+          <inertia>
+            <ixx>0.65</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.65</iyy>
+            <iyz>0</iyz>
+            <izz>1.04</izz>
+          </inertia>
+        </inertial>
+
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>.25 .05 2</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name='visual'>
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>.25 .05 2</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+
       <joint name="left_front_joint" type="fixed">
         <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
@@ -503,6 +537,12 @@ With ros2:
         <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
         <child>left_back_link</child>
+      </joint>
+
+      <joint name="keel_joint" type="fixed">
+        <pose>0 0 0 0 0 0</pose>
+        <parent>base_link</parent>
+        <child>keel_link</child>
       </joint>
 
       <link name='propeller_link'>
@@ -652,23 +692,23 @@ With ros2:
         <link_name>rudder_link</link_name>
         <cp>0 0 0</cp>
       </plugin>
-
-      <!--plugin filename="libFoilDynamics.so"
-      name="foil_dynamics::FoilDynamics">
-        <link_type>rudder_link</link_type>
+      <plugin name="usv_sail_plugin" filename="foil_dynamics_system.so">
+        <link_type>rudder</link_type>
         <a0>0</a0>
-        <cla>0.45</cla>
+        <cla>0.8</cla>
         <cda>0.3</cda>
-        <alpha_stall>90</alpha_stall>
+        <alpha_stall>0.785</alpha_stall>
         <cla_stall>-0.85</cla_stall>
         <cda_stall>-0.3233984055</cda_stall>
 
         <cp>0 0 0</cp>
         <area>1</area>
-        <fluid_density>1025</fluid_density>
+        <fluid_density>1000</fluid_density>
         <forward>1 0 0</forward>
         <upward>0 1 0</upward>
-      </plugin-->
+        <link_name>rudder</link_name>
+        <fluidVelocity>${waterType}</fluidVelocity>
+      </plugin>
 
       <!-- Drag on the hull parts -->
       <plugin
@@ -739,6 +779,23 @@ With ros2:
         <cp>0 0 0</cp>
       </plugin>
 
+      <plugin
+        filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+        <air_density>1025</air_density>
+        <cla>.1</cla>
+        <cla_stall>0</cla_stall>
+        <cda>1</cda>
+        <cda_stall>0</cda_stall>
+        <alpha_stall>90</alpha_stall>
+        <a0>0</a0>
+        <area>0.75</area>
+        <upward>0 0 1</upward>
+        <forward>1 0 0</forward>
+        <link_name>keel_link</link_name>
+        <cp>0 0 0</cp>
+      </plugin>
+
       <!-- Hydrodynamics on the hull parts -->
       <plugin
         filename="gz-sim-hydrodynamics-system"
@@ -795,6 +852,23 @@ With ros2:
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>left_back_link</link_name>
+        <xUabsU>-6</xUabsU>
+        <xU>-6</xU>
+        <yVabsV>-6</yVabsV>
+        <yV>-6</yV>
+        <zWabsW>-6</zWabsW>
+        <zW>-6</zW>
+        <kPabsP>-0.5</kPabsP>
+        <kP>-0.5</kP>
+        <mQabsQ>-5</mQabsQ>
+        <mQ>-5</mQ>
+        <nRabsR>-0.6</nRabsR>
+        <nR>-0.6</nR>
+      </plugin>
+      <plugin
+        filename="gz-sim-hydrodynamics-system"
+        name="gz::sim::systems::Hydrodynamics">
+        <link_name>keel_link</link_name>
         <xUabsU>-6</xUabsU>
         <xU>-6</xU>
         <yVabsV>-6</yVabsV>

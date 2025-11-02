@@ -53,4 +53,5 @@ sudo echo ACTION=="add", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740", SYML
 
 sudo udevadm trigger
 
-
+# add system plugins to gazebo
+echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/src/motorboat_sim_testing/foil_dynamics/build/ >> "/home/autoboat_user/.bashrc"
