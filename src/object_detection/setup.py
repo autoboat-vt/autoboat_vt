@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'object_detection = object_detection.buoy_detection_node:main'
+            # 'object_detection = object_detection.buoy_detection_node:main'
+            'object_detection = object_detection.deepstream_buoy_detection_node:main'
         ],
     },
 )
