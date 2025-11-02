@@ -66,14 +66,9 @@ make -C nvdsinfer_custom_impl_Yolo clean && make -C nvdsinfer_custom_impl_Yolo
 
 # Install ultralytics
 echo -e "\n\nInstalling ultralytics\n\n"
-cd ~/autoboat_vt/src/object_detection/object_detection/DeepStream-Yolo/
-git clone https://github.com/ultralytics/ultralytics.git
-# cd ~/autoboat_vt/src/object_detection/object_detection/DeepStream-Yolo/ultralytics/
-cd ultralytics/
-pip install -e .
+pip install ultralytics
 pip install onnx onnxslim onnxruntime
 pip install numpy==1.26.0
-cp ../export_yolo11.py
 
 echo -e "\n\nInstalling Utils\n\n"
 sudo apt-get install -y v4l-utils
