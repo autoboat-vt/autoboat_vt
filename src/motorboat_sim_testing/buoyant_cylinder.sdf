@@ -418,7 +418,7 @@ With ros2:
 
         <inertial>
           <pose>0 0 0 0 0 0</pose>
-          <mass>6.8</mass>
+          <mass>6.9</mass>
           <inertia>
             <ixx>0.065</ixx>
             <ixy>0</ixy>
@@ -452,7 +452,7 @@ With ros2:
 
         <inertial>
           <pose>0 0 0 0 0 0</pose>
-          <mass>6.8</mass>
+          <mass>6.9</mass>
           <inertia>
             <ixx>0.065</ixx>
             <ixy>0</ixy>
@@ -532,7 +532,7 @@ With ros2:
           <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>0.05 0.05 .05</size>
+              <size>0.05 0.05 0.05</size>
             </box>
           </geometry>
         </visual>
@@ -560,7 +560,7 @@ With ros2:
           <pose>0 0 0 0 0 0</pose>
           <mass>0.5</mass>
           <inertia>
-            <ixx>0.00141</ixx>
+            <ixx>0.00174</ixx>
             <ixy>0.0000000000076</ixy>
             <ixz>0.0000000000076</ixz>
             <iyy>0.00174</iyy>
@@ -594,8 +594,8 @@ With ros2:
         <axis>
           <xyz>0 0 1</xyz>
           <limit>
-            <lower>-.61</lower>
-            <upper>.61</upper>
+            <lower>-1e+12</lower>
+            <upper>1e+12</upper>
           </limit>
           <dynamics>
             <damping>1</damping>
@@ -632,7 +632,7 @@ With ros2:
         <topic>propeller_topic</topic>
         <joint_name>propeller_joint</joint_name>
         <fluid_density>1025</fluid_density>
-        <propeller_diameter>0.3</propeller_diameter>
+        <propeller_diameter>0.05</propeller_diameter>
       </plugin>
 
       <!-- Drag on the rudder to make it function -->
@@ -640,13 +640,13 @@ With ros2:
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>.1</cla>
+        <cla>1</cla>
         <cla_stall>0</cla_stall>
-        <cda>1</cda>
+        <cda>5</cda>
         <cda_stall>0</cda_stall>
-        <alpha_stall>5</alpha_stall>
+        <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>.052</area>
+        <area>.416</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>rudder_link</link_name>
@@ -662,7 +662,7 @@ With ros2:
         <cla_stall>0</cla_stall>
         <cda>1</cda>
         <cda_stall>0</cda_stall>
-        <alpha_stall>5</alpha_stall>
+        <alpha_stall>90</alpha_stall>
         <a0>0</a0>
         <area>0.135</area>
         <upward>0 0 1</upward>
@@ -679,7 +679,7 @@ With ros2:
         <cla_stall>0</cla_stall>
         <cda>1</cda>
         <cda_stall>0</cda_stall>
-        <alpha_stall>5</alpha_stall>
+        <alpha_stall>90</alpha_stall>
         <a0>0</a0>
         <area>0.135</area>
         <upward>0 0 1</upward>
@@ -696,7 +696,7 @@ With ros2:
         <cla_stall>0</cla_stall>
         <cda>1</cda>
         <cda_stall>0</cda_stall>
-        <alpha_stall>5</alpha_stall>
+        <alpha_stall>90</alpha_stall>
         <a0>0</a0>
         <area>0.135</area>
         <upward>0 0 1</upward>
@@ -713,7 +713,7 @@ With ros2:
         <cla_stall>0</cla_stall>
         <cda>1</cda>
         <cda_stall>0</cda_stall>
-        <alpha_stall>5</alpha_stall>
+        <alpha_stall>90</alpha_stall>
         <a0>0</a0>
         <area>0.135</area>
         <upward>0 0 1</upward>
@@ -727,69 +727,69 @@ With ros2:
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>left_front_link</link_name>
-        <xUabsU>-0.62282</xUabsU>
-        <xU>0</xU>
+        <xUabsU>-6</xUabsU>
+        <xU>-6</xU>
         <yVabsV>-6</yVabsV>
-        <yV>0</yV>
-        <zWabsW>-6.0127</zWabsW>
-        <zW>0</zW>
+        <yV>-6</yV>
+        <zWabsW>-6</zWabsW>
+        <zW>-6</zW>
         <kPabsP>-0.5</kPabsP>
-        <kP>0</kP>
-        <mQabsQ>-6.32698957</mQabsQ>
-        <mQ>0</mQ>
+        <kP>-0.5</kP>
+        <mQabsQ>-5</mQabsQ>
+        <mQ>-5</mQ>
         <nRabsR>-0.6</nRabsR>
-        <nR>0</nR>
+        <nR>-0.6</nR>
       </plugin>
       <plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>right_front_link</link_name>
-        <xUabsU>-0.62282</xUabsU>
-        <xU>0</xU>
+        <xUabsU>-6</xUabsU>
+        <xU>-6</xU>
         <yVabsV>-6</yVabsV>
-        <yV>0</yV>
-        <zWabsW>-6.0127</zWabsW>
-        <zW>0</zW>
+        <yV>-6</yV>
+        <zWabsW>-6</zWabsW>
+        <zW>-6</zW>
         <kPabsP>-0.5</kPabsP>
-        <kP>0</kP>
-        <mQabsQ>-6.32698957</mQabsQ>
-        <mQ>0</mQ>
+        <kP>-0.5</kP>
+        <mQabsQ>-5</mQabsQ>
+        <mQ>-5</mQ>
         <nRabsR>-0.6</nRabsR>
-        <nR>0</nR>
+        <nR>-0.6</nR>
       </plugin>
       <plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>right_back_link</link_name>
-        <xUabsU>-0.62282</xUabsU>
-        <xU>0</xU>
+        <xUabsU>-6</xUabsU>
+        <xU>-6</xU>
         <yVabsV>-6</yVabsV>
-        <yV>0</yV>
-        <zWabsW>-6.0127</zWabsW>
-        <zW>0</zW>
+        <yV>-6</yV>
+        <zWabsW>-6</zWabsW>
+        <zW>-6</zW>
         <kPabsP>-0.5</kPabsP>
-        <kP>0</kP>
-        <mQabsQ>-6.32698957</mQabsQ>
-        <mQ>0</mQ>
+        <kP>-0.5</kP>
+        <mQabsQ>-5</mQabsQ>
+        <mQ>-5</mQ>
         <nRabsR>-0.6</nRabsR>
-        <nR>0</nR>
+        <nR>-0.6</nR>
       </plugin>
       <plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>left_back_link</link_name>
-        <xUabsU>-0.62282</xUabsU>
-        <xU>0</xU>
+        <xUabsU>-6</xUabsU>
+        <xU>-6</xU>
         <yVabsV>-6</yVabsV>
-        <yV>0</yV>
-        <zWabsW>-6.0127</zWabsW>
-        <zW>0</zW>
+        <yV>-6</yV>
+        <zWabsW>-6</zWabsW>
+        <zW>-6</zW>
         <kPabsP>-0.5</kPabsP>
-        <kP>0</kP>
-        <mQabsQ>-6.32698957</mQabsQ>
-        <mQ>0</mQ>
+        <kP>-0.5</kP>
+        <mQabsQ>-5</mQabsQ>
+        <mQ>-5</mQ>
         <nRabsR>-0.6</nRabsR>
-        <nR>0</nR>
+        <nR>-0.6</nR>
       </plugin>
 
     </model>
