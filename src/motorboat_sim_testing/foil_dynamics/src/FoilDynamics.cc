@@ -73,11 +73,11 @@ void FoilDynamics::Configure(const gz::sim::Entity &_entity,
   if (_sdf->HasElement("area"))
     area_ = _sdf->Get<double>("area");
 
-  if (_sdf->HasElement("mult_lift"))
-    mult_lift_ = _sdf->Get<double>("mult_lift");
+  if (_sdf->HasElement("cla"))
+    mult_lift_ = _sdf->Get<double>("cla");
 
-  if (_sdf->HasElement("mult_drag"))
-    mult_drag_ = _sdf->Get<double>("mult_drag");
+  if (_sdf->HasElement("cda"))
+    mult_drag_ = _sdf->Get<double>("cda");
 
   if (_sdf->HasElement("fluid_density"))
     rho_ = _sdf->Get<double>("fluid_density");
@@ -150,10 +150,9 @@ void FoilDynamics::Update(const gz::sim::UpdateInfo &_info,
   link_.AddWorldWrench(_ecm, force, gz::math::Vector3d::Zero);
 }
 
-} // namespace foil_dynamics
+}
 
 /////////////////////////////////////////////////
-// Plugin registration must be OUTSIDE namespace
 GZ_ADD_PLUGIN(foil_dynamics::FoilDynamics,
               gz::sim::System,
               foil_dynamics::FoilDynamics::ISystemConfigure,

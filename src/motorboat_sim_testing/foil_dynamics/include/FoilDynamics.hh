@@ -62,7 +62,7 @@ namespace foil_dynamics
     double area_{1.0};
 
     /// \brief Lift multiplier
-    double mult_lift_{1.5};
+    double mult_lift_{1.0};
 
     /// \brief Drag multiplier
     double mult_drag_{1.0};
