@@ -10,6 +10,7 @@ if [[ "$OS" == "Linux" ]]; then
     echo -e "devcontainer_environment_variables\n\nDISPLAY=:0" > $SCRIPT_DIR/devcontainer_environment_variables
 
     sudo apt install x11-utils
+    sudo apt install x11-xserver-utils
 
     # Ensure that the devcontainer can actually access the display
     export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"
