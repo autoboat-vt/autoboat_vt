@@ -1,6 +1,6 @@
 # TODO: make it so that we only have 1 ros installation script in here because its weird that there are duplicate scripts for installing ros????
 
-# install ros2 humble
+# install ros2 jazzy
 locale  # check for UTF-8
 
 sudo apt update && sudo apt install locales
@@ -20,7 +20,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-a
 
 sudo apt update && sudo apt upgrade
 
-sudo apt install ros-humble-ros-base && sudo apt install ros-dev-tools
+sudo apt install ros-jazzy-ros-base && sudo apt install ros-dev-tools
 
 
 
@@ -72,9 +72,9 @@ sudo apt update && sudo apt install curl -y
 sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
 sudo apt update && sudo apt upgrade
-sudo apt install ros-humble-ros-base
-source /opt/ros/humble/setup.bash
-sudo apt install ros-humble-realsense2-*
+sudo apt install ros-jazzy-ros-base
+source /opt/ros/jazzy/setup.bash
+sudo apt install ros-jazzy-realsense2-*
 
 
 # fix .bashrc and add all of the ROS stuff to the bashrc 

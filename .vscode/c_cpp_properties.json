@@ -6,7 +6,7 @@
                 "limitSymbolsToIncludedHeaders": false
             },
             "includePath": [
-                "/opt/ros/humble/include/**",
+                "/opt/ros/jazzy/include/**",
                 "/usr/include/**",
                 "${workspaceFolder}/src/microros/dependencies/micro_ros_raspberrypi_pico_sdk/libmicroros/include/**",
                 "${workspaceFolder}/src/microros/dependencies/pico-sdk/src/common/pico_stdlib_headers/include/**",

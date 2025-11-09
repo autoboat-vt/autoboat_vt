@@ -10,14 +10,14 @@ sudo chmod -R 777 /etc/udev/
 echo 'alias python="python3"' >> /home/autoboat_user/.bashrc
 
 # Install all of the pip packages
-pip install -e /home/ws/src/vesc/pyvesc/
-pip install -e /home/ws/src/simulation/sailboat_gym/
+pip install --break-system-packages -e /home/ws/src/vesc/pyvesc/
+pip install --break-system-packages -e /home/ws/src/simulation/sailboat_gym/
 
 
 
 # Build the ros2 workspace for the first time
-source /opt/ros/humble/setup.bash
-echo source /opt/ros/humble/setup.bash >> "/home/autoboat_user/.bashrc"
+source /opt/ros/jazzy/setup.bash
+echo source /opt/ros/jazzy/setup.bash >> "/home/autoboat_user/.bashrc"
 source /home/autoboat_user/.bashrc
 colcon build --symlink-install
 

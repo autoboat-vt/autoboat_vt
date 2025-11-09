@@ -11,7 +11,6 @@ Project-URL: Repository, https://github.com/lucasmrdt/sailboat-gym
 Project-URL: Documentation, https://github.com/lucasmrdt/sailboat-gym/blob/main/DOCUMENTATION.md
 Project-URL: Bug Report, https://github.com/lucasmrdt/sailboat-gym/issues
 Keywords: Simulation,Sailboat,Gymnasium,Gym
-Platform: UNKNOWN
 Classifier: Development Status :: 4 - Beta
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Programming Language :: Python :: 3
@@ -27,6 +26,4 @@ License-File: LICENSE
 
 
 Welcome to Sailboat Gym! This repository provides a dynamic simulation environment specifically designed for sailboats. With Sailboat Gym, you can explore and experiment with different control algorithms and strategies in a realistic virtual sailing environment.
-
-
 

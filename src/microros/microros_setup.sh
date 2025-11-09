@@ -7,7 +7,7 @@ SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 sudo apt install -y cmake g++ gcc-arm-none-eabi doxygen libnewlib-arm-none-eabi git python3 build-essential pkg-config libusb-1.0-0-dev
 sudo apt-get update || true  # continue even if this "fails" for whatever reason
 sudo apt-get upgrade -y
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash
 
 
 # Install Pico SDK if it is not currently installed
@@ -22,7 +22,7 @@ export PICO_SDK_PATH=/home/ws/src/microros/dependencies/pico-sdk
 
 # Install Microros Pico SDK if it is not currently installed
 if [ ! -d "/home/ws/src/microros/dependencies/micro_ros_raspberrypi_pico_sdk" ]; then
-  git clone -b humble https://github.com/micro-ROS/micro_ros_raspberrypi_pico_sdk.git /home/ws/src/microros/dependencies/micro_ros_raspberrypi_pico_sdk
+  git clone -b jazzy https://github.com/micro-ROS/micro_ros_raspberrypi_pico_sdk.git /home/ws/src/microros/dependencies/micro_ros_raspberrypi_pico_sdk
 fi
 
 export PICO_MICROROS_SDK_PATH=/home/ws/src/microros/dependencies/micro_ros_raspberrypi_pico_sdk
@@ -45,7 +45,7 @@ cmake .. && cmake --build . -j16
 
 # Create and build microros workspace
 if [ ! -d "/home/ws/src/microros/dependencies/micro_ros_agent/src/micro_ros_setup" ]; then
-  git clone -b humble https://github.com/micro-ROS/micro_ros_setup.git /home/ws/src/microros/dependencies/micro_ros_agent/src/micro_ros_setup
+  git clone -b jazzy https://github.com/micro-ROS/micro_ros_setup.git /home/ws/src/microros/dependencies/micro_ros_agent/src/micro_ros_setup
   cd /home/ws/src/microros/dependencies/micro_ros_agent/src/micro_ros_setup
   git reset --hard 5abfdaa59b0f18dc152b47b564d8e27012b05ac8 # They introduced a change that broke a lot of stuff. This is the only commit that works
 fi

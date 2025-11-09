@@ -21,7 +21,7 @@ class SailboatAutopilot:
                 For more information on specific parameters you are allowed to use, please see that file.
 
             logger (RcutilsLogger): A ROS logger to use instead of print statements which works a little better with ROS.
-                For more information: https://docs.ros.org/en/humble/Tutorials/Demos/Logging-and-logger-configuration.html.
+                For more information: https://docs.ros.org/en/jazzy/Tutorials/Demos/Logging-and-logger-configuration.html.
                 This logger is what you get by running self.get_logger(). So for example in order to log an info message,
                 please run logger.info("message").
         """
