@@ -20,7 +20,7 @@ namespace foil_dynamics
   class FoilDynamics
       : public gz::sim::System,
         public gz::sim::ISystemConfigure,
-        public gz::sim::ISystemUpdate
+        public gz::sim::ISystemPreUpdate
   {
   public:
     FoilDynamics();
@@ -33,7 +33,7 @@ namespace foil_dynamics
                    gz::sim::EventManager &_eventMgr) override;
 
     // Called every simulation iteration
-    void Update(const gz::sim::UpdateInfo &_info,
+    void PreUpdate(const gz::sim::UpdateInfo &_info,
                 gz::sim::EntityComponentManager &_ecm) override;
 
   private:
@@ -61,11 +61,11 @@ namespace foil_dynamics
     /// \brief Reference area [m^2]
     double area_{1.0};
 
-    /// \brief Lift multiplier
-    double mult_lift_{1.0};
+    /// \brief Initial coefficient of lift / angle of attack (in radians) slope
+    double cla_{1.0};
 
-    /// \brief Drag multiplier
-    double mult_drag_{1.0};
+    /// \brief Initial coefficient of drag / angle of attack (in radians) slope 
+    double cda_{1.0};
   };
 } // namespace foil_dynamics
 

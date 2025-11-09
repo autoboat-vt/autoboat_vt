@@ -5,7 +5,7 @@ Without ros2:
 
   0. Start the simulation:
 
-    gz sim buoyant_cylinder.sdf
+    gz sim buoyant_sphere.sdf
 
   1. Move the rudder:
 
@@ -13,11 +13,11 @@ Without ros2:
     
   1a. View rudder position:
 
-    gz topic -e -t /world/buoyant_cylinder/model/my_ship/joint_state
+    gz topic -e -t /world/buoyant_sphere/model/my_ship/joint_state
 
   2. Propel the vehicle:
 
-    gz topic -t motorboat/propeller_topic -m gz.msgs.Double -p 'data: 2'
+    gz topic -t sailboat/propeller_topic -m gz.msgs.Double -p 'data: 2'
 
 
 With ros2:
@@ -33,12 +33,12 @@ With ros2:
   
   2. Propel the vehicle:
 
-    ros2 topic pub motorboat/propeller_topic std_msgs/msg/Float64 'data: 5'
+    ros2 topic pub sailboat/propeller_topic std_msgs/msg/Float64 'data: 5'
 
 -->
 
 <sdf version="1.7">
-  <world name="buoyant_cylinder">
+  <world name="buoyant_sphere">
 
     <scene>
       <ambient>0.0 1.0 1.0</ambient>
@@ -180,59 +180,6 @@ With ros2:
           <property key="showTitleBar" type="bool">false</property>
         </gz-gui>
       </plugin>
-      <plugin filename="MarkerManager" name="Marker manager">
-        <gz-gui>
-          <anchors target="3D View">
-            <line own="right" target="right" />
-            <line own="top" target="top" />
-          </anchors>
-          <property key="resizable" type="bool">false</property>
-          <property key="width" type="double">5</property>
-          <property key="height" type="double">5</property>
-          <property key="state" type="string">floating</property>
-          <property key="showTitleBar" type="bool">false</property>
-        </gz-gui>
-        <warn_on_action_failure>false</warn_on_action_failure>
-      </plugin>
-      <plugin filename="SelectEntities" name="Select Entities">
-        <gz-gui>
-          <anchors target="Select entities">
-            <line own="right" target="right" />
-            <line own="top" target="top" />
-          </anchors>
-          <property key="resizable" type="bool">false</property>
-          <property key="width" type="double">5</property>
-          <property key="height" type="double">5</property>
-          <property key="state" type="string">floating</property>
-          <property key="showTitleBar" type="bool">false</property>
-        </gz-gui>
-      </plugin>
-      <plugin filename="VisualizationCapabilities" name="Visualization Capabilities">
-        <gz-gui>
-          <anchors target="Select entities">
-            <line own="right" target="right" />
-            <line own="top" target="top" />
-          </anchors>
-          <property key="resizable" type="bool">false</property>
-          <property key="width" type="double">5</property>
-          <property key="height" type="double">5</property>
-          <property key="state" type="string">floating</property>
-          <property key="showTitleBar" type="bool">false</property>
-        </gz-gui>
-      </plugin>
-      <plugin filename="Spawn" name="Spawn Entities">
-        <gz-gui>
-          <anchors target="Select entities">
-            <line own="right" target="right" />
-            <line own="top" target="top" />
-          </anchors>
-          <property key="resizable" type="bool">false</property>
-          <property key="width" type="double">5</property>
-          <property key="height" type="double">5</property>
-          <property key="state" type="string">floating</property>
-          <property key="showTitleBar" type="bool">false</property>
-        </gz-gui>
-      </plugin>
       <!-- World control -->
       <plugin filename="WorldControl" name="World control">
         <gz-gui>
@@ -253,25 +200,6 @@ With ros2:
         <start_paused>true</start_paused>
       </plugin>
       <!-- World statistics -->
-      <plugin filename="WorldStats" name="World stats">
-        <gz-gui>
-          <title>World stats</title>
-          <property type="bool" key="showTitleBar">false</property>
-          <property type="bool" key="resizable">false</property>
-          <property type="double" key="height">110</property>
-          <property type="double" key="width">290</property>
-          <property type="double" key="z">1</property>
-          <property type="string" key="state">floating</property>
-          <anchors target="3D View">
-            <line own="right" target="right" />
-            <line own="bottom" target="bottom" />
-          </anchors>
-        </gz-gui>
-        <sim_time>true</sim_time>
-        <real_time>true</real_time>
-        <real_time_factor>true</real_time_factor>
-        <iterations>true</iterations>
-      </plugin>
       <plugin filename="ComponentInspector" name="Component Inspector">
         <gz-gui>
           <title>Inspector</title>
@@ -324,7 +252,7 @@ With ros2:
     <!-- User options - Modify these parameters according to your needs -->
 
     <!-- Physics parameters -->
-    <physics name="1ms" type="dart">
+    <physics name="1ms" type="ode">
       <max_step_size>0.02</max_step_size>
       <real_time_factor>1</real_time_factor>
     </physics>
@@ -481,12 +409,12 @@ With ros2:
         </visual>
       </link>
 
-      <link name='keel_link'>
+      <link name='keel_connector_link'>
         <pose>0 0 -1.075 0 0 0</pose>
 
         <inertial>
           <pose>0 0 0 0 0 0</pose>
-          <mass>35</mass>
+          <mass>5</mass>
           <inertia>
             <ixx>0.65</ixx>
             <ixy>0</ixy>
@@ -510,6 +438,39 @@ With ros2:
           <geometry>
             <box>
               <size>.25 .05 2</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+
+      <link name='keel_link'>
+        <pose>0 0 -2.175 0 0 0</pose>
+
+        <inertial>
+          <pose>0 0 0 0 0 0</pose>
+          <mass>15</mass>
+          <inertia>
+            <ixx>0.65</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.65</iyy>
+            <iyz>0</iyz>
+            <izz>1.04</izz>
+          </inertia>
+        </inertial>
+
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>.2 .1 .1</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>.2 .1 .1</size>
             </box>
           </geometry>
         </visual>
@@ -543,6 +504,11 @@ With ros2:
         <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
         <child>keel_link</child>
+      </joint>
+      <joint name="keel_connector_joint" type="fixed">
+        <pose>0 0 0 0 0 0</pose>
+        <parent>base_link</parent>
+        <child>keel_connector_link</child>
       </joint>
 
       <link name='propeller_link'>
@@ -668,7 +634,7 @@ With ros2:
       <plugin
         filename="gz-sim-thruster-system"
         name="gz::sim::systems::Thruster">
-        <namespace>motorboat</namespace>
+        <namespace>sailboat</namespace>
         <topic>propeller_topic</topic>
         <joint_name>propeller_joint</joint_name>
         <fluid_density>1025</fluid_density>
@@ -680,35 +646,31 @@ With ros2:
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>1</cla>
+        <cla>1.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>5</cda>
+        <cda>.02</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>.416</area>
-        <upward>0 0 1</upward>
+        <area>.1</area>
+        <upward>0 1 0</upward>
         <forward>1 0 0</forward>
         <link_name>rudder_link</link_name>
         <cp>0 0 0</cp>
       </plugin>
-      <plugin name="usv_sail_plugin" filename="foil_dynamics_system.so">
-        <link_type>rudder</link_type>
-        <a0>0</a0>
-        <cla>0.8</cla>
-        <cda>0.3</cda>
-        <alpha_stall>0.785</alpha_stall>
-        <cla_stall>-0.85</cla_stall>
-        <cda_stall>-0.3233984055</cda_stall>
 
+      <!--plugin filename="libFoilDynamics.so"
+      name="foil_dynamics::FoilDynamics">
+        <link_name>rudder_link</link_name>
+        <a0>0</a0>
+        <cla>1</cla>
+        <cda>5</cda>
         <cp>0 0 0</cp>
-        <area>1</area>
-        <fluid_density>1000</fluid_density>
+        <area>.416</area>
+        <fluid_density>1025</fluid_density>
         <forward>1 0 0</forward>
-        <upward>0 1 0</upward>
-        <link_name>rudder</link_name>
-        <fluidVelocity>${waterType}</fluidVelocity>
-      </plugin>
+        <upward>0 0 1</upward>
+      </plugin-->
 
       <!-- Drag on the hull parts -->
       <plugin
@@ -717,7 +679,7 @@ With ros2:
         <air_density>1025</air_density>
         <cla>.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>1</cda>
+        <cda>0.003</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
@@ -734,7 +696,7 @@ With ros2:
         <air_density>1025</air_density>
         <cla>.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>1</cda>
+        <cda>0.003</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
@@ -751,7 +713,7 @@ With ros2:
         <air_density>1025</air_density>
         <cla>.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>1</cda>
+        <cda>0.003</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
@@ -768,7 +730,7 @@ With ros2:
         <air_density>1025</air_density>
         <cla>.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>1</cda>
+        <cda>0.003</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
@@ -785,11 +747,28 @@ With ros2:
         <air_density>1025</air_density>
         <cla>.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>1</cda>
+        <cda>0.003</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>0.75</area>
+        <area>0.135</area>
+        <upward>0 0 1</upward>
+        <forward>1 0 0</forward>
+        <link_name>keel_connector_link</link_name>
+        <cp>0 0 0</cp>
+      </plugin>
+
+      <plugin
+        filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+        <air_density>1025</air_density>
+        <cla>.1</cla>
+        <cla_stall>0</cla_stall>
+        <cda>0.003</cda>
+        <cda_stall>0</cda_stall>
+        <alpha_stall>90</alpha_stall>
+        <a0>0</a0>
+        <area>0.135</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>keel_link</link_name>
@@ -852,6 +831,23 @@ With ros2:
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>left_back_link</link_name>
+        <xUabsU>-6</xUabsU>
+        <xU>-6</xU>
+        <yVabsV>-6</yVabsV>
+        <yV>-6</yV>
+        <zWabsW>-6</zWabsW>
+        <zW>-6</zW>
+        <kPabsP>-0.5</kPabsP>
+        <kP>-0.5</kP>
+        <mQabsQ>-5</mQabsQ>
+        <mQ>-5</mQ>
+        <nRabsR>-0.6</nRabsR>
+        <nR>-0.6</nR>
+      </plugin>
+      <plugin
+        filename="gz-sim-hydrodynamics-system"
+        name="gz::sim::systems::Hydrodynamics">
+        <link_name>keel_connector_link</link_name>
         <xUabsU>-6</xUabsU>
         <xU>-6</xU>
         <yVabsV>-6</yVabsV>

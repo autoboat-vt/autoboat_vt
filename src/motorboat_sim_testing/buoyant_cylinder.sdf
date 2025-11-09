@@ -636,37 +636,21 @@ With ros2:
       </plugin>
 
       <!-- Drag on the rudder to make it function -->
-      <!--plugin
+      <plugin
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>1</cla>
+        <cla>.11</cla>
         <cla_stall>0</cla_stall>
-        <cda>5</cda>
+        <cda>.02</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>.416</area>
-        <upward>0 0 1</upward>
+        <area>.1</area>
+        <upward>0 1 0</upward>
         <forward>1 0 0</forward>
         <link_name>rudder_link</link_name>
         <cp>0 0 0</cp>
-      </plugin-->
-
-      <plugin filename="libFoilDynamics.so"
-      name="foil_dynamics::FoilDynamics">
-        <link_name>rudder_link</link_name>
-        <a0>0</a0>
-        <cla>10</cla>
-        <cda>10</cda>
-        <alpha_stall>90</alpha_stall>
-        <cla_stall>0</cla_stall>
-        <cda_stall>0</cda_stall>
-        <cp>0 0 0</cp>
-        <area>15</area>
-        <fluid_density>1025</fluid_density>
-        <forward>1 0 0</forward>
-        <upward>0 0 1</upward>
       </plugin>
 
       <!-- Drag on the hull parts -->
@@ -676,7 +660,7 @@ With ros2:
         <air_density>1025</air_density>
         <cla>.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>1</cda>
+        <cda>0.003</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
@@ -693,7 +677,7 @@ With ros2:
         <air_density>1025</air_density>
         <cla>.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>1</cda>
+        <cda>0.003</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
@@ -710,7 +694,7 @@ With ros2:
         <air_density>1025</air_density>
         <cla>.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>1</cda>
+        <cda>0.003</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
@@ -727,7 +711,7 @@ With ros2:
         <air_density>1025</air_density>
         <cla>.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>1</cda>
+        <cda>0.003</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>

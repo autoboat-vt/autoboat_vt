@@ -6,6 +6,7 @@
 #include <gz/sim/components/Pose.hh>
 #include <gz/sim/components/World.hh>
 #include <gz/plugin/Register.hh>
+#include <gz/common/Console.hh>
 
 #include <rclcpp/rclcpp.hpp>
 #include <cmath>
@@ -21,8 +22,8 @@ FoilDynamics::FoilDynamics()
   forward_(1, 0, 0),
   upward_(0, 0, 1),
   area_(1.0),
-  mult_lift_(1.5),
-  mult_drag_(1.0)
+  cla_(1.5),
+  cda_(1.0)
 {
   RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "FoilDynamics plugin constructed");
 }
@@ -59,6 +60,7 @@ void FoilDynamics::Configure(const gz::sim::Entity &_entity,
       link_ = gz::sim::Link(linkEntity);
     }
   }
+  link_.EnableVelocityChecks(_ecm);
 
   // Parse parameters
   if (_sdf->HasElement("cp"))
@@ -74,10 +76,10 @@ void FoilDynamics::Configure(const gz::sim::Entity &_entity,
     area_ = _sdf->Get<double>("area");
 
   if (_sdf->HasElement("cla"))
-    mult_lift_ = _sdf->Get<double>("cla");
+    cla_ = _sdf->Get<double>("cla");
 
   if (_sdf->HasElement("cda"))
-    mult_drag_ = _sdf->Get<double>("cda");
+    cda_ = _sdf->Get<double>("cda");
 
   if (_sdf->HasElement("fluid_density"))
     rho_ = _sdf->Get<double>("fluid_density");
@@ -87,7 +89,7 @@ void FoilDynamics::Configure(const gz::sim::Entity &_entity,
 }
 
 /////////////////////////////////////////////////
-void FoilDynamics::Update(const gz::sim::UpdateInfo &_info,
+void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
                           gz::sim::EntityComponentManager &_ecm)
 {
   if (_info.paused)
@@ -138,13 +140,14 @@ void FoilDynamics::Update(const gz::sim::UpdateInfo &_info,
   double q = 0.5 * rho_ * speedInLDPlane * speedInLDPlane;
 
   // Lift and drag coefficients
-  double cl = mult_lift_ * sin(2 * alpha);
-  double cd = mult_drag_ * fabs(1 - cos(2 * alpha));
+  double cl = cla_ * sin(2 * alpha);
+  double cd = cda_ * fabs(1 - cos(2 * alpha));
 
   // Forces
   gz::math::Vector3d lift = cl * q * area_ * liftDir;
   gz::math::Vector3d drag = cd * q * area_ * dragDir;
   gz::math::Vector3d force = lift + drag;
+
 
   // Apply world wrench
   link_.AddWorldWrench(_ecm, force, gz::math::Vector3d::Zero);
@@ -156,6 +159,6 @@ void FoilDynamics::Update(const gz::sim::UpdateInfo &_info,
 GZ_ADD_PLUGIN(foil_dynamics::FoilDynamics,
               gz::sim::System,
               foil_dynamics::FoilDynamics::ISystemConfigure,
-              foil_dynamics::FoilDynamics::ISystemUpdate)
+              foil_dynamics::FoilDynamics::ISystemPreUpdate)
 
 GZ_ADD_PLUGIN_ALIAS(foil_dynamics::FoilDynamics, "foil_dynamics::FoilDynamics")
