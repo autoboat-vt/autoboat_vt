@@ -9,7 +9,7 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     ros_gz_sim_pkg_path = get_package_share_directory('ros_gz_sim')
-    motorboat_pkg_path = FindPackageShare('motorboat_sim_testing')  # Replace with your own package name
+    # motorboat_pkg_path = FindPackageShare('motorboat_sim_testing')  # Replace with your own package name
     gz_launch_path = PathJoinSubstitution([ros_gz_sim_pkg_path, 'launch','gz_sim.launch.py'])
 
     return LaunchDescription([
@@ -29,66 +29,6 @@ def generate_launch_description():
             }.items(),
         ),
 
-        # Node(
-        #     package='autopilot',
-        #     executable='motorboat_autopilot',
-        #     name='motorboat_autopilot',
-
-        #     respawn=True,
-        #     respawn_delay=2.0,
-        #     # output="log"
-        # ),
-
-        # Node(
-        #     package='autopilot',
-        #     executable='telemetry',
-        #     name='telemetry',
-
-        #     respawn=True,
-        #     respawn_delay=2.0,
-        #     # output="log"
-        # ),
-
-        # Node(
-        #     package='sensors',
-        #     executable='gps',
-        #     name='gps',
-
-        #     respawn=True,
-        #     respawn_delay=2.0,
-        #     # output="log"
-        # ),
-
-        # Node(
-        #     package='sensors',
-        #     executable='rc',
-        #     name='rc',
-
-        #     respawn=True,
-        #     respawn_delay=2.0,
-        #     # output="log"
-        # ),
-
-
-        # Node(
-        #     package='vesc',
-        #     executable='vesc',
-        #     name='vesc',
-
-        #     respawn=True,
-        #     respawn_delay=0.01,
-        #     # output="log"
-        # ),
-
-        # Node(
-        #     package='micro_ros_agent',
-        #     executable='micro_ros_agent',
-        #     name='micro_ros_agent',
-        #     output='screen',
-        #     arguments=['serial', '--dev', "/dev/pico", "-b", "115200"]
-        # ),
-    
-
         # Bridging and remapping Gazebo topics to ROS 2 (replace with your own topics)
         Node(
             package='ros_gz_bridge',
@@ -97,10 +37,21 @@ def generate_launch_description():
                        '/rudder@std_msgs/msg/Float64]gz.msgs.Double',
                        '/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
                        '/navsat@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat'],
-            # remappings=[('/example_imu_topic',
-            #              '/remapped_imu_topic'),],
+            remappings=[('/rudder','/desired_rudder_angle'),('motorboat/propeller_topic', '/propeller_sim_rpm')],
+
             output='screen'
-        )
+        ),
+
+         Node(
+            package='autopilot',
+            executable='motorboat_autopilot',
+            name='motorboat_autopilot',
+
+            respawn=True,
+            respawn_delay=2.0,
+            remappings=[('/rudder','/desired_rudder_angle',),('motorboat/propeller_topic','/propeller_sim_rpm')],
+            # output="log"
+        ),
     ]
     
     

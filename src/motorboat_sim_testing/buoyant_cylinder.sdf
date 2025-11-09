@@ -33,7 +33,17 @@ With ros2:
   
   2. Propel the vehicle:
 
-    ros2 topic pub motorboat/propeller_topic std_msgs/msg/Float64 'data: 5'
+ros2 topic pub motorboat/propeller_topic std_msgs/msg/Float64 'data: 5'
+
+
+With ROS2 autopilot node:
+0. Start the simulation (in ../launch/):
+ros2 launch <simtest class="launch py">
+1. Move the rudder: 
+      ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
+2. Propel the vehicle:
+ ros2 topic pub /propeller_sim_rpm std_msgs/msg/Float64 'data: 5'
+
 
 -->
 

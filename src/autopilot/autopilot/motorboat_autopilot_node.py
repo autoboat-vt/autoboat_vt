@@ -35,7 +35,7 @@ class MotorboatAutopilotNode(Node):
             self.autopilot_parameters: dict = yaml.safe_load(stream)
 
         # this is temporarily using the sailboat autopilot object for now since we still need to implement the motorboat autopilot object
-        self.motorboat_autopilot = MotorboatAutopilot(parameters=self.autopilot_parameters, logger=self.get_logger())
+        self.motorboat_autopilot = MotorboatAutopilot(autopilot_parameters=self.autopilot_parameters, logger=self.get_logger())
 
         # Initialize ROS2 subscriptions, publishers, and timers
         self.autopilot_refresh_timer = self.create_timer(1 / self.autopilot_parameters["autopilot_refresh_rate"], self.update_ros_topics)
@@ -59,6 +59,9 @@ class MotorboatAutopilotNode(Node):
 
         self.should_propeller_motor_be_powered_publisher = self.create_publisher(Bool, "/should_propeller_motor_be_powered", qos_profile=10)
         self.propeller_motor_control_struct_publisher = self.create_publisher(msg_type=VESCControlData, topic="/propeller_motor_control_struct", qos_profile=qos_profile_sensor_data)
+        self.propeller_sim_rpm_publisher = self.create_publisher(msg_type=Float32, topic="/propeller_sim_rpm", qos_profile=qos_profile_sensor_data)
+
+
         self.desired_rudder_angle_publisher = self.create_publisher(msg_type=Float32, topic="/desired_rudder_angle", qos_profile=qos_profile_sensor_data)
 
         self.zero_rudder_encoder_publisher = self.create_publisher(msg_type=Bool, topic="/zero_rudder_encoder", qos_profile=10)
@@ -74,7 +77,7 @@ class MotorboatAutopilotNode(Node):
         self.heading = 0.0
         self.rudder_angle = 0.0
 
-        self.autopilot_mode = MotorboatAutopilotMode.Hold_Heading
+        self.autopilot_mode = MotorboatAutopilotMode.Full_RC
         self.should_propeller_motor_be_powered = False
         self.should_zero_encoder = False
         self.encoder_has_been_zeroed = False
@@ -98,6 +101,7 @@ class MotorboatAutopilotNode(Node):
 
         # Publish the default parameters so that the telemetry node/ telemetry server/ groundstation know which parameters it can change
         self.default_autopilot_parameters_publisher.publish(String(data=json.dumps(self.autopilot_parameters)))
+
 
 
 
@@ -224,10 +228,6 @@ class MotorboatAutopilotNode(Node):
     def heading_callback(self, heading: Float32):
         self.heading = heading.data
 
-
-
-
-
     def get_optimal_rudder_angle(self, heading: float, desired_heading: float):
         """
         TODO: This function should eventually be moved to the motorboat autopilot file once that is properly created
@@ -290,7 +290,6 @@ class MotorboatAutopilotNode(Node):
         """
         TODO Documentation
         """
-
         if self.autopilot_mode == MotorboatAutopilotMode.Waypoint_Mission and self.motorboat_autopilot.waypoints != None:
             return 0.0  # this is unimplemented for now
             # _, rudder_angle = self.motorboat_autopilot.run_waypoint_mission_step(self.position, self.velocity, self.heading, self.apparent_wind_angle)
@@ -312,6 +311,8 @@ class MotorboatAutopilotNode(Node):
         Updates the propeller control struct and rudder angle topics based on the output of the autopilot controller
         """
         desired_rudder_angle = self.step()
+        # self.propeller_sim_rpm_publisher.publish(Float32(data=5.0))
+
 
         # self.current_waypoint_index_publisher.publish(Int32(data=self.motorboat_autopilot.current_waypoint_index))
 
@@ -357,7 +358,6 @@ class MotorboatAutopilotNode(Node):
                         desired_vesc_duty_cycle=0.0
                     )
                 )
-
             elif self.propeller_motor_control_mode == MotorboatControls.DUTY_CYCLE:
                 duty_cycle_value = self.joystick_left_y  # min 0 max 100
 
