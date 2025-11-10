@@ -21,41 +21,31 @@ import os
 import base64
 
 
-TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk/"
+TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk:8443/"
 
 
 class TelemetryNode(Node):
     """
-    This ROS node's job is to take in a bunch of information from a bunch of different topics and then send over that information to the groundstation through the telemetry server.
-    The groundstation's job is then to display that information in a coherent and user-friendly way, and all the telemetry server does is make it so that
-    the groundstation and the telemetry node can exchange information easily via easy API calls.
+    This ROS node collects information from multiple topics and transmits it to
+    the groundstation via the telemetry server. It also receives commands and
+    parameters from the groundstation to control the autopilot.
 
-    Additionally, the telemetry node also is able to give the autopilot waypoints and autopilot parameters, which are given to it from the groundstation.
-    Waypoints are pretty simple: they are just a list of (latitude, longitude) tuples that tell the autopilot all of the positions that they should get to.
-    These positions are sent from the groundstation when the user specifies where it wants the boat to move to. Autopilot parameters are a little more compilicated.
-    Autopilot parameters represent a bunch of variables that we may want to be able to change on the fly while the boat is on the water. These include but are absolutely
-    not limited to things like how far away you have to be from a waypoint to have captured the waypoint, the maximum values to turn your rudder to,
-    editing sail angles at different points of sail, etc, etc. The list of the parameters that the groundstation would like to change are sent from the groundstation,
-    and it is the telemetry server's responsibility to tell the autopilot through the /autopilot_parameters topic how it should change its autopilot parameters.
-
-    The main functions called on a timer are update_boat_status, update_waypoints_from_telemetry, and update_autopilot_parameters_from_telemetry.
-    These are the main functions you should focus on when trying to understand how this node works.
-
-    **NOTE**: All units are in standard SI units and angle is measured in degrees
+    Inherits
+    -------
+    `Node`
     """
 
-    # NOTE: All units are in standard SI units and angle is measured in degrees
-
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("telemetry")
 
-        self.create_timer(0.01, self.update_boat_status)
+        self.create_timer(0.01, self.update_boat_status) # 10 ms
         self.create_timer(0.5, self.update_waypoints_from_telemetry)
         self.create_timer(0.5, self.update_autopilot_parameters_from_telemetry)
 
         self.cv_bridge = CvBridge()
 
         current_folder_path = os.path.dirname(os.path.realpath(__file__))
+        print(current_folder_path)
         with open(current_folder_path + "/config/sailboat_default_parameters.yaml", "r") as stream:
             self.autopilot_parameters_dictionary: dict = yaml.safe_load(stream)
 
@@ -175,16 +165,52 @@ class TelemetryNode(Node):
         self.waypoints_session = requests.Session()
 
     def position_callback(self, position: NavSatFix) -> None:
+        """
+        Callback function for the position topic. Updates the boat's current position.
+
+        Parameters
+        ----------
+        position
+            The current GPS position of the boat.
+        """
+
         self.position = position
 
     def velocity_callback(self, velocity_vector: Twist) -> None:
+        """
+        Callback function for the velocity topic. Updates the boat's current velocity vector and speed.
+
+        Parameters
+        ----------
+        velocity_vector
+            The current velocity vector of the boat.
+        """
+
         self.velocity_vector = np.array([velocity_vector.linear.x, velocity_vector.linear.y])
         self.speed = np.sqrt(velocity_vector.linear.x**2 + velocity_vector.linear.y**2)
 
     def heading_callback(self, heading: Float32) -> None:
+        """
+        Callback function for the heading topic. Updates the boat's current heading.
+        
+        Parameters
+        ----------
+        heading
+            The current heading of the boat.
+        """
+
         self.heading = heading.data
 
     def apparent_wind_vector_callback(self, apparent_wind_vector: Vector3) -> None:
+        """
+        Callback function for the apparent wind vector topic. Updates the boat's current apparent wind vector, speed, and angle.
+
+        Parameters
+        ----------
+        apparent_wind_vector
+            The current apparent wind vector of the boat.
+        """
+
         self.apparent_wind_vector = np.array([apparent_wind_vector.x, apparent_wind_vector.y])
 
         self.apparent_wind_speed, self.apparent_wind_angle = cartesian_vector_to_polar(apparent_wind_vector.x, apparent_wind_vector.y)
@@ -243,8 +269,7 @@ class TelemetryNode(Node):
 
     def get_raw_response_from_telemetry_server(self, route: str, session: requests.Session = None) -> any:
         """
-        This is essentially just a helper function to send a GET request to a specific telemetry server route and automatically
-        retry if it cannot connect to that route.
+        This is essentially just a helper function to send a GET request to a specific telemetry server route and automatically retry if it cannot connect to that route.
 
         Args:
             route (str): the route of the telemetry server that you would like to send a GET request to.
