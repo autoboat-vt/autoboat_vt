@@ -20,7 +20,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 RUN apt-get update && apt-get upgrade -y
 RUN apt-get install -y python3-pip
-ENV SHELL /bin/bash
+ENV SHELL=/bin/bash
 
 # ********************************************************
 # * Anything else you want to do like clean up goes here *
@@ -57,7 +57,10 @@ RUN sudo apt install nano -y --fix-missing
 
 
 # Required installations for new groundstation
-RUN sudo apt install golang -y --fix-missing
+RUN sudo apt update && sudo apt install -y software-properties-common
+RUN sudo add-apt-repository ppa:longsleep/golang-backports
+RUN sudo apt update
+RUN sudo apt install -y golang-go
 RUN sudo apt-get install -y --fix-missing \
     libx11-xcb1 \
     libxcb1 \
