@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# Installs DeepStream-Yolo dependencies
+# Installs deepstream_yolo dependencies
 # and DeepStream itself if not already installed.
 
 # NOTE: THIS IS FOR DEEPSTREAM 7.1 ON JETPACK 6.2 ONLY. probably also work on jetpack 6.1 but untested.
@@ -58,9 +58,9 @@ sudo apt install -y python3-gi python3-dev python3-gst-1.0 \
 wget https://github.com/NVIDIA-AI-IOT/deepstream_python_apps/releases/download/v1.2.0/pyds-1.2.0-cp310-cp310-linux_aarch64.whl
 pip3 install ./pyds-1.2.0-*.whl
 
-# Compile the DeepStream-Yolo library
-echo -e "\n\nCompiling DeepStream-Yolo library\n\n"
-cd ~/autoboat_vt/src/object_detection/object_detection/DeepStream-Yolo/
+# Compile the deepstream_yolo library
+echo -e "\n\nCompiling deepstream_yolo library\n\n"
+cd ~/autoboat_vt/src/object_detection/object_detection/deepstream_yolo/
 export CUDA_VER=12.6
 make -C nvdsinfer_custom_impl_Yolo clean && make -C nvdsinfer_custom_impl_Yolo
 

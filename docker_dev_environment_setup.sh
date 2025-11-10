@@ -45,6 +45,6 @@ sudo echo ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTR
 
 sudo udevadm trigger
 
-
+source /home/ws/src/object_detection/object_detection/deepstream_yolo/install_deepstream_yolo_dev_container.sh
 
 source ~/.bashrc

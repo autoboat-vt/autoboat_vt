@@ -33,7 +33,13 @@ NUM_IMAGES_TO_SAVE = 1000
 COMPUTE_HW = 1
 MEMORY_TYPE = 0
 LATENCY = False
-PATH_TO_YOLO_CONFIG = "/home/sailbot/autoboat_vt/src/object_detection/object_detection/DeepStream-Yolo/config_infer_primary_yolo11.txt"
+
+if ("IS_DEV_CONTAINER" in os.environ and os.environ["IS_DEV_CONTAINER"] == "true"):
+    PATH_TO_SRC_DIR = "/home/ws/src"
+else:
+    PATH_TO_SRC_DIR = "/home/sailbot/autoboat_vt/src"
+
+PATH_TO_YOLO_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo11.txt"
 INFERENCE = True
 # MUXER_BATCH_TIMEOUT_USEC = 40_000
 
@@ -62,8 +68,8 @@ CAM_LIST = {
 }
 
 
-if SHOULD_SAVE_IMAGES and not os.path.exists('/home/sailbot/autoboat_vt/src/object_detection/object_detection/frame_results'):
-    os.makedirs('/home/sailbot/autoboat_vt/src/object_detection/object_detection/frame_results')
+if SHOULD_SAVE_IMAGES and not os.path.exists(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results"):
+    os.makedirs(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results")
 
 class BuoyDetectionNode(Node):
     def __init__(self):
@@ -139,10 +145,20 @@ class BuoyDetectionNode(Node):
 
         osd = Gst.ElementFactory.make('nvdsosd', 'nvosd')
 
+        nvvidconv_jpeg = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-jpeg')
+        nvvidconv_jpeg.set_property('nvbuf-memory-type', MEMORY_TYPE)
+        nvvidconv_jpeg.set_property('compute-hw', COMPUTE_HW)
+        
+        caps_nvvidconv_jpeg = Gst.ElementFactory.make('capsfilter', 'nvconverter-jpeg-caps')
+        if ("IS_DEV_CONTAINER" in os.environ and os.environ["IS_DEV_CONTAINER"] == "true"):
+            caps_nvvidconv_jpeg.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=I420')) # Dev container needs I420
+        else:
+            caps_nvvidconv_jpeg.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=NV12')) # Jetson needs NV12
+
         jpegenc = Gst.ElementFactory.make('nvjpegenc', 'jpegenc')
 
         multifilesink = Gst.ElementFactory.make('multifilesink', 'multifilesink')
-        multifilesink.set_property('location', '/home/sailbot/autoboat_vt/src/object_detection/object_detection/frame_results/frame%06d.jpg')
+        multifilesink.set_property('location', f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results/frame%06d.jpg")
         multifilesink.set_property('index', 0)
         multifilesink.set_property('max-files', NUM_IMAGES_TO_SAVE)
 
@@ -159,6 +175,8 @@ class BuoyDetectionNode(Node):
         self.pipeline.add(queue_multifilesink_valve)
         self.pipeline.add(multifilesink_valve)
         self.pipeline.add(osd)
+        self.pipeline.add(nvvidconv_jpeg)
+        self.pipeline.add(caps_nvvidconv_jpeg)
         self.pipeline.add(jpegenc)
         self.pipeline.add(multifilesink)
 
@@ -182,7 +200,10 @@ class BuoyDetectionNode(Node):
             # streammux.link(fakesink)
         queue_multifilesink_valve.link(multifilesink_valve)
         multifilesink_valve.link(osd)
-        osd.link(jpegenc)
+        osd.link(nvvidconv_jpeg)
+        # multifilesink_valve.link(nvvidconv_jpeg)
+        nvvidconv_jpeg.link(caps_nvvidconv_jpeg)
+        caps_nvvidconv_jpeg.link(jpegenc)
         jpegenc.link(multifilesink)
 
         self.loop = GLib.MainLoop()
