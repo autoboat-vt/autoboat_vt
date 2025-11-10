@@ -274,195 +274,184 @@ With ros2:
       </plugin>
 
       <link name='left_front_link'>
-        <pose>.15 .15 0 0 0 0</pose>
+        <pose>.75 0.29235 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 0 0 0 0</pose>
-          <mass>6.9</mass>
+          <mass>50</mass>
           <inertia>
-            <ixx>0.065</ixx>
+            <ixx>0.50269253813</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.065</iyy>
+            <iyy>2.86225018748</iyy>
             <iyz>0</iyz>
-            <izz>0.104</izz>
+            <izz>3.20506959375</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>1.5 0.5847 0.25425</size>
             </box>
           </geometry>
         </collision>
 
         <visual name='visual'>
-          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>1.5 0.5847 0.25425</size>
             </box>
           </geometry>
         </visual>
       </link>
 
       <link name='right_front_link'>
-        <pose>.15 -.15 0 0 0 0</pose>
+        <pose>.75 -0.29235 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 0 0 0 0</pose>
-          <mass>6.9</mass>
+          <mass>50</mass>
           <inertia>
-            <ixx>0.065</ixx>
+            <ixx>0.50269253813</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.065</iyy>
+            <iyy>2.86225018748</iyy>
             <iyz>0</iyz>
-            <izz>0.104</izz>
+            <izz>3.20506959375</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>1.5 0.5847 0.25425</size>
             </box>
           </geometry>
         </collision>
 
         <visual name='visual'>
-          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>1.5 0.5847 0.25425</size>
             </box>
           </geometry>
         </visual>
       </link>
 
       <link name='right_back_link'>
-        <pose>-.15 -.15 0 0 0 0</pose>
+        <pose>-.75 -0.29235 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 0 0 0 0</pose>
-          <mass>6.9</mass>
+          <mass>50</mass>
           <inertia>
-            <ixx>0.065</ixx>
+            <ixx>0.50269253813</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.065</iyy>
+            <iyy>2.86225018748</iyy>
             <iyz>0</iyz>
-            <izz>0.104</izz>
+            <izz>3.20506959375</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>1.5 0.5847 0.25425</size>
             </box>
           </geometry>
         </collision>
 
         <visual name='visual'>
-          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>1.5 0.5847 0.25425</size>
             </box>
           </geometry>
         </visual>
       </link>
 
       <link name='left_back_link'>
-        <pose>-.15 .15 0 0 0 0</pose>
+        <pose>-.75 0.29235 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 0 0 0 0</pose>
-          <mass>6.9</mass>
+          <mass>50</mass>
           <inertia>
-            <ixx>0.065</ixx>
+            <ixx>0.50269253813</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.065</iyy>
+            <iyy>2.86225018748</iyy>
             <iyz>0</iyz>
-            <izz>0.104</izz>
+            <izz>3.20506959375</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>1.5 0.5847 0.25425</size>
             </box>
           </geometry>
         </collision>
 
         <visual name='visual'>
-          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>1.5 0.5847 0.25425</size>
             </box>
           </geometry>
         </visual>
       </link>
 
       <link name='keel_connector_link'>
-        <pose>0 0 -1.075 0 0 0</pose>
+        <pose>0 0 -1.00425 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 0 0 0 0</pose>
-          <mass>5</mass>
+          <mass>20</mass>
           <inertia>
-            <ixx>0.65</ixx>
+            <ixx>0.04753613825</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.65</iyy>
+            <iyy>0.04764179911</iyy>
             <iyz>0</iyz>
-            <izz>1.04</izz>
+            <izz>0.0005859375</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>.25 .05 2</size>
+              <size>.15 .125 1.75425</size>
             </box>
           </geometry>
         </collision>
 
         <visual name='visual'>
-          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>.25 .05 2</size>
+              <size>.15 .125 1.75425</size>
             </box>
           </geometry>
         </visual>
       </link>
 
       <link name='keel_link'>
-        <pose>0 0 -2.175 0 0 0</pose>
+        <pose>0 0 -1.943875 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 0 0 0 0</pose>
-          <mass>15</mass>
+          <mass>300</mass>
           <inertia>
-            <ixx>0.65</ixx>
+            <ixx>0.09765625</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.65</iyy>
+            <iyy>0.390625</iyy>
             <iyz>0</iyz>
-            <izz>1.04</izz>
+            <izz>0.390625</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>.2 .1 .1</size>
+              <size>.5 .25 .25</size>
             </box>
           </geometry>
         </collision>
@@ -470,12 +459,83 @@ With ros2:
         <visual name='visual'>
           <geometry>
             <box>
-              <size>.2 .1 .1</size>
+              <size>.5 .25 .25</size>
             </box>
           </geometry>
         </visual>
       </link>
 
+      <link name='mast_link'>
+        <pose>0 0 1.003425 0 0 0</pose>
+
+        <inertial>
+          <mass>6.9</mass>
+          <inertia>
+            <ixx>0.09765625</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.390625</iyy>
+            <iyz>0</iyz>
+            <izz>0.390625</izz>
+          </inertia>
+        </inertial>
+
+        <collision name='collision'>
+          <geometry>
+            <cylinder>
+              <radius>.025</radius>
+              <length>1.7526</length>
+            </cylinder>
+          </geometry>
+        </collision>
+
+        <visual name='visual'>
+          <geometry>
+            <cylinder>
+              <radius>.025</radius>
+              <length>1.7526</length>
+            </cylinder>
+          </geometry>
+        </visual>
+      </link>
+
+      <link name='boom_link'>
+        <pose>.5 0 0.5 0 0 0</pose>
+
+        <inertial>
+          <mass>4</mass>
+          <inertia>
+            <ixx>0.09765625</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.390625</iyy>
+            <iyz>0</iyz>
+            <izz>0.390625</izz>
+          </inertia>
+        </inertial>
+
+        <collision name='collision'>
+          <pose>0 0 0 0 1.57079632679 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.025</radius>
+              <length>1</length>
+            </cylinder>
+          </geometry>
+        </collision>
+
+        <visual name='visual'>
+          <pose>0 0 0 0 1.57079632679 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.025</radius>
+              <length>1</length>
+            </cylinder>
+          </geometry>
+        </visual>
+      </link>
+
+      <!-- Main body joints -->
       <joint name="left_front_joint" type="fixed">
         <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
@@ -500,52 +560,64 @@ With ros2:
         <child>left_back_link</child>
       </joint>
 
-      <joint name="keel_joint" type="fixed">
-        <pose>0 0 0 0 0 0</pose>
-        <parent>base_link</parent>
-        <child>keel_link</child>
-      </joint>
       <joint name="keel_connector_joint" type="fixed">
         <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
         <child>keel_connector_link</child>
       </joint>
 
+      <joint name="keel_joint" type="fixed">
+        <pose>0 0 0 0 0 0</pose>
+        <parent>base_link</parent>
+        <child>keel_link</child>
+      </joint>
+
+      <joint name="mast_joint" type="fixed">
+        <pose>0 0 0 0 0 0</pose>
+        <parent>base_link</parent>
+        <child>mast_link</child>
+      </joint>
+
+      <joint name="boom_joint" type="fixed">
+        <pose>0 0 0 0 0 0</pose>
+        <parent>base_link</parent>
+        <child>boom_link</child>
+      </joint>
+      
+
+      <!-- Propeller and rudder -->
       <link name='propeller_link'>
-        <pose>-.25 0 -.1 0 0 0</pose>
+        <pose>-1.2 0 -.2 0 0 0</pose>
         <inertial>
-          <pose>0 0 0 0 0 0</pose>
-          <mass>0.2</mass>
+          <mass>3.125</mass>
           <inertia>
-            <ixx>0.00005</ixx>
+            <ixx>0.00813802083</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.00005</iyy>
+            <iyy>0.00813802083</iyy>
             <iyz>0</iyz>
-            <izz>0.00005</izz>
+            <izz>0.00813802083</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>0.05 0.05 0.05</size>
+              <size>0.125 0.125 0.125</size>
             </box>
           </geometry>
         </collision>
 
         <visual name='visual'>
-          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>0.05 0.05 0.05</size>
+              <size>0.125 0.125 0.125</size>
             </box>
           </geometry>
         </visual>
       </link>
 
       <joint name="propeller_joint" type="revolute">
-        <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
         <child>propeller_link</child>
         <axis>
@@ -560,34 +632,32 @@ With ros2:
       </joint>
 
       <link name='rudder_link'>
-        <pose>-.35 0 -.11 0 0 0</pose>
+        <pose>-1.4 0 -0.25425 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 0 0 0 0</pose>
-          <mass>0.5</mass>
+          <mass>2.780875</mass>
           <inertia>
-            <ixx>0.00174</ixx>
-            <ixy>0.0000000000076</ixy>
-            <ixz>0.0000000000076</ixz>
-            <iyy>0.00174</iyy>
-            <iyz>0.0000000000076</iyz>
-            <izz>0.00036</izz>
+            <ixx>0.01555970532</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.0220773811</iyy>
+            <iyz>0</iyz>
+            <izz>0.00767637369</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>0.1 0.02 .2</size>
+              <size>0.175 0.05 0.25425</size>
             </box>
           </geometry>
         </collision>
 
         <visual name='visual'>
-          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>0.1 0.02 .2</size>
+              <size>0.175 0.05 0.25425</size>
             </box>
           </geometry>
         </visual>
@@ -626,7 +696,6 @@ With ros2:
         filename="gz-sim-joint-position-controller-system"
         name="gz::sim::systems::JointPositionController">
         <joint_name>rudder_joint</joint_name>
-        <p_gain>1</p_gain>
         <topic>rudder</topic>
       </plugin>
 
@@ -638,7 +707,7 @@ With ros2:
         <topic>propeller_topic</topic>
         <joint_name>propeller_joint</joint_name>
         <fluid_density>1025</fluid_density>
-        <propeller_diameter>0.05</propeller_diameter>
+        <propeller_diameter>0.125</propeller_diameter>
       </plugin>
 
       <!-- Drag on the rudder to make it function -->
@@ -652,7 +721,7 @@ With ros2:
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>.1</area>
+        <area>0.1</area>
         <upward>0 1 0</upward>
         <forward>1 0 0</forward>
         <link_name>rudder_link</link_name>
@@ -683,7 +752,7 @@ With ros2:
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>0.135</area>
+        <area>1</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>left_front_link</link_name>
@@ -700,7 +769,7 @@ With ros2:
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>0.135</area>
+        <area>1</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>right_front_link</link_name>
@@ -717,7 +786,7 @@ With ros2:
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>0.135</area>
+        <area>1</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>right_back_link</link_name>
@@ -734,7 +803,7 @@ With ros2:
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>0.135</area>
+        <area>1</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>left_back_link</link_name>
@@ -751,7 +820,7 @@ With ros2:
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>0.135</area>
+        <area>1</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>keel_connector_link</link_name>
@@ -768,7 +837,7 @@ With ros2:
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>0.135</area>
+        <area>0.15625</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>keel_link</link_name>
