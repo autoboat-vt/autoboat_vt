@@ -1,7 +1,7 @@
 {
     "name": "VT AutoBoat Development Container v1.1.1",
     "image": "vtautoboat/autoboat_docker_dev_image",
-    "initializeCommand": "xhost +localhost && docker pull vtautoboat/autoboat_docker_dev_image",
+    "initializeCommand": "xhost +localhost; docker pull vtautoboat/autoboat_docker_dev_image",
     "privileged": true,
     "remoteUser": "",
     "containerUser": "",
@@ -10,23 +10,28 @@
     "customizations": {
         "vscode": {
             "extensions": [
-                "ms-azuretools.vscode-docker",
-                "ms-python.python",
-                "ms-python.vscodylance",
-                "magicstack.magicpython",
+                "ms-azuretools.vscode-containers",
+                "ms-iot.vscode-ros",
+                "smilerobotics.urdf",
+                "golang.go",
                 "ms-vscode.cpptools",
                 "twxs.cmake",
                 "ms-vscode.cmake-tools",
-                "ms-iot.vscode-ros",
-                "smilerobotics.urdf",
-                "yzhang.markdown-all-in-one",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "magicstack.magicpython",
                 "charliermarsh.ruff",
-                "njpwerner.autodocstring",
-                "tamasfe.even-better-toml",
-                "davidanson.vscode-markdownlint",
                 "rodolphebarbanneau.python-docstring-highlighter",
+                "njpwerner.autodocstring",
+                "IBM.output-colorizer",
+                "ms-vscode.hexeditor",
+                "pflannery.vscode-versionlens",
+                "yzhang.markdown-all-in-one",
+                "davidanson.vscode-markdownlint",
+                "tamasfe.even-better-toml",
                 "redhat.vscode-xml",
-                "redhat.vscode-yaml"
+                "redhat.vscode-yaml",
+                "mkxml.vscode-filesize"
             ]
         }
     },
