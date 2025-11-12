@@ -5,9 +5,11 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 
 
+
 if [[ "$OS" == "Linux" ]]; then
     # SETUP THE DISPLAY ENVIRONMENT VARIABLES FOR LINUX/ WSL
     echo -e "devcontainer_environment_variables\n\nDISPLAY=:0" > $SCRIPT_DIR/devcontainer_environment_variables
+    echo -e \USER=$USER >> $SCRIPT_DIR/devcontainer_environment_variables
 
     sudo apt install x11-utils
     sudo apt install x11-xserver-utils
@@ -100,6 +102,7 @@ if [[ "$OS" == "Linux" ]]; then
 elif [[ "$OS" == "Darwin" ]]; then
     # SETUP THE DISPLAY ENVIRONMENT VARIABLES FOR MACOS
     echo -e "devcontainer_environment_variables\n\nDISPLAY=docker.for.mac.host.internal:0" >> $SCRIPT_DIR/devcontainer_environment_variables
+    echo -e \USER=$USER >> $SCRIPT_DIR/devcontainer_environment_variables
 
     echo "[INFO] macOS detected. GPU passthrough not supported in Docker Desktop."
 
@@ -108,6 +111,7 @@ elif [[ "$OS" == "Darwin" ]]; then
 else
     # SETUP THE DISPLAY ENVIRONMENT VARIABLES FOR AN UNKNOWN OS
     echo -e "devcontainer_environment_variables\n\nDISPLAY=:0" > $SCRIPT_DIR/devcontainer_environment_variables
-    
+    echo -e \USER=$USER >> $SCRIPT_DIR/devcontainer_environment_variables
+
     echo "[WARN] Unsupported OS: $OS. Running CPU-only and Display may not work properly."
 fi
