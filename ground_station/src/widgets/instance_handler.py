@@ -33,6 +33,7 @@ class InstanceInfo:
         A dictionary containing instance information with the following keys:
         - `instance_id`: The unique identifier for the instance.
         - `instance_identifier`: A human-readable name for the instance.
+        - `user`: The user associated with the instance.
         - `created_at`: The timestamp when the instance was created (ISO format).
         - `updated_at`: The timestamp when the instance was last updated (ISO format).
 
@@ -46,6 +47,7 @@ class InstanceInfo:
         try:
             self.instance_id = int(data["instance_id"])
             self.instance_identifier = str(data["instance_identifier"])
+            self.user = str(data["user"])
             self.created_at = self.utc_to_local(datetime.fromisoformat(data["created_at"]))
             self.updated_at = self.utc_to_local(datetime.fromisoformat(data["updated_at"]))
 
@@ -88,6 +90,7 @@ class InstanceInfo:
         return {
             "instance_id": self.instance_id,
             "instance_identifier": self.instance_identifier,
+            "user": self.user,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
@@ -525,8 +528,9 @@ class InstanceWidget(QFrame):
         A dictionary containing information about the instance. It should include (at least):
         - `instance_id`: The unique identifier for the instance.
         - `instance_identifier`: A human-readable name for the instance.
-        - `created_at`: The timestamp when the instance was created.
-        - `updated_at`: The timestamp when the instance was last updated.
+        - `user`: The user associated with the instance.
+        - `created_at`: The timestamp when the instance was created (ISO format).
+        - `updated_at`: The timestamp when the instance was last updated (ISO format).
 
     Attributes
     ----------
@@ -599,6 +603,7 @@ class InstanceWidget(QFrame):
 
         self.instance_id = self.instance_info.instance_id
         self.instance_identifier = self.instance_info.instance_identifier
+        self.user = self.instance_info.user
         self.created_at = self.instance_info.created_at
         self.updated_at = self.instance_info.updated_at
 
@@ -614,11 +619,13 @@ class InstanceWidget(QFrame):
         self.instance_id_label = QLabel(str(self.instance_id))
         self.instance_name_edit = QLineEdit(self.instance_identifier)
         self.instance_name_edit.editingFinished.connect(self.on_instance_name_changed)
+        self.user_label = QLabel(self.user)
         self.created_at_label = QLabel(self.created_at.strftime("%Y-%m-%d %I:%M:%S %p"))
         self.updated_at_label = QLabel(self.updated_at.strftime("%Y-%m-%d %I:%M:%S %p"))
 
         self.form_layout.addRow("Instance ID", self.instance_id_label)
         self.form_layout.addRow("Instance Name", self.instance_name_edit)
+        self.form_layout.addRow("User", self.user_label)
         self.form_layout.addRow("Created At", self.created_at_label)
         self.form_layout.addRow("Updated At", self.updated_at_label)
         # endregion setup widget style
