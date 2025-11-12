@@ -469,14 +469,14 @@ With ros2:
         <pose>0 0 1.003425 0 0 0</pose>
 
         <inertial>
-          <mass>6.9</mass>
+          <mass>2</mass>
           <inertia>
-            <ixx>0.09765625</ixx>
+            <ixx>0.51224696</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.390625</iyy>
+            <iyy>0.51224696</iyy>
             <iyz>0</iyz>
-            <izz>0.390625</izz>
+            <izz>0.000625</izz>
           </inertia>
         </inertial>
 
@@ -503,14 +503,14 @@ With ros2:
         <pose>.5 0 0.5 0 0 0</pose>
 
         <inertial>
-          <mass>4</mass>
+          <mass>2</mass>
           <inertia>
-            <ixx>0.09765625</ixx>
+            <ixx>0.16697916666</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.390625</iyy>
+            <iyy>0.16697916666</iyy>
             <iyz>0</iyz>
-            <izz>0.390625</izz>
+            <izz>0.000625</izz>
           </inertia>
         </inertial>
 
@@ -531,6 +531,46 @@ With ros2:
               <radius>0.025</radius>
               <length>1</length>
             </cylinder>
+          </geometry>
+        </visual>
+      </link>
+
+      <link name='sail_link'>
+        <pose>.025 0 0.525 0 0 0</pose>
+
+        <inertial>
+          <mass>.94</mass>
+          <inertia>
+            <ixx>0.03222</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.11737</iyy>
+            <iyz>0</iyz>
+            <izz>0.14959</izz>
+          </inertia>
+        </inertial>
+
+        <collision name='collision'>
+          <pose>0 0 0 1.57079632679 0 0</pose>
+          <geometry>
+            <polyline>
+              <point>0 0</point>
+              <point>0 1.372</point>
+              <point>0.991 0</point>
+              <height>.001</height>
+            </polyline>
+          </geometry>
+        </collision>
+
+        <visual name='visual'>
+          <pose>0 0 0 1.57079632679 0 0</pose>
+          <geometry>
+            <polyline>
+              <point>0 0</point>
+              <point>0 1.372</point>
+              <point>0.991 0</point>
+              <height>.001</height>
+            </polyline>
           </geometry>
         </visual>
       </link>
@@ -568,20 +608,38 @@ With ros2:
 
       <joint name="keel_joint" type="fixed">
         <pose>0 0 0 0 0 0</pose>
-        <parent>base_link</parent>
+        <parent>keel_connector_link</parent>
         <child>keel_link</child>
       </joint>
 
-      <joint name="mast_joint" type="fixed">
+      <joint name="mast_joint" type="revolute">
         <pose>0 0 0 0 0 0</pose>
+        <axis>
+          <xyz>0 0 1</xyz>
+            <limit>
+            <lower>-1.6</lower>
+            <upper>1.6</upper>
+          </limit>
+          <dynamics>
+            <damping>20</damping>
+          </dynamics>
+        </axis>
+        
+        
         <parent>base_link</parent>
         <child>mast_link</child>
       </joint>
 
       <joint name="boom_joint" type="fixed">
         <pose>0 0 0 0 0 0</pose>
-        <parent>base_link</parent>
+        <parent>mast_link</parent>
         <child>boom_link</child>
+      </joint>
+
+      <joint name="sail_joint" type="fixed">
+        <pose>0 0 0 0 0 0</pose>
+        <parent>boom_link</parent>
+        <child>sail_link</child>
       </joint>
       
 
@@ -721,7 +779,7 @@ With ros2:
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>0.1</area>
+        <area>0.3</area>
         <upward>0 1 0</upward>
         <forward>1 0 0</forward>
         <link_name>rudder_link</link_name>
