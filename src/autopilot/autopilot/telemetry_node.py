@@ -81,11 +81,12 @@ class TelemetryNode(Node):
         self.autopilot_parameters_session = requests.Session()
         self.waypoints_session = requests.Session()
 
-        self.instance_id = -1
         while True:
             new_id = self.get_raw_response_from_telemetry_server("instance_manager/create", session=self.boat_status_session)
             if isinstance(new_id, int):
                 self.instance_id = new_id
+                instance_name = f"{os.environ['USER']}'s Instance"
+                self.boat_status_session.post(urljoin(TELEMETRY_SERVER_URL, f"instance_manager/set_name/{self.instance_id}/{instance_name}"))
                 self.logger.info(f"Created new telemetry server instance with ID {self.instance_id}")
                 break
 
