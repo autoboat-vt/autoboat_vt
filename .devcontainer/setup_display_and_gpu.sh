@@ -38,13 +38,6 @@ setup() {
 	shell_name=$(basename "$SHELL" 2>/dev/null || echo "bash")
 	log_info "Detected shell: $shell_name"
 
-	if sh -c 'set -o posix >/dev/null 2>&1' &>/dev/null; then
-		log_info "Shell $shell_name is POSIX-compliant"
-	else
-		log_error "Shell $shell_name is not POSIX-compliant. Exiting."
-		exit 1
-	fi
-
 	local profile_file
 	case "$shell_name" in
 	zsh) profile_file="$HOME/.zprofile" ;;
