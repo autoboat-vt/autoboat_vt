@@ -73,4 +73,4 @@ pip install numpy==1.26.0
 echo -e "\n\nInstalling Utils\n\n"
 sudo apt-get install -y v4l-utils
 
-gst-inspect-1.0 # initialize gstreamer plugins
+gst-inspect-1.0 > /dev/null # initialize gstreamer plugins
