@@ -130,7 +130,11 @@ pip install numpy==1.26.4
 echo -e "\n\nInstalling Utils\n\n"
 sudo apt-get install -y v4l-utils
 
-sudo v4l2-ctl --list-devices # TODO: can we change permissions so this doesn't need to be run?
+gst-inspect-1.0 # initialize gstreamer plugins
+
+# sudo v4l2-ctl --list-devices # TODO: can we change permissions so this doesn't need to be run?
 
 export IS_DEV_CONTAINER=true
 echo -e "\n\nDeepstream setup complete!\n\n"
+
+cd /home/ws/
