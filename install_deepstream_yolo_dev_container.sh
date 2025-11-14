@@ -48,23 +48,8 @@ install_deepstream_x86() {
 }
 
 install_deepstream_aarch64() {
-    echo -e "\nInstalling deepstream for aarch64"
-    # Untested for arm platforms
-    sudo apt install -y \
-        libssl3 \
-        libssl-dev \
-        libgstreamer1.0-0 \
-        gstreamer1.0-tools \
-        gstreamer1.0-plugins-good \
-        gstreamer1.0-plugins-bad \
-        gstreamer1.0-plugins-ugly \
-        gstreamer1.0-libav \
-        libgstreamer-plugins-base1.0-dev \
-        libgstrtspserver-1.0-0 \
-        libjansson4 \
-        libyaml-cpp-dev
-    sudo wget --content-disposition 'https://api.ngc.nvidia.com/v2/resources/nvidia/deepstream/versions/7.1/files/deepstream-7.1_7.1.0-1_arm64.deb' -O deepstream-7.1_7.1.0-1_arm64.deb
-    sudo apt-get install -y ./deepstream-7.1_7.1.0-1_arm64.deb
+    echo -e "\nDon't use arm\n"
+    exit
 }
 
 cd ~/
@@ -130,7 +115,7 @@ pip install numpy==1.26.4
 echo -e "\n\nInstalling Utils\n\n"
 sudo apt-get install -y v4l-utils
 
-gst-inspect-1.0 # initialize gstreamer plugins
+gst-inspect-1.0 > /dev/null # initialize gstreamer plugins
 
 # sudo v4l2-ctl --list-devices # TODO: can we change permissions so this doesn't need to be run?
 
