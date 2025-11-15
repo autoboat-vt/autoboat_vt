@@ -59,7 +59,6 @@ int8_t cmps14::getRoll() {
     return (int8_t)buffer;
 }
 
-//accellXYZ is never stored or sent anywhere.
 void cmps14::readAccelerator(float *accelX, float *accelY, float *accelZ) {
     uint8_t buffer[6];
     if (readBytes(ACCELEROX_Register, buffer, 6) != 6) {

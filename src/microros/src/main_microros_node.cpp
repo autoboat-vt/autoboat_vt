@@ -336,7 +336,10 @@ void application_loop() {
     // sleep_ms(3000);
     //compass_angle_msg.data = compass.getBearing()/10;
     //compass_angle_msg.data = fmod(compass.getBearing() / 10 + COMPASS_OFFSET + 360,360.0);
-    compass_angle_msg.data = compass.getBearing() / 10.0 + COMPASS_OFFSET
+    //compass_angle_msg.data = compass.getBearing() / 10.0 + COMPASS_OFFSET
+    compass_angle_msg.data = compass.getBearing() / 10.0;
+
+
     // fmod((-compass.getBearing() / 10.0 + COMPASS_OFFSET + 360), 360.0);
     // current_rudder_angle_msg.data = current_rudder_angle;
     // current_rudder_motor_angle_msg.data = current_rudder_motor_angle;

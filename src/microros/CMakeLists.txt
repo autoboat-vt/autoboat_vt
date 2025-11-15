@@ -58,3 +58,4 @@ add_compile_definitions(PICO_STDIO_DEFAULT_CRLF=0)
 
 # Generate UF2
 pico_add_extra_outputs(pico_microros)
+
