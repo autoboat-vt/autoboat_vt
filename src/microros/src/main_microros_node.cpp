@@ -32,8 +32,8 @@ std_msgs__msg__Float32        test_msg;
 
 static drv8711* rudderStepperMotorDriver = nullptr;
 static drv8711* winchStepperMotorDriver = nullptr;
-static amt22*   rudderEncoder = nullptr;
-static amt22*   winchEncoder = nullptr;
+static amt22*   rudderEncoder;
+static amt22*   winchEncoder;
 static cmps14  compass;
 
 
@@ -331,7 +331,7 @@ void application_loop(rcl_timer_t * timer, int64_t last_call_time) {
     
     // counter clockwise from true east
     compass_angle_msg.data = fmod((-cmps14_getBearing(&compass) / 10.0 + COMPASS_OFFSET + 360), 360.0);
-    current_rudder_angle_msg.data = 0.0;//current_rudder_angle;
+    current_rudder_angle_msg.data = 8.0;//current_rudder_angle;
     current_rudder_motor_angle_msg.data = 0.0;//current_rudder_motor_angle;
 
     test_msg.data = rudder_error;

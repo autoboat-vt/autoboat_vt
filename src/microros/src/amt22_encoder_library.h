@@ -17,6 +17,8 @@
 #define SET_ZERO_POINT 0x70
 #define READ_TURNS 0xA0
 
+//activate low
+
 class amt22 : public spi_device
 {
 
@@ -30,13 +32,13 @@ public:
 
     void zero_encoder_value();
 
-    inline uint8_t *read_position(uint8_t *bytes_read);
+    uint8_t* read_position(uint8_t* bytes_read);
 
-    inline bool get_bit(uint8_t byte, int index);
+    bool get_bit(uint8_t byte, int index);
 
     bool verify_packet(uint8_t packet_contents[2]);
 
-    inline float parse_angle(uint8_t packet_contents[2]);
+    float parse_angle(uint8_t packet_contents[2]);
 
     float get_motor_angle();
 

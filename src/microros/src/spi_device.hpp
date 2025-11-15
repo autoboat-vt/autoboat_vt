@@ -25,12 +25,12 @@ class spi_device {
 
 
     protected:
-        spi_inst_t *spi_port;
+        spi_inst_t* spi_port;
         uint csPin;
 
-        void cs_select();
+        void cs_low();
 
-        void cs_deselect();
+        void cs_high();
 
 
 };

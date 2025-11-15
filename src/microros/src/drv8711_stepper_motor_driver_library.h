@@ -9,6 +9,8 @@
 #define DRV8711_DIRECTION_BIT 1
 #define DRV8711_STEP_BIT 2
 
+// activate high
+
 typedef enum
 {
     CTRL_REG_ADDRESS = 0x00,

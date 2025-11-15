@@ -1,5 +1,7 @@
 #include "drv8711_stepper_motor_driver_library.h"
 
+        //activate high
+
         drv8711::drv8711(
             spi_inst_t *spi_port,
             uint8_t cs_pin,
@@ -9,8 +11,6 @@
             uint16_t max_winch_current
         ) : spi_device(spi_port, cs_pin), slp_pin(slp_pin)  {
            
-            gpio_init(slp_pin);
-            gpio_set_dir(slp_pin, GPIO_OUT);
             gpio_put(slp_pin, 1);
             sleep_ms(1000);
            
@@ -37,10 +37,12 @@
             uint16_t send = (0x8 | (address & 0b111)) << 12;
             uint8_t tx[2] = {(send & 0x00FF), (send & 0xFF00) >> 8};
             uint8_t rx[2] = {};
-   
-            this->cs_select();
+            
+            
+
+            this->cs_high();
             spi_write_read_blocking(spi_port, tx, rx, 2);
-            this->cs_deselect();
+            this->cs_low();
             uint16_t rx0 = rx[0];
             uint16_t rx1 = rx[1];
             uint16_t whatIsRead = ((rx0 & 0x0F) >> 8) | rx1;
@@ -56,9 +58,9 @@
             // Bits 4:15 - Data to write
             uint16_t send = ((address & 0b111) << 12) | (value & 0xFFF);
             uint8_t tx[2] = {send >> 8, send & 0x00FF};
-            this->cs_select();
+            this->cs_high();
             spi_write_blocking(spi_port, tx, 2);
-            this->cs_deselect();
+            this->cs_low();
         }
 
 

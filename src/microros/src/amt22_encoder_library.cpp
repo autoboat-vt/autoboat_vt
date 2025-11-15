@@ -1,35 +1,23 @@
-#include "hardware/spi.h"
-#include "pico/stdlib.h"
-#include <math.h>
-#include <stdio.h>
-#include <string.h>
-#include "spi_device.hpp"
 #include "amt22_encoder_library.h"
 
 #define LED_PIN 25
 
+//activate low
 
-#define READ_BIT 0x00
-
-
-#define READ_RATE 10000
+    amt22::amt22(int cs_pin, spi_inst_t* spi_port) : spi_device(spi_port, cs_pin) {
 
 
-#define NO_OP 0x00
-#define RESET_ENCODER 0x60
-#define SET_ZERO_POINT 0x70
-#define READ_TURNS 0xA0
-
-    amt22::amt22(int cs_pin, spi_inst_t *spi_port) : spi_device(spi_port, cs_pin) {
-
+        
         // Chip select is active-low, so we'll initialise it to a driven-high state
-        gpio_init(cs_pin);
-        gpio_set_dir(cs_pin, GPIO_OUT);
         gpio_put(cs_pin, 1);
         gpio_pull_up(cs_pin);
+
+        turn_count = 0;
+        cur_angle = 0;
+
         // sleep_us(10);
         // Make the CS pin available to picotool
-        // bi_decl(bi_1pin_with_name(PICO_SPI_CSN_PIN, "SPI CS"));
+        // bi_decl(bi_1pin_with_name(cs_pin, "SPI CS"));
     }
 
 
@@ -40,24 +28,22 @@
 
     void amt22::zero_encoder_value() {
         sleep_us(40);
-        this->cs_select();
+        this->cs_low();
         sleep_us(3);
         uint8_t send[2] = {NO_OP, SET_ZERO_POINT};  
         spi_write_blocking(spi_port, send, 2);
         sleep_us(3);  
-        this->cs_deselect();
+        this->cs_high();
     }
 
 
-    inline uint8_t* amt22::read_position(uint8_t * bytes_read) {
+    uint8_t* amt22::read_position(uint8_t * bytes_read) {
         
-        gpio_init(LED_PIN);
-        gpio_set_dir(LED_PIN, 1);
+        //gpio_init(LED_PIN);
+        //gpio_set_dir(LED_PIN, 1);
         
         sleep_us(40);
-        this->cs_select();
-
-        
+        this->cs_low();
 
         sleep_us(3);
         uint8_t send[2] = {NO_OP, NO_OP};    
@@ -65,18 +51,20 @@
         // source of error
         spi_write_read_blocking(this->spi_port, send, bytes_read, 2);
 
-        gpio_put(LED_PIN, 1);
+        sleep_us(3);
+
+        //gpio_put(LED_PIN, 1);
 
         sleep_us(3);
 
 
-        this->cs_deselect();
+        this->cs_high();
    
         return bytes_read;
     }
 
 
-    inline bool amt22::get_bit(uint8_t byte, int index){
+    bool amt22::get_bit(uint8_t byte, int index){
         return (byte & 1 << (index)) != 0;
     }
 
@@ -123,7 +111,7 @@
 
 
    
-    inline float amt22::parse_angle(uint8_t packet_contents[2]){
+    float amt22::parse_angle(uint8_t packet_contents[2]){
 
 
         packet_contents[0] = packet_contents[0] & ~0b11000000;
@@ -144,7 +132,7 @@
         
         
 
-        // sleep_us(READ_RATE);
+        sleep_us(READ_RATE);
 
         
 
