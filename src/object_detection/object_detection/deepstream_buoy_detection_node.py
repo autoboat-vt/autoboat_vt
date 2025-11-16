@@ -22,10 +22,15 @@ from autoboat_msgs.msg import ObjectDetectionResultsList, ObjectDetectionResult
 os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
 # os.environ['NVDS_ENABLE_COMPONENT_LATENCY_MEASUREMENT'] = '1'
 os.environ['CUDA_VER'] = "12.6"
-# os.environ['OPENCV'] = "1"
+# os.environ['OPENCV'] = "1" # These are for int8 calibration, not needed here
 # os.environ['INT8_CALIB_IMG_PATH'] = "calibration.txt"
 # os.environ['INT8_CALIB_BATCH_SIZE'] = "4"
 # os.environ['GST_DEBUG'] = "3"
+
+if (re.search("/home/ws", os.getcwd()) is not None):
+    IS_DEV_CONTAINER = True
+else:
+    IS_DEV_CONTAINER = False
 
 SHOULD_SAVE_IMAGES = True
 NUM_IMAGES_TO_SAVE = 1000
@@ -34,7 +39,7 @@ COMPUTE_HW = 1
 MEMORY_TYPE = 0
 LATENCY = False
 
-if ("IS_DEV_CONTAINER" in os.environ and os.environ["IS_DEV_CONTAINER"] == "true"):
+if (IS_DEV_CONTAINER):
     PATH_TO_SRC_DIR = "/home/ws/src"
 else:
     PATH_TO_SRC_DIR = "/home/sailbot/autoboat_vt/src"
@@ -43,43 +48,29 @@ PATH_TO_YOLO_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deep
 INFERENCE = True
 # MUXER_BATCH_TIMEOUT_USEC = 40_000
 
-# This is just a way to figure out which /dev/video* is the camera
-# The camera outputs on 3 devices: /dev/video0, /dev/video2, /dev/video4.
-# Each device is a different format, but the order can change
-# We want specifically the YUYV (color) format
-v4l2_results = re.search("YUYV", subprocess.run(['v4l2-ctl', '--list-devices', '--device', '/dev/video0'], capture_output=True, text=True).stdout)
-if (v4l2_results is not None):
-    v4l2_device = "/dev/video0"
-else:
-    v4l2_results = re.search("YUYV", subprocess.run(['v4l2-ctl', '--list-devices', '--device', '/dev/video2'], capture_output=True, text=True).stdout)
-    if (v4l2_results is not None):
-        v4l2_device = "/dev/video2"
-    else:
-        v4l2_device = "/dev/video4"
-
-CAM_LIST = {
-    0: {
-        "name": v4l2_device,
-        "framerate": "30/1",
-        "format": "YUY2",
-        "input_width": 1280,
-        "input_height": 800
-    }
-}
-
-
 if SHOULD_SAVE_IMAGES and not os.path.exists(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results"):
     os.makedirs(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results")
 
 class BuoyDetectionNode(Node):
     def __init__(self):
         super().__init__("buoy_detection")
+        self.CAM_LIST = {
+            0: {
+                "name": self._find_camera(),
+                "framerate": "30/1",
+                "format": "YUY2",
+                "input_width": 1280,
+                "input_height": 800
+            }
+        }
+
         # ROS2 Initialization
         sensor_qos_profile = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST, depth=1)
         self.object_detection_results_publisher = self.create_publisher(msg_type=ObjectDetectionResultsList, topic="/object_detection_results_list", qos_profile=sensor_qos_profile)
 
         # TODO: add subscriber for image topics
         # TODO: add dynamic reconfigure for parameters from telemetry node
+        # TODO: add localization
 
         # DeepStream Initialization
         Gst.init(None)
@@ -100,11 +91,11 @@ class BuoyDetectionNode(Node):
         # v4l2-ctl --list-devices
         # v4l2-ctl --device /dev/video0 --list-formats-ext
         source0 = Gst.ElementFactory.make("v4l2src", "usb-cam-0")
-        source0.set_property('device', CAM_LIST[0]["name"])
-        self.get_logger().info(f"Opening camera device: {CAM_LIST[0]['name']}")
+        source0.set_property('device', self.CAM_LIST[0]["name"])
+        self.get_logger().info(f"Opening camera device: {self.CAM_LIST[0]['name']}")
 
         caps_source0 = Gst.ElementFactory.make('capsfilter', 'source0-caps')
-        caps_source0.set_property('caps', Gst.Caps.from_string(f'video/x-raw, width={CAM_LIST[0]["input_width"]}, height={CAM_LIST[0]["input_height"]}, format={CAM_LIST[0]["format"]}, framerate={CAM_LIST[0]["framerate"]}'))
+        caps_source0.set_property('caps', Gst.Caps.from_string(f'video/x-raw, width={self.CAM_LIST[0]["input_width"]}, height={self.CAM_LIST[0]["input_height"]}, format={self.CAM_LIST[0]["format"]}, framerate={self.CAM_LIST[0]["framerate"]}'))
 
         # This is a workaround.
         # Issue with deepstream7.1 and jetpack6.2 requires compute-hw to be 1 instead of 0.
@@ -120,7 +111,7 @@ class BuoyDetectionNode(Node):
         nvvidconvsrc0.set_property('compute-hw', COMPUTE_HW)
 
         caps_nvvidconvsrc0 = Gst.ElementFactory.make('capsfilter', 'nvmm-caps-0')
-        caps_nvvidconvsrc0.set_property('caps', Gst.Caps.from_string(f'video/x-raw(memory:NVMM), format=NV12, width={CAM_LIST[0]["input_width"]}, height={CAM_LIST[0]["input_height"]}'))
+        caps_nvvidconvsrc0.set_property('caps', Gst.Caps.from_string(f'video/x-raw(memory:NVMM), format=NV12, width={self.CAM_LIST[0]["input_width"]}, height={self.CAM_LIST[0]["input_height"]}'))
 
         if INFERENCE:
             pgie = Gst.ElementFactory.make('nvinfer', 'pgie')
@@ -150,7 +141,7 @@ class BuoyDetectionNode(Node):
         nvvidconv_jpeg.set_property('compute-hw', COMPUTE_HW)
         
         caps_nvvidconv_jpeg = Gst.ElementFactory.make('capsfilter', 'nvconverter-jpeg-caps')
-        if ("IS_DEV_CONTAINER" in os.environ and os.environ["IS_DEV_CONTAINER"] == "true"):
+        if (IS_DEV_CONTAINER):
             caps_nvvidconv_jpeg.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=I420')) # Dev container needs I420
         else:
             caps_nvvidconv_jpeg.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=NV12')) # Jetson needs NV12
@@ -309,6 +300,26 @@ class BuoyDetectionNode(Node):
     def _probe(self, pad, info, u_data):
         self.get_logger().info(u_data)
         return Gst.PadProbeReturn.OK
+
+    def _find_camera(self):
+        """
+        This is just a way to figure out which /dev/video* is the camera\n
+        The camera outputs on 3 devices: /dev/video0, /dev/video2, /dev/video4.\n
+        Each device is a different format, but the order can change.\n
+        We want specifically the YUYV (color) format\n
+        While this finds the device with YUYV format, it does not guarantee that the correct resolution and framerate are available.
+        Returns:
+            str: The /dev/video* device path
+        """
+        if (re.search("YUYV", subprocess.run(['v4l2-ctl', '--list-devices', '--device', '/dev/video0'], capture_output=True, text=True).stdout) is not None):
+            return "/dev/video0"
+        elif (re.search("YUYV", subprocess.run(['v4l2-ctl', '--list-devices', '--device', '/dev/video2'], capture_output=True, text=True).stdout) is not None):
+            return "/dev/video2"
+        elif (re.search("YUYV", subprocess.run(['v4l2-ctl', '--list-devices', '--device', '/dev/video4'], capture_output=True, text=True).stdout) is not None):
+            return "/dev/video4"
+        else:
+            self.get_logger().error("Could not find camera device with YUYV format")
+            sys.exit(1)
 
 def main():
     rclpy.init()
