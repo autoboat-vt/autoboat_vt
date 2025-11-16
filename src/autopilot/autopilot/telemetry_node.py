@@ -338,7 +338,7 @@ class TelemetryNode(Node):
         start_time = time.time()
         # requests.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json={"value": list(boat_status_dictionary.values())})
         self.boat_status_session.post(url=TELEMETRY_SERVER_URL + "/boat_status/set", json=boat_status_dictionary)
-        self.get_logger().info(f"{time.time() - start_time}")
+        # self.get_logger().info(f"{time.time() - start_time}")
 
     def update_waypoints_from_telemetry(self):
         """
