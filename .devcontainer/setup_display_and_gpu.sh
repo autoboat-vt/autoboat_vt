@@ -136,7 +136,6 @@ setup_linux() {
 
 		else
 			log_info "NVIDIA Container Toolkit already installed."
-			setup ":0" 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"'
 		fi
 
 	else
