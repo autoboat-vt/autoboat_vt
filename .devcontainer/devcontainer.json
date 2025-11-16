@@ -37,7 +37,9 @@
     },
     "containerEnv": {
         "ROS_AUTOMATIC_DISCOVERY_RANGE": "LOCALHOST",
-        "ROS_DOMAIN_ID": "42"
+        "ROS_DOMAIN_ID": "42",
+        "CONTAINER_OWNER_USER_NAME": "${localEnv:USER}",
+        "TZ": "${localEnv:TZ:America/New_York}"
     },
     "runArgs": [
         "--net=host",

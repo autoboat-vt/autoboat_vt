@@ -1,6 +1,6 @@
 from qtpy.QtCore import QRegularExpression
 from qtpy.QtGui import QFont
-from constants import YELLOW, RED, GREEN, WHITE
+from utils.constants import YELLOW, RED, GREEN, WHITE
 from syntax_highlighters.base_highlighter import BaseHighlighter
 
 

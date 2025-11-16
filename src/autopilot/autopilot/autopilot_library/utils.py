@@ -63,7 +63,7 @@ def check_float_equivalence(float1: float, float2: float) -> bool:
 
 
 
-def cartesian_vector_to_polar(x: float, y: float) -> tuple:
+def cartesian_vector_to_polar(x: float, y: float) -> tuple[float, float]:
     """
     Converts a cartesian vector (x and y coordinates) to polar form (magnitude and direction).
 
@@ -79,9 +79,10 @@ def cartesian_vector_to_polar(x: float, y: float) -> tuple:
     # arctan2 doesn't like when we pass 2 zeros into it so we should cover that case
     if x == 0. and y == 0.:
         return 0., 0.
-    magnitude = np.sqrt(x**2 + y**2)
+    
+    magnitude = np.linalg.norm([x, y])
     direction = np.arctan2(y, x) # radians
-    direction = direction * (180/np.pi)  # angle from -180 to 180 degrees
+    direction = direction * (180 / np.pi)  # angle from -180 to 180 degrees
     direction = direction % 360  # angle from 0 to 360 degrees
     return magnitude, direction
 
@@ -198,9 +199,6 @@ def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float
     
     
     
-    
-    
-    
 # ==============================================================================
 # UTIL FUNCTIONS THAT ARE NOT FULLY TESTED
 # ==============================================================================
@@ -244,6 +242,7 @@ def does_line_violate_no_sail_zone(
     # find the angle between these two vectors
     angle_between = np.arccos(np.dot(up_wind_vector, normalized_displacement))
     
+    # TODO I AM PRETTY SURE THAT WE NEED TO USE THE IS ANGLE BETWEEN BOUNDARIES FUNCTION FOR THIS?
     if -no_sail_zone_size < angle_between < no_sail_zone_size:
         return True
     
