@@ -935,7 +935,7 @@ class GroundStationWidget(QWidget):
             )
             self.browser.page().runJavaScript(js_code)
 
-        except TypeError:
+        except (TypeError, ValueError):
             self.boat_data["position"] = [-69.420, -69.420]
             self.boat_data["heading"] = -69.420
 

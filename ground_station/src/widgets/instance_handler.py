@@ -1,4 +1,5 @@
 import requests
+import random
 from utils import constants, thread_classes, misc
 from urllib.parse import urljoin
 from datetime import datetime, timezone
@@ -8,6 +9,7 @@ from enum import auto
 from strenum import StrEnum
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
+    QApplication,
     QWidget,
     QFrame,
     QGridLayout,
@@ -54,38 +56,15 @@ class InstanceInfo:
         except (KeyError, TypeError, ValueError) as e:
             raise ValueError(f"Invalid instance_info data: {e}")
 
-    def utc_to_local(self, utc_dt: datetime) -> datetime:
+    def as_dict(self) -> dict[str, Any]:
         """
-        Convert a UTC datetime to local timezone.
-
-        Parameters
-        ----------
-        utc_dt : datetime
-            A timezone-aware datetime in UTC.
+        Return the instance information as a dictionary.
 
         Returns
         -------
-        datetime
-            Datetime converted to local timezone.
+        dict[str, Any]
+            A dictionary containing the instance information.
         """
-
-        if utc_dt.tzinfo is None:
-            utc_dt = utc_dt.replace(tzinfo=timezone.utc)
-
-        return utc_dt.astimezone()
-
-    def age_seconds(self) -> float:
-        """Return the age of the instance in seconds since creation."""
-
-        return (datetime.now(tz=timezone.utc) - self.created_at).total_seconds()
-
-    def summary(self) -> str:
-        """Return a summary string of the instance information."""
-
-        return f"Instance {self.instance_identifier} (ID: {self.instance_id})"
-
-    def as_dict(self) -> dict[str, Any]:
-        """Return the instance information as a dictionary."""
 
         return {
             "instance_id": self.instance_id,
@@ -95,13 +74,31 @@ class InstanceInfo:
             "updated_at": self.updated_at,
         }
 
+    def utc_to_local(self, utc_dt: datetime) -> datetime:
+        """
+        Convert a UTC datetime to local timezone.
+
+        Parameters
+        ----------
+        utc_dt : datetime
+            The UTC datetime to convert.
+
+        Returns
+        -------
+        datetime
+            The converted local datetime.
+        """
+
+        if utc_dt.tzinfo is None:
+            utc_dt = utc_dt.replace(tzinfo=timezone.utc)
+
+        return utc_dt.astimezone()
+
 
 class InstanceHandler(QWidget):
     """
-    A widget to handle instances of the application. <br>
-
-    This widget is responsible for providing a interface that allows users to
-    select a instance of the simulation to connect to. Additionally, this interface
+    This widget is responsible for providing a interface that allows users to \\
+    select a instance of the simulation to connect to. Additionally, this interface \\
     will allow users to manage instances that are no longer running but still available.
 
     Inherits
@@ -115,34 +112,38 @@ class InstanceHandler(QWidget):
 
         Attributes
         ----------
+        TIME_SINCE_UPDATED
+            Sort by time since last update.
         INSTANCE_ID
             Sort by instance ID.
         INSTANCE_NAME
             Sort by instance name.
         CREATED_AT
             Sort by creation timestamp.
-        TIME_SINCE_UPDATED
-            Sort by time since last update.
         NO_SORT
             No sorting applied.
+
+        Inherits
+        --------
+        `StrEnum`
         """
 
+        TIME_SINCE_UPDATED = auto()
         INSTANCE_ID = auto()
         INSTANCE_NAME = auto()
         CREATED_AT = auto()
-        TIME_SINCE_UPDATED = auto()
         NO_SORT = auto()
 
     def __init__(self) -> None:
         super().__init__()
 
-        self.ids: list[int] = []
+        self.timer = misc.copy_qtimer(constants.ONE_SECOND_TIMER)
         self.widgets_by_id: dict[int, InstanceWidget] = {}
-        self.sort_by: InstanceHandler.SortBy = InstanceHandler.SortBy.INSTANCE_ID
-        self.sort_key: Callable[[InstanceWidget], int] = lambda w: w.instance_id
+
+        self.sort_by: InstanceHandler.SortBy = InstanceHandler.SortBy.TIME_SINCE_UPDATED
+        self.on_sort_by_changed(self.sort_by)
 
         self.current_search_text: str = ""
-        self.timer = misc.copy_qtimer(constants.ONE_SECOND_TIMER)
 
         self.main_layout = QGridLayout()
         self.setLayout(self.main_layout)
@@ -163,8 +164,8 @@ class InstanceHandler(QWidget):
         self.searchbar.textChanged.connect(self.filter_instances)
 
         sort_layout = QHBoxLayout()
-        sort_layout.setContentsMargins(0, 0, 0, 0)  # optional: remove extra margins
-        sort_layout.setSpacing(5)  # space between label and dropdown
+        sort_layout.setContentsMargins(0, 0, 0, 0)
+        sort_layout.setSpacing(5)
 
         self.sort_label = QLabel("Sort by:")
         self.sort_by_dropdown = QComboBox()
@@ -175,7 +176,7 @@ class InstanceHandler(QWidget):
 
         sort_layout.addWidget(self.sort_label)
         sort_layout.addWidget(self.sort_by_dropdown)
-        sort_layout.addStretch()  # pushes the widgets to the left
+        sort_layout.addStretch()
 
         # status label to show search results and connection status
         self.status_label = QLabel()
@@ -236,16 +237,47 @@ class InstanceHandler(QWidget):
         self.instances_container.setUpdatesEnabled(False)
 
         # region update and create new instance widgets
+        # note that new_ids is not necessarily a superset of existing_ids
+        existing_ids = set(self.widgets_by_id.keys())
         new_ids: set[int] = {
             instance["instance_id"] for instance in instances if isinstance(instance.get("instance_id"), int)
         }
-        existing_ids = set(self.widgets_by_id.keys())
 
-        # only remove widgets that are no longer present in the fetched instances
-        for removed_id in existing_ids - new_ids:
-            widget = self.widgets_by_id.pop(removed_id)
+        # how this works:
+        # a = {1, 2, 3, 4, 5}
+        # b = {2, 3, 4, 5, 6}
+        # a - b = {1} and b - a = {6}
+        deprecated_ids = existing_ids - new_ids
+        not_deprecated_ids = list(new_ids - deprecated_ids)
+
+        for instance_id in deprecated_ids:
+            widget = self.widgets_by_id.pop(instance_id)
             self.instances_layout.removeWidget(widget)
             widget.deleteLater()
+
+            if instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
+                if len(not_deprecated_ids) >= 1:
+                    constants.TELEMETRY_SERVER_INSTANCE_ID = random.choice(not_deprecated_ids)
+                    constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
+                    print(
+                        f"The instance you were connected to, #{instance_id}, has been removed. You have been connected to instance #{constants.TELEMETRY_SERVER_INSTANCE_ID} instead. Please select a different instance if needed."
+                    )
+
+                else:
+                    try:
+                        new_instance_id: int = constants.REQ_SESSION.get(
+                            constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
+                            timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                        ).json()
+                        constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
+                        constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
+                        print(
+                            f"The instance you were connected to, #{instance_id}, has been removed. A new instance has been created with ID #{new_instance_id} and you have been connected to it."
+                        )
+
+                    except requests.exceptions.RequestException as e:
+                        print(f"[Error] Failed to create a new instance, exiting application. Error: {e}")
+                        QApplication.quit()
 
         for instance in instances:
             try:
@@ -259,21 +291,17 @@ class InstanceHandler(QWidget):
             widget = self.widgets_by_id.get(instance_info.instance_id)
             if widget:
                 widget.updated_at = instance_info.updated_at
-                new_updated_at = instance_info.updated_at.strftime("%Y-%m-%d %I:%M:%S %p")
-                widget.updated_at_label.setText(new_updated_at)
+                widget.updated_at_label.setText(instance_info.updated_at.strftime("%Y-%m-%d %I:%M:%S %p"))
+
                 if widget.instance_identifier != instance_info.instance_identifier:
                     widget.instance_name_edit.setText(instance_info.instance_identifier)
 
             else:
                 try:
-                    new_widget = InstanceWidget(instance)
-                    self.widgets_by_id[instance_info.instance_id] = new_widget
+                    self.widgets_by_id[instance_info.instance_id] = InstanceWidget(instance)
 
                 except ValueError as e:
                     print(f"[Warning] Skipping invalid instance data: {e}")
-
-        for widget in self.widgets_by_id.values():
-            self.instances_layout.removeWidget(widget)
 
         for widget in sorted(self.widgets_by_id.values(), key=self.sort_key):
             self.instances_layout.addWidget(widget)
@@ -289,81 +317,6 @@ class InstanceHandler(QWidget):
 
         self.instances_container.setUpdatesEnabled(True)
         self.instances_container.update()
-
-    def handle_no_instances(self) -> None:
-        """Handle scenario when no valid instances exist."""
-
-        self.timer.stop()
-        create_new_instance = misc.show_message_box(
-            "No Valid Instances",
-            "No valid instances found. Would you like to create a new instance?",
-            constants.ICONS.question,
-            [
-                QMessageBox.StandardButton.Yes,
-                QMessageBox.StandardButton.No,
-            ],
-        )
-        if create_new_instance == QMessageBox.StandardButton.Yes:
-            try:
-                new_instance_id: int = constants.REQ_SESSION.get(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
-                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-                ).json()
-
-                instance_info: dict[str, Any] = constants.REQ_SESSION.get(
-                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_instance_info"], str(new_instance_id)),
-                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-                ).json()
-
-                new_widget = InstanceWidget(instance_info)
-                self.instances_layout.addWidget(new_widget)
-                self.widgets_by_id[new_instance_id] = new_widget
-
-                constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
-                constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
-                print(f"[Info] Created new instance with ID #{new_instance_id}.")
-
-            except requests.exceptions.RequestException as e:
-                print(f"[Error] Failed to create a new instance: {e}")
-
-            except ValueError as e:
-                print(f"[Error] Failed to create instance widget: {e}")
-
-        else:
-            print("[Info] User chose not to create a new instance even though none were found.")
-
-        self.timer.start()
-
-    def handle_multiple_instances(self) -> None:
-        """
-        Handles the scenario when multiple instances exist but none is selected.
-        This scenario should only occur when the appiclation is started for the first time
-        as no instance is selected by default.
-        """
-
-        self.timer.stop()
-        dialog_text = "Please select the instance you want to connect to."
-
-        while True:
-            new_id = misc.show_input_dialog(
-                "Select Instance",
-                dialog_text,
-                input_type=int,
-            )
-
-            if new_id is None:
-                dialog_text = "No instance selected. Please enter a valid instance ID."
-
-            else:
-                if new_id in self.widgets_by_id:
-                    constants.TELEMETRY_SERVER_INSTANCE_ID = new_id
-                    constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
-                    print(f"[Info] Connected to instance #{constants.TELEMETRY_SERVER_INSTANCE_ID}.")
-                    break
-
-                dialog_text = f"Instance #{new_id} not found. Please enter a valid instance ID."
-
-        self.timer.start()
 
     def create_new_instance(self) -> None:
         """Create a new instance on the telemetry server."""
@@ -410,13 +363,7 @@ class InstanceHandler(QWidget):
                 constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
                 constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
 
-            print("[Info] " + alert_message)
-            misc.show_message_box(
-                "Alert",
-                alert_message,
-                constants.ICONS.notification,
-                [QMessageBox.StandardButton.Ok],
-            )
+            print(f"[Info] {alert_message}")
 
         except requests.exceptions.RequestException as e:
             print(f"[Error] Failed to delete all instances: {e}")
@@ -469,6 +416,7 @@ class InstanceHandler(QWidget):
                     if (w.updated_at - w.created_at).total_seconds() > 1.0
                     else float("inf")
                 )
+
             elif self.sort_by == InstanceHandler.SortBy.NO_SORT:
                 self.sort_key: Callable[[InstanceWidget], int] = lambda w: 0
 
@@ -517,9 +465,7 @@ class InstanceHandler(QWidget):
 
 class InstanceWidget(QFrame):
     """
-    A widget to represent a single instance of the application.<br>
-
-    This widget is responsible for displaying the information of a single instance
+    This widget is responsible for displaying the information of a single instance \\
     and providing controls to connect or disconnect from it.
 
     Parameters
@@ -616,16 +562,16 @@ class InstanceWidget(QFrame):
         self.setStyleSheet(InstanceWidget.style_sheet)
 
         self.form_layout = QFormLayout()
-        self.instance_id_label = QLabel(str(self.instance_id))
         self.instance_name_edit = QLineEdit(self.instance_identifier)
         self.instance_name_edit.editingFinished.connect(self.on_instance_name_changed)
         self.user_label = QLabel(self.user)
+        self.instance_id_label = QLabel(str(self.instance_id))
         self.created_at_label = QLabel(self.created_at.strftime("%Y-%m-%d %I:%M:%S %p"))
         self.updated_at_label = QLabel(self.updated_at.strftime("%Y-%m-%d %I:%M:%S %p"))
 
-        self.form_layout.addRow("Instance ID", self.instance_id_label)
         self.form_layout.addRow("Instance Name", self.instance_name_edit)
         self.form_layout.addRow("User", self.user_label)
+        self.form_layout.addRow("Instance ID", self.instance_id_label)
         self.form_layout.addRow("Created At", self.created_at_label)
         self.form_layout.addRow("Updated At", self.updated_at_label)
         # endregion setup widget style

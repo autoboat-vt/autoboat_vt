@@ -38,7 +38,7 @@ class TelemetryStatus(StrEnum):
 
     Attributes
     ----------
-    `SUCCESS`: Indicates that telemetry data was fetched successfully. <br>
+    `SUCCESS`: Indicates that telemetry data was fetched successfully. \\
     `FAILURE`: Indicates that telemetry data fetching failed.
 
     Inherits
@@ -132,6 +132,7 @@ _instance_manager_endpoints = {
     "create_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/create"),
     "delete_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/delete/"),
     "delete_all_instances": urljoin(TELEMETRY_SERVER_URL, "instance_manager/delete_all"),
+    "clean_instances": urljoin(TELEMETRY_SERVER_URL, "instance_manager/clean_instances"),
     "set_instance_user": urljoin(TELEMETRY_SERVER_URL, "instance_manager/set_user/"),
     "set_instance_name": urljoin(TELEMETRY_SERVER_URL, "instance_manager/set_name/"),
     "get_user_from_id": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_user/"),

@@ -142,7 +142,7 @@ def show_message_box(
     icon
         An optional icon to display in the message box.
     buttons
-        A list of standard buttons to show. Defaults to `[QMessageBox.Ok]`. <br>
+        A list of standard buttons to show. Defaults to `[QMessageBox.Ok]`. \\
         Example: `[QMessageBox.Yes, QMessageBox.No]`
     remember_choice_option
         If `True`, adds a "Remember my choice" checkbox to the message box.
@@ -194,7 +194,7 @@ def show_input_dialog(
     default_value
         The default value to show in the input field.
     input_type
-        The type to convert the input to. Defaults to `str`. <br>
+        The type to convert the input to. Defaults to `str`. \\
         Example: `int`, `float`, etc.
 
     Returns

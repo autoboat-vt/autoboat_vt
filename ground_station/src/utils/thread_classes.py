@@ -193,9 +193,9 @@ class RemoteWaypointFetcher(QThread):
         waypoints, where each waypoint is a list of `[latitude, longitude]`.
 
     request_url_change: `Signal`
-        Signal to request a change in the telemetry server URL. Emits a value from the `constants.TelemetryStatus`. <br>
-        `SUCCESS` indicates that the telemetry server is reachable and waypoints were fetched successfully. <br>
-        `FAILURE` indicates that the telemetry server is not reachable and waypoints could not be fetched.
+        Signal to request a change in the telemetry server URL. Emits a value from the `constants.TelemetryStatus`. \\
+        `SUCCESS` indicates that the telemetry server is reachable and waypoints were fetched successfully. \\
+        `FAILURE` indicates that the telemetry server is not reacha le and waypoints could not be fetched.
     """
 
     waypoints_fetched = Signal(list)
