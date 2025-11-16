@@ -12,17 +12,15 @@ if [[ "$OS" == "Linux" ]]; then
     sudo apt install x11-utils
     sudo apt install x11-xserver-utils
 
-    # Ensure that the devcontainer can actually access the display
-    export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"
-    export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"
-
-    echo 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' >> ~/.profile
-    echo 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"' >> ~/.profile
-
-
-
     # SETUP THE GPU SUPPORT FOR LINUX/ WSL
     if command -v nvidia-smi &>/dev/null; then
+    
+        export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"
+        export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"
+
+        echo 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' >> ~/.profile
+        echo 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"' >> ~/.profile
+
         echo "[INFO] NVIDIA GPU detected. Ensuring nvidia-container-toolkit is installed..."
 
         if ! command -v nvidia-ctk &>/dev/null; then
