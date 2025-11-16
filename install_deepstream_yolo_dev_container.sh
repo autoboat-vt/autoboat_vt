@@ -110,6 +110,7 @@ make -C nvdsinfer_custom_impl_Yolo clean && make -C nvdsinfer_custom_impl_Yolo
 echo -e "\n\nInstalling ultralytics\n\n"
 pip install ultralytics
 pip install onnx onnxslim onnxruntime onnxscript
+pip install sahi
 pip install numpy==1.26.4
 
 echo -e "\n\nInstalling Utils\n\n"
