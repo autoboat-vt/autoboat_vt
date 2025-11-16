@@ -23,7 +23,7 @@ import base64
 from typing import Any
 
 # don't put '/' at the end of the URL
-TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk:8443"
+TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
 
 
 class TelemetryNode(Node):
