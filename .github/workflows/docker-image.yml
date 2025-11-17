@@ -3,7 +3,6 @@ name: Docker Image CI
 on:
   push:
     branches: ["main"]
-    # Only trigger when Dockerfile changes
     paths:
       - ".devcontainer/Dockerfile"
   pull_request:
@@ -18,19 +17,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build the Docker image
-        run: |
-          IMAGE_TAG=vtautoboat/autoboat_docker_dev_image:${{ github.sha }}
-          docker build -t $IMAGE_TAG -f .devcontainer/Dockerfile .devcontainer
-          docker tag $IMAGE_TAG vtautoboat/autoboat_docker_dev_image:latest
+      - name: Build and push (cached)
+        uses: docker/build-push-action@v5
+        with:
+          context: .devcontainer
+          file: .devcontainer/Dockerfile
 
-      - name: Push Docker image to Docker Hub
-        run: |
-          docker push vtautoboat/autoboat_docker_dev_image:${{ github.sha }}
-          docker push vtautoboat/autoboat_docker_dev_image:latest
+          # Push to Docker Hub
+          push: true
+          tags: |
+            vtautoboat/autoboat_docker_dev_image:latest
+            vtautoboat/autoboat_docker_dev_image:${{ github.sha }}
+
+          # USE REGISTRY CACHE (the important part!)
+          cache-from: type=registry,ref=vtautoboat/autoboat_docker_dev_image:latest
+          cache-to: type=registry,ref=vtautoboat/autoboat_docker_dev_image:cache,mode=max
