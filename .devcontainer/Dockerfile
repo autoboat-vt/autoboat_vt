@@ -127,7 +127,4 @@ USER $USERNAME
 COPY required_pip_packages.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
-
-RUN echo "hi4"
-
 CMD ["/bin/bash"]
