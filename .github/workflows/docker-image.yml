@@ -3,8 +3,13 @@ name: Docker Image CI
 on:
   push:
     branches: ["main"]
+    # Only trigger when Dockerfile changes
+    paths:
+      - ".devcontainer/Dockerfile"
   pull_request:
     branches: ["main"]
+    paths:
+      - ".devcontainer/Dockerfile"
 
 jobs:
   build:
@@ -20,7 +25,12 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build the Docker image
-        run: docker build -t vtautoboat/autoboat_docker_dev_image:latest .devcontainer/ -f .devcontainer/Dockerfile
+        run: |
+          IMAGE_TAG=vtautoboat/autoboat_docker_dev_image:${{ github.sha }}
+          docker build -t $IMAGE_TAG -f .devcontainer/Dockerfile .devcontainer
+          docker tag $IMAGE_TAG vtautoboat/autoboat_docker_dev_image:latest
 
       - name: Push Docker image to Docker Hub
-        run: docker push vtautoboat/autoboat_docker_dev_image:latest
+        run: |
+          docker push vtautoboat/autoboat_docker_dev_image:${{ github.sha }}
+          docker push vtautoboat/autoboat_docker_dev_image:latest
