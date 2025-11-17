@@ -96,7 +96,5 @@ USER $USERNAME
 COPY required_pip_packages.txt /tmp/requirements.txt 
 RUN pip install -r /tmp/requirements.txt
 
-RUN echo "test"
-
 # [Optional] Set the default user. Omit if you want to keep the default as root.
 CMD ["/bin/bash"]
