@@ -53,7 +53,7 @@ RUN sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) 
  && apt-get install curl -y \
  && curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add - \
  && apt update || true \
- && apt install ros-humble-librealsense2* -y \ 
+ && apt install ros-humble-librealsense2* -y \
  && apt install ros-humble-realsense2-* -y \
  && rm /etc/apt/sources.list.d/ros-latest.list \
  && rm -rf /var/lib/apt/lists/*
@@ -128,6 +128,6 @@ COPY required_pip_packages.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
 
-RUN echo "hi3"
+RUN echo "hi4"
 
 CMD ["/bin/bash"]
