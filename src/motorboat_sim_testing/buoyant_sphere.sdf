@@ -532,14 +532,14 @@ With ros2:
 
         <inertial>
           <pose>0.33033 0.45733 0 0 0 0</pose>
-          <mass>0.136</mass>
+          <mass>0.5</mass>
           <inertia>
-            <ixx>0.0467</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>0.1698</iyy>
-            <iyz>0</iyz>
-            <izz>0.21644</izz>
+            <ixx>0.15687</ixx>
+            <ixy>-0.00008</ixy>
+            <ixz>0.05665</ixz>
+            <iyy>0.23871</iyy>
+            <iyz>0.00011</iyz>
+            <izz>0.08185</izz>
           </inertia>
         </inertial>
 
@@ -550,7 +550,7 @@ With ros2:
               <point>0 0</point>
               <point>0 1.372</point>
               <point>-0.991 0</point>
-              <height>.0001</height>
+              <height>.001</height>
             </polyline>
           </geometry>
         </collision>
@@ -562,7 +562,7 @@ With ros2:
               <point>0 0</point>
               <point>0 1.372</point>
               <point>-0.991 0</point>
-              <height>.0001</height>
+              <height>.001</height>
             </polyline>
           </geometry>
         </visual>
@@ -570,64 +570,57 @@ With ros2:
 
       <!-- Main body joints -->
       <joint name="left_front_joint" type="fixed">
-        <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
         <child>left_front_link</child>
       </joint>
 
       <joint name="right_front_joint" type="fixed">
-        <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
         <child>right_front_link</child>
       </joint>
 
       <joint name="right_back_joint" type="fixed">
-        <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
         <child>right_back_link</child>
       </joint>
 
       <joint name="left_back_joint" type="fixed">
-        <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
         <child>left_back_link</child>
       </joint>
 
       <joint name="keel_connector_joint" type="fixed">
-        <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
         <child>keel_connector_link</child>
       </joint>
 
       <joint name="keel_joint" type="fixed">
-        <pose>0 0 0 0 0 0</pose>
         <parent>keel_connector_link</parent>
         <child>keel_link</child>
       </joint>
 
       <joint name="mast_joint" type="revolute">
-        <pose>0 0 0 0 0 0</pose>
         <axis>
           <xyz>0 0 1</xyz>
             <limit>
             <lower>-1.6</lower>
             <upper>1.6</upper>
           </limit>
+          <dynamics>
+            <damping>2.0</damping>
+          </dynamics>
         </axis>
-        
         
         <parent>base_link</parent>
         <child>mast_link</child>
       </joint>
 
       <joint name="boom_joint" type="fixed">
-        <pose>0 0 0 0 0 0</pose>
         <parent>mast_link</parent>
         <child>boom_link</child>
       </joint>
 
       <joint name="sail_joint" type="fixed">
-        <pose>0 0 0 0 0 0</pose>
         <parent>boom_link</parent>
         <child>sail_link</child>
       </joint>
@@ -880,7 +873,7 @@ With ros2:
         <cp>0 0 0</cp>
       </plugin>
 
-      <!--plugin
+      <plugin
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1.225</air_density>
@@ -890,26 +883,26 @@ With ros2:
         <cda_stall>.013</cda_stall>
         <alpha_stall>.52</alpha_stall>
         <a0>0</a0>
-        <area>0.68</area>
-        <upward>0 0 1</upward>
+        <area>0.75</area>
+        <upward>0 1 0</upward>
         <forward>1 0 0</forward>
         <link_name>sail_link</link_name>
         <cp>0.33033 0.45733 0</cp>
-      </plugin-->
+      </plugin>
 
       <!-- TODO: get values for cla and cda (initial slope of cl and cd curves) -->
        <!-- TODO: also generally just fix the foil dynamics plugin to make it correct -->
-      <plugin filename="libFoilDynamics.so"
+      <!--plugin filename="libFoilDynamics.so"
       name="foil_dynamics::FoilDynamics">
         <link_name>sail_link</link_name>
         <clmax>1</clmax>
         <cdmax>2</cdmax>
         <cop>0.33033 0.45733 0</cop>
-        <area>2</area>
+        <area>.75</area>
         <fluid_density>1.225</fluid_density>
         <forward>1 0 0</forward>
         <upward>0 1 0</upward>
-      </plugin>
+      </plugin-->
 
       <!-- Hydrodynamics on the hull parts -->
       <plugin
@@ -1018,7 +1011,7 @@ With ros2:
 
     <!-- wind effects -->
      <wind>
-      <linear_velocity>0 0 0</linear_velocity>
+      <linear_velocity>10 10 0</linear_velocity>
     </wind>
 
     <!-- Load the plugin for the wind -->

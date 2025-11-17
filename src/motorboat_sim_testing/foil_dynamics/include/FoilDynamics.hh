@@ -62,10 +62,10 @@ namespace foil_dynamics
     double area_{1.0};
 
     /// \brief Initial coefficient of lift / angle of attack (in radians) slope
-    double cla_{1.0};
+    double clmax_{1.0};
 
     /// \brief Initial coefficient of drag / angle of attack (in radians) slope 
-    double cda_{1.0};
+    double cdmax_{1.0};
   };
 } // namespace foil_dynamics
 

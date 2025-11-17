@@ -22,8 +22,8 @@ FoilDynamics::FoilDynamics()
   forward_(1, 0, 0),
   upward_(0, 0, 1),
   area_(1.0),
-  cla_(1.5),
-  cda_(1.0)
+  clmax_(1.5),
+  cdmax_(1.0)
 {
   RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "FoilDynamics plugin constructed");
 }
@@ -63,8 +63,8 @@ void FoilDynamics::Configure(const gz::sim::Entity &_entity,
   link_.EnableVelocityChecks(_ecm);
 
   // Parse parameters
-  if (_sdf->HasElement("cp"))
-    cp_ = _sdf->Get<gz::math::Vector3d>("cp");
+  if (_sdf->HasElement("cop"))
+    cp_ = _sdf->Get<gz::math::Vector3d>("cop");
 
   if (_sdf->HasElement("forward"))
     forward_ = _sdf->Get<gz::math::Vector3d>("forward");
@@ -75,11 +75,11 @@ void FoilDynamics::Configure(const gz::sim::Entity &_entity,
   if (_sdf->HasElement("area"))
     area_ = _sdf->Get<double>("area");
 
-  if (_sdf->HasElement("cla"))
-    cla_ = _sdf->Get<double>("cla");
+  if (_sdf->HasElement("clmax"))
+    clmax_ = _sdf->Get<double>("clmax");
 
-  if (_sdf->HasElement("cda"))
-    cda_ = _sdf->Get<double>("cda");
+  if (_sdf->HasElement("cdmax"))
+    cdmax_ = _sdf->Get<double>("cdmax");
 
   if (_sdf->HasElement("fluid_density"))
     rho_ = _sdf->Get<double>("fluid_density");
@@ -113,13 +113,15 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
     return;
   gz::math::Pose3d pose = *optPose;
 
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Velocity: %f %f %f", vel.X(), vel.Y(), vel.Z());
+
   // Rotate forward/upward vectors to world frame
   gz::math::Vector3d forwardI = pose.Rot().RotateVector(forward_);
   gz::math::Vector3d upwardI = pose.Rot().RotateVector(upward_);
   gz::math::Vector3d ldNormal = forwardI.Cross(upwardI).Normalize();
 
   // Project velocity into lift–drag plane
-  gz::math::Vector3d velInLDPlane = ldNormal.Cross(vel.Cross(ldNormal));
+  gz::math::Vector3d velInLDPlane = vel - vel.Dot(ldNormal)*ldNormal;
 
   // Drag and lift directions
   gz::math::Vector3d dragDir = -velInLDPlane.Normalized();
@@ -140,8 +142,8 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   double q = 0.5 * rho_ * speedInLDPlane * speedInLDPlane;
 
   // Lift and drag coefficients
-  double cl = cla_ * sin(2 * alpha);
-  double cd = cda_ * fabs(1 - cos(2 * alpha));
+  double cl = clmax_ * sin(2 * alpha);
+  double cd = (alpha/1.6)*(alpha/1.6); // double cd = cdmax_/2 * (1 - cos(2 * alpha));
 
   // Forces
   gz::math::Vector3d lift = cl * q * area_ * liftDir;
@@ -149,6 +151,7 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   gz::math::Vector3d force = lift + drag;
 
 
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Force: %f %f %f", force.X(), force.Y(), force.Z());
   // Apply world wrench
   link_.AddWorldWrench(_ecm, force, gz::math::Vector3d::Zero);
 }
