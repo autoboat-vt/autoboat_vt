@@ -115,13 +115,18 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
 
   RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Velocity: %f %f %f", vel.X(), vel.Y(), vel.Z());
 
+  // initial wind
+  gz::math::Vector3d wind(2, 2, 0);
+  
   // Rotate forward/upward vectors to world frame
   gz::math::Vector3d forwardI = pose.Rot().RotateVector(forward_);
   gz::math::Vector3d upwardI = pose.Rot().RotateVector(upward_);
   gz::math::Vector3d ldNormal = forwardI.Cross(upwardI).Normalize();
 
   // Project velocity into lift–drag plane
-  gz::math::Vector3d velInLDPlane = vel - vel.Dot(ldNormal)*ldNormal;
+  // wind is the base air speed
+  vel = wind - vel;
+  gz::math::Vector3d velInLDPlane = ldNormal.Cross(vel.Cross(ldNormal));
 
   // Drag and lift directions
   gz::math::Vector3d dragDir = -velInLDPlane.Normalized();

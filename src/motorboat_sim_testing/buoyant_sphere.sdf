@@ -19,6 +19,8 @@ Without ros2:
 
     gz topic -t sailboat/propeller_topic -m gz.msgs.Double -p 'data: 200'
 
+  3. Set wind:
+    gz topic -t "/world/buoyant_sphere/wind/" -m gz.msgs.Wind  -p "linear_velocity: {x:-5, y:5}, enable_wind: true"
 
 With ros2:
 
@@ -528,7 +530,6 @@ With ros2:
 
       <link name='sail_link'>
         <pose>-.025 0 0.4 0 0 0</pose>
-        <enable_wind>true</enable_wind>
 
         <inertial>
           <pose>0.33033 0.45733 0 0 0 0</pose>
@@ -756,13 +757,13 @@ With ros2:
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>1.1</cla>
+        <cla>.11</cla>
         <cla_stall>0</cla_stall>
         <cda>.02</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>0.6</area>
+        <area>0.0225</area>
         <upward>0 1 0</upward>
         <forward>1 0 0</forward>
         <link_name>rudder_link</link_name>
@@ -873,7 +874,7 @@ With ros2:
         <cp>0 0 0</cp>
       </plugin>
 
-      <plugin
+      <!--plugin
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1.225</air_density>
@@ -888,11 +889,11 @@ With ros2:
         <forward>1 0 0</forward>
         <link_name>sail_link</link_name>
         <cp>0.33033 0.45733 0</cp>
-      </plugin>
+      </plugin-->
 
       <!-- TODO: get values for cla and cda (initial slope of cl and cd curves) -->
        <!-- TODO: also generally just fix the foil dynamics plugin to make it correct -->
-      <!--plugin filename="libFoilDynamics.so"
+      <plugin filename="libFoilDynamics.so"
       name="foil_dynamics::FoilDynamics">
         <link_name>sail_link</link_name>
         <clmax>1</clmax>
@@ -902,7 +903,7 @@ With ros2:
         <fluid_density>1.225</fluid_density>
         <forward>1 0 0</forward>
         <upward>0 1 0</upward>
-      </plugin-->
+      </plugin>
 
       <!-- Hydrodynamics on the hull parts -->
       <plugin
