@@ -32,12 +32,10 @@ jobs:
           context: .devcontainer
           file: .devcontainer/Dockerfile
 
-          # Push to Docker Hub
           push: true
           tags: |
             vtautoboat/autoboat_docker_dev_image:latest
             vtautoboat/autoboat_docker_dev_image:${{ github.sha }}
 
-          # USE REGISTRY CACHE (the important part!)
           cache-from: type=registry,ref=vtautoboat/autoboat_docker_dev_image:latest
           cache-to: type=registry,ref=vtautoboat/autoboat_docker_dev_image:cache,mode=max
