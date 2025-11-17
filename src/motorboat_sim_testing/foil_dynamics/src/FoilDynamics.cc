@@ -116,21 +116,21 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Velocity: %f %f %f", vel.X(), vel.Y(), vel.Z());
 
   // initial wind
-  gz::math::Vector3d wind(2, 2, 0);
+  gz::math::Vector3d wind(2, .1, 0);
   
   // Rotate forward/upward vectors to world frame
   gz::math::Vector3d forwardI = pose.Rot().RotateVector(forward_);
   gz::math::Vector3d upwardI = pose.Rot().RotateVector(upward_);
-  gz::math::Vector3d ldNormal = forwardI.Cross(upwardI).Normalize();
+  gz::math::Vector3d ldNormal = forwardI.Cross(upwardI).Normalized();
 
   // Project velocity into lift–drag plane
   // wind is the base air speed
-  vel = wind - vel;
-  gz::math::Vector3d velInLDPlane = ldNormal.Cross(vel.Cross(ldNormal));
+  gz::math::Vector3d aw = wind - vel;
+  gz::math::Vector3d velInLDPlane = aw;
 
   // Drag and lift directions
-  gz::math::Vector3d dragDir = -velInLDPlane.Normalized();
-  gz::math::Vector3d liftDir = ldNormal.Cross(velInLDPlane).Normalized();
+  gz::math::Vector3d dragDir = velInLDPlane.Normalized();
+  gz::math::Vector3d liftDir = -ldNormal.Cross(velInLDPlane).Normalized();
 
   // Angle of attack
   double cosAlpha = gz::math::clamp(
@@ -148,7 +148,7 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
 
   // Lift and drag coefficients
   double cl = clmax_ * sin(2 * alpha);
-  double cd = (alpha/1.6)*(alpha/1.6); // double cd = cdmax_/2 * (1 - cos(2 * alpha));
+  double cd = cdmax_ / 2 * (1 - cos (2 * alpha));
 
   // Forces
   gz::math::Vector3d lift = cl * q * area_ * liftDir;

@@ -607,9 +607,6 @@ With ros2:
             <lower>-1.6</lower>
             <upper>1.6</upper>
           </limit>
-          <dynamics>
-            <damping>2.0</damping>
-          </dynamics>
         </axis>
         
         <parent>base_link</parent>
