@@ -80,6 +80,7 @@ RUN sudo apt-get install -y --fix-missing \
 RUN sudo apt install docker -y
 RUN sudo apt install docker.io -y
 
+RUN /sbin/ping google.com
 
 USER $USERNAME
 # [Optional] Set the default user. Omit if you want to keep the default as root.
