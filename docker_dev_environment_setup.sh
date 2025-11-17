@@ -45,6 +45,4 @@ sudo echo ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTR
 
 sudo udevadm trigger
 
-
-
 source ~/.bashrc
