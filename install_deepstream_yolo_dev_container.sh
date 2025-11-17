@@ -110,7 +110,7 @@ make -C nvdsinfer_custom_impl_Yolo clean && make -C nvdsinfer_custom_impl_Yolo
 echo -e "\n\nInstalling ultralytics\n\n"
 pip install ultralytics
 pip install onnx onnxslim onnxruntime onnxscript
-pip install sahi
+pip install sahi # sahi is currently not used
 pip install numpy==1.26.4
 
 echo -e "\n\nInstalling Utils\n\n"
@@ -120,7 +120,7 @@ gst-inspect-1.0 > /dev/null # initialize gstreamer plugins
 
 # sudo v4l2-ctl --list-devices # TODO: can we change permissions so this doesn't need to be run?
 
-export IS_DEV_CONTAINER=true
+export IS_DEV_CONTAINER=true # I don't think this persists after script ends otherwise
 echo -e "\n\nDeepstream setup complete!\n\n"
 
 cd /home/ws/

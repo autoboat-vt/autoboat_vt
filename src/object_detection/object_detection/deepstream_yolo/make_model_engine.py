@@ -12,9 +12,15 @@ import time
 import gi
 gi.require_version('Gst', '1.0')
 from gi.repository import GLib, Gst
+import re
+
+if (re.search("/home/ws", os.getcwd()) is not None):
+    IS_DEV_CONTAINER = True
+else:
+    IS_DEV_CONTAINER = False
 
 # Determine paths based on environment
-if "IS_DEV_CONTAINER" in os.environ and os.environ["IS_DEV_CONTAINER"] == "true":
+if (IS_DEV_CONTAINER):
     PATH_TO_SRC_DIR = "/home/ws/src"
 else:
     PATH_TO_SRC_DIR = "/home/sailbot/autoboat_vt/src"
