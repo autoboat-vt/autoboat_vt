@@ -120,6 +120,11 @@ RUN apt-get update \
 
 
 
+# C++ requirements?
+# sudo apt install libcurl4-openssl-dev
+# sudo apt-get install nlohmann-json3-dev
+# sudo apt install geographiclib-tools
+
 # -------------------------------
 # Python requirements (as user)
 # -------------------------------

@@ -23,3 +23,12 @@ The main problem is that apparently on mac the place where the docker binary is 
 
 If the simulation is periodically pausing for like a minute and then unpausing, the issue is likely that your system clock isn't synced properly (often due to a dual boot) 
 
+
+
+
+
+
+
+
+FASTER C++ BUILDING: 
+colcon build --symlink-install --cmake-args -DCMAKE_UNITY_BUILD=ON

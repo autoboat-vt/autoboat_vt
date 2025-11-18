@@ -15,8 +15,18 @@ def generate_launch_description():
         ),
         
         
+        # Node(
+        #     package='autopilot',
+        #     executable='telemetry',
+        #     name='telemetry',
+
+        #     respawn=True, 
+        #     respawn_delay=2.0,
+        #     output="log"
+        # ),
+        
         Node(
-            package='autopilot',
+            package='autopilot_cpp',
             executable='telemetry',
             name='telemetry',
 
