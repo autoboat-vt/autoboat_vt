@@ -6,11 +6,14 @@ on:
     paths:
       - ".devcontainer/Dockerfile"
       - ".devcontainer/required_pip_packages.txt"
+      - ".github/workflows/docker-image.yml"
+      
   pull_request:
     branches: ["main"]
     paths:
       - ".devcontainer/Dockerfile"
       - ".devcontainer/required_pip_packages.txt"
+      - ".github/workflows/docker-image.yml"
 
 jobs:
   build:
