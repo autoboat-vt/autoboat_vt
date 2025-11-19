@@ -1,6 +1,6 @@
 #!/usr/bin/env -S bash -euo pipefail
 
-check_port() {
+query_port() {
     local port=$1
     if lsof -iTCP:"$port" -sTCP:LISTEN -t >/dev/null; then
         return 1
@@ -9,38 +9,49 @@ check_port() {
     fi
 }
 
-PORT="${PORT:-3001}"
-if ! check_port "$PORT"; then
-    echo "Port $PORT is in use by the following process(es):"
-    for pid in $(lsof -iTCP:"$PORT" -sTCP:LISTEN -t); do
-        user=$(ps -o user= -p "$pid")
-        cmd=$(ps -o comm= -p "$pid")
-        start=$(ps -o lstart= -p "$pid")
-        echo "PID: $pid | User: $user | Command: $cmd | Started: $start"
-    done
-
-    read -p "Do you want to kill these process(es)? [y/N] " answer
-    case "$answer" in
-    [Yy]*)
-        lsof -iTCP:"$PORT" -sTCP:LISTEN -t | xargs kill -9 >/dev/null 2>&1 || true
-        # wait until port is actually free
-        for i in {1..10}; do
-            if check_port "$PORT"; then
-                break
-            fi
-            sleep 0.5
+check_port() {
+    local port=$1
+    if ! query_port "$port"; then
+        echo "Port $port is in use by the following process(es):"
+        for pid in $(lsof -iTCP:"$port" -sTCP:LISTEN -t); do
+            user=$(ps -o user= -p "$pid")
+            cmd=$(ps -o comm= -p "$pid")
+            start=$(ps -o lstart= -p "$pid")
+            echo "PID: $pid | User: $user | Command: $cmd | Started: $start"
         done
-        if ! check_port "$PORT"; then
-            echo "Port $PORT still in use after kill. Exiting."
+
+        read -p "Do you want to kill these process(es)? [y/N] " answer
+        case "$answer" in
+        [Yy]*)
+            lsof -iTCP:"$port" -sTCP:LISTEN -t | xargs kill -9 >/dev/null 2>&1 || true
+            # wait until port is actually free
+            for i in {1..10}; do
+                if query_port "$port"; then
+                    break
+                fi
+                sleep 0.5
+            done
+            if ! query_port "$port"; then
+                echo "Port $port still in use after kill. Exiting."
+                exit 1
+            fi
+            ;;
+        *)
+            echo "Port $port is in use. Exiting."
             exit 1
-        fi
-        ;;
-    *)
-        echo "Port $PORT is in use. Exiting."
-        exit 1
-        ;;
-    esac
-fi
+            ;;
+        esac
+    fi
+}
+
+GO_PORT=3001
+ASSET_SERVER_PORT=8000
+
+echo "Checking Go server port $GO_PORT..."
+check_port "$GO_PORT"
+
+echo "Checking Asset server port $ASSET_SERVER_PORT..."
+check_port "$ASSET_SERVER_PORT"
 
 os_type=$(uname -s | tr '[:upper:]' '[:lower:]')
 arch_type=$(uname -m)
@@ -110,13 +121,6 @@ fi
 
 bin/$bin_name &
 GO_PID=$!
-
-for i in {1..10}; do
-    if check_port "$PORT"; then
-        break
-    fi
-    sleep 1
-done
 
 $local_python "$python_src" &
 PYTHON_PID=$!

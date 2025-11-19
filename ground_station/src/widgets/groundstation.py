@@ -5,7 +5,7 @@ import requests
 import json
 
 from utils import constants, thread_classes, misc
-from syntax_highlighters.json import JsonHighlighter
+from syntax_highlighters import JsonHighlighter
 from widgets.popup_edit import TextEditWindow
 
 from pathlib import PurePath
@@ -95,6 +95,7 @@ class GroundStationWidget(QWidget):
         self.left_label = QLabel("Telemetry Data")
         self.left_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.left_text_section = QTextEdit()
+        self.left_text_section.highlighter = JsonHighlighter(self.left_text_section.document())
         self.left_text_section.setReadOnly(True)
         self.left_text_section.setText("Awaiting telemetry data...")
 
@@ -759,7 +760,7 @@ class GroundStationWidget(QWidget):
 
         equal_flag = sorted(self.waypoints) == sorted(waypoints)
 
-        if not equal_flag and not self.remember_waypoints_pull_service_status and self.can_pull_waypoints:
+        if not (equal_flag and self.remember_waypoints_pull_service_status) and self.can_pull_waypoints:
             for timer in self.timers:
                 timer.stop()
 
