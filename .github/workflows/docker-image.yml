@@ -38,7 +38,24 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push (cached)
+      - name: Build and push the base devcontainer
+        uses: docker/build-push-action@v5
+        with:
+          context: .devcontainer
+          file: .devcontainer/Dockerfile
+          platforms: linux/amd64
+
+          push: true
+          tags: |
+            vtautoboat/autoboat_docker_dev_image:latest
+            vtautoboat/autoboat_docker_dev_image:${{ github.sha }}
+
+          cache-from: |
+            type=registry,ref=vtautoboat/autoboat_docker_dev_image:cache
+          cache-to: |
+            type=registry,ref=vtautoboat/autoboat_docker_dev_image:cache,mode=max
+
+      - name: Build and push the deepstream variant of the devcontainer
         uses: docker/build-push-action@v5
         with:
           context: .devcontainer
