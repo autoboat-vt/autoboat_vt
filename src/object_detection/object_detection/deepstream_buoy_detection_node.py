@@ -306,22 +306,25 @@ class BuoyDetectionNode(Node):
     def _find_camera(self):
         """
         This is just a way to figure out which /dev/video* is the camera\n
-        The camera outputs on 3 devices: /dev/video0, /dev/video2, /dev/video4.\n
-        Each device is a different format, but the order can change.\n
-        We want specifically the YUYV (color) format\n
+        The camera outputs on 3 devices.\n
+        Each device is a different format, but the order can change or extra cameras can cause the number to increase,\n
+        We want specifically the YUYV (color) format of the RealSense camera\n
         While this finds the device with YUYV format, it does not guarantee that the correct resolution and framerate are available.
         Returns:
             str: The /dev/video* device path
         """
-        if (re.search("YUYV", subprocess.run(['v4l2-ctl', '--list-devices', '--device', '/dev/video0'], capture_output=True, text=True).stdout) is not None):
-            return "/dev/video0"
-        elif (re.search("YUYV", subprocess.run(['v4l2-ctl', '--list-devices', '--device', '/dev/video2'], capture_output=True, text=True).stdout) is not None):
-            return "/dev/video2"
-        elif (re.search("YUYV", subprocess.run(['v4l2-ctl', '--list-devices', '--device', '/dev/video4'], capture_output=True, text=True).stdout) is not None):
-            return "/dev/video4"
-        else:
-            self.get_logger().error("Could not find camera device with YUYV format")
-            sys.exit(1)
+
+        camera_devices_output = subprocess.run(['v4l2-ctl', '--list-devices'], capture_output=True, text=True).stdout
+        matches = re.findall(r"/dev/video[0-9]*", camera_devices_output)
+        for match in matches:
+            device_id = match.split("/dev/video")[-1]
+            print(device_id)
+            if (re.search("RealSense", subprocess.run(['cat', f'/sys/class/video4linux/video{device_id}/name'], capture_output=True, text=True).stdout) is not None):
+                if (re.search("YUYV", subprocess.run(['v4l2-ctl', '--device', f'/dev/video{device_id}', '--list-formats-ext'], capture_output=True, text=True).stdout) is not None):
+                    return f"/dev/video{device_id}"
+        self.get_logger().error("Could not find RealSense camera device with YUYV format")
+        sys.exit(1)
+
 
 def main():
     rclpy.init()

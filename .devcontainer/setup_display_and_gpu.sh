@@ -1,110 +1,186 @@
 #!/usr/bin/env bash
+
+set -euo pipefail
+
+# -----------------------------------------------------------------------------
+# setup
+# -----------------------------------------------------------------------------
 OS="$(uname -s)"
-EXTRA_ARGS=""
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="$SCRIPT_DIR/devcontainer_environment_variables"
 
+# -----------------------------------------------------------------------------
+# helper functions
+# -----------------------------------------------------------------------------
+log_info() { echo -e "[INFO]  $*"; }
+log_warn() { echo -e "[WARN]  $*"; }
+log_error() { echo -e "[ERROR] $*" >&2; }
+separator() { echo "------------------------------------------------------------"; }
 
-if [[ "$OS" == "Linux" ]]; then
-    # SETUP THE DISPLAY ENVIRONMENT VARIABLES FOR LINUX/ WSL
-    echo -e "devcontainer_environment_variables\n\nDISPLAY=:0" > $SCRIPT_DIR/devcontainer_environment_variables
+setup() {
+	local display_value="$1"
+	shift
+	local lines=("$@")
 
+	if [[ -f "$ENV_FILE" ]]; then
+		log_info "Environment file $ENV_FILE already exists. Skipping."
+	else
+		log_info "Writing environment variables to $ENV_FILE"
+		{
+			echo "devcontainer_environment_variables"
+			echo
+			echo "DISPLAY=$display_value"
+			echo "USER=${USER:-unknown}"
+		} >"$ENV_FILE"
+	fi
 
-    # Ensure that the devcontainer can actually access the display
-    export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"
-    export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"
+	local shell_name
+	shell_name=$(basename "$SHELL" 2>/dev/null || echo "bash")
+	log_info "Detected shell: $shell_name"
 
-    echo 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' >> ~/.profile
-    echo 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"' >> ~/.profile
+	local profile_file
+	case "$shell_name" in
+	zsh) profile_file="$HOME/.zprofile" ;;
+	bash) profile_file="$HOME/.bash_profile" ;;
+	*) profile_file="$HOME/.profile" ;;
+	esac
 
+	log_info "Using $profile_file"
+	touch "$profile_file"
 
+	for line in "${lines[@]}"; do
+		if ! grep -qxF "$line" "$profile_file"; then
+			echo "$line" >>"$profile_file"
+			log_info "Added '$line' to $profile_file"
+		else
+			log_info "'$line' already exists in $profile_file"
+		fi
+	done
+}
 
-    # SETUP THE GPU SUPPORT FOR LINUX/ WSL
-    if command -v nvidia-smi &>/dev/null; then
-        echo "[INFO] NVIDIA GPU detected. Ensuring nvidia-container-toolkit is installed..."
+# -----------------------------------------------------------------------------
+# linux setup
+# -----------------------------------------------------------------------------
+setup_linux() {
+	log_info "Detected Linux environment."
 
-        if ! command -v nvidia-ctk &>/dev/null; then
-            echo "[INFO] Installing NVIDIA Container Toolkit..."
+	# install X11 tools
+	log_info "Installing X11 utilities..."
+	sudo apt-get update -qq
+	sudo apt-get install -y x11-utils x11-xserver-utils
 
-            # Add GPG key
-            curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
-              | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit.gpg
+	# gpu detection
+	if command -v nvidia-smi &>/dev/null; then
+		log_info "NVIDIA GPU detected."
+		setup ":0" 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"'
 
-            # Detect distro
-            . /etc/os-release
-            distribution="${ID}${VERSION_ID}"
+		if ! command -v nvidia-ctk &>/dev/null; then
+			log_info "Installing NVIDIA Container Toolkit..."
 
-            # --- Fallback mapping for unsupported distros ---
-            case "$distribution" in
-                ubuntu24.04)
-                    echo "[WARN] ubuntu24.04 not yet supported by NVIDIA. Falling back to ubuntu22.04 repo."
-                    distribution="ubuntu22.04"
-                    ;;
-                ubuntu2*)
-                    echo "[WARN] Future Ubuntu release detected ($distribution). Falling back to ubuntu22.04 repo."
-                    distribution="ubuntu22.04"
-                    ;;
-                debian1*)
-                    if [[ "$distribution" != "debian11" && "$distribution" != "debian12" ]]; then
-                        echo "[WARN] Unsupported Debian release ($distribution). Falling back to debian12 repo."
-                        distribution="debian12"
-                    fi
-                    ;;
-            esac
+			curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey |
+				sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit.gpg
 
-            echo "[INFO] Using distribution: $distribution"
+			if [[ ! -f /etc/os-release ]]; then
+				log_error "/etc/os-release not found. Cannot determine distribution."
+				exit 1
+			fi
 
-            # Fetch repo list
-            repo_url="https://nvidia.github.io/libnvidia-container/${distribution}/libnvidia-container.list"
-            echo "[INFO] Fetching repo file: $repo_url"
+			. /etc/os-release
+			distribution="${ID}${VERSION_ID:-}"
+			case "$distribution" in
+			ubuntu24.04)
+				log_warn "ubuntu24.04 not yet supported by NVIDIA. Using ubuntu22.04 repo."
+				distribution="ubuntu22.04"
+				;;
+			ubuntu2*)
+				log_warn "Future Ubuntu release detected ($distribution). Falling back to ubuntu22.04."
+				distribution="ubuntu22.04"
+				;;
+			debian1*)
+				if [[ "$distribution" != "debian11" && "$distribution" != "debian12" ]]; then
+					log_warn "Unsupported Debian release ($distribution). Falling back to debian12."
+					distribution="debian12"
+				fi
+				;;
+			esac
+			log_info "Using NVIDIA repository for: $distribution"
 
-            repo_tmp=$(mktemp)
-            if curl -fsSL "$repo_url" -o "$repo_tmp"; then
-                if grep -q "^deb " "$repo_tmp"; then
-                    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit.gpg] https://#g' \
-                        "$repo_tmp" | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list >/dev/null
-                    echo "[INFO] Repo list installed."
-                else
-                    echo "[ERROR] Repo URL returned unexpected content (not a deb line)."
-                    cat "$repo_tmp"
-                    exit 1
-                fi
-            else
-                echo "[ERROR] Failed to download repo list for $distribution"
-                echo "Try using a supported distro (e.g. ubuntu20.04, ubuntu22.04, debian11, debian12)."
-                exit 1
-            fi
+			repo_url="https://nvidia.github.io/libnvidia-container/${distribution}/libnvidia-container.list"
+			repo_tmp=$(mktemp)
+			if curl -fsSL "$repo_url" -o "$repo_tmp"; then
+				if grep -q "^deb " "$repo_tmp"; then
+					sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit.gpg] https://#g' \
+						"$repo_tmp" | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list >/dev/null
+					log_info "NVIDIA repo list installed successfully."
+				else
+					log_error "Unexpected repo content; aborting."
+					cat "$repo_tmp"
+					exit 1
+				fi
+			else
+				log_error "Failed to download NVIDIA repo for distribution: ${distribution:-unknown}"
+				log_error "URL: ${repo_url}"
+				log_error "Check your internet connection or ensure this distro is supported by NVIDIA."
+				exit 1
+			fi
+			rm -f "$repo_tmp"
 
-            # Install toolkit
-            sudo apt-get update
-            sudo apt-get install -y nvidia-container-toolkit
+			export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"
+			export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"
 
-            echo "[INFO] Configuring Docker runtime..."
-            sudo nvidia-ctk runtime configure --runtime=docker
-            sudo systemctl restart docker
-            
-        else
-            echo "[INFO] NVIDIA Container Toolkit already installed."
-        fi
+			sudo apt-get update
+			sudo apt-get install -y nvidia-container-toolkit
+			log_info "Configuring Docker runtime for NVIDIA..."
+			sudo nvidia-ctk runtime configure --runtime=docker
+			sudo systemctl restart docker
 
+		else
+			log_info "NVIDIA Container Toolkit already installed."
+		fi
 
-    else
-        echo "[INFO] No GPU found, running CPU-only on Linux."
-    fi
+	else
+		log_info "No NVIDIA GPU found. Running CPU-only mode."
+		setup ":0"
+	fi
+}
 
+# -----------------------------------------------------------------------------
+# macOS setup
+# -----------------------------------------------------------------------------
+setup_macos() {
+	log_info "Detected macOS environment."
 
+	if ! command -v brew &>/dev/null; then
+		log_warn "Please install Homebrew and then XQuartz for proper X11 support."
+		exit 1
+	else
+		if brew list --cask xquartz &>/dev/null; then
+			log_info "XQuartz is already installed via Homebrew."
+		else
+			log_info "Installing XQuartz via Homebrew..."
+			brew install --cask xquartz
+		fi
+	fi
 
+	setup "docker.for.mac.host.internal:0"
+	log_warn "GPU passthrough not supported on Docker Desktop for macOS."
+}
 
-elif [[ "$OS" == "Darwin" ]]; then
-    # SETUP THE DISPLAY ENVIRONMENT VARIABLES FOR MACOS
-    echo -e "devcontainer_environment_variables\n\nDISPLAY=docker.for.mac.host.internal:0" >> $SCRIPT_DIR/devcontainer_environment_variables
+# -----------------------------------------------------------------------------
+# Fallback for unknown OS
+# -----------------------------------------------------------------------------
+setup_unknown() {
+	log_warn "Unsupported OS detected: $OS"
+	setup ":0"
+	log_warn "Running CPU-only. Display may not work properly."
+}
 
-    echo "[INFO] macOS detected. GPU passthrough not supported in Docker Desktop."
+separator
+case "$OS" in
+Linux) setup_linux ;;
+Darwin) setup_macos ;;
+*) setup_unknown ;;
+esac
+separator
 
-
-
-else
-    # SETUP THE DISPLAY ENVIRONMENT VARIABLES FOR AN UNKNOWN OS
-    echo -e "devcontainer_environment_variables\n\nDISPLAY=:0" > $SCRIPT_DIR/devcontainer_environment_variables
-    
-    echo "[WARN] Unsupported OS: $OS. Running CPU-only and Display may not work properly."
-fi
+log_info "Setup complete!"
