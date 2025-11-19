@@ -1,7 +1,7 @@
 {
-    "name": "VT AutoBoat Development Container v1.1.1",
+    "name": "VT AutoBoat Development Container v1.2.0",
     "image": "vtautoboat/autoboat_docker_dev_image",
-    "initializeCommand": "xhost +localhost; docker pull --platform=linux/amd64 vtautoboat/autoboat_docker_dev_image",
+    "initializeCommand": "bash .devcontainer/initializeCommand.sh",
     "postCreateCommand": "bash docker_dev_environment_setup.sh",
     "privileged": true,
     "remoteUser": "",
@@ -51,7 +51,8 @@
         "-v",
         "/var/run/docker.sock:/var/run/docker.sock",
         "${localEnv:DOCKER_GPU_RUN_ARGS:--env}",
-        "${localEnv:DOCKER_RUNTIME_RUN_ARGS:IGNORE_THIS=hi}"
+        "${localEnv:DOCKER_RUNTIME_RUN_ARGS:IGNORE_THIS=hi}",
+        "--name", "autoboat_dev_container"
     ],
     "mounts": [
         "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"

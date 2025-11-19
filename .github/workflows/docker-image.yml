@@ -1,3 +1,6 @@
+# This workflow simply builds and pushes a new image to docker hub whenever the dockerfile changes on the main branch
+
+
 name: Docker Image CI
 
 on:
