@@ -38,8 +38,8 @@ class TelemetryUpdater(QThread):
         </ul>
     """
 
-    boat_data_fetched: dict = Signal(dict)
-    request_url_change: constants.TelemetryStatus = Signal(constants.TelemetryStatus)
+    boat_data_fetched = Signal(dict)
+    request_url_change = Signal(constants.TelemetryStatus)
 
     def __init__(self) -> None:
         super().__init__()
@@ -48,17 +48,26 @@ class TelemetryUpdater(QThread):
         """Fetch boat data from the telemetry server and emit it."""
 
         try:
-            boat_status: dict[str, str | float | list[float] | list[list[float]]]
             boat_status = constants.REQ_SESSION.get(
                 urljoin(
                     constants.TELEMETRY_SERVER_ENDPOINTS["get_boat_status"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)
                 ),
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
+
+            if not isinstance(boat_status, dict):
+                raise TypeError
+
             self.request_url_change.emit(constants.TelemetryStatus.SUCCESS)
 
-        except requests.exceptions.RequestException as e:
-            print(f"[Warning] Failed to fetch boat data: {e}")
+        except requests.exceptions.RequestException:
+            boat_status = {}
+            self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
+
+        except TypeError:
+            print(
+                f"[Warning] Telemetry data is not in expected format. Using empty dict. \nExpected: {dict}, Received: {boat_status}"
+            )
             boat_status = {}
             self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
 
@@ -106,18 +115,20 @@ class InstanceFetcher(QThread):
         """Fetch instances from the telemetry server and emit them."""
 
         try:
-            instances: list[dict] = constants.REQ_SESSION.get(
+            instances = constants.REQ_SESSION.get(
                 constants.TELEMETRY_SERVER_ENDPOINTS["get_all_instance_info"],
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
 
             if not isinstance(instances, list):
-                raise TypeError("Instances data is not a list")
+                raise TypeError
+
+            if not all(isinstance(instance, dict) for instance in instances):
+                raise TypeError
 
             self.request_url_change.emit(constants.TelemetryStatus.SUCCESS)
 
-        except requests.exceptions.RequestException as e:
-            print(f"[Warning] Failed to fetch instances. Using empty list. Exception: {e}")
+        except requests.exceptions.RequestException:
             instances = []
             self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
 
@@ -160,10 +171,16 @@ class LocalWaypointFetcher(QThread):
         """Fetch waypoints from the local server and emit them."""
 
         try:
-            waypoints: list[list[float]] = constants.REQ_SESSION.get(constants.WAYPOINTS_SERVER_URL).json()
+            waypoints = constants.REQ_SESSION.get(constants.WAYPOINTS_SERVER_URL).json()
 
             if not isinstance(waypoints, list):
-                raise TypeError("Waypoints data is not a list")
+                raise TypeError
+
+            for waypoint in waypoints:
+                if not isinstance(waypoint, (tuple, list)):
+                    raise TypeError
+                if not all(isinstance(cord, (int, float)) for cord in waypoint):
+                    raise TypeError
 
         except requests.exceptions.RequestException as e:
             print(f"[Warning] Failed to fetch waypoints. Using empty list. Exception: {e}")
@@ -213,7 +230,6 @@ class RemoteWaypointFetcher(QThread):
         """Fetch waypoints from the telemetry server and emit them."""
 
         try:
-            waypoints: list[list[float]]
             waypoints = constants.REQ_SESSION.get(
                 urljoin(
                     constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)
@@ -222,12 +238,18 @@ class RemoteWaypointFetcher(QThread):
             ).json()
 
             if not isinstance(waypoints, list):
-                raise TypeError("Waypoints data is not a list")
+                raise TypeError
+
+            for waypoint in waypoints:
+                if not isinstance(waypoint, (tuple, list)):
+                    raise TypeError
+
+                if not all(isinstance(cord, (int, float)) for cord in waypoint):
+                    raise TypeError
 
             self.request_url_change.emit(constants.TelemetryStatus.SUCCESS)
 
-        except requests.exceptions.RequestException as e:
-            print(f"[Warning] Failed to fetch waypoints. Using empty list. Exception: {e}")
+        except requests.exceptions.RequestException:
             waypoints = []
             self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
 
@@ -276,6 +298,7 @@ class ImageFetcher(QThread):
                 ),
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
+
             base64_encoded_image = image_data.get("current_camera_image")
             if base64_encoded_image is None:
                 raise ValueError("Image data is None")

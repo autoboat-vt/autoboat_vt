@@ -165,18 +165,28 @@ def show_message_box(
     if icon:
         msg_box.setIconPixmap(icon.pixmap(64, 64))
 
-    for button in buttons:
-        msg_box.addButton(button)
+    std_buttons = QMessageBox.NoButton
+    for b in buttons:
+        std_buttons |= b
+    msg_box.setStandardButtons(std_buttons)
 
     if remember_choice_option:
-        remember_checkbox = QCheckBox("Remember my decision")
+        remember_checkbox = QCheckBox("Remember my decision?")
         msg_box.setCheckBox(remember_checkbox)
-        clicked_button = msg_box.exec_()
-        return QMessageBox.StandardButton(clicked_button), remember_checkbox.isChecked()
+        clicked = msg_box.exec()
+        clicked_button = QMessageBox.StandardButton(clicked)
+        if clicked_button == QMessageBox.NoButton:
+            print(f"[Warning] User closed the dialog without selecting a button. Using {buttons[0]}.")
+            clicked_button = buttons[0]
+        return clicked_button, remember_checkbox.isChecked()
 
     else:
-        clicked_button = msg_box.exec_()
-        return QMessageBox.StandardButton(clicked_button)
+        clicked = msg_box.exec()
+        clicked_button = QMessageBox.StandardButton(clicked)
+        if clicked_button == QMessageBox.NoButton:
+            print(f"[Warning] User closed the dialog without selecting a button. Using {buttons[0]}.")
+            clicked_button = buttons[0]
+        return clicked_button
 
 
 def show_input_dialog(
@@ -203,22 +213,27 @@ def show_input_dialog(
         The user input converted to the specified type, or `None` if the dialog was cancelled.
     """
 
-    if default_value is not None:
-        text, ok = QInputDialog.getText(None, title, label, text=default_value)
+    if input_type is int:
+        value = int(default_value) if default_value is not None else 0
+        result, ok = QInputDialog.getInt(None, title, label, value=value)
+
+    elif input_type is float:
+        value = float(default_value) if default_value is not None else 0.0
+        result, ok = QInputDialog.getDouble(None, title, label, value=value)
 
     else:
-        text, ok = QInputDialog.getText(None, title, label)
+        text = default_value if default_value is not None else ""
+        text, ok = QInputDialog.getText(None, title, label, text=text)
+        result = None
+        if ok:
+            try:
+                result = input_type(text)
+            except ValueError:
+                print(f"[Error] Failed to convert '{text}' to {input_type.__name__}.")
+                return None
 
     if ok:
-        try:
-            converted_value: T = input_type(text)
-
-        except ValueError:
-            print(f"[Error] Failed to convert {text} to {input_type}. Returning None.")
-            return None
-
-        return converted_value
-
+        return result if result is not None else text
     else:
         return None
 
