@@ -46,6 +46,8 @@ else:
 
 PATH_TO_YOLO_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo11.txt"
 INFERENCE = True
+if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":
+    INFERENCE = False
 # MUXER_BATCH_TIMEOUT_USEC = 40_000
 
 if SHOULD_SAVE_IMAGES and not os.path.exists(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results"):
