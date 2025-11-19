@@ -9,8 +9,7 @@ xhost +localhost || true
 # but when you are just reopening a container, then the container that you are attempting to open already exists and therefore we use the following command to sense that.
 if docker container inspect autoboat_dev_container >/dev/null 2>&1; then
     echo "Container autoboat_dev_container exists."
-    docker pull --platform=linux/amd64 vtautoboat/autoboat_docker_dev_image
-
 else
     echo "Container autoboat_dev_container does not exist."
+    docker pull --platform=linux/amd64 vtautoboat/autoboat_docker_dev_image
 fi
