@@ -143,6 +143,7 @@ class InstanceHandler(QWidget):
         self.sort_by: InstanceHandler.SortBy = InstanceHandler.SortBy.TIME_SINCE_UPDATED
         self.on_sort_by_changed(self.sort_by)
 
+        self.connection_history: list[constants.TelemetryStatus] = []
         self.current_search_text: str = ""
 
         self.main_layout = QGridLayout()
@@ -234,6 +235,35 @@ class InstanceHandler(QWidget):
             A list of dictionaries containing instance data.
         """
 
+        if (
+            self.connection_history[-1] is constants.TelemetryStatus.SUCCESS
+            and self.connection_history[0] is constants.TelemetryStatus.FAILURE
+        ):
+            try:
+                available_ids = constants.REQ_SESSION.get(
+                    constants.TELEMETRY_SERVER_ENDPOINTS["get_all_ids"], timeout=constants.TELEMETRY_TIMEOUT_SECONDS
+                ).json()
+
+                if isinstance(available_ids, list) and all(
+                    isinstance(instance_id, int) for instance_id in available_ids
+                ):
+                    constants.TELEMETRY_SERVER_INSTANCE_ID = random.choice(available_ids)
+                    print(
+                        f"[Info] Reconnected to telemetry server. New instance id is {constants.TELEMETRY_SERVER_INSTANCE_ID}."
+                    )
+                else:
+                    print(
+                        "[Info] Cannot find any instances on server when attempting to reconnect. Creating an instance to connect to."
+                    )
+                    constants.TELEMETRY_SERVER_INSTANCE_ID = constants.REQ_SESSION.get(
+                        constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
+                        timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                    ).json()
+
+            except requests.exceptions.RequestException:
+                self.connection_history[-1] = constants.TelemetryStatus.FAILURE
+                return
+
         self.instances_container.setUpdatesEnabled(False)
 
         # region update and create new instance widgets
@@ -276,8 +306,7 @@ class InstanceHandler(QWidget):
                         )
 
                     except requests.exceptions.RequestException as e:
-                        print(f"[Error] Failed to create a new instance, exiting application. Error: {e}")
-                        QApplication.quit()
+                        print(f"[Error] Failed to create a new instance, Error: {e}")
 
         for instance in instances:
             try:
@@ -458,6 +487,12 @@ class InstanceHandler(QWidget):
             <li> <code>FAILURE</code> indicates that the telemetry server is not reachable and instances could not be fetched.</li>
             </ul>
         """
+
+        if len(self.connection_history) < 2:
+            self.connection_history.append(telemetry_status)
+        else:
+            self.connection_history.pop(0)
+            self.connection_history.append(telemetry_status)
 
         if telemetry_status == constants.TelemetryStatus.FAILURE:
             print("[Warning] Failed to fetch instances from the telemetry server.")
