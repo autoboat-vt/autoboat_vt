@@ -395,7 +395,7 @@ With ros2:
       </link>
 
       <link name='keel_connector_link'>
-        <pose>0 0 -0.877125 0 0 0</pose>
+        <pose>0 0 -0.502125 0 0 0</pose>
 
         <inertial>
           <mass>1.20958</mass>
@@ -412,7 +412,7 @@ With ros2:
         <collision name='collision'>
           <geometry>
             <box>
-              <size>0.01 0.01 1.75425</size>
+              <size>0.01 0.01 0.877125</size>
             </box>
           </geometry>
         </collision>
@@ -420,14 +420,14 @@ With ros2:
         <visual name='visual'>
           <geometry>
             <box>
-              <size>0.01 0.01 1.75425</size>
+              <size>0.01 0.01 0.877125</size>
             </box>
           </geometry>
         </visual>
       </link>
 
       <link name='keel_link'>
-        <pose>0 0 -1.81675 0 0 0</pose>
+        <pose>0 0 -0.989753205 0 0 0</pose>
 
         <inertial>
           <mass>18.14368</mass>
@@ -536,7 +536,7 @@ With ros2:
           <mass>0.5</mass>
           <inertia>
             <ixx>0.15687</ixx>
-            <ixy>-0.00008</ixy>
+            <ixy>0.00008</ixy>
             <ixz>0.05665</ixz>
             <iyy>0.23871</iyy>
             <iyz>0.00011</iyz>
@@ -888,7 +888,7 @@ With ros2:
         <cp>0.33033 0.45733 0</cp>
       </plugin-->
 
-      <!-- TODO: get values for cla and cda (initial slope of cl and cd curves) -->
+      <!-- TODO: get values for clmax and cdmax (cl vs alpha and cd vs alpha curves) -->
        <!-- TODO: also generally just fix the foil dynamics plugin to make it correct -->
       <plugin filename="libFoilDynamics.so"
       name="foil_dynamics::FoilDynamics">
@@ -911,8 +911,8 @@ With ros2:
         <xU>-6</xU>
         <yVabsV>-6</yVabsV>
         <yV>-6</yV>
-        <zWabsW>-6</zWabsW>
-        <zW>-6</zW>
+        <zWabsW>-60</zWabsW>
+        <zW>-60</zW>
         <kPabsP>-0.5</kPabsP>
         <kP>-0.5</kP>
         <mQabsQ>-5</mQabsQ>
@@ -928,8 +928,8 @@ With ros2:
         <xU>-6</xU>
         <yVabsV>-6</yVabsV>
         <yV>-6</yV>
-        <zWabsW>-6</zWabsW>
-        <zW>-6</zW>
+        <zWabsW>-60</zWabsW>
+        <zW>-60</zW>
         <kPabsP>-0.5</kPabsP>
         <kP>-0.5</kP>
         <mQabsQ>-5</mQabsQ>
@@ -945,8 +945,8 @@ With ros2:
         <xU>-6</xU>
         <yVabsV>-6</yVabsV>
         <yV>-6</yV>
-        <zWabsW>-6</zWabsW>
-        <zW>-6</zW>
+        <zWabsW>-60</zWabsW>
+        <zW>-60</zW>
         <kPabsP>-0.5</kPabsP>
         <kP>-0.5</kP>
         <mQabsQ>-5</mQabsQ>
@@ -962,8 +962,8 @@ With ros2:
         <xU>-6</xU>
         <yVabsV>-6</yVabsV>
         <yV>-6</yV>
-        <zWabsW>-6</zWabsW>
-        <zW>-6</zW>
+        <zWabsW>-60</zWabsW>
+        <zW>-60</zW>
         <kPabsP>-0.5</kPabsP>
         <kP>-0.5</kP>
         <mQabsQ>-5</mQabsQ>
@@ -979,8 +979,8 @@ With ros2:
         <xU>-6</xU>
         <yVabsV>-6</yVabsV>
         <yV>-6</yV>
-        <zWabsW>-6</zWabsW>
-        <zW>-6</zW>
+        <zWabsW>-60</zWabsW>
+        <zW>-60</zW>
         <kPabsP>-0.5</kPabsP>
         <kP>-0.5</kP>
         <mQabsQ>-5</mQabsQ>
@@ -996,8 +996,8 @@ With ros2:
         <xU>-6</xU>
         <yVabsV>-6</yVabsV>
         <yV>-6</yV>
-        <zWabsW>-6</zWabsW>
-        <zW>-6</zW>
+        <zWabsW>-60</zWabsW>
+        <zW>-60</zW>
         <kPabsP>-0.5</kPabsP>
         <kP>-0.5</kP>
         <mQabsQ>-5</mQabsQ>

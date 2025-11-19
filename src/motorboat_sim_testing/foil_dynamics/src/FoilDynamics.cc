@@ -104,19 +104,14 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
     return;
   gz::math::Vector3d vel = *optVel;
 
-  if (vel.Length() < 0.01)
-    return;
-
   // Get world pose
   auto optPose = link_.WorldPose(_ecm);
   if (!optPose)
     return;
   gz::math::Pose3d pose = *optPose;
 
-  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Velocity: %f %f %f", vel.X(), vel.Y(), vel.Z());
-
   // initial wind
-  gz::math::Vector3d wind(2, .1, 0);
+  gz::math::Vector3d wind(0, 0, 0);
   
   // Rotate forward/upward vectors to world frame
   gz::math::Vector3d forwardI = pose.Rot().RotateVector(forward_);
@@ -127,6 +122,9 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   // wind is the base air speed
   gz::math::Vector3d aw = wind - vel;
   gz::math::Vector3d velInLDPlane = aw;
+
+  if (aw.Length() < 0.01)
+    return;
 
   // Drag and lift directions
   gz::math::Vector3d dragDir = velInLDPlane.Normalized();
@@ -140,7 +138,7 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   double alphaSign = -upwardI.Dot(velInLDPlane) /
                      (upwardI.Length() + velInLDPlane.Length());
 
-  double alpha = (alphaSign > 0.0) ? acos(cosAlpha) : -acos(cosAlpha);
+  double alpha = (alphaSign >= 0.0) ? acos(cosAlpha) : -acos(cosAlpha);
 
   // Dynamic pressure
   double speedInLDPlane = velInLDPlane.Length();
@@ -155,10 +153,16 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   gz::math::Vector3d drag = cd * q * area_ * dragDir;
   gz::math::Vector3d force = lift + drag;
 
-
-  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Force: %f %f %f", force.X(), force.Y(), force.Z());
-  // Apply world wrench
-  link_.AddWorldWrench(_ecm, force, gz::math::Vector3d::Zero);
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Velocity: %f %f %f", vel.X(), vel.Y(), vel.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Wind Velocity: %f %f %f", wind.X(), wind.Y(), wind.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Angle: %lf", alpha);
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "LiftDirection: %f %f %f", liftDir.X(), liftDir.Y(), liftDir.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "DragDirection: %f %f %f", dragDir.X(), dragDir.Y(), dragDir.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Lift: %f %f %f", lift.X(), lift.Y(), lift.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Drag: %f %f %f", drag.X(), drag.Y(), drag.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Force: %f %f %f\n\n", force.X(), force.Y(), force.Z());
+  // Apply world force
+  link_.AddWorldForce(_ecm, force);
 }
 
 }
