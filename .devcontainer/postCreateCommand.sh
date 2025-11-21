@@ -1,3 +1,9 @@
+# ---------------------------------------------------------------------------------------------------------
+# These commands are run on the docker container right after the docker container starts
+# ---------------------------------------------------------------------------------------------------------
+
+
+
 # This is very unsafe lol but I need this to be able to access docker from inside of the dev container for the sim. 
 # Do not remove unless we are releasing this software as a product
 echo sudo chmod 777 /var/run/docker.sock >> "/home/autoboat_user/.bashrc"
