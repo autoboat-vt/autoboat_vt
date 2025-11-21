@@ -1,3 +1,7 @@
+# ---------------------------------------------------------------------------------------------------------
+# These commands are run right on the host computer before the docker container starts up
+# ---------------------------------------------------------------------------------------------------------
+
 # ensure that this finishes even if the command fails (the user doesn't have xhost)
 xhost +localhost || true  
 
