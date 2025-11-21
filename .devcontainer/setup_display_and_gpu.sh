@@ -40,8 +40,8 @@ setup() {
 
 	local profile_file
 	case "$shell_name" in
-	zsh) profile_file="$HOME/.zprofile" ;;
-	bash) profile_file="$HOME/.bash_profile" ;;
+	zsh) profile_file="$HOME/.zshrc" ;;
+	bash) profile_file="$HOME/.bashrc" ;;
 	*) profile_file="$HOME/.profile" ;;
 	esac
 
@@ -184,3 +184,4 @@ esac
 separator
 
 log_info "Setup complete!"
+exit 0
