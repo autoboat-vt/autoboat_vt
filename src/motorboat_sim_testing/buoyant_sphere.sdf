@@ -20,7 +20,7 @@ Without ros2:
     gz topic -t sailboat/propeller_topic -m gz.msgs.Double -p 'data: 200'
 
   3. Set wind:
-    gz topic -t "/world/buoyant_sphere/wind/" -m gz.msgs.Wind  -p "linear_velocity: {x:-5, y:5}, enable_wind: true"
+    gz topic -t /wind -m gz.msgs.Vector3d -p "x: 5, y: 5, z: 0"
 
 With ros2:
 

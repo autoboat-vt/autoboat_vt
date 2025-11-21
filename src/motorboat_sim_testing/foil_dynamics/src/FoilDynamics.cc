@@ -1,16 +1,5 @@
 #include "../include/FoilDynamics.hh"
-
-#include <gz/sim/Model.hh>
-#include <gz/sim/Link.hh>
-#include <gz/sim/Util.hh>
-#include <gz/sim/components/Pose.hh>
-#include <gz/sim/components/World.hh>
-#include <gz/plugin/Register.hh>
-#include <gz/common/Console.hh>
-
-#include <rclcpp/rclcpp.hpp>
 #include <cmath>
-#include <string>
 
 namespace foil_dynamics
 {
@@ -23,7 +12,8 @@ FoilDynamics::FoilDynamics()
   upward_(0, 0, 1),
   area_(1.0),
   clmax_(1.5),
-  cdmax_(1.0)
+  cdmax_(1.0),
+  wind_(0, 0, 0)
 {
   RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "FoilDynamics plugin constructed");
 }
@@ -86,7 +76,16 @@ void FoilDynamics::Configure(const gz::sim::Entity &_entity,
 
   RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"),
               "FoilDynamics loaded for model [%s]", modelName_.c_str());
+
+  node_.Subscribe("/wind", &FoilDynamics::OnWindMsg, this);
 }
+
+
+/////////////////////////////////////////////////
+void FoilDynamics::OnWindMsg(const gz::msgs::Vector3d &_msg) {
+  wind_ = gz::msgs::Convert(_msg);
+}
+
 
 /////////////////////////////////////////////////
 void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
@@ -109,9 +108,6 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   if (!optPose)
     return;
   gz::math::Pose3d pose = *optPose;
-
-  // initial wind
-  gz::math::Vector3d wind(0, 0, 0);
   
   // Rotate forward/upward vectors to world frame
   gz::math::Vector3d forwardI = pose.Rot().RotateVector(forward_);
@@ -120,7 +116,7 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
 
   // Project velocity into lift–drag plane
   // wind is the base air speed
-  gz::math::Vector3d aw = wind - vel;
+  gz::math::Vector3d aw = wind_ - vel;
   gz::math::Vector3d velInLDPlane = aw;
 
   if (aw.Length() < 0.01)
@@ -154,7 +150,7 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   gz::math::Vector3d force = lift + drag;
 
   RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Velocity: %f %f %f", vel.X(), vel.Y(), vel.Z());
-  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Wind Velocity: %f %f %f", wind.X(), wind.Y(), wind.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Wind Velocity: %f %f %f", wind_.X(), wind_.Y(), wind_.Z());
   RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Angle: %lf", alpha);
   RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "LiftDirection: %f %f %f", liftDir.X(), liftDir.Y(), liftDir.Z());
   RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "DragDirection: %f %f %f", dragDir.X(), dragDir.Y(), dragDir.Z());

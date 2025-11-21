@@ -7,7 +7,10 @@
 #include <gz/sim/Util.hh>
 #include <gz/sim/components/Pose.hh>
 #include <gz/sim/components/World.hh>
+#include <gz/transport/Node.hh>
 #include <gz/plugin/Register.hh>
+#include <gz/msgs/wind.pb.h>
+#include <gz/msgs/Utility.hh>
 
 #include <gz/math/Vector3.hh>
 #include <gz/math/Pose3.hh>
@@ -31,6 +34,9 @@ namespace foil_dynamics
                    const std::shared_ptr<const sdf::Element> &_sdf,
                    gz::sim::EntityComponentManager &_ecm,
                    gz::sim::EventManager &_eventMgr) override;
+
+    // Called every time the wind topic is published to.
+    void OnWindMsg(const gz::msgs::Vector3d &_msg);
 
     // Called every simulation iteration
     void PreUpdate(const gz::sim::UpdateInfo &_info,
@@ -66,6 +72,12 @@ namespace foil_dynamics
 
     /// \brief Initial coefficient of drag / angle of attack (in radians) slope 
     double cdmax_{1.0};
+
+    /// \brief Initial wind
+    gz::math::Vector3d wind_{0, 0, 0};
+
+    /// \brief Gazebo communication node.
+    gz::transport::Node node_;
   };
 } // namespace foil_dynamics
 
