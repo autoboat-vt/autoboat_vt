@@ -17,9 +17,7 @@ class MainWindow(QMainWindow):
     def start_asset_server() -> None:
         """Start a quiet HTTP server for static assets."""
 
-        Handler = http.server.SimpleHTTPRequestHandler
-        Handler.directory = constants.ASSETS_DIR.as_posix()
-
+        Handler = lambda *args, **kwargs: http.server.SimpleHTTPRequestHandler(*args, directory=constants.ASSETS_DIR.as_posix(), **kwargs)
         with socketserver.TCPServer(("", constants.ASSET_SERVER_PORT), Handler) as httpd:
             print(f"[Info] Serving HTTP assets on port {constants.ASSET_SERVER_PORT}...")
             httpd.serve_forever()
