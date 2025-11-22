@@ -1,6 +1,5 @@
 # This workflow simply builds and pushes a new image to docker hub whenever the dockerfile changes on the main branch
 
-
 name: Docker Image CI
 
 on:
@@ -10,7 +9,7 @@ on:
       - ".devcontainer/Dockerfile"
       - ".devcontainer/required_pip_packages.txt"
       - ".github/workflows/docker-image.yml"
-      
+
   pull_request:
     branches: ["main"]
     paths:
@@ -55,19 +54,19 @@ jobs:
           cache-to: |
             type=registry,ref=vtautoboat/autoboat_docker_dev_image:cache,mode=max
 
-      - name: Build and push the deepstream variant of the devcontainer
-        uses: docker/build-push-action@v5
-        with:
-          context: .devcontainer
-          file: .devcontainer/Dockerfile
-          platforms: linux/amd64
+      # - name: Build and push the deepstream variant of the devcontainer
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: .devcontainer
+      #     file: .devcontainer/Dockerfile
+      #     platforms: linux/amd64
 
-          push: true
-          tags: |
-            vtautoboat/autoboat_docker_dev_image:latest
-            vtautoboat/autoboat_docker_dev_image:${{ github.sha }}
+      #     push: true
+      #     tags: |
+      #       vtautoboat/autoboat_docker_dev_image:latest
+      #       vtautoboat/autoboat_docker_dev_image:${{ github.sha }}
 
-          cache-from: |
-            type=registry,ref=vtautoboat/autoboat_docker_dev_image:cache
-          cache-to: |
-            type=registry,ref=vtautoboat/autoboat_docker_dev_image:cache,mode=max
+      #     cache-from: |
+      #       type=registry,ref=vtautoboat/autoboat_docker_dev_image:cache
+      #     cache-to: |
+      #       type=registry,ref=vtautoboat/autoboat_docker_dev_image:cache,mode=max
