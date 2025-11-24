@@ -8,6 +8,7 @@
             "includePath": [
                 "/opt/ros/humble/include/**",
                 "/usr/include/**",
+                
                 "${workspaceFolder}/src/microros/dependencies/micro_ros_raspberrypi_pico_sdk/libmicroros/include/**",
                 "${workspaceFolder}/src/microros/dependencies/pico-sdk/src/common/pico_stdlib_headers/include/**",
                 "${workspaceFolder}/src/microros/dependencies/pico-sdk/src/common/pico_base_headers/include",
@@ -26,9 +27,56 @@
                 "${workspaceFolder}/src/microros/dependencies/pico-sdk/src/rp2040/hardware_structs/include",
                 "${workspaceFolder}/src/microros/dependencies/pico-sdk/src/rp2350/hardware_structs/include",
                 "${workspaceFolder}/src/microros/dependencies/pico-sdk/src/rp2350/hardware_regs/include",
-                "${workspaceFolder}/build/sensors_transmission/generated/pico_base"
+                "${workspaceFolder}/build/sensors_transmission/generated/pico_base",
+
+                "${workspaceFolder}/install/autoboat_msgs/include",
+
+                "${workspaceFolder}/src/sensors_cpp/include"
+                // "${workspaceFolder}/src/sensors_cpp/include/sensors_cpp",
+                // "${workspaceFolder}/src/sensors_cpp/include/xcrsf",
+
+                // "/opt/ros/humble/include",
+
+                // "/opt/ros/humble/include/rclcpp",
+                // "/opt/ros/humble/include/rcl",
+                // "/opt/ros/humble/include/rmw",
+                // "/opt/ros/humble/include/rcutils",
+                // "/opt/ros/humble/include/rcpputils",
+
+                // "/opt/ros/humble/include/std_msgs",
+                // "/opt/ros/humble/include/geometry_msgs",
+                // "/opt/ros/humble/include/sensor_msgs",
+                // "/opt/ros/humble/include/builtin_interfaces",
+                // "/opt/ros/humble/include/statistics_msgs",
+                // "/opt/ros/humble/include/rosgraph_msgs",
+
+                // "/opt/ros/humble/include/rosidl_runtime_c",
+                // "/opt/ros/humble/include/rosidl_runtime_cpp",
+                // "/opt/ros/humble/include/rosidl_typesupport_interface",
+                // "/opt/ros/humble/include/rosidl_typesupport_c",
+                // "/opt/ros/humble/include/rosidl_typesupport_cpp",
+                // "/opt/ros/humble/include/rosidl_typesupport_introspection_c",
+                // "/opt/ros/humble/include/rosidl_typesupport_introspection_cpp",
+                // "/opt/ros/humble/include/rosidl_typesupport_fastrtps_c",
+                // "/opt/ros/humble/include/rosidl_typesupport_fastrtps_cpp",
+
+                // "/opt/ros/humble/include/rcl_interfaces",
+                // "/opt/ros/humble/include/rcl_logging_interface",
+                // "/opt/ros/humble/include/rcl_yaml_param_parser",
+
+
+                // "/opt/ros/humble/include/ament_index_cpp",
+                // "/opt/ros/humble/include/libstatistics_collector",
+                // "/opt/ros/humble/include/libyaml_vendor",
+                // "/opt/ros/humble/include/tracetools",
+
+
+                // "/usr/include/opencv4",
+                // "/opt/ros/humble/include/fastcdr"
+
             ],
             "name": "ROS",
+            // "compileCommands": "${workspaceFolder}/build/compile_commands.json",
             "intelliSenseMode": "gcc-x64",
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "gnu11",

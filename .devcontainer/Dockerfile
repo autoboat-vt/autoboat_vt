@@ -118,18 +118,23 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 
-
-
-# C++ requirements?
-# sudo apt install libcurl4-openssl-dev
-# sudo apt-get install nlohmann-json3-dev
-# sudo apt install geographiclib-tools
-
 # -------------------------------
 # Python requirements (as user)
 # -------------------------------
 USER $USERNAME
 COPY required_pip_packages.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
+
+
+# C++ requirements?
+RUN sudo apt-get update \
+    && sudo apt install libcurl4-openssl-dev -y \
+    && sudo apt-get install nlohmann-json3-dev -y \
+    && sudo apt install geographiclib-tools -y \
+    && sudo apt install ros-humble-serial-driver \
+    && sudo apt install ros-humble-asio-cmake-module
+
+
+
 
 CMD ["/bin/bash"]
