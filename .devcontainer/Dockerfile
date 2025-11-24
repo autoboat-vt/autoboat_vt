@@ -135,6 +135,7 @@ RUN pip install -r /tmp/requirements.txt
 #     && sudo apt install ros-humble-asio-cmake-module -y \
 #     && sudo apt install libudev-dev -y
     # && sudo apt install libboost-system-dev libboost-thread-dev -y \
+    # && && rm -rf /var/lib/apt/lists/*
 
 
 

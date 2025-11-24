@@ -204,7 +204,7 @@ class RCPublisher(Node):
         
         
     def timer_callback(self):
-        start_time = time.time()
+        # start_time = time.time()
         
         num_unread_bytes = self.sensor_serial.in_waiting
         
@@ -225,11 +225,11 @@ class RCPublisher(Node):
         
         self.rc_data_publisher.publish(rc_data)
         
-        print(f"time used: {time.time() - start_time}")
-        process = psutil.Process(os.getpid())
-        ram_bytes = process.memory_info().rss  # Resident Set Size: physical memory used
-        ram_mb = ram_bytes / (1024 ** 2)
-        print(f"ram mb: {ram_mb}")
+        # print(f"time used: {time.time() - start_time}")
+        # process = psutil.Process(os.getpid())
+        # ram_bytes = process.memory_info().rss  # Resident Set Size: physical memory used
+        # ram_mb = ram_bytes / (1024 ** 2)
+        # print(f"ram mb: {ram_mb}")
 
 
 

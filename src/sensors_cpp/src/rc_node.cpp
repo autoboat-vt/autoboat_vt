@@ -75,7 +75,7 @@ private:
 
     void main_loop() {
 
-        auto start = std::chrono::steady_clock::now();
+        // auto start = std::chrono::steady_clock::now();
 
         
         autoboat_msgs::msg::RCData message = autoboat_msgs::msg::RCData();
@@ -105,13 +105,13 @@ private:
 
         rc_data_publisher->publish(message);
         
-        auto end = std::chrono::steady_clock::now();
+        // auto end = std::chrono::steady_clock::now();
     
         // Calculate and print the elapsed time in milliseconds
-        std::chrono::duration<double, std::milli> elapsed_ms = end - start;
-        std::cout << "Consumed time in milliseconds: " << elapsed_ms.count() << "ms\n";
+        // std::chrono::duration<double, std::milli> elapsed_ms = end - start;
+        // std::cout << "Consumed time in milliseconds: " << elapsed_ms.count() << "ms\n";
 
-        print_cpu_and_ram_stats();
+        // print_cpu_and_ram_stats();
     }
 
 

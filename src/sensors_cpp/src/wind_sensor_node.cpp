@@ -30,12 +30,11 @@ public:
     WindSensorPublisher(): Node("wind_sensor_publisher"), io_ctx(), serial_driver(io_ctx) {
         apparent_wind_vector_publisher = this->create_publisher<geometry_msgs::msg::Vector3>("/apparent_wind_vector", rclcpp::SensorDataQoS());
 
-        // // RCLCPP_INFO(this->get_logger(), "Initializing wind sensor node...");
+        RCLCPP_INFO(this->get_logger(), "Initializing wind sensor node...");
 
         SerialPortConfig cfg(38400, drivers::serial_driver::FlowControl::NONE, drivers::serial_driver::Parity::NONE, drivers::serial_driver::StopBits::ONE);
         
         std::string device_filepath = get_device_filepath_from_vid_pid_and_serial_number(WIND_SENSOR_VID, WIND_SENSOR_PID, WIND_SENSOR_SERIAL_NUMBER);
-        // // RCLCPP_INFO(this->get_logger(), "Opening port: %s", device_filepath.c_str());
         serial_driver.init_port(device_filepath, cfg);
         serial_port = serial_driver.port();
         
@@ -47,12 +46,11 @@ public:
 
         main_loop_timer = this->create_wall_timer(10ms, std::bind(&WindSensorPublisher::main_loop, this));
 
-        // // RCLCPP_INFO(this->get_logger(), "Wind sensor publisher running");
+        RCLCPP_INFO(this->get_logger(), "Wind sensor publisher running");
     }
 
     ~WindSensorPublisher() override {
         if (serial_port && serial_port->is_open()) {
-          // // RCLCPP_INFO(this->get_logger(), "Closing serial port");
           serial_port->close();
         }
     }
@@ -72,7 +70,7 @@ private:
 
     void main_loop() {
 
-        auto start = std::chrono::steady_clock::now();
+        // auto start = std::chrono::steady_clock::now();
 
         if (!serial_port || !serial_port->is_open())
             return;
@@ -81,15 +79,12 @@ private:
         std::vector<uint8_t> buffer(256);
         size_t n = serial_port->receive(buffer);
         
-        // RCLCPP_INFO(this->get_logger(), "GOT HERE3");
 
         if (n == 0)
             return;
         
-        // RCLCPP_INFO(this->get_logger(), "GOT HERE4");
         std::string line(buffer.begin(), buffer.begin() + n);
         
-        // RCLCPP_INFO(this->get_logger(), "GOT HERE5");
         if (line.empty()) 
           return;
         
@@ -112,7 +107,6 @@ private:
             return;
         }
 
-        // RCLCPP_INFO(this->get_logger(), "GOT HERE6");
         double apparent_angle = std::stod(fields[1]);
         double apparent_speed_knots = std::stod(fields[3]);
         double speed_mps = apparent_speed_knots * KNOTS_TO_METERS_PER_SECOND;
@@ -136,13 +130,13 @@ private:
 
         apparent_wind_vector_publisher->publish(msg);
 
-        auto end = std::chrono::steady_clock::now();
+        // auto end = std::chrono::steady_clock::now();
     
         // Calculate and print the elapsed time in milliseconds
-        std::chrono::duration<double, std::milli> elapsed_ms = end - start;
-        std::cout << "Consumed time in milliseconds: " << elapsed_ms.count() << "ms\n";
+        // std::chrono::duration<double, std::milli> elapsed_ms = end - start;
+        // std::cout << "Consumed time in milliseconds: " << elapsed_ms.count() << "ms\n";
 
-        print_cpu_and_ram_stats();
+        // print_cpu_and_ram_stats();
     }
 
 
