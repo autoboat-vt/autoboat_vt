@@ -65,12 +65,21 @@ namespace crossfire {
          * @param uart_path The path from the serial connection.
          * @param baud_rate The baud rate, default is 420_000 for ExpressLRS Receiver.
          */
-        explicit XCrossfire(const std::string& uart_path, speed_t baud_rate = 420000);
+        XCrossfire(const std::string& uart_path, speed_t baud_rate = 420000);
 
         /**
          * @brief Destroy instance of XCrossfire.
          */
         ~XCrossfire();
+
+
+        // Stuff for copying
+        XCrossfire(XCrossfire&& other) noexcept;
+        XCrossfire& operator=(XCrossfire&& other) noexcept;
+
+        XCrossfire(const XCrossfire&) = delete;
+        XCrossfire& operator=(const XCrossfire&) = delete;
+
 
         /**
          * @brief Open serial connection.

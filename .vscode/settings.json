@@ -130,7 +130,8 @@
         "typeindex": "cpp",
         "typeinfo": "cpp",
         "valarray": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "strstream": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

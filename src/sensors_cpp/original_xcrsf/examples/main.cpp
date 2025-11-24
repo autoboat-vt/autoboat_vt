@@ -28,7 +28,7 @@
 #include "xcrsf/crossfire.h"
 
 int main() {
-    auto crossfire = crossfire::XCrossfire("/dev/ttyAMA0");
+    auto crossfire = crossfire::XCrossfire("/dev/ttyUSB0");
     if (crossfire.open_port()) { std::printf("Port opened...\n"); }
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 

@@ -11,7 +11,6 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 # find dependencies
-include_directories(include include/sensors_cpp)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -20,7 +19,12 @@ find_package(Threads REQUIRED)
 
 find_package(serial_driver REQUIRED)
 
+# find_package(PkgConfig REQUIRED)
+# pkg_check_modules(LIBSERIALPORT REQUIRED libserialport)
 
+
+include_directories(include include/sensors_cpp)
+# include_directories(${LIBSERIALPORT_INCLUDE_DIRS})
 
 
 # uncomment the following section in order to fill in

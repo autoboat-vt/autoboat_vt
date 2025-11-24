@@ -4,6 +4,7 @@
 
 #include <serial_driver/serial_driver.hpp>
 #include <serial_driver/serial_port.hpp>
+// #include <serial/serial.h>
 
 #include <deque>
 #include <string>
@@ -23,20 +24,19 @@ static const std::string WIND_SENSOR_SERIAL_NUMBER = "ABSCDYAB";
 const std::string RC_DEVICE_FILE_PATH = "/dev/ttyAMA0";
 
 
-std::string getPort(uint16_t vid, uint16_t pid, const std::string& serial_number)
-{
-    auto devices = serial::list_ports();
-    for (const auto& device : devices) {
-        std::cout << device.serial_number << std::endl;
-        if (device.vid == vid &&
-            device.pid == pid &&
-            device.serial_number == serial_number)
-        {
-            return device.port;
-        }
-    }
-    throw std::runtime_error("Device not found");
-}
+// std::string getPort(uint16_t vid, uint16_t pid, const std::string& serial_number) {
+//     auto devices = serial::list_ports();
+//     for (const auto& device : devices) {
+//         std::cout << device.serial_number << std::endl;
+//         if (device.vid == vid &&
+//             device.pid == pid &&
+//             device.serial_number == serial_number)
+//         {
+//             return device.port;
+//         }
+//     }
+//     throw std::runtime_error("Device not found");
+// }
 
 
 
@@ -61,7 +61,9 @@ public:
         SerialPortConfig cfg(38400, drivers::serial_driver::FlowControl::NONE, drivers::serial_driver::Parity::NONE, drivers::serial_driver::StopBits::ONE);
         
 
-        std::string port_name = getPort(WIND_SENSOR_VID, WIND_SENSOR_PID, WIND_SENSOR_SERIAL_NUMBER);
+        // std::string port_name = getPort(WIND_SENSOR_VID, WIND_SENSOR_PID, WIND_SENSOR_SERIAL_NUMBER);
+
+        std::string port_name = RC_DEVICE_FILE_PATH;
         RCLCPP_INFO(this->get_logger(), "Opening port: %s", port_name.c_str());
         serial_driver_.init_port(port_name, cfg);
         port_ = serial_driver_.port();

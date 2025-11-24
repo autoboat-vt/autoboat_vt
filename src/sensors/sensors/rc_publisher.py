@@ -20,6 +20,8 @@ from crsf_parser.payloads import PacketsTypes
 from crsf_parser.frames import crsf_frame
 from crsf_parser import CRSFParser, PacketValidationStatus
 
+import psutil
+import os
 
 
 RC_VID = 0x0403
@@ -49,6 +51,7 @@ class RCPublisher(Node):
     
     def __init__(self):
         super().__init__("rc_publisher")
+        
         
         self.create_timer(0.3, self.timer_callback)
         
@@ -201,6 +204,8 @@ class RCPublisher(Node):
         
         
     def timer_callback(self):
+        start_time = time.time()
+        
         num_unread_bytes = self.sensor_serial.in_waiting
         
         if num_unread_bytes == 0: return
@@ -219,6 +224,12 @@ class RCPublisher(Node):
         if rc_data == None: return
         
         self.rc_data_publisher.publish(rc_data)
+        
+        print(f"time used: {time.time() - start_time}")
+        process = psutil.Process(os.getpid())
+        ram_bytes = process.memory_info().rss  # Resident Set Size: physical memory used
+        ram_mb = ram_bytes / (1024 ** 2)
+        print(f"ram mb: {ram_mb}")
 
 
 
