@@ -11,6 +11,7 @@ import numpy as np
 from collections import deque
 import serial
 from serial.tools import list_ports
+import time, psutil, os
 
 
 WIND_SENSOR_VID = 0x0403
@@ -91,8 +92,12 @@ class WindSensorPublisher(Node):
 
 
     def timer_callback(self):
+        start_time = time.time()
+        
         raw_data = self.sensor_serial.readline().decode('ascii')
         split_data = raw_data.split(',')
+        
+        print(split_data)
 
         if len(split_data) != 6: return
         
@@ -111,6 +116,14 @@ class WindSensorPublisher(Node):
         
         msg = Vector3(x=filtered_apparent_wind_vector[0], y=filtered_apparent_wind_vector[1])
         self.apparent_wind_vector_publisher.publish(msg=msg)
+        
+        
+        print(f"time used: {time.time() - start_time}")
+        process = psutil.Process(os.getpid())
+        ram_bytes = process.memory_info().rss  # Resident Set Size: physical memory used
+        ram_mb = ram_bytes / (1024 ** 2)
+        print(f"ram mb: {ram_mb}")
+        
 
 
     def should_terminate_callback(self, msg: Bool):

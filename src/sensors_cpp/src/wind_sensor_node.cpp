@@ -4,6 +4,7 @@
 
 #include <serial_driver/serial_driver.hpp>
 #include <serial_driver/serial_port.hpp>
+#include "sensors_cpp/get_device_filepath_utils.hpp"
 
 #include <deque>
 #include <string>
@@ -26,24 +27,17 @@ static constexpr double KNOTS_TO_METERS_PER_SECOND = 0.514444;
 
 class WindSensorPublisher : public rclcpp::Node {
 public:
-    WindSensorPublisher(): Node("wind_sensor_publisher"), io_ctx_(), serial_driver_(io_ctx_) {
-        apparent_pub_ = this->create_publisher<geometry_msgs::msg::Vector3>("/apparent_wind_vector", rclcpp::SensorDataQoS());
+    WindSensorPublisher(): Node("wind_sensor_publisher"), io_ctx(), serial_driver(io_ctx) {
+        apparent_wind_vector_publisher = this->create_publisher<geometry_msgs::msg::Vector3>("/apparent_wind_vector", rclcpp::SensorDataQoS());
 
-        // term_sub_ = this->create_subscription<std_msgs::msg::Bool>("/should_terminate", 10, [this](const std_msgs::msg::Bool::SharedPtr msg) {
-        //     if(msg->data) {
-        //       RCLCPP_INFO(this->get_logger(), "Termination requested.");
-        //       rclcpp::shutdown();
-        //     }
-        // });
-
-        RCLCPP_INFO(this->get_logger(), "Initializing wind sensor node...");
+        // // RCLCPP_INFO(this->get_logger(), "Initializing wind sensor node...");
 
         SerialPortConfig cfg(38400, drivers::serial_driver::FlowControl::NONE, drivers::serial_driver::Parity::NONE, drivers::serial_driver::StopBits::ONE);
         
         std::string device_filepath = get_device_filepath_from_vid_pid_and_serial_number(WIND_SENSOR_VID, WIND_SENSOR_PID, WIND_SENSOR_SERIAL_NUMBER);
-        RCLCPP_INFO(this->get_logger(), "Opening port: %s", device_filepath.c_str());
-        serial_driver_.init_port(device_filepath, cfg);
-        serial_port = serial_driver_.port();
+        // // RCLCPP_INFO(this->get_logger(), "Opening port: %s", device_filepath.c_str());
+        serial_driver.init_port(device_filepath, cfg);
+        serial_port = serial_driver.port();
         
         if (!serial_port) 
             throw std::runtime_error("Failed to get serial port handle");
@@ -51,14 +45,14 @@ public:
 
         serial_port->open();
 
-        timer_ = this->create_wall_timer(10ms, std::bind(&WindSensorPublisher::main_loop, this));
+        main_loop_timer = this->create_wall_timer(10ms, std::bind(&WindSensorPublisher::main_loop, this));
 
-        RCLCPP_INFO(this->get_logger(), "Wind sensor publisher running");
+        // // RCLCPP_INFO(this->get_logger(), "Wind sensor publisher running");
     }
 
     ~WindSensorPublisher() override {
         if (serial_port && serial_port->is_open()) {
-          RCLCPP_INFO(this->get_logger(), "Closing serial port");
+          // // RCLCPP_INFO(this->get_logger(), "Closing serial port");
           serial_port->close();
         }
     }
@@ -66,28 +60,36 @@ public:
     
 private:
 
-    drivers::common::IoContext io_ctx_;
-    SerialDriver serial_driver_;
+    drivers::common::IoContext io_ctx;
+    SerialDriver serial_driver;
     std::shared_ptr<SerialPort> serial_port;
 
-    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr apparent_pub_;
-    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr term_sub_;
-    rclcpp::TimerBase::SharedPtr timer_;
-    std::deque<std::pair<double,double>> wind_history_;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr apparent_wind_vector_publisher;
+    // rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr term_sub_;
+    rclcpp::TimerBase::SharedPtr main_loop_timer;
+    std::deque<std::pair<double,double>> wind_history;
 
 
     void main_loop() {
+
+        auto start = std::chrono::steady_clock::now();
+
         if (!serial_port || !serial_port->is_open())
             return;
+        
         
         std::vector<uint8_t> buffer(256);
         size_t n = serial_port->receive(buffer);
         
+        // RCLCPP_INFO(this->get_logger(), "GOT HERE3");
+
         if (n == 0)
             return;
-
+        
+        // RCLCPP_INFO(this->get_logger(), "GOT HERE4");
         std::string line(buffer.begin(), buffer.begin() + n);
-
+        
+        // RCLCPP_INFO(this->get_logger(), "GOT HERE5");
         if (line.empty()) 
           return;
         
@@ -110,6 +112,7 @@ private:
             return;
         }
 
+        // RCLCPP_INFO(this->get_logger(), "GOT HERE6");
         double apparent_angle = std::stod(fields[1]);
         double apparent_speed_knots = std::stod(fields[3]);
         double speed_mps = apparent_speed_knots * KNOTS_TO_METERS_PER_SECOND;
@@ -118,20 +121,28 @@ private:
         double x = speed_mps * std::cos(angle_ccw * M_PI / 180.0);
         double y = speed_mps * std::sin(angle_ccw * M_PI / 180.0);
 
-        if (wind_history_.size() >= 15) 
-            wind_history_.pop_front();
+        if (wind_history.size() >= 15) 
+            wind_history.pop_front();
         
 
-        wind_history_.push_back({x, y});
+        wind_history.push_back({x, y});
 
-        auto filtered = weighted_average(wind_history_);
+        auto filtered = weighted_average(wind_history);
 
         geometry_msgs::msg::Vector3 msg;
         msg.x = filtered.first;
         msg.y = filtered.second;
         msg.z = 0.0;
 
-        apparent_pub_->publish(msg);
+        apparent_wind_vector_publisher->publish(msg);
+
+        auto end = std::chrono::steady_clock::now();
+    
+        // Calculate and print the elapsed time in milliseconds
+        std::chrono::duration<double, std::milli> elapsed_ms = end - start;
+        std::cout << "Consumed time in milliseconds: " << elapsed_ms.count() << "ms\n";
+
+        print_cpu_and_ram_stats();
     }
 
 
@@ -153,12 +164,35 @@ private:
         return { w1/denom, w2/denom };
     }
 
+
+    void print_cpu_and_ram_stats() {
+        std::ifstream statm("/proc/self/statm");
+        long size, resident, share, text, lib, data, dt;
+        statm >> size >> resident >> share >> text >> lib >> data >> dt;
+
+        long page_size_kb = sysconf(_SC_PAGESIZE) / 1024; // in KB
+        std::cout << "Resident RAM: " << resident * page_size_kb << " KB\n";
+
+        // --- CPU time ---
+        std::ifstream stat("/proc/self/stat");
+        std::string tmp;
+        long utime_ticks, stime_ticks;
+        for (int i=0; i<13; ++i) stat >> tmp; // skip first 13 fields
+        stat >> utime_ticks >> stime_ticks;     // user and kernel time in ticks
+
+        long ticks_per_sec = sysconf(_SC_CLK_TCK);
+        double utime_sec = (double)utime_ticks / ticks_per_sec;
+        double stime_sec = (double)stime_ticks / ticks_per_sec;
+
+        std::cout << "User CPU time: " << utime_sec << " s\n";
+        std::cout << "System CPU time: " << stime_sec << " s\n";
+    }
+
 };
 
 
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
     auto node = std::make_shared<WindSensorPublisher>();
     rclcpp::spin(node);

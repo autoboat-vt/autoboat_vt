@@ -2,7 +2,7 @@
 #include "autoboat_msgs/msg/rc_data.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
-#include "sensors_cpp/get_device_port_utils.hpp"
+#include "sensors_cpp/get_device_filepath_utils.hpp"
 
 #include <chrono>
 #include <functional>
@@ -57,7 +57,7 @@ public:
         // Initialize Publishers and Timers
         rc_data_publisher = this->create_publisher<autoboat_msgs::msg::RCData>("rc_data", sensor_qos);
 
-        main_loop_timer = this->create_wall_timer(10ms, std::bind(&RCDataPublisher::main_loop, this));
+        main_loop_timer = this->create_wall_timer(50ms, std::bind(&RCDataPublisher::main_loop, this));
 
 
     }
