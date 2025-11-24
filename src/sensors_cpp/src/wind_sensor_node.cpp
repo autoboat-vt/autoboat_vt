@@ -4,7 +4,6 @@
 
 #include <serial_driver/serial_driver.hpp>
 #include <serial_driver/serial_port.hpp>
-// #include <serial/serial.h>
 
 #include <deque>
 #include <string>
@@ -21,26 +20,9 @@ static constexpr uint16_t WIND_SENSOR_VID = 0x0403;
 static constexpr uint16_t WIND_SENSOR_PID = 0x6001;
 static const std::string WIND_SENSOR_SERIAL_NUMBER = "ABSCDYAB";
 
-const std::string RC_DEVICE_FILE_PATH = "/dev/ttyAMA0";
-
-
-// std::string getPort(uint16_t vid, uint16_t pid, const std::string& serial_number) {
-//     auto devices = serial::list_ports();
-//     for (const auto& device : devices) {
-//         std::cout << device.serial_number << std::endl;
-//         if (device.vid == vid &&
-//             device.pid == pid &&
-//             device.serial_number == serial_number)
-//         {
-//             return device.port;
-//         }
-//     }
-//     throw std::runtime_error("Device not found");
-// }
-
-
 
 static constexpr double KNOTS_TO_METERS_PER_SECOND = 0.514444;
+
 
 class WindSensorPublisher : public rclcpp::Node {
 public:
@@ -56,33 +38,28 @@ public:
 
         RCLCPP_INFO(this->get_logger(), "Initializing wind sensor node...");
 
-
-
         SerialPortConfig cfg(38400, drivers::serial_driver::FlowControl::NONE, drivers::serial_driver::Parity::NONE, drivers::serial_driver::StopBits::ONE);
         
-
-        // std::string port_name = getPort(WIND_SENSOR_VID, WIND_SENSOR_PID, WIND_SENSOR_SERIAL_NUMBER);
-
-        std::string port_name = RC_DEVICE_FILE_PATH;
-        RCLCPP_INFO(this->get_logger(), "Opening port: %s", port_name.c_str());
-        serial_driver_.init_port(port_name, cfg);
-        port_ = serial_driver_.port();
+        std::string device_filepath = get_device_filepath_from_vid_pid_and_serial_number(WIND_SENSOR_VID, WIND_SENSOR_PID, WIND_SENSOR_SERIAL_NUMBER);
+        RCLCPP_INFO(this->get_logger(), "Opening port: %s", device_filepath.c_str());
+        serial_driver_.init_port(device_filepath, cfg);
+        serial_port = serial_driver_.port();
         
-        if (!port_) 
+        if (!serial_port) 
             throw std::runtime_error("Failed to get serial port handle");
         
 
-        port_->open();
+        serial_port->open();
 
-        timer_ = this->create_wall_timer(100ms, std::bind(&WindSensorPublisher::main_loop, this));
+        timer_ = this->create_wall_timer(10ms, std::bind(&WindSensorPublisher::main_loop, this));
 
         RCLCPP_INFO(this->get_logger(), "Wind sensor publisher running");
     }
 
     ~WindSensorPublisher() override {
-        if (port_ && port_->is_open()) {
+        if (serial_port && serial_port->is_open()) {
           RCLCPP_INFO(this->get_logger(), "Closing serial port");
-          port_->close();
+          serial_port->close();
         }
     }
 
@@ -91,7 +68,7 @@ private:
 
     drivers::common::IoContext io_ctx_;
     SerialDriver serial_driver_;
-    std::shared_ptr<SerialPort> port_;
+    std::shared_ptr<SerialPort> serial_port;
 
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr apparent_pub_;
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr term_sub_;
@@ -100,11 +77,11 @@ private:
 
 
     void main_loop() {
-        if (!port_ || !port_->is_open())
+        if (!serial_port || !serial_port->is_open())
             return;
         
         std::vector<uint8_t> buffer(256);
-        size_t n = port_->receive(buffer);
+        size_t n = serial_port->receive(buffer);
         
         if (n == 0)
             return;

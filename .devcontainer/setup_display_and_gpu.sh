@@ -69,7 +69,27 @@ setup_linux() {
 	sudo apt-get update -qq
 	sudo apt-get install -y x11-utils x11-xserver-utils
 
-	# gpu detection
+
+    # Set up UDEV Rules TODO UNTESTED
+
+    # sudo chmod -R 777 /etc/udev/
+
+    # # Load udev rules for each device and remove any autoboat udev rules that existed before
+    # if [ -f "/etc/udev/rules.d/99-autoboat-udev.rules" ]; then
+    #     rm -f /etc/udev/rules.d/99-autoboat-udev.rules
+    # fi
+
+    # sudo echo SUBSYSTEM=="tty", ATTRS{idVendor}=="2E8A", ATTRS{idProduct}=="0005", SYMLINK+="pico", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
+    # sudo echo SUBSYSTEM=="tty", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", SYMLINK+="gps", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
+    # sudo echo SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="A9001WL3", SYMLINK+="rc", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
+    # sudo echo SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="ABSCDYAB", SYMLINK+="wind_sensor", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
+
+    # sudo udevadm trigger
+    # sudo udevadm control --reload-rules
+
+
+
+	# GPU detection
 	if command -v nvidia-smi &>/dev/null; then
 		log_info "NVIDIA GPU detected."
 		setup ":0" 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"'

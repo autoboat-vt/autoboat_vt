@@ -1,31 +1,17 @@
 #include "crossfire.h"
+#include "autoboat_msgs/msg/rc_data.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/string.hpp"
+#include "sensors_cpp/get_device_port_utils.hpp"
 
 #include <chrono>
 #include <functional>
 #include <memory>
 #include <string>
-#include "autoboat_msgs/msg/rc_data.hpp"
-#include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/string.hpp"
-#include <sys/sysinfo.h>
 
 
-
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <unistd.h>
-
-// #include <serial_driver/serial_driver.hpp>
-// #include <serial_driver/serial_port.hpp>
-// #include <serial/serial.h>
-// #include <libserialport.h>
-
-
-#include <stdexcept>
 
 using namespace std::chrono_literals;
-
 
 
 
@@ -37,66 +23,8 @@ static constexpr uint16_t RC_VID = 0x0403;
 static constexpr uint16_t RC_PID = 0x6001;
 static const std::string RC_SERIAL_NUMBER = "A9001WL3";
 
-// BAUD_RATE = 420000
 
-
-
-// const std::string RC_DEVICE_FILE_PATH;
-const std::string RC_DEVICE_FILE_PATH = "/dev/ttyUSB0";
-
-// std::string getPort(uint16_t vid, uint16_t pid, const std::string& serial_number) {
-//     auto devices = serial::list_ports();
-//     for (const auto& device : devices) {
-//         std::cout << device.serial_number << std::endl;
-//         if (device.vid == vid &&
-//             device.pid == pid &&
-//             device.serial_number == serial_number)
-//         {
-//             return device.port;
-//         }
-//     }
-//     throw std::runtime_error("Device not found");
-// }
-
-// std::string getPort(uint16_t vid, uint16_t pid, const std::string& serial_number)
-// {
-//     struct sp_port **port_list;
-//     if (sp_list_ports(&port_list) != SP_OK) {
-//         throw std::runtime_error("Failed to enumerate serial ports");
-//     }
-
-//     for (int i = 0; port_list[i] != nullptr; ++i) {
-//         sp_port *port = port_list[i];
-
-//         // Get USB info
-//         int usb_vid = 0, usb_pid = 0;
-//         char *usb_serial = nullptr;
-
-//         sp_get_port_usb_vid_pid(port, &usb_vid, &usb_pid);
-//         sp_get_port_usb_serial(port, &usb_serial);
-
-//         std::string port_name = sp_get_port_name(port);
-
-//         std::cout << "Port: " << port_name
-//                   << " VID: " << std::hex << usb_vid
-//                   << " PID: " << pid
-//                   << " Serial: " << (usb_serial ? usb_serial : "NONE")
-//                   << std::endl;
-
-//         if ((uint16_t)usb_vid == vid &&
-//             (uint16_t)usb_pid == pid &&
-//             usb_serial &&
-//             serial_number == usb_serial)
-//         {
-//             sp_free_port_list(port_list);
-//             return port_name;  // e.g. "/dev/ttyACM0"
-//         }
-//     }
-
-//     sp_free_port_list(port_list);
-//     throw std::runtime_error("ROS2 serial device not found");
-// }
-
+namespace fs = std::filesystem;
 
 
 
@@ -110,7 +38,10 @@ public:
     // object. To learn more see: 
     RCDataPublisher() : Node("rc_data_publisher") {
 
-        if (crossfire_device.open_port()) { std::printf("Port opened...\n"); }
+        if (crossfire_device.open_port()) { 
+            std::printf("Port opened...\n"); 
+        }
+
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
         // Continuously Attempt To Reconnect
@@ -139,8 +70,7 @@ private:
     // This is an example of uniform initialization which is a type of initialization
     // that guarantees the compiler that the variable will always be initialized this way
     // https://www.geeksforgeeks.org/cpp/uniform-initialization-in-c/
-    crossfire::XCrossfire crossfire_device {RC_DEVICE_FILE_PATH}; 
-    // const std::string RC_DEVICE_FILE_PATH = getPort(RC_VID, RC_PID, RC_SERIAL_NUMBER);
+    crossfire::XCrossfire crossfire_device {get_device_filepath_from_vid_pid_and_serial_number(RC_VID, RC_PID, RC_SERIAL_NUMBER)}; 
 
 
     void main_loop() {
@@ -181,7 +111,7 @@ private:
         std::chrono::duration<double, std::milli> elapsed_ms = end - start;
         std::cout << "Consumed time in milliseconds: " << elapsed_ms.count() << "ms\n";
 
-        print_stats();
+        print_cpu_and_ram_stats();
     }
 
 
@@ -253,7 +183,7 @@ private:
     }
 
 
-    void print_stats() {
+    void print_cpu_and_ram_stats() {
         std::ifstream statm("/proc/self/statm");
         long size, resident, share, text, lib, data, dt;
         statm >> size >> resident >> share >> text >> lib >> data >> dt;

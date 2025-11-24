@@ -18,18 +18,12 @@ find_package(autoboat_msgs REQUIRED)
 find_package(Threads REQUIRED)
 
 find_package(serial_driver REQUIRED)
+find_library(UDEV_LIB udev)
 
-# find_package(PkgConfig REQUIRED)
-# pkg_check_modules(LIBSERIALPORT REQUIRED libserialport)
 
 
 include_directories(include include/sensors_cpp)
-# include_directories(${LIBSERIALPORT_INCLUDE_DIRS})
-
-
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
+include_directories(include include/xcrsf)
 
 set(XCRSF_SRC_LIST 
     src/xcrsf/crossfire.cpp 
@@ -39,20 +33,20 @@ set(XCRSF_SRC_LIST
     src/xcrsf/handler.cpp
 )
 
-include_directories(include include/xcrsf)
+
 add_library(xcrsf SHARED ${XCRSF_SRC_LIST})
 target_link_libraries(xcrsf PRIVATE ${CMAKE_THREAD_LIBS_INIT} atomic)
 
 
 add_executable(rc_node src/rc_node.cpp)
 ament_target_dependencies(rc_node rclcpp std_msgs autoboat_msgs)
-target_link_libraries(rc_node xcrsf ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(rc_node xcrsf ${CMAKE_THREAD_LIBS_INIT} ${UDEV_LIB})
 install(TARGETS rc_node DESTINATION lib/${PROJECT_NAME})
-
 
 
 add_executable(wind_sensor_node src/wind_sensor_node.cpp)
 ament_target_dependencies(wind_sensor_node rclcpp std_msgs geometry_msgs serial_driver)
+target_link_libraries(wind_sensor_node ${UDEV_LIB})
 install(TARGETS wind_sensor_node DESTINATION lib/${PROJECT_NAME})
 
 
