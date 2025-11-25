@@ -7,14 +7,14 @@ on:
       - ".devcontainer/devcontainer_variants/**"
       - ".devcontainer/Dockerfile"
       - ".devcontainer/required_pip_packages.txt"
-      - ".github/workflows/docker-image.yml"
+      - ".github/workflows/devcontainer.yml"
   pull_request:
     branches: ["main"]
     paths:
       - ".devcontainer/devcontainer_variants/**"
       - ".devcontainer/Dockerfile"
       - ".devcontainer/required_pip_packages.txt"
-      - ".github/workflows/docker-image.yml"
+      - ".github/workflows/devcontainer.yml"
 
 jobs:
   base:

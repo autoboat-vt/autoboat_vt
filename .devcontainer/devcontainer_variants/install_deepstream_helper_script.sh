@@ -117,4 +117,5 @@ sudo apt-get install -y v4l-utils
 # export IS_DEV_CONTAINER=true # I don't think this persists after script ends otherwise
 echo -e "\n\nDeepstream setup complete!\n\n"
 
+
 cd /home/ws/
