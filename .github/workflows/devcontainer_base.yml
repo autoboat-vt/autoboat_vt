@@ -40,7 +40,7 @@ jobs:
       - name: Build and push the base devcontainer
         uses: docker/build-push-action@v5
         with:
-          context: .devcontainer
+          context: .
           file: .devcontainer/Dockerfile
           platforms: linux/amd64
 

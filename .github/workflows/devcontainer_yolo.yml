@@ -1,8 +1,9 @@
-name: AutoBoat Dev Container Base CI
+name: AutoBoat Dev Container Yolo Variant CI
 
 on:
   push:
-    branches: ["main"]
+    # TODO: FIX THIS ONCE WE FINALIZE THIS SYSTEM
+    branches: ["devcontainer_testing"]
     paths:
       - ".devcontainer/devcontainer_variants/Dockerfile.yolo"
       - ".devcontainer/Dockerfile"
@@ -40,8 +41,8 @@ jobs:
       - name: Build and push the base devcontainer
         uses: docker/build-push-action@v5
         with:
-          context: .devcontainer
-          file: .devcontainer/Dockerfile
+          context: .
+          file: .devcontainer/devcontainer_variants/Dockerfile.yolo
           platforms: linux/amd64
 
           push: true
