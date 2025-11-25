@@ -106,7 +106,7 @@ RUN apt-get update \
 # Python requirements (as user)
 # -------------------------------
 USER $USERNAME
-COPY required_pip_packages.txt /tmp/requirements.txt
+COPY .devcontainer/required_pip_packages.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
 CMD ["/bin/bash"]
