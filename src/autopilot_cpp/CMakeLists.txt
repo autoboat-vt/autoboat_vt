@@ -17,6 +17,7 @@ find_package(OpenCV REQUIRED)
 find_package(CURL REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(autoboat_msgs REQUIRED)
+find_package(GeographicLib REQUIRED)
 
 add_executable(telemetry src/telemetry_node.cpp)
 ament_target_dependencies(telemetry rclcpp std_msgs geometry_msgs sensor_msgs cv_bridge OpenCV autoboat_msgs)
