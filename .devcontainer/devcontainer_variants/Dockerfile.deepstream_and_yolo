@@ -1,1 +1,19 @@
-FROM vtautoboat/autoboat_docker_dev_image:deepstream
+FROM vtautoboat/autoboat_docker_dev_image:yolo
+
+ARG USERNAME=autoboat_user
+USER $USERNAME
+
+RUN mkdir -p /tmp/autoboat_scripts
+
+COPY .devcontainer/devcontainer_variants/install_deepstream_helper_script.sh /tmp/autoboat_scripts/install_deepstream_helper_script.sh
+RUN bash /tmp/autoboat_scripts/install_deepstream_helper_script.sh
+
+
+# RUN # Compile the deepstream_yolo library
+# echo -e "\n\nCompiling deepstream_yolo library\n\n"
+# cd /home/ws/src/object_detection/object_detection/deepstream_yolo/
+# export CUDA_VER=12.6
+# make -C nvdsinfer_custom_impl_Yolo clean && make -C nvdsinfer_custom_impl_Yolo
+
+# gst-inspect-1.0 > /dev/null # initialize gstreamer plugins
+CMD []

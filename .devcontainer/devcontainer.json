@@ -1,6 +1,6 @@
 {
     "name": "VT AutoBoat Development Container v1.2.0",
-    "image": "vtautoboat/autoboat_docker_dev_image",
+    "image": "vtautoboat/autoboat_docker_dev_image:yolo",
     "initializeCommand": "bash .devcontainer/initializeCommand.sh",
     "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
     "privileged": true,
@@ -52,6 +52,7 @@
         "/var/run/docker.sock:/var/run/docker.sock",
         "${localEnv:DOCKER_GPU_RUN_ARGS:--env}",
         "${localEnv:DOCKER_RUNTIME_RUN_ARGS:IGNORE_THIS=hi}",
+
         "--name", "autoboat_dev_container"
     ],
     "mounts": [
