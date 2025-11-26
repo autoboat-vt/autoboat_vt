@@ -69,13 +69,40 @@ echo sudo service cron start >> ~/.bashrc
 
 
 
+
+# Move temporary files that were downloaded from each devcontainer variant
+# The reason that we have this is to make it faster to download certain repositories and dataset for each devcontainer variant
+# For instance, its far easier to just have the buoy/ boat computer vision dataset in the docker image and then just copy it
+# into your workspace than for you to just download the huge dataset yourself. It just makes things slightly easier
+
+# In some cases, we can store the entire built dependencies in /tmp like for microros where we can store a package
+# of all of the dependencies that we need to work with microros
+
 if [[ "$DEVCONTAINER_VARIANT" == "yolo" || "$DEVCONTAINER_VARIANT" == "deepstream_and_yolo" ]]; then
 
     # These devcontainers put the following data in the /tmp folder so all we need to do is move them so the user can see it 
     mv /tmp/autoboat_weights src/object_detection/object_detection/weights
     mv /tmp/autoboat_dataset src/object_detection/object_detection/dataset
     mv /tmp/autoboat_hard_images src/object_detection/object_detection/hard_images
+
+    sudo chmod -R 777 src/object_detection/object_detection 
 fi
 
+
+
+if [[ "$DEVCONTAINER_VARIANT" == "microros" ]]; then
+    rm -rf src/microros/dependencies
+    mv /tmp/src/microros/dependencies src/microros
+fi
+
+
+if [[ "$DEVCONTAINER_VARIANT" == "deepstream" || "$DEVCONTAINER_VARIANT" == "deepstream_and_yolo" ]]; then
+
+    rm -rf src/object_detection/object_detection/deepstream_yolo
+    sudo mv /tmp/deepstream_yolo src/object_detection/object_detection/deepstream_yolo
+
+    sudo chmod -R 777 src/object_detection/object_detection
+
+fi
 
 source ~/.bashrc

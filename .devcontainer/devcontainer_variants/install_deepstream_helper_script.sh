@@ -115,7 +115,6 @@ sudo apt-get install -y v4l-utils
 # sudo v4l2-ctl --list-devices # TODO: can we change permissions so this doesn't need to be run?
 
 # export IS_DEV_CONTAINER=true # I don't think this persists after script ends otherwise
+
+
 echo -e "\n\nDeepstream setup complete!\n\n"
-
-
-cd /home/ws/

@@ -1,1 +1,13 @@
 FROM vtautoboat/autoboat_docker_dev_image:latest
+
+
+RUN mkdir -p /tmp/autoboat_scripts
+
+COPY .devcontainer/devcontainer_variants/install_microros_helper_script.sh /tmp/autoboat_scripts/install_microros_helper_script.sh
+RUN bash /tmp/autoboat_scripts/install_microros_helper_script.sh
+
+
+RUN echo "export DEVCONTAINER_VARIANT=microros" >> ~/.bashrc
+
+
+CMD ["/bin/bash"]
