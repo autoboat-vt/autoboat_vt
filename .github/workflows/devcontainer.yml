@@ -2,7 +2,7 @@ name: AutoBoat Development Container CI
 
 on:
   push:
-    branches: ["devcontainer_testing"]
+    branches: ["main"]
     paths:
       - ".devcontainer/devcontainer_variants/**"
       - ".devcontainer/Dockerfile"
