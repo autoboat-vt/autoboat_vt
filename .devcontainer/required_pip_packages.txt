@@ -45,14 +45,14 @@ dataclass_wizard
 click
 pympler
 ruff
-
+packaging
 
 
 # Groundstation
 urllib3
 QtAwesome
 python-dateutil
-PyQtWebEngine
+PyQtWebEngine==5.15.7
 PyQt5
 QtPy
 packaging

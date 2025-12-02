@@ -107,6 +107,8 @@ RUN apt-get update \
 # -------------------------------
 USER $USERNAME
 COPY .devcontainer/required_pip_packages.txt /tmp/requirements.txt
+RUN pip install --upgrade pip
+RUN pip install packaging
 RUN pip install -r /tmp/requirements.txt
 
 CMD ["/bin/bash"]
