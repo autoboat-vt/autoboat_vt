@@ -116,7 +116,7 @@ void application_init(rcl_allocator_t *allocator, rclc_support_t *support, rclc_
 
 void uros_log(const char *msg, uint8_t severity, const char *file, const char *function);
 
-void application_loop(rcl_timer_t * timer, int64_t last_call_time);
+void application_loop(rcl_timer_t *timer, int64_t last_call_time);
 
 void desired_rudder_angle_received_callback(const void *msg_in);
 

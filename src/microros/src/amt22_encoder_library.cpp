@@ -39,8 +39,6 @@
 
     uint8_t* amt22::read_position(uint8_t * bytes_read) {
         
-        //gpio_init(LED_PIN);
-        //gpio_set_dir(LED_PIN, 1);
         
         sleep_us(40);
         this->cs_low();
@@ -48,12 +46,13 @@
         sleep_us(3);
         uint8_t send[2] = {NO_OP, NO_OP};    
 
+        
         // source of error
         spi_write_read_blocking(this->spi_port, send, bytes_read, 2);
 
         sleep_us(3);
 
-        //gpio_put(LED_PIN, 1);
+        
 
         sleep_us(3);
 

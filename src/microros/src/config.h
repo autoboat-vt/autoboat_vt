@@ -2,10 +2,9 @@
 PCB SPECIFIC CONFIGURATIONS
 */
 
-
 #define Theseus 0
 #define Lumpy 1
-#define BOAT_MODE Lumpy
+#define BOAT_MODE Theseus
 
 // Important constants
 #define LED_PIN 25
