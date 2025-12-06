@@ -15,6 +15,7 @@ rcl_publisher_t    current_winch_angle_publisher;
 rcl_publisher_t    compass_angle_publisher;
 rcl_publisher_t    test_publisher;
 rcl_timer_t        application_loop_timer;
+rcl_publisher_t    cell_voltage_publishers[16];
 
 std_msgs__msg__Bool           should_propeller_motor_be_powered_msg;  
 std_msgs__msg__Bool           zero_rudder_encoder_msg;
@@ -29,7 +30,8 @@ std_msgs__msg__Float32        desired_winch_angle_msg;
 std_srvs__srv__Empty_Request  empty_request_msg;
 std_srvs__srv__Empty_Response empty_response_msg;
 std_msgs__msg__Float32        test_msg;
-
+std_msgs__msg__Float32        voltageCell;
+std_msgs__msg__Float32 cell_voltage_msgs[16];
 static drv8711 rudderStepperMotorDriver;
 static drv8711 winchStepperMotorDriver;
 static amt22   rudderEncoder;
@@ -39,6 +41,10 @@ using namespace std;
 
 //uint8_t address = 0x60;
 cmps14 compass(I2C_PORT, 0x60);
+
+GVMSensor GVM(I2C_PORT, INSERT_ADRESS_HERE);  //<-----------------------------------------------------------------------
+
+
 
 //I2CDevice::cmps14 compass(I2C_PORT, address);
 //static_cast<uint8_t>(0x60)
@@ -165,6 +171,9 @@ void application_init(rcl_allocator_t *allocator, rclc_support_t *support, rclc_
     desired_rudder_angle_msg.data = 0.0;
     current_rudder_angle_msg.data = 0.0;
     compass_angle_msg.data = 0.0;
+    for(int i=0;i<16;i++){
+        cell_voltage_msgs[i].data=0.0;
+    }
 
 }
 
@@ -338,7 +347,9 @@ void application_loop() {
     //compass_angle_msg.data = fmod(compass.getBearing() / 10 + COMPASS_OFFSET + 360,360.0);
     //compass_angle_msg.data = compass.getBearing() / 10.0 + COMPASS_OFFSET
     compass_angle_msg.data = compass.getBearing() / 10.0;
-
+    for(int i=0;i<16;i++){
+        cell_voltage_msgs[i].data=GVM.readVoltage(i);
+    }
 
     // fmod((-compass.getBearing() / 10.0 + COMPASS_OFFSET + 360), 360.0);
     // current_rudder_angle_msg.data = current_rudder_angle;
@@ -350,4 +361,13 @@ void application_loop() {
     // rcl_publish(&current_rudder_motor_angle_publisher, &current_rudder_motor_angle_msg, NULL);
     // rcl_publish(&current_rudder_angle_publisher, &current_rudder_angle_msg, NULL);
     rcl_publish(&compass_angle_publisher, &compass_angle_msg, NULL);
+
+    for(int i=0;i<16;i++){
+        rcl_publish(&cell_voltage_publishers, &cell_voltage_msgs[i], NULL);
+        
+    }
+
+
+
+   
 }
