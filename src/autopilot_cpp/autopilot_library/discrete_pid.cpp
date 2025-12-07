@@ -16,7 +16,7 @@ public:
     }
 
 
-    void setGains(double Kp = -1.0, double Ki = -1.0, double Kd = -1.0, double n = -1.0, double sample_period = -1.0) {
+    void set_gains(double Kp = -1.0, double Ki = -1.0, double Kd = -1.0, double n = -1.0, double sample_period = -1.0) {
         if (Kp >= 0.0) this->Kp = Kp;
         if (Ki >= 0.0) this->Ki = Ki;
         if (Kd >= 0.0) this->Kd = Kd;

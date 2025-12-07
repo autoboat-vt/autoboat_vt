@@ -30,8 +30,11 @@
                 "${workspaceFolder}/build/sensors_transmission/generated/pico_base",
 
                 "${workspaceFolder}/install/autoboat_msgs/include",
+                "${workspaceFolder}/install/autopilot_cpp/include",
+                "${workspaceFolder}/install/sensors_cpp/include"
 
-                "${workspaceFolder}/src/sensors_cpp/include"
+                // "${workspaceFolder}/src/sensors_cpp/include"
+
                 // "${workspaceFolder}/src/sensors_cpp/include/sensors_cpp",
                 // "${workspaceFolder}/src/sensors_cpp/include/xcrsf",
 

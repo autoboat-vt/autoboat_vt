@@ -127,15 +127,25 @@ RUN pip install -r /tmp/requirements.txt
 
 
 # C++ requirements?
-# RUN sudo apt-get update \
-#     && sudo apt install libcurl4-openssl-dev -y \
-#     && sudo apt-get install nlohmann-json3-dev -y \
-#     && sudo apt install geographiclib-tools -y \
-#     && sudo apt install ros-humble-serial-driver \
-#     && sudo apt install ros-humble-asio-cmake-module -y \
-#     && sudo apt install libudev-dev -y
-    # && sudo apt install libboost-system-dev libboost-thread-dev -y \
-    # && && rm -rf /var/lib/apt/lists/*
+RUN pip install meson
+RUN sudo apt-get update \
+    && sudo apt install libcurl4-openssl-dev -y \
+    && sudo apt-get install nlohmann-json3-dev -y \
+    && sudo apt install geographiclib-tools -y \
+    && sudo apt install ros-humble-serial-driver -y \
+    && sudo apt install ros-humble-asio-cmake-module -y \
+    && sudo apt install libudev-dev -y \
+    && sudo apt install libboost-system-dev libboost-thread-dev -y \
+    && sudo apt install ninja-build \
+    && sudo rm -rf /var/lib/apt/lists/*
+
+
+RUN cd ~ \
+    && git clone https://github.com/libcpr/cpr.git \
+    && cd cpr && mkdir build && cd build \
+    && cmake .. -DCPR_USE_SYSTEM_CURL=ON \
+    && cmake --build . --parallel \
+    && sudo cmake --install . 
 
 
 

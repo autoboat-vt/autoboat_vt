@@ -5,10 +5,10 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic -Wno-unused-variable -Wsign-compare)
-  add_compile_options(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
-endif()
+add_compile_options(-O3)
+add_compile_options(-Wall -Wextra -Wpedantic)
+add_compile_options(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
+
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
@@ -34,14 +34,18 @@ set(XCRSF_SRC_LIST
 )
 
 
+
 add_library(xcrsf SHARED ${XCRSF_SRC_LIST})
 target_link_libraries(xcrsf PRIVATE ${CMAKE_THREAD_LIBS_INIT} atomic)
+
+
 
 
 add_executable(rc_node src/rc_node.cpp)
 ament_target_dependencies(rc_node rclcpp std_msgs autoboat_msgs)
 target_link_libraries(rc_node xcrsf ${CMAKE_THREAD_LIBS_INIT} ${UDEV_LIB})
 install(TARGETS rc_node DESTINATION lib/${PROJECT_NAME})
+
 
 
 add_executable(wind_sensor_node src/wind_sensor_node.cpp)

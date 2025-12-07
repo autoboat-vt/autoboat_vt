@@ -44,8 +44,9 @@ public:
 
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-        // Continuously Attempt To Reconnect
-        while (!crossfire_device.is_paired()) {
+        // Continuously attempt To reconnect as long as the node is still running
+        // rclcpp will return false if the node is told to turn off for whatever reason (for example ctrl+c signal)
+        while (!crossfire_device.is_paired() && rclcpp::ok()) {
             std::printf("Waiting for reconnect...\n");
             RCLCPP_INFO(this->get_logger(), "Waiting for reconnect...\n:");
             auto _ = crossfire_device.open_port();

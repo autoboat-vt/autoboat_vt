@@ -8,13 +8,14 @@
 #include <tuple>
 
 
+/*
+A position that describes a point on the earth which is stored internally as its longitude and latitude.
+Whenever a function such as get_local_coordinates is called, this class has to convert to the proper position measurement system such as NED or UTM.
+
+This class mainly just calls on python libraries such as navpy, utm, and pygeodesy to convert to other position measurement systems.
+*/
 class Position {
-    /*
-    A position that describes a point on the earth which is stored internally as its longitude and latitude.
-    Whenever a function such as get_local_coordinates is called, this class has to convert to the proper position measurement system such as NED or UTM.
     
-    This class mainly just calls on python libraries such as navpy, utm, and pygeodesy to convert to other position measurement systems.
-    */
     
 public:
     explicit TelemetryNode(double longitude_, double latitude_) {

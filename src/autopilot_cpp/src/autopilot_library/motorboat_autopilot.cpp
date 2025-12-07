@@ -1,1 +1,0 @@
-#include <autopilot_cpp/motorboat_autopilot.hpp>

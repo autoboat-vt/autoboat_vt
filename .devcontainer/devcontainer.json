@@ -1,6 +1,6 @@
 {
     "name": "VT AutoBoat Development Container v1.1.1",
-    "image": "vtautoboat/autoboat_docker_dev_image",
+    "image": "vtautoboat/autoboat_docker_dev_image:latest",
     "initializeCommand": "xhost +localhost; docker pull vtautoboat/autoboat_docker_dev_image",
     "postCreateCommand": "bash docker_dev_environment_setup.sh",
     "privileged": true,

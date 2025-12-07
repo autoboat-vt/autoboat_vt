@@ -26,7 +26,7 @@ def generate_launch_description():
         # ),
         
         Node(
-            package='autopilot',
+            package='autopilot_cpp',
             executable='telemetry',
             name='telemetry',
 
