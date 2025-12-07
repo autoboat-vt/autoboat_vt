@@ -1,0 +1,11 @@
+FROM vtautoboat/autoboat_docker_dev_image:latest
+
+ARG USERNAME=autoboat_user
+USER $USERNAME
+RUN mkdir -p /home/${USERNAME}/scripts
+
+COPY object_detection_setup.sh /home/${USERNAME}/scripts/object_detection_setup.sh
+
+RUN bash /home/${USERNAME}/scripts/object_detection_setup.sh
+
+CMD ["/bin/bash"]

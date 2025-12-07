@@ -19,6 +19,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Create user + sudo setup
 # -------------------------------
 RUN groupadd --gid $USER_GID $USERNAME \
+<<<<<<< HEAD
  && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
  && apt-get update \
  && apt-get install -y --no-install-recommends sudo \
@@ -27,96 +28,90 @@ RUN groupadd --gid $USER_GID $USERNAME \
  && chmod 0440 /etc/sudoers.d/$USERNAME 
 
 
+=======
+   && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+   && apt-get update \
+   && apt-get install -y --no-install-recommends sudo \
+   && echo "$USERNAME ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME \
+   && chmod 0440 /etc/sudoers.d/$USERNAME \
+   && rm -rf /var/lib/apt/lists/*
+>>>>>>> main
 
 # -------------------------------
 # Base system updates & required tools
-# -------------------------------
+# ------------------------------- 
 RUN apt-get update \
- && apt-get upgrade -y \
- && apt-get install -y --no-install-recommends python3-pip cron usbutils udev nano git-lfs \
- && rm -rf /var/lib/apt/lists/*
-
-
+   && apt-get upgrade -y \
+   && apt-get install -y --no-install-recommends python3-pip cron usbutils udev nano git-lfs lsof \
+   && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------
 # Very unsafe sudo permissions
 # -------------------------------
 RUN echo "${USERNAME} ALL=(ALL) NOPASSWD: /usr/bin/chmod" >> /etc/sudoers \
- && echo "${USERNAME} ALL=(ALL) NOPASSWD: /usr/sbin/service" >> /etc/sudoers
-
-
+   && echo "${USERNAME} ALL=(ALL) NOPASSWD: /usr/sbin/service" >> /etc/sudoers
 
 # -------------------------------
 # Install RealSense Camera
 # -------------------------------
 RUN sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list' \
- && apt-get install curl -y \
- && curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add - \
- && apt update || true \
- && apt install ros-humble-librealsense2* -y \
- && apt install ros-humble-realsense2-* -y \
- && rm /etc/apt/sources.list.d/ros-latest.list \
- && rm -rf /var/lib/apt/lists/*
-
-
+   && apt-get install curl -y \
+   && curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add - \
+   && apt update || true \
+   && apt install ros-humble-librealsense2* -y \
+   && apt install ros-humble-realsense2-* -y \
+   && rm /etc/apt/sources.list.d/ros-latest.list \
+   && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------
 # Install ROS/ Vision packages
 # -------------------------------
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ros-dev-tools python3-opencv ros-humble-vision-opencv \
- && rm -rf /var/lib/apt/lists/* \
- && rm /etc/apt/sources.list.d/ros-latest.list || true
-
-
+   && apt-get install -y --no-install-recommends ros-dev-tools python3-opencv ros-humble-vision-opencv \
+   && rm -rf /var/lib/apt/lists/* \
+   && rm /etc/apt/sources.list.d/ros-latest.list || true
 
 # -------------------------------
 # Golang setup
 # -------------------------------
 RUN apt-get update \
- && apt-get install -y --no-install-recommends software-properties-common \
- && add-apt-repository ppa:longsleep/golang-backports -y \
- && apt-get update \
- && apt-get install -y --no-install-recommends golang-go \
- && rm -rf /var/lib/apt/lists/*
-
-
+   && apt-get install -y --no-install-recommends software-properties-common \
+   && add-apt-repository ppa:longsleep/golang-backports -y \
+   && apt-get update \
+   && apt-get install -y --no-install-recommends golang-go \
+   && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------
 # X11 / GUI libraries
 # -------------------------------
 RUN apt-get update \
- && apt-get install -y --fix-missing --no-install-recommends \
-    libx11-xcb1 \
-    libxcb1 \
-    libxcb-util1 \
-    libxcb-image0 \
-    libxcb-keysyms1 \
-    libxcb-render0 \
-    libxcb-render-util0 \
-    libxcb-shape0 \
-    libxcb-shm0 \
-    libxcb-icccm4 \
-    libxcb-sync1 \
-    libxcb-xfixes0 \
-    libxcb-xinerama0 \
-    libxcb-randr0 \
-    libxcb-glx0 \
-    libxkbcommon-x11-0 \
-    libxrender1 \
-    libasound2 \
- && rm -rf /var/lib/apt/lists/*
-
-
-
+   && apt-get install -y --fix-missing --no-install-recommends \
+   libx11-xcb1 \
+   libxcb1 \
+   libxcb-util1 \
+   libxcb-image0 \
+   libxcb-keysyms1 \
+   libxcb-render0 \
+   libxcb-render-util0 \
+   libxcb-shape0 \
+   libxcb-shm0 \
+   libxcb-icccm4 \
+   libxcb-sync1 \
+   libxcb-xfixes0 \
+   libxcb-xinerama0 \
+   libxcb-randr0 \
+   libxcb-glx0 \
+   libxkbcommon-x11-0 \
+   libxrender1 \
+   libasound2 \
+   && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------
 # Install Docker inside Docker
 # -------------------------------
 RUN apt-get update \
- && apt-get install -y --no-install-recommends docker docker.io \
- && rm -rf /var/lib/apt/lists/*
-
+   && apt-get install -y --no-install-recommends docker docker.io \
+   && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------
 # Python requirements (as user)

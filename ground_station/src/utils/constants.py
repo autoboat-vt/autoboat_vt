@@ -117,9 +117,12 @@ TEN_MS_TIMER = misc.create_timer(10)
 
 ONE_MS_TIMER = misc.create_timer(1)
 
+# server ports
+ASSET_SERVER_PORT = 8000
+GO_SERVER_PORT = 3001
 
 # url for local waypoints server
-WAYPOINTS_SERVER_URL = "http://localhost:3001/waypoints"
+WAYPOINTS_SERVER_URL = f"http://localhost:{GO_SERVER_PORT}/waypoints"
 
 # base url for telemetry server (the CIA is inside of my brain...)
 TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
@@ -172,7 +175,7 @@ TELEMETRY_SERVER_ENDPOINTS = dict(
     **_waypoints_endpoints,
 )
 
-TELEMETRY_TIMEOUT_SECONDS = 30
+TELEMETRY_TIMEOUT_SECONDS = 5
 TELEMETRY_RETRY_ATTEMPTS = 3
 
 REQ_SESSION = requests.Session()
