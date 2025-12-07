@@ -22,6 +22,21 @@ import os
 import base64
 from typing import Any
 
+
+
+import psutil
+import os
+import time
+
+# Get the current process ID
+pid = os.getpid()
+p = psutil.Process(pid)
+
+# The first call to p.cpu_percent() returns 0.0, so call it once to prime it
+p.cpu_percent(interval=None) 
+
+
+
 # don't put '/' at the end of the URL
 TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
 

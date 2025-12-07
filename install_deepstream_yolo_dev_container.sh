@@ -116,6 +116,28 @@ pip install numpy==1.26.4
 echo -e "\n\nInstalling Utils\n\n"
 sudo apt-get install -y v4l-utils
 
+
+sudo apt install -y \
+    libssl3 \
+    libssl-dev \
+    libgles2-mesa-dev \
+    libgstreamer1.0-0 \
+    gstreamer1.0-tools \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad \
+    gstreamer1.0-plugins-ugly \
+    gstreamer1.0-libav \
+    libgstreamer-plugins-base1.0-dev \
+    libgstrtspserver-1.0-0 \
+    libjansson4 \
+    libyaml-cpp-dev \
+    libjsoncpp-dev \
+    protobuf-compiler \
+    gcc \
+    make \
+    python3
+
+
 gst-inspect-1.0 > /dev/null # initialize gstreamer plugins
 
 # sudo v4l2-ctl --list-devices # TODO: can we change permissions so this doesn't need to be run?
