@@ -117,13 +117,14 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   // Project velocity into lift–drag plane
   // wind is the base air speed
   gz::math::Vector3d aw = wind_ - vel;
-  gz::math::Vector3d velInLDPlane = aw;
+  // velInLDPlane is the "apparent velocity" if we assume that wind is the base air speed
+  gz::math::Vector3d velInLDPlane = -aw;
 
   if (aw.Length() < 0.01)
     return;
 
   // Drag and lift directions
-  gz::math::Vector3d dragDir = velInLDPlane.Normalized();
+  gz::math::Vector3d dragDir = -velInLDPlane.Normalized();
   gz::math::Vector3d liftDir = -ldNormal.Cross(velInLDPlane).Normalized();
 
   // Angle of attack
@@ -132,9 +133,9 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
       -1.0, 1.0);
 
   double alphaSign = -upwardI.Dot(velInLDPlane) /
-                     (upwardI.Length() + velInLDPlane.Length());
+                     (upwardI.Length() * velInLDPlane.Length());
 
-  double alpha = (alphaSign >= 0.0) ? acos(cosAlpha) : -acos(cosAlpha);
+  double alpha = fabs((alphaSign >= 0.0) ? acos(cosAlpha) : -acos(cosAlpha));
 
   // Dynamic pressure
   double speedInLDPlane = velInLDPlane.Length();
@@ -150,6 +151,7 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   gz::math::Vector3d force = lift + drag;
 
   RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Velocity: %f %f %f", vel.X(), vel.Y(), vel.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "VelocityInLDPlane: %f %f %f", velInLDPlane.X(), velInLDPlane.Y(), velInLDPlane.Z());
   RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Wind Velocity: %f %f %f", wind_.X(), wind_.Y(), wind_.Z());
   RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Angle: %lf", alpha);
   RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "LiftDirection: %f %f %f", liftDir.X(), liftDir.Y(), liftDir.Z());

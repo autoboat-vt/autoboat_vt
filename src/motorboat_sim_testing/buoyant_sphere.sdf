@@ -242,8 +242,6 @@ With ros2:
     </model>
 
 
-    <!-- User options - Modify these parameters according to your needs -->
-
     <!-- Physics parameters -->
     <physics name="1ms" type="ode">
       <max_step_size>0.02</max_step_size>
@@ -492,6 +490,10 @@ With ros2:
         </visual>
       </link>
 
+      <link name='sail_rotator_link'>
+        <pose>0 0 0 0 0 0</pose>
+      </link>
+
       <link name='boom_link'>
         <pose>-.5 0 .375 0 0 0</pose>
 
@@ -532,7 +534,7 @@ With ros2:
         <pose>-.025 0 0.4 0 0 0</pose>
 
         <inertial>
-          <pose>0.33033 0.45733 0 0 0 0</pose>
+          <pose>-0.33033 0 0.45733 0 0 0</pose>
           <mass>0.5</mass>
           <inertia>
             <ixx>0.15687</ixx>
@@ -600,21 +602,29 @@ With ros2:
         <child>keel_link</child>
       </joint>
 
-      <joint name="mast_joint" type="revolute">
+      <joint name="sail_rotator_joint" type="revolute">
         <axis>
           <xyz>0 0 1</xyz>
             <limit>
-            <lower>-1.6</lower>
-            <upper>1.6</upper>
+            <lower>-1</lower>
+            <upper>1</upper>
           </limit>
+          <dynamics>
+            <damping>1</damping>
+          </dynamics>
         </axis>
         
+        <parent>base_link</parent>
+        <child>sail_rotator_link</child>
+      </joint>
+      
+      <joint name="mast_joint" type="fixed">
         <parent>base_link</parent>
         <child>mast_link</child>
       </joint>
 
       <joint name="boom_joint" type="fixed">
-        <parent>mast_link</parent>
+        <parent>sail_rotator_link</parent>
         <child>boom_link</child>
       </joint>
 
@@ -871,22 +881,6 @@ With ros2:
         <cp>0 0 0</cp>
       </plugin>
 
-      <!--plugin
-        filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-        <air_density>1.225</air_density>
-        <cla>.06</cla>
-        <cla_stall>-.01</cla_stall>
-        <cda>0.0067</cda>
-        <cda_stall>.013</cda_stall>
-        <alpha_stall>.52</alpha_stall>
-        <a0>0</a0>
-        <area>0.75</area>
-        <upward>0 1 0</upward>
-        <forward>1 0 0</forward>
-        <link_name>sail_link</link_name>
-        <cp>0.33033 0.45733 0</cp>
-      </plugin-->
 
       <!-- TODO: get values for clmax and cdmax (cl vs alpha and cd vs alpha curves) -->
        <!-- TODO: also generally just fix the foil dynamics plugin to make it correct -->
@@ -898,8 +892,8 @@ With ros2:
         <cop>0.33033 0.45733 0</cop>
         <area>.75</area>
         <fluid_density>1.225</fluid_density>
-        <forward>1 0 0</forward>
-        <upward>0 1 0</upward>
+        <forward>-1 0 0</forward>
+        <upward>0 -1 0</upward>
       </plugin>
 
       <!-- Hydrodynamics on the hull parts -->
