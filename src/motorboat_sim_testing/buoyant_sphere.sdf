@@ -896,6 +896,12 @@ With ros2:
         <upward>0 -1 0</upward>
       </plugin>
 
+      <!-- Sail rotation plugin -->
+      <plugin filename="libSailLimits.so"
+      name="sail_limits::SailLimits">
+        <link_name>sail_rotator_joint</link_name>
+      </plugin>
+
       <!-- Hydrodynamics on the hull parts -->
       <plugin
         filename="gz-sim-hydrodynamics-system"

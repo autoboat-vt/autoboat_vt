@@ -1,0 +1,6 @@
+1. create folder with build, src, and include folders
+2. create header and source file and create cmakelists.txt and package.xml
+3. run "cmake .." and "make" in the build folder
+4. fix all the errors bc ur bad at programming
+5. add the path to the build folder to GZ_SIM_SYSTEM_PLUGIN_PATH in .bashrc, which means you need to edit docker_dev_environment_setup.sh
+6. add the plugin to your sdf!
