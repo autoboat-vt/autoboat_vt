@@ -70,7 +70,7 @@ class BuoyDetectionNode(Node):
         self.position_listener = self.create_subscription(msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=sensor_qos_profile)
         self.heading_listener = self.create_subscription(msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=sensor_qos_profile) # heading is counterclockwise of true east
         self.model_listener = self.create_subscription(msg_type=String, topic="/model", callback=self.model_callback, qos_profile=sensor_qos_profile)
-        self.threshold_listener = self.create_subscription(msg_type=String, topic="/threshold", callback=self.threshold_callback, qos_profile=sensor_qos_profile)
+        self.threshold_listener = self.create_subscription(msg_type=Float32, topic="/threshold", callback=self.threshold_callback, qos_profile=sensor_qos_profile)
 
         self.current_position = {
             "latitude": 0,
