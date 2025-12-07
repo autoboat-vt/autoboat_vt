@@ -14,9 +14,8 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 
 # from realsense2_camera_msgs.msg import RGBD
-from sensor_msgs.msg import Image
-from std_msgs.msg import Float32
-from std_msgs.msg import Int32
+from std_msgs.msg import Float32, String
+from sensor_msgs.msg import NavSatFix, Image
 from autoboat_msgs.msg import ObjectDetectionResultsList, ObjectDetectionResult
 
 os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
@@ -33,11 +32,10 @@ else:
     IS_DEV_CONTAINER = False
 
 SHOULD_SAVE_IMAGES = True
-NUM_IMAGES_TO_SAVE = 1000
+NUM_IMAGES_TO_SAVE = 500
 
 COMPUTE_HW = 1
 MEMORY_TYPE = 0
-LATENCY = False
 
 if (IS_DEV_CONTAINER):
     PATH_TO_SRC_DIR = "/home/ws/src"
@@ -69,17 +67,34 @@ class BuoyDetectionNode(Node):
         # ROS2 Initialization
         sensor_qos_profile = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST, depth=1)
         self.object_detection_results_publisher = self.create_publisher(msg_type=ObjectDetectionResultsList, topic="/object_detection_results_list", qos_profile=sensor_qos_profile)
+        self.position_listener = self.create_subscription(msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=sensor_qos_profile)
+        self.heading_listener = self.create_subscription(msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=sensor_qos_profile) # heading is counterclockwise of true east
+        self.model_listener = self.create_subscription(msg_type=String, topic="/model", callback=self.model_callback, qos_profile=sensor_qos_profile)
+        self.threshold_listener = self.create_subscription(msg_type=String, topic="/threshold", callback=self.threshold_callback, qos_profile=sensor_qos_profile)
+
+        self.current_position = {
+            "latitude": 0,
+            "longitude": 0
+        }
+        self.current_heading = 0 # default to true east
 
         # TODO: add subscriber for image topics
         # TODO: add dynamic reconfigure for parameters from telemetry node
+        #   Added model and threshold switching.
         # TODO: add localization
 
         # DeepStream Initialization
         Gst.init(None)
         self.pipeline = None
         self.loop = None
-        self.last_time = time.process_time()
+        self.threshold = 0
+        self.model = "" # model name without .pt.onnx. Ex. yolo11m.pt.onnx -> yolo11m
+        self.config_file_split = []
+        self.last_time = time.time()
+        self.file_lock = threading.Lock()
+
         self._init_pipeline()
+        self._read_file()
         vs = threading.Thread(target=self.run, daemon=True)
         vs.start()
 
@@ -187,14 +202,11 @@ class BuoyDetectionNode(Node):
             streammux.link(pgie)
             pgie.link(tracker)
             tracker.link(queue_multifilesink_valve)
-            # tracker.link(fakesink)
         else:
             streammux.link(queue_multifilesink_valve)
-            # streammux.link(fakesink)
         queue_multifilesink_valve.link(multifilesink_valve)
         multifilesink_valve.link(osd)
         osd.link(nvvidconv_jpeg)
-        # multifilesink_valve.link(nvvidconv_jpeg)
         nvvidconv_jpeg.link(caps_nvvidconv_jpeg)
         caps_nvvidconv_jpeg.link(jpegenc)
         jpegenc.link(multifilesink)
@@ -260,7 +272,7 @@ class BuoyDetectionNode(Node):
             msg.ntp_timestamp = frame_meta.ntp_timestamp
 
             if (frame_meta.frame_num % 60 == 0):
-                current_time = time.process_time()
+                current_time = time.time()
                 fps = 60 / (current_time - self.last_time)
                 self.last_time = current_time
                 self.get_logger().info(f"Frame: {frame_meta.frame_num}, avg FPS: {fps:.2f}")
@@ -318,13 +330,100 @@ class BuoyDetectionNode(Node):
         matches = re.findall(r"/dev/video[0-9]*", camera_devices_output)
         for match in matches:
             device_id = match.split("/dev/video")[-1]
-            print(device_id)
             if (re.search("RealSense", subprocess.run(['cat', f'/sys/class/video4linux/video{device_id}/name'], capture_output=True, text=True).stdout) is not None):
                 if (re.search("YUYV", subprocess.run(['v4l2-ctl', '--device', f'/dev/video{device_id}', '--list-formats-ext'], capture_output=True, text=True).stdout) is not None):
                     return f"/dev/video{device_id}"
         self.get_logger().error("Could not find RealSense camera device with YUYV format")
         sys.exit(1)
 
+    def _read_file(self):
+        # Open file
+        self.file_lock.acquire()
+        with open(PATH_TO_YOLO_CONFIG, 'r') as file:
+            content = file.read()
+            self.config_file_split = content.split('\n\n')
+        self.file_lock.release()
+
+        # Read model
+        onnx_section = self.config_file_split[1]
+        onnx_lines = onnx_section.split('\n')
+        for line in onnx_lines:
+            if line.startswith('onnx-file='):
+                self.model = line.split('=')[-1][:-8] # remove .pt.onnx
+                break
+        
+        # Read threshold
+        attributes_lines = self.config_file_split[4].split('\n')
+        self.threshold = float(attributes_lines[2].split('=')[-1])
+
+    def position_callback(self, msg):
+        self.current_position["latitude"] = msg.latitude
+        self.current_position["longitude"] = msg.longitude
+
+    def heading_callback(self, msg):
+        self.current_heading = msg.data
+    
+    def model_callback(self, msg):
+        new_model = msg.data
+        if new_model != self.model and INFERENCE:
+            onnx_lines = self.config_file_split[1].split('\n')
+            engine_lines = self.config_file_split[2].split('\n')
+
+            found_model_entry = False
+            for i in range(len(onnx_lines)):
+                if onnx_lines[i].startswith('onnx-file='):
+                    onnx_lines[i] = "#" + onnx_lines[i]
+                if onnx_lines[i].split('=')[-1] == f"{new_model}.pt.onnx":
+                    onnx_lines[i] = onnx_lines[i][1:] # uncomment line so it can be used
+                    found_model_entry = True
+            
+            for i in range(len(engine_lines)):
+                if engine_lines[i].startswith('model-engine-file='):
+                    engine_lines[i] = "#" + engine_lines[i]
+                if engine_lines[i].split('=')[-1] == f"{new_model}_model_b1_gpu0_fp16.engine":
+                    engine_lines[i] = engine_lines[i][1:] # uncomment line so it can be used
+            
+            if not found_model_entry: # Look for the new model file in the file system and add it if it exists
+                # TODO: add check for .pt file instead of just .onnx
+                if os.path.exists(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/{new_model}.pt.onnx"):
+                    onnx_lines.append(f"onnx-file={new_model}.pt.onnx")
+                    engine_lines.append(f"model-engine-file={new_model}_model_b1_gpu0_fp16.engine")
+                else:
+                    self.get_logger().error(f"Model {new_model}.pt.onnx not found, not updating model")
+                    return
+            
+            onnx_content = "\n".join(onnx_lines)
+            engine_content = "\n".join(engine_lines)
+            self.config_file_split[1] = onnx_content
+            self.config_file_split[2] = engine_content
+            self.model = new_model
+            self.update_config_file()
+            self.get_logger().info(f"Updated model to {new_model}")
+        else:
+            self.get_logger().error(f"Model is already {new_model}, not updating")
+    
+    def threshold_callback(self, msg):
+        new_threshold = msg.data
+        if float(new_threshold) != self.threshold:
+            attributes_lines = self.config_file_split[4].split('\n')
+            attributes_lines[2] = f"pre-cluster-threshold={new_threshold}"
+            self.config_file_split[4] = "\n".join(attributes_lines)
+            self.threshold = new_threshold
+            self.update_config_file()
+            self.get_logger().info(f"Updated threshold to {new_threshold}")
+        else:
+            self.get_logger().info(f"Threshold is already {new_threshold}, not updating")
+    
+    def update_config_file(self):
+        self.file_lock.acquire()
+        with open(PATH_TO_YOLO_CONFIG, 'w') as file:
+            file.write("\n\n".join(self.config_file_split))
+        self.file_lock.release()
+        if INFERENCE:
+            self.pipeline.get_by_name('pgie').set_property('config-file-path', PATH_TO_YOLO_CONFIG)
+            self.get_logger().info("Reloaded config file in nvinfer")
+        else:
+            self.get_logger().info("Not reloading config file in nvinfer since INFERENCE is disabled")
 
 def main():
     rclpy.init()
