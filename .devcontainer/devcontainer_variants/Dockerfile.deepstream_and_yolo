@@ -1,0 +1,1 @@
+FROM vtautoboat/autoboat_docker_dev_image:deepstream

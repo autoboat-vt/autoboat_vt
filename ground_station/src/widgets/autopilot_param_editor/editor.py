@@ -1,9 +1,10 @@
-import constants
+from utils import constants, misc
 from syntax_highlighters.json import JsonHighlighter
 from widgets.popup_edit import TextEditWindow
 from copy import deepcopy
 from yaml import safe_load
 import requests
+from urllib.parse import urljoin
 import json
 from typing import Any
 from pathlib import PurePath
@@ -49,7 +50,7 @@ class AutopilotParamEditor(QWidget):
         self.button_layout = QHBoxLayout()
         self.button_group_box.setLayout(self.button_layout)
 
-        self.send_all_button = constants.pushbutton_maker(
+        self.send_all_button = misc.pushbutton_maker(
             "Send All",
             constants.ICONS.upload,
             self.send_all_parameters,
@@ -57,7 +58,7 @@ class AutopilotParamEditor(QWidget):
             min_height=30,
             is_clickable=True,
         )
-        self.pull_all_button = constants.pushbutton_maker(
+        self.pull_all_button = misc.pushbutton_maker(
             "Pull All",
             constants.ICONS.download,
             self.pull_all_parameters,
@@ -65,7 +66,7 @@ class AutopilotParamEditor(QWidget):
             min_height=30,
             is_clickable=True,
         )
-        self.load_from_file_button = constants.pushbutton_maker(
+        self.load_from_file_button = misc.pushbutton_maker(
             "Load from File",
             constants.ICONS.hard_drive,
             self.load_parameters_from_file,
@@ -73,7 +74,7 @@ class AutopilotParamEditor(QWidget):
             min_height=30,
             is_clickable=True,
         )
-        self.save_to_file_button = constants.pushbutton_maker(
+        self.save_to_file_button = misc.pushbutton_maker(
             "Save to File",
             constants.ICONS.save,
             self.save_parameters_to_file,
@@ -90,7 +91,9 @@ class AutopilotParamEditor(QWidget):
 
         try:
             self.config = JsoncParser.parse_file(constants.AUTO_PILOT_PARAMS_DIR / "params_default.jsonc")
-            print(f"[Info] Loaded {len(self.config)} parameters from `{constants.AUTO_PILOT_PARAMS_DIR / 'params_default.jsonc'}`.")
+            print(
+                f"[Info] Loaded {len(self.config)} parameters from `{constants.AUTO_PILOT_PARAMS_DIR / 'params_default.jsonc'}`."
+            )
         except Exception:
             print("[Error] Please ensure the file exists in the `app_data/autopilot_params` directory.")
 
@@ -104,12 +107,11 @@ class AutopilotParamEditor(QWidget):
         self.scroll.setWidget(self.params_container)
 
         self.searchbar = QLineEdit()
+        self.searchbar.setClearButtonEnabled(True)
         self.searchbar.setPlaceholderText("Search parameters...")
         self.searchbar.textChanged.connect(self.filter_parameters)
 
-        self.searchbar.setClearButtonEnabled(True)
-
-        # Status label to show search results
+        # status label to show search results
         self.status_label = QLabel()
         self.status_label.setStyleSheet("color: #D3D3D3; font-size: 12pt;")
         self.status_label.setAlignment(Qt.AlignCenter)
@@ -132,12 +134,14 @@ class AutopilotParamEditor(QWidget):
                 existing_data[widget.name] = widget.value
 
         try:
-            response = constants.REQ_SESSION.post(
-                constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
+            constants.REQ_SESSION.post(
+                urljoin(
+                    constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
+                    str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                ),
                 json=existing_data,
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             )
-            response.raise_for_status()
             print("[Info] All parameters sent successfully.")
         except requests.exceptions.RequestException as e:
             print(f"[Error] Failed to send all parameters: {e}")
@@ -147,12 +151,13 @@ class AutopilotParamEditor(QWidget):
 
         print("[Info] Pulling all parameters...")
         try:
-            response = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
+            data = constants.REQ_SESSION.get(
+                urljoin(
+                    constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
+                    str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                ),
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-            )
-            response.raise_for_status()
-            data = response.json()
+            ).json()
 
             for widget in self.widgets:
                 if isinstance(widget, AutopilotParamWidget):
@@ -193,7 +198,9 @@ class AutopilotParamEditor(QWidget):
     def save_parameters_to_file(self) -> None:
         """Save parameters to a file."""
 
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save Parameters to File", "", "JSON Files (*.json);;All Files (*)")
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Parameters to File", "", "JSON Files (*.json);;All Files (*)"
+        )
         if not file_path:
             return
 
@@ -322,8 +329,11 @@ class AutopilotParamWidget(QFrame):
             assert isinstance(self.default_val, self.type), f"Default value must be of type {self.type.__name__}."
             assert isinstance(self.description, str), "Description must be a string."
 
-        except (KeyError, IndexError):
-            print("Invalid configuration for `AutopilotParamWidget`. See `src/widgets/autopilot_param_editor/editor_config.jsonc`.")
+        except (KeyError, AssertionError):
+            raise ValueError(
+                "[Error] Invalid configuration for `AutopilotParamWidget`. See `src/widgets/autopilot_param_editor/editor_config.jsonc`."
+            )
+
         # endregion validate parameter config
 
         # region define layouts
@@ -374,7 +384,7 @@ class AutopilotParamWidget(QFrame):
         # endregion left layout
 
         # region right layout
-        self.send_button = constants.pushbutton_maker(
+        self.send_button = misc.pushbutton_maker(
             "Send",
             constants.ICONS.upload,
             self.send_value,
@@ -382,7 +392,7 @@ class AutopilotParamWidget(QFrame):
             min_height=30,
             is_clickable=True,
         )
-        self.pull_button = constants.pushbutton_maker(
+        self.pull_button = misc.pushbutton_maker(
             "Pull",
             constants.ICONS.download,
             self.pull_value,
@@ -390,7 +400,7 @@ class AutopilotParamWidget(QFrame):
             min_height=30,
             is_clickable=True,
         )
-        self.reset_button = constants.pushbutton_maker(
+        self.reset_button = misc.pushbutton_maker(
             "Reset",
             constants.ICONS.refresh,
             self.reset_value,
@@ -415,7 +425,10 @@ class AutopilotParamWidget(QFrame):
         print(f"[Info] Sending value for {self.name}: {self.value}")
         try:
             existing_data = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
+                urljoin(
+                    constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
+                    str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                ),
                 timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             ).json()
 
@@ -431,12 +444,14 @@ class AutopilotParamWidget(QFrame):
                 existing_data[self.name] = self.value
 
             try:
-                response = constants.REQ_SESSION.post(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
+                constants.REQ_SESSION.post(
+                    urljoin(
+                        constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
+                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                    ),
                     json=existing_data,
                     timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
-                response.raise_for_status()
                 print(f"[Info] Successfully sent {self.name} with value {self.value}.")
 
             except requests.exceptions.RequestException as e:
@@ -444,7 +459,9 @@ class AutopilotParamWidget(QFrame):
                 return
 
         else:
-            print(f"[Error] Unexpected data format from telemetry server: {existing_data}. Expected a dictionary of parameters.")
+            print(
+                f"[Error] Unexpected data format from telemetry server: {existing_data}. Expected a dictionary of parameters."
+            )
             return
 
         self.reset_button.setEnabled(True)
@@ -455,9 +472,13 @@ class AutopilotParamWidget(QFrame):
         """Pull the current value of the parameter from the telemetry endpoint."""
 
         try:
-            response = constants.REQ_SESSION.get(constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"])
-            response.raise_for_status()
-            data = response.json()
+            data = constants.REQ_SESSION.get(
+                urljoin(
+                    constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
+                    str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                ),
+                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+            ).json()
 
             if self.name in data:
                 self.value = data[self.name]
@@ -511,7 +532,9 @@ class AutopilotParamWidget(QFrame):
                 edited_data = float(edited_data)
 
             if not isinstance(edited_data, self.type):
-                raise TypeError(f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}.")
+                raise TypeError(
+                    f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}."
+                )
 
             with open(
                 PurePath(constants._autopilot_param_editor_dir / "params_temp.json"),
@@ -572,7 +595,9 @@ class AutopilotParamWidget(QFrame):
                 return
 
             if not isinstance(edited_data, self.type):
-                raise TypeError(f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}.")
+                raise TypeError(
+                    f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}."
+                )
 
         except TypeError:
             print(f"[Error] Invalid value for {self.name}. Resetting to previous value.")

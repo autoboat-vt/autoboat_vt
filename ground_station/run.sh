@@ -1,6 +1,61 @@
 #!/usr/bin/env -S bash -euo pipefail
 
+query_port() {
+    local port=$1
+    if lsof -iTCP:"$port" -sTCP:LISTEN -t >/dev/null; then
+        return 1
+    else
+        return 0
+    fi
+}
+
+check_port() {
+    local port=$1
+    if ! query_port "$port"; then
+        echo "Port $port is in use by the following process(es):"
+        for pid in $(lsof -iTCP:"$port" -sTCP:LISTEN -t); do
+            user=$(ps -o user= -p "$pid")
+            cmd=$(ps -o comm= -p "$pid")
+            start=$(ps -o lstart= -p "$pid")
+            echo "PID: $pid | User: $user | Command: $cmd | Started: $start"
+        done
+
+        read -p "Do you want to kill these process(es)? [y/N] " answer
+        case "$answer" in
+        [Yy]*)
+            lsof -iTCP:"$port" -sTCP:LISTEN -t | xargs kill -9 >/dev/null 2>&1 || true
+            # wait until port is actually free
+            for i in {1..10}; do
+                if query_port "$port"; then
+                    break
+                fi
+                sleep 0.5
+            done
+            if ! query_port "$port"; then
+                echo "Port $port still in use after kill. Exiting."
+                exit 1
+            fi
+            ;;
+        *)
+            echo "Port $port is in use. Exiting."
+            exit 1
+            ;;
+        esac
+    fi
+}
+
+GO_PORT=3001
+ASSET_SERVER_PORT=8000
+
+echo "Checking Go server port $GO_PORT..."
+check_port "$GO_PORT"
+
+echo "Checking Asset server port $ASSET_SERVER_PORT..."
+check_port "$ASSET_SERVER_PORT"
+
 os_type=$(uname -s | tr '[:upper:]' '[:lower:]')
+arch_type=$(uname -m)
+bin_name="server_${os_type}_${arch_type}"
 
 if [[ "$os_type" == "linux"* ]]; then
     export QT_XCB_GL_INTEGRATION=none
@@ -8,86 +63,76 @@ if [[ "$os_type" == "linux"* ]]; then
     export QT_QPA_PLATFORM=xcb
 fi
 
-# Check for Go installation
-if ! command -v go &> /dev/null; then
-    echo "Go is not installed. Please install Go to run this script."
-    exit 1
-fi
-
 go_src="src/widgets/map_widget/server.go"
 python_src="src/main.py"
+mkdir -p bin
 
-# Check for Python installation
-if ! command -v python3 &> /dev/null; then
-    echo "Python 3 is not installed. Please install Python 3 to run this script."
+command -v go >/dev/null || {
+    echo "Go not installed."
     exit 1
-fi
+}
+command -v python3 >/dev/null || {
+    echo "Python 3 not installed."
+    exit 1
+}
 
 local_go=$(command -v go)
 local_python=$(command -v python3)
 
-mkdir -p bin
-bin_name="server_$os_type"
-
 should_rebuild=false
+src_hash=$(sha256sum "$go_src" | awk '{print $1}')
 
-if [[ -f "bin/$bin_name" ]]; then
-    if [[ -f "last_build_time.txt" ]]; then
-        build_os_type=$(sed -n '1p' last_build_time.txt)
-        if [[ "$build_os_type" != "$os_type" ]]; then
-            echo "Server binary was built for $build_os_type, but this is $os_type. Rebuilding..."
-            should_rebuild=true
-        fi
+if [[ -f "bin/$bin_name" && -f last_build_time.txt ]]; then
+    build_os_type=$(sed -n '1p' last_build_time.txt)
+    build_arch_type=$(sed -n '2p' last_build_time.txt)
+    last_build_time=$(sed -n '3p' last_build_time.txt)
+    last_src_hash=$(sed -n '4p' last_build_time.txt || echo "")
 
-        last_build_time=$(sed -n '2p' last_build_time.txt)
-        now=$(date +%s)
-        if (( now - last_build_time > 3600 )); then
-            echo "Server binary is over 1 hour old. Rebuilding..."
-            should_rebuild=true
-        else
-            echo "Server binary is fresh. Skipping rebuild."
-        fi
-    else
-        echo "No last_build_time.txt file found. Rebuilding..."
+    now=$(date +%s)
+
+    if [[ "$build_os_type" != "$os_type" || "$build_arch_type" != "$arch_type" ]]; then
+        echo "Binary built for $build_os_type/$build_arch_type; rebuilding..."
         should_rebuild=true
+    elif ((now - last_build_time > 3600)); then
+        echo "Binary is over 1 hour old. Rebuilding..."
+        should_rebuild=true
+    elif [[ "$last_src_hash" != "$src_hash" ]]; then
+        echo "Source has changed. Rebuilding..."
+        should_rebuild=true
+    else
+        echo "Binary is up-to-date. Skipping rebuild."
     fi
 else
-    echo "Server binary not found. Building..."
+    echo "Binary missing or metadata missing. Rebuilding..."
     should_rebuild=true
 fi
 
 if [[ "$should_rebuild" == true ]]; then
     $local_go mod tidy
-    if $local_go build -o "bin/$bin_name" $go_src; then
-        echo "Go server built successfully."
-        {
-            echo "$os_type"
-            date +%s
-        } > last_build_time.txt
-    else
-        echo "Failed to build the Go server."
-        exit 1
-    fi
+    $local_go build -o "bin/$bin_name" "$go_src"
+    echo "Go server built successfully."
+    {
+        echo "$os_type"
+        echo "$arch_type"
+        date +%s
+        echo "$src_hash"
+    } >last_build_time.txt
 fi
 
-# Start the Go server in the background
 bin/$bin_name &
 GO_PID=$!
 
-# Start Python script in the background
-$local_python $python_src &
+$local_python "$python_src" &
 PYTHON_PID=$!
 
 cleanup() {
     kill "$GO_PID" "$PYTHON_PID" 2>/dev/null || true
     wait "$GO_PID" "$PYTHON_PID" 2>/dev/null || true
-
-    if [[ -f "src/widgets/autopilot_param_editor/params_temp.json" ]]; then
-        rm "src/widgets/autopilot_param_editor/params_temp.json"
-    fi
+    temp_file="src/widgets/autopilot_param_editor/params_temp.json"
+    [[ -f $temp_file ]] && rm "$temp_file"
 }
-trap cleanup EXIT
 
-# Wait for either process to exit, then trigger cleanup
-wait -n "$GO_PID" "$PYTHON_PID"
+trap cleanup EXIT TERM INT
+wait -n
+
 exit 0

@@ -6,9 +6,17 @@ install
 log
 output
 
+# object detection
 **.pt
 src/microros/dependencies/**
 .devcontainer/devcontainer_environment_variables
+**.engine
+**.onnx
+**.o
+**.so
+src/object_detection/object_detection/deepstream_yolo/ultralytics/
+src/object_detection/object_detection/deepstream_yolo/labels.txt
+src/object_detection/object_detection/frame_results/
 
 # groundstation
 pkg

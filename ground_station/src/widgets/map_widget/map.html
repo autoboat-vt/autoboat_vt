@@ -35,8 +35,7 @@
                     center: [36.983731367697374, -76.29555376681454],
                     zoom: 13
                 };
-                static assets_url =
-                    "https://raw.githubusercontent.com/autoboat-vt/autoboat_vt/refs/heads/main/ground_station/app_data/assets/";
+                static assets_url = "http://localhost:8000/";
                 static buoy_color = "orange";
                 static waypoint_color = "blue";
                 static focused_waypoint_color = "violet";
@@ -470,7 +469,7 @@
                     });
                 }
             }
-            map = new map_interface();
+            const map = new map_interface();
         </script>
     </body>
 </html>
