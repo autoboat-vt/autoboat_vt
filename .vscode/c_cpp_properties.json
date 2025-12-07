@@ -27,11 +27,11 @@
                 "${workspaceFolder}/src/microros/dependencies/pico-sdk/src/rp2040/hardware_structs/include",
                 "${workspaceFolder}/src/microros/dependencies/pico-sdk/src/rp2350/hardware_structs/include",
                 "${workspaceFolder}/src/microros/dependencies/pico-sdk/src/rp2350/hardware_regs/include",
-                "${workspaceFolder}/build/sensors_transmission/generated/pico_base",
+                "${workspaceFolder}/build/sensors_transmission/generated/pico_base"
 
-                "${workspaceFolder}/install/autoboat_msgs/include",
-                "${workspaceFolder}/install/autopilot_cpp/include",
-                "${workspaceFolder}/install/sensors_cpp/include"
+                // "${workspaceFolder}/install/autoboat_msgs/include"
+                // "${workspaceFolder}/install/autopilot_cpp/include",
+                // "${workspaceFolder}/install/sensors_cpp/include"
 
                 // "${workspaceFolder}/src/sensors_cpp/include"
 
@@ -79,11 +79,11 @@
 
             ],
             "name": "ROS",
-            // "compileCommands": "${workspaceFolder}/build/compile_commands.json",
-            "intelliSenseMode": "gcc-x64",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json",
+            "intelliSenseMode": "linux-gcc-x64",
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "gnu11",
-            "cppStandard": "c++14"
+            "cppStandard": "c++23"
         }
     ],
     "version": 4

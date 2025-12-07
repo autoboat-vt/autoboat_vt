@@ -11,7 +11,7 @@ sudo chmod -R 777 /etc/udev/
 echo 'alias python="python3"' >> /home/autoboat_user/.bashrc
 
 # Easier alias for a specific type of build
-echo 'alias build="cd /home/ws && colcon build --symlink-install --cmake-args -DCMAKE_UNITY_BUILD=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"' >> /home/autoboat_user/.bashrc
+echo 'alias build="cd /home/ws && colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"' >> /home/autoboat_user/.bashrc
 
 # Install all of the pip packages
 pip install -e /home/ws/src/vesc/pyvesc/
@@ -22,7 +22,7 @@ pip install -e /home/ws/src/simulation/sailboat_gym/
 source /opt/ros/humble/setup.bash
 echo source /opt/ros/humble/setup.bash >> "/home/autoboat_user/.bashrc"
 source /home/autoboat_user/.bashrc
-colcon build --symlink-install --cmake-args -DCMAKE_UNITY_BUILD=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 echo source /home/ws/install/setup.bash >> "/home/autoboat_user/.bashrc"
 

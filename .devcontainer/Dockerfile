@@ -22,9 +22,9 @@ RUN groupadd --gid $USER_GID $USERNAME \
  && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
  && apt-get update \
  && apt-get install -y --no-install-recommends sudo \
+ && rm -rf /var/lib/apt/lists/* \
  && echo "$USERNAME ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME \
- && chmod 0440 /etc/sudoers.d/$USERNAME \
- && rm -rf /var/lib/apt/lists/*
+ && chmod 0440 /etc/sudoers.d/$USERNAME 
 
 
 
@@ -126,8 +126,7 @@ COPY required_pip_packages.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
 
-# C++ requirements?
-RUN pip install meson
+# C++ requirements
 RUN sudo apt-get update \
     && sudo apt install libcurl4-openssl-dev -y \
     && sudo apt-get install nlohmann-json3-dev -y \
@@ -148,6 +147,8 @@ RUN cd ~ \
     && sudo cmake --install . 
 
 
+
+    
 
 
 CMD ["/bin/bash"]

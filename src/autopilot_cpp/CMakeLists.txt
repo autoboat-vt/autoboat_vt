@@ -6,7 +6,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
 
-
 add_compile_options(-O3)
 add_compile_options(-Wall -Wextra -Wpedantic)
 add_compile_options(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
@@ -34,8 +33,8 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(cv_bridge REQUIRED)   
-find_package(OpenCV REQUIRED)         # TODO try to remove this dependency
+# find_package(cv_bridge REQUIRED)   
+# find_package(OpenCV REQUIRED)         # TODO try to remove this dependency
 # find_package(CURL REQUIRED)           # TODO try to remove this dependency
 find_package(nlohmann_json REQUIRED)
 find_package(autoboat_msgs REQUIRED)
@@ -43,7 +42,7 @@ find_package(cpr REQUIRED)
 
 # create telemetry node executable
 add_executable(telemetry src/telemetry_node.cpp)
-ament_target_dependencies(telemetry rclcpp std_msgs geometry_msgs sensor_msgs cv_bridge OpenCV autoboat_msgs)
+ament_target_dependencies(telemetry rclcpp std_msgs geometry_msgs sensor_msgs autoboat_msgs)
 target_link_libraries(telemetry nlohmann_json::nlohmann_json cpr::cpr)
 install(TARGETS telemetry DESTINATION lib/${PROJECT_NAME})
 

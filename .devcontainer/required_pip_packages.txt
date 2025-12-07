@@ -55,7 +55,6 @@ python-dateutil
 PyQtWebEngine
 PyQt5
 QtPy
-packaging
 idna
 charset-normalizer
 jsonc-parser

@@ -9,7 +9,7 @@ onnx-file=yolo11n.pt.onnx
 #onnx-file=pretty_good_11l_train32.pt.onnx
 #onnx-file=dylans_model.pt.onnx
 
-model-engine-file=yolo11n_model_b1_gpu0_fp32.engine
+model-engine-file=yolo11n_model_b1_gpu0_fp16.engine
 #model-engine-file=yolo11m_dynamic_model_b1_gpu0_fp32.engine
 #model-engine-file=yolo11m_dynamic_model_b1_gpu0_fp16.engine
 #model-engine-file=yolo11l_dynamic_model_b1_gpu0_fp16.engine
