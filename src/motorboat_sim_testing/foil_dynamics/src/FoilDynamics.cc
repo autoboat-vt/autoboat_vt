@@ -150,15 +150,15 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   gz::math::Vector3d drag = cd * q * area_ * dragDir;
   gz::math::Vector3d force = lift + drag;
 
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Velocity: %f %f %f", vel.X(), vel.Y(), vel.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "VelocityInLDPlane: %f %f %f", velInLDPlane.X(), velInLDPlane.Y(), velInLDPlane.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Wind Velocity: %f %f %f", wind_.X(), wind_.Y(), wind_.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Angle: %lf", alpha);
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "LiftDirection: %f %f %f", liftDir.X(), liftDir.Y(), liftDir.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "DragDirection: %f %f %f", dragDir.X(), dragDir.Y(), dragDir.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Lift: %f %f %f", lift.X(), lift.Y(), lift.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Drag: %f %f %f", drag.X(), drag.Y(), drag.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Force: %f %f %f\n\n", force.X(), force.Y(), force.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Velocity: %f %f %f", vel.X(), vel.Y(), vel.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "VelocityInLDPlane: %f %f %f", velInLDPlane.X(), velInLDPlane.Y(), velInLDPlane.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Wind Velocity: %f %f %f", wind_.X(), wind_.Y(), wind_.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Angle: %lf", alpha);
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "LiftDirection: %f %f %f", liftDir.X(), liftDir.Y(), liftDir.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "DragDirection: %f %f %f", dragDir.X(), dragDir.Y(), dragDir.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Lift: %f %f %f", lift.X(), lift.Y(), lift.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Drag: %f %f %f", drag.X(), drag.Y(), drag.Z());
+  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Force: %f %f %f\n\n", force.X(), force.Y(), force.Z());
 
   // Apply world force
   link_.AddWorldForce(_ecm, force);

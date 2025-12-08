@@ -21,7 +21,8 @@ namespace sail_limits
 {
   class SailLimits
       : public gz::sim::System,
-        public gz::sim::ISystemConfigure
+        public gz::sim::ISystemConfigure,
+        public gz::sim::ISystemPreUpdate
   {
   public:
     SailLimits();
@@ -34,7 +35,11 @@ namespace sail_limits
                    gz::sim::EventManager &_eventMgr) override;
 
     // Called every time the limit topic is published to.
-    void OnLimitMsg(const gz::msgs::Vector2d &_msg);
+    void OnLimitMsg(const gz::msgs::Double &_msg);
+
+    // Called every simulation iteration
+    void PreUpdate(const gz::sim::UpdateInfo &_info,
+                gz::sim::EntityComponentManager &_ecm) override;
 
   private:
     /// \brief The model entity
@@ -48,6 +53,9 @@ namespace sail_limits
 
     /// \brief Initial joint limits
     gz::math::Vector2d limit_{-1.6, 1.6};
+
+    /// \brief Joint limit 2 for smoother motion
+    gz::math::Vector2d limit2_{-1.6, 1.6};
 
     /// \brief Gazebo communication node.
     gz::transport::Node node_;

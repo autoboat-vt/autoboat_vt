@@ -7,7 +7,7 @@ Without ros2:
 
     gz sim buoyant_sphere.sdf
 
-  1. Move the rudder:
+  1. Move the rudder in radians:
 
     gz topic -t /rudder -m gz.msgs.Double -p 'data: .61'
     
@@ -21,6 +21,9 @@ Without ros2:
 
   3. Set wind:
     gz topic -t /wind -m gz.msgs.Vector3d -p "x: 5, y: 5, z: 0"
+  
+  4. Set max sail angle in degrees:
+   gz topic -t /sail_limit -m gz.msgs.Double -p 'data: 45'
 
 With ros2:
 
@@ -899,7 +902,7 @@ With ros2:
       <!-- Sail rotation plugin -->
       <plugin filename="libSailLimits.so"
       name="sail_limits::SailLimits">
-        <link_name>sail_rotator_joint</link_name>
+        <joint_name>sail_rotator_joint</joint_name>
       </plugin>
 
       <!-- Hydrodynamics on the hull parts -->
