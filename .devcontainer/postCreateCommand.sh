@@ -34,7 +34,7 @@ pip install -e /home/ws/src/simulation/sailboat_gym/
 source /opt/ros/humble/setup.bash
 echo source /opt/ros/humble/setup.bash >> "/home/autoboat_user/.bashrc"
 source /home/autoboat_user/.bashrc
---symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 echo source /home/ws/install/setup.bash >> "/home/autoboat_user/.bashrc"
 

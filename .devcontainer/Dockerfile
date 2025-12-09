@@ -115,7 +115,7 @@ RUN pip install -r /tmp/requirements.txt
 RUN sudo apt-get update \
     && sudo apt install libcurl4-openssl-dev -y \
     && sudo apt-get install nlohmann-json3-dev -y \
-    && sudo apt install geographiclib-tools -y \
+   #  && sudo apt install geographiclib-tools -y \
     && sudo apt install ros-humble-serial-driver -y \
     && sudo apt install ros-humble-asio-cmake-module -y \
     && sudo apt install libudev-dev -y \

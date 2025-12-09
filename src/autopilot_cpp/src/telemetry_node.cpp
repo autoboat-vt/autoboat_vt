@@ -99,7 +99,7 @@ public:
 
 
         // timers
-        boat_status_timer_ = this->create_wall_timer(10ms, std::bind(&TelemetryNode::write_boat_status_to_telemetry_server, this));
+        boat_status_timer_ = this->create_wall_timer(300ms, std::bind(&TelemetryNode::write_boat_status_to_telemetry_server, this));
         waypoints_timer_ = this->create_wall_timer(500ms, std::bind(&TelemetryNode::read_waypoints_from_telemetry_server, this));
         autopilot_params_timer_ = this->create_wall_timer(500ms, std::bind(&TelemetryNode::read_autopilot_parameters_from_telemetry_server, this));
 
@@ -187,62 +187,51 @@ private:
     // CALLBACKS
     // ------------------------------------------------------------
     void position_callback(const sensor_msgs::msg::NavSatFix::SharedPtr msg) {
-        std::lock_guard<std::mutex> lk(mutex_);
         position_latitude_ = msg->latitude;
         position_longitude_ = msg->longitude;
     }
 
     void velocity_callback(const geometry_msgs::msg::Twist::SharedPtr msg) {
-        std::lock_guard<std::mutex> lk(mutex_);
         velocity_vector_x_ = msg->linear.x;
         velocity_vector_y_ = msg->linear.y;
         speed_ = std::hypot(velocity_vector_x_, velocity_vector_y_);
     }
 
     void heading_callback(const std_msgs::msg::Float32::SharedPtr msg) {
-        std::lock_guard<std::mutex> lk(mutex_);
         heading_ = msg->data;
     }
 
     void apparent_wind_vector_callback(const geometry_msgs::msg::Vector3::SharedPtr msg) {
-        std::lock_guard<std::mutex> lk(mutex_);
         apparent_wind_x_ = msg->x;
         apparent_wind_y_ = msg->y;
         std::tie(apparent_wind_speed_, apparent_wind_angle_) = cartesian_vector_to_polar(apparent_wind_x_, apparent_wind_y_);
     }
 
     void desired_heading_callback(const std_msgs::msg::Float32::SharedPtr msg) {
-        std::lock_guard<std::mutex> lk(mutex_);
         desired_heading_ = msg->data;
     }
 
     void vesc_telemetry_data_callback(const autoboat_msgs::msg::VESCTelemetryData::SharedPtr msg) {
-        std::lock_guard<std::mutex> lk(mutex_);
         vesc_rpm_ = msg->rpm;
     }
 
     void current_waypoint_index_callback(const std_msgs::msg::Int32::SharedPtr msg) {
-        std::lock_guard<std::mutex> lk(mutex_);
         current_waypoint_index_ = msg->data;
     }
     
     void full_autonomy_maneuver_callback(const std_msgs::msg::String::SharedPtr msg) {
-        std::lock_guard<std::mutex> lk(mutex_);
         full_autonomy_maneuver_ = msg->data;
     }
 
     void autopilot_mode_callback(const std_msgs::msg::String::SharedPtr msg) {
-        std::lock_guard<std::mutex> lk(mutex_);
         autopilot_mode_ = msg->data;
     }
 
     void desired_sail_angle_callback(const std_msgs::msg::Float32::SharedPtr msg) {
-        std::lock_guard<std::mutex> lk(mutex_);
         desired_sail_angle_ = msg->data;
     }
 
     void desired_rudder_angle_callback(const std_msgs::msg::Float32::SharedPtr msg) {
-        std::lock_guard<std::mutex> lk(mutex_);
         desired_rudder_angle_ = msg->data;
     }
 
@@ -333,12 +322,11 @@ private:
         // gather true wind and distance to waypoint
         double true_wind_x, true_wind_y, true_wind_speed, true_wind_angle;
         
-        {
-            std::lock_guard<std::mutex> lk(mutex_);
-            true_wind_x = apparent_wind_x_ + velocity_vector_x_;
-            true_wind_y = apparent_wind_y_ + velocity_vector_y_;
-            std::tie(true_wind_speed, true_wind_angle) = cartesian_vector_to_polar(true_wind_x, true_wind_y);
-        }
+        
+        true_wind_x = apparent_wind_x_ + velocity_vector_x_;
+        true_wind_y = apparent_wind_y_ + velocity_vector_y_;
+        std::tie(true_wind_speed, true_wind_angle) = cartesian_vector_to_polar(true_wind_x, true_wind_y);
+        
 
 
         double distance_to_next_waypoint = 0.0;
@@ -351,27 +339,25 @@ private:
 
         json boat_status_json = json::object(); 
 
-        {
-            std::lock_guard<std::mutex> lk(mutex_);
-            boat_status_json["position"] = {position_latitude_, position_longitude_};
-            boat_status_json["state"] = autopilot_mode_;
-            boat_status_json["full_autonomy_maneuver"] = full_autonomy_maneuver_;
-            boat_status_json["speed"] = speed_;
-            boat_status_json["velocity_vector"] = {velocity_vector_x_, velocity_vector_y_};
-            boat_status_json["bearing"] = desired_heading_;
-            boat_status_json["heading"] = heading_;
-            boat_status_json["true_wind_speed"] = true_wind_speed;
-            boat_status_json["true_wind_angle"] = true_wind_angle;
-            boat_status_json["apparent_wind_speed"] = apparent_wind_speed_;
-            boat_status_json["apparent_wind_angle"] = apparent_wind_angle_;
-            boat_status_json["sail_angle"] = desired_sail_angle_;
-            boat_status_json["rudder_angle"] = desired_rudder_angle_;
-            boat_status_json["current_waypoint_index"] = current_waypoint_index_;
-            boat_status_json["distance_to_next_waypoint"] = distance_to_next_waypoint;
+        
+        boat_status_json["position"] = {position_latitude_, position_longitude_};
+        boat_status_json["state"] = autopilot_mode_;
+        boat_status_json["full_autonomy_maneuver"] = full_autonomy_maneuver_;
+        boat_status_json["speed"] = speed_;
+        boat_status_json["velocity_vector"] = {velocity_vector_x_, velocity_vector_y_};
+        boat_status_json["bearing"] = desired_heading_;
+        boat_status_json["heading"] = heading_;
+        boat_status_json["true_wind_speed"] = true_wind_speed;
+        boat_status_json["true_wind_angle"] = true_wind_angle;
+        boat_status_json["apparent_wind_speed"] = apparent_wind_speed_;
+        boat_status_json["apparent_wind_angle"] = apparent_wind_angle_;
+        boat_status_json["sail_angle"] = desired_sail_angle_;
+        boat_status_json["rudder_angle"] = desired_rudder_angle_;
+        boat_status_json["current_waypoint_index"] = current_waypoint_index_;
+        boat_status_json["distance_to_next_waypoint"] = distance_to_next_waypoint;
 
-            // vesc telemetry
-            boat_status_json["vesc_telemetry_data_rpm"] = vesc_rpm_;
-        }
+        // vesc telemetry
+        boat_status_json["vesc_telemetry_data_rpm"] = vesc_rpm_;
 
 
         // POST to telemetry server (ignore failures)
@@ -417,11 +403,8 @@ private:
             new_waypoints.emplace_back(lat, lon);
         }
 
-        {
-            std::lock_guard<std::mutex> lk(mutex_);
-            current_waypoints_list_ = new_waypoints;
-        }
-
+        
+        current_waypoints_list_ = new_waypoints;
         waypoints_list_pub_->publish(waypoint_list_msg);
     }
 
