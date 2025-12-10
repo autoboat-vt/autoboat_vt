@@ -55,6 +55,7 @@ python-dateutil
 PyQtWebEngine
 PyQt5
 QtPy
+pyqtgraph
 packaging
 idna
 charset-normalizer

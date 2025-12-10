@@ -73,6 +73,7 @@ WEB_LINK_COLOR = QColor("#2a82da")
 BACKGROUND_COLOR = QColor("#333333")
 ACCENT_COLOR = QColor("#AAAAAA")
 FONT_COLOR = QColor("#F5F5F5")
+PLOT_COLORS: list[QColor] = [ORANGE, YELLOW, GREEN, BLUE, PURPLE, RED, WHITE]
 
 # pallette and style sheet
 PALLETTE = QPalette()

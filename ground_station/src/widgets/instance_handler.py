@@ -9,7 +9,6 @@ from enum import auto
 from strenum import StrEnum
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
-    QApplication,
     QWidget,
     QFrame,
     QGridLayout,
@@ -19,7 +18,6 @@ from qtpy.QtWidgets import (
     QLineEdit,
     QLabel,
     QFormLayout,
-    QMessageBox,
     QGroupBox,
     QComboBox,
 )

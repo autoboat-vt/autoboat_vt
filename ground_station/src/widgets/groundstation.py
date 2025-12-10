@@ -693,6 +693,7 @@ class GroundStationWidget(QWidget):
 
         if constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
             self.clear_waypoints()
+            self.left_text_section.clear()
             constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = False
 
         if not self.telemetry_handler.isRunning():

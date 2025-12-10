@@ -45,6 +45,8 @@ def get_icons() -> SimpleNamespace:
         "delete": qta.icon("mdi.trash-can", color="white"),
         "add": qta.icon("mdi.plus", color="white"),
         "save": qta.icon("mdi.content-save", color="white"),
+        "pause": qta.icon("mdi.pause-circle", color="white"),
+        "play": qta.icon("mdi.play-circle", color="white"),
         "cog": qta.icon("mdi.cog", color="white"),
         "pencil": qta.icon("ei.pencil", color="white"),
         "refresh": qta.icon("mdi.refresh", color="white"),
