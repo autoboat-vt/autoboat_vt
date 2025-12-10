@@ -20,9 +20,11 @@ Without ros2:
     gz topic -t sailboat/propeller_topic -m gz.msgs.Double -p 'data: 200'
 
   3. Set wind:
+
     gz topic -t /wind -m gz.msgs.Vector3d -p "x: 5, y: 5, z: 0"
   
   4. Set max sail angle in degrees:
+
    gz topic -t /sail_limit -m gz.msgs.Double -p 'data: 45'
 
 With ros2:
@@ -34,7 +36,6 @@ With ros2:
   1. Move the rudder:
 
     ros2 topic pub /rudder std_msgs/msg/Float64 'data: .61'
-  
   
   2. Propel the vehicle:
 
@@ -763,36 +764,47 @@ With ros2:
       </plugin>
 
       <!-- Drag on the rudder to make it function -->
-      <plugin
+      <!--plugin
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>.11</cla>
-        <cla_stall>0</cla_stall>
-        <cda>.02</cda>
-        <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
+        <cla>6.3</cla>
+        <cla_stall>-6.3</cla_stall>
+        <cda>1.14</cda>
+        <cda_stall>1.14</cda_stall>
+        <alpha_stall>.785</alpha_stall>
         <a0>0</a0>
         <area>0.0225</area>
         <upward>0 1 0</upward>
         <forward>1 0 0</forward>
         <link_name>rudder_link</link_name>
         <cp>0 0 0</cp>
+      </plugin-->
+
+      <plugin filename="libRudderDynamics.so"
+      name="rudder_dynamics::RudderDynamics">
+        <link_name>rudder_link</link_name>
+        <clmax>1.45</clmax>
+        <cdmax>1.32</cdmax>
+        <area>.0225</area>
+        <fluid_density>1025</fluid_density>
+        <forward>1 0 0</forward>
+        <upward>0 1 0</upward>
       </plugin>
 
       <!-- Drag on the hull parts -->
-       <!-- TODO: get characteristic area of hull -->
+       <!-- TODO: get cla, cda, alpha stall, cla_stall, and cda_stall for hull -->
       <plugin
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>.1</cla>
+        <cla>1</cla>
         <cla_stall>0</cla_stall>
-        <cda>0.003</cda>
+        <cda>0.3</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>0.01858249687</area>
+        <area>0.03716499375</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>left_front_link</link_name>
@@ -803,13 +815,13 @@ With ros2:
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>.1</cla>
+        <cla>1</cla>
         <cla_stall>0</cla_stall>
-        <cda>0.003</cda>
+        <cda>0.3</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>0.01858249687</area>
+        <area>0.03716499375</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>right_front_link</link_name>
@@ -820,13 +832,13 @@ With ros2:
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>.1</cla>
+        <cla>1</cla>
         <cla_stall>0</cla_stall>
-        <cda>0.003</cda>
+        <cda>0.3</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>0.01858249687</area>
+        <area>0.03716499375</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>right_back_link</link_name>
@@ -837,13 +849,13 @@ With ros2:
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>.1</cla>
+        <cla>1</cla>
         <cla_stall>0</cla_stall>
-        <cda>0.003</cda>
+        <cda>0.3</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
-        <area>0.01858249687</area>
+        <area>0.03716499375</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>left_back_link</link_name>
@@ -871,9 +883,9 @@ With ros2:
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>.1</cla>
+        <cla>1</cla>
         <cla_stall>0</cla_stall>
-        <cda>0.003</cda>
+        <cda>0.3</cda>
         <cda_stall>0</cda_stall>
         <alpha_stall>90</alpha_stall>
         <a0>0</a0>
@@ -886,7 +898,6 @@ With ros2:
 
 
       <!-- TODO: get values for clmax and cdmax (cl vs alpha and cd vs alpha curves) -->
-       <!-- TODO: also generally just fix the foil dynamics plugin to make it correct -->
       <plugin filename="libFoilDynamics.so"
       name="foil_dynamics::FoilDynamics">
         <link_name>sail_link</link_name>

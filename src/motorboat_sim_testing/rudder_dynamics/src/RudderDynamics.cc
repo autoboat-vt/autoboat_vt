@@ -1,28 +1,27 @@
-#include "../include/FoilDynamics.hh"
+#include "../include/RudderDynamics.hh"
 #include <cmath>
 
-namespace foil_dynamics
+namespace rudder_dynamics
 {
 
 /////////////////////////////////////////////////
-FoilDynamics::FoilDynamics()
+RudderDynamics::RudderDynamics()
 : rho_(1000.1),
   cp_(0, 0, 0),
   forward_(1, 0, 0),
   upward_(0, 0, 1),
   area_(1.0),
   clmax_(1.5),
-  cdmax_(1.0),
-  wind_(0, 0, 0)
+  cdmax_(1.0)
 {
-  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "FoilDynamics plugin constructed");
+  RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "RudderDynamics plugin constructed");
 }
 
 /////////////////////////////////////////////////
-FoilDynamics::~FoilDynamics() = default;
+RudderDynamics::~RudderDynamics() = default;
 
 /////////////////////////////////////////////////
-void FoilDynamics::Configure(const gz::sim::Entity &_entity,
+void RudderDynamics::Configure(const gz::sim::Entity &_entity,
                              const std::shared_ptr<const sdf::Element> &_sdf,
                              gz::sim::EntityComponentManager &_ecm,
                              gz::sim::EventManager &)
@@ -30,7 +29,7 @@ void FoilDynamics::Configure(const gz::sim::Entity &_entity,
   model_ = gz::sim::Model(_entity);
   if (!model_.Valid(_ecm))
   {
-    RCLCPP_ERROR(rclcpp::get_logger("FoilDynamics"), "Invalid model entity");
+    RCLCPP_ERROR(rclcpp::get_logger("RudderDynamics"), "Invalid model entity");
     return;
   }
 
@@ -43,7 +42,7 @@ void FoilDynamics::Configure(const gz::sim::Entity &_entity,
     auto linkEntity = model_.LinkByName(_ecm, linkName);
     if (linkEntity == gz::sim::kNullEntity)
     {
-      RCLCPP_ERROR(rclcpp::get_logger("FoilDynamics"), "Link [%s] not found", linkName.c_str());
+      RCLCPP_ERROR(rclcpp::get_logger("RudderDynamics"), "Link [%s] not found", linkName.c_str());
     }
     else
     {
@@ -74,21 +73,13 @@ void FoilDynamics::Configure(const gz::sim::Entity &_entity,
   if (_sdf->HasElement("fluid_density"))
     rho_ = _sdf->Get<double>("fluid_density");
 
-  RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"),
-              "FoilDynamics loaded for model [%s]", modelName_.c_str());
-
-  node_.Subscribe("/wind", &FoilDynamics::OnWindMsg, this);
+  RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"),
+              "RudderDynamics loaded for model [%s]", modelName_.c_str());
 }
 
 
 /////////////////////////////////////////////////
-void FoilDynamics::OnWindMsg(const gz::msgs::Vector3d &_msg) {
-  wind_ = gz::msgs::Convert(_msg);
-}
-
-
-/////////////////////////////////////////////////
-void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
+void RudderDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
                           gz::sim::EntityComponentManager &_ecm)
 {
   if (_info.paused)
@@ -115,12 +106,9 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   gz::math::Vector3d ldNormal = forwardI.Cross(upwardI).Normalized();
 
   // Project velocity into lift–drag plane
-  // wind is the base air speed
-  gz::math::Vector3d aw = wind_ - vel;
-  // velInLDPlane is the "apparent velocity" if we assume that wind is the base air speed
-  gz::math::Vector3d velInLDPlane = -aw;
+  gz::math::Vector3d velInLDPlane = vel;
 
-  if (aw.Length() < 0.01)
+  if (velInLDPlane.Length() < 0.01)
     return;
 
   // Drag and lift directions
@@ -150,15 +138,14 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   gz::math::Vector3d drag = cd * q * area_ * dragDir;
   gz::math::Vector3d force = lift + drag;
 
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Velocity: %f %f %f", vel.X(), vel.Y(), vel.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "VelocityInLDPlane: %f %f %f", velInLDPlane.X(), velInLDPlane.Y(), velInLDPlane.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Wind Velocity: %f %f %f", wind_.X(), wind_.Y(), wind_.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Angle: %lf", alpha);
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "LiftDirection: %f %f %f", liftDir.X(), liftDir.Y(), liftDir.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "DragDirection: %f %f %f", dragDir.X(), dragDir.Y(), dragDir.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Lift: %f %f %f", lift.X(), lift.Y(), lift.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Drag: %f %f %f", drag.X(), drag.Y(), drag.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("FoilDynamics"), "Force: %f %f %f\n\n", force.X(), force.Y(), force.Z());
+  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "Velocity: %f %f %f", vel.X(), vel.Y(), vel.Z());
+  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "VelocityInLDPlane: %f %f %f", velInLDPlane.X(), velInLDPlane.Y(), velInLDPlane.Z());
+  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "Angle: %lf", alpha);
+  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "LiftDirection: %f %f %f", liftDir.X(), liftDir.Y(), liftDir.Z());
+  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "DragDirection: %f %f %f", dragDir.X(), dragDir.Y(), dragDir.Z());
+  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "Lift: %f %f %f", lift.X(), lift.Y(), lift.Z());
+  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "Drag: %f %f %f", drag.X(), drag.Y(), drag.Z());
+  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "Force: %f %f %f\n\n", force.X(), force.Y(), force.Z());
 
   // Apply world force
   link_.AddWorldForce(_ecm, force);
@@ -167,9 +154,9 @@ void FoilDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
 }
 
 /////////////////////////////////////////////////
-GZ_ADD_PLUGIN(foil_dynamics::FoilDynamics,
+GZ_ADD_PLUGIN(rudder_dynamics::RudderDynamics,
               gz::sim::System,
-              foil_dynamics::FoilDynamics::ISystemConfigure,
-              foil_dynamics::FoilDynamics::ISystemPreUpdate)
+              rudder_dynamics::RudderDynamics::ISystemConfigure,
+              rudder_dynamics::RudderDynamics::ISystemPreUpdate)
 
-GZ_ADD_PLUGIN_ALIAS(foil_dynamics::FoilDynamics, "foil_dynamics::FoilDynamics")
+GZ_ADD_PLUGIN_ALIAS(rudder_dynamics::RudderDynamics, "rudder_dynamics::RudderDynamics")

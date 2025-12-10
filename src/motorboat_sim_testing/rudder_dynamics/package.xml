@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>rudder_dynamics</name>
+  <version>0.0.0</version>
+  <description>Rudder Dynamics package for AutoboatVT.</description>
+  <maintainer email="ashear@vt.edu">ashear</maintainer>
+  <license>TODO: License declaration</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
