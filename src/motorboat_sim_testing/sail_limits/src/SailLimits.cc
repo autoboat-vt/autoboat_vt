@@ -55,6 +55,9 @@ void SailLimits::Configure(const gz::sim::Entity &_entity,
 /////////////////////////////////////////////////
 void SailLimits::OnLimitMsg(const gz::msgs::Double &_msg) {
   double limit = _msg.data()*3.14159/180;
+  if (limit < 0.01) {
+    limit = 0.01;
+  }
   //RCLCPP_INFO(rclcpp::get_logger("SailLimits"), "Limit updated.");
   // this is to make it smoother - it does this in two timesteps instead of one so the sail doesn't snap.
   limit_ = {(limit_.X() - (-limit))/2, (limit_.Y() - limit)/2};
