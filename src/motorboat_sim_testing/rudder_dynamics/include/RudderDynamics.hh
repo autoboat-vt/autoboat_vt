@@ -44,13 +44,13 @@ namespace rudder_dynamics
 
   private:
     /// \brief The model entity
-    gz::sim::Model model_{gz::sim::kNullEntity};
+    gz::sim::Model model_{{gz::sim::kNullEntity}};
 
     /// \brief The model name (for logging)
     std::string modelName_;
 
-    /// \brief The hydrodynamic link
-    gz::sim::Link link_{gz::sim::kNullEntity};
+    /// \brief The hydrodynamic links
+    std::vector<gz::sim::Link> links_{gz::sim::kNullEntity};
 
     /// \brief Fluid density [kg/m^3]
     double rho_{1000.1};
