@@ -6,8 +6,6 @@ namespace sail_limits
 
 /////////////////////////////////////////////////
 SailLimits::SailLimits()
-:  limit_(-1.6, 1.6),
-   limit2_(-1.6, 1.6)
 {
   RCLCPP_INFO(rclcpp::get_logger("SailLimits"), "SailLimits plugin constructed");
 }
@@ -49,6 +47,10 @@ void SailLimits::Configure(const gz::sim::Entity &_entity,
   }
 
   node_.Subscribe("/sail_limit", &SailLimits::OnLimitMsg, this);
+
+  joint_.EnablePositionCheck(_ecm);
+
+  currentPosition_ = 0;
 }
 
 
@@ -60,8 +62,16 @@ void SailLimits::OnLimitMsg(const gz::msgs::Double &_msg) {
   }
   //RCLCPP_INFO(rclcpp::get_logger("SailLimits"), "Limit updated.");
   // this is to make it smoother - it does this in two timesteps instead of one so the sail doesn't snap.
-  limit_ = {(limit_.X() - (-limit))/2, (limit_.Y() - limit)/2};
-  limit2_ = {-limit, limit};
+  gz::math::Vector2d currentLimit = limit_[0];
+  gz::math::Vector2d newLimit = {-limit, limit};
+  if (fabs(currentPosition_) > limit) {
+    if (currentPosition_ < 0)
+      newLimit = {-limit, -limit+0.01};
+    else
+      newLimit = {limit, limit+0.01};
+  }
+  
+  limit_ = {newLimit, newLimit, newLimit, newLimit, newLimit, newLimit, newLimit, {-limit, limit}};
 }
 
 /////////////////////////////////////////////////
@@ -74,9 +84,16 @@ void SailLimits::PreUpdate(const gz::sim::UpdateInfo &_info,
   if (!joint_.Valid(_ecm))
     return;
   
-  std::vector<gz::math::Vector2d> limitsVector = {limit_};
+  std::vector<gz::math::Vector2d> limitsVector = {limit_[0]};
   joint_.SetPositionLimits(_ecm, limitsVector);
-  limit_ = limit2_;
+  for (int i = 0; i < limit_.size()-1; i++) {
+    limit_[i] = limit_[i+1];
+  }
+
+  auto possiblePos = joint_.Position(_ecm);
+  if (possiblePos) {
+    currentPosition_ = (*possiblePos)[0];
+  }
 }
 
 }

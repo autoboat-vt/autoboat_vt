@@ -21,7 +21,7 @@ Without ros2:
 
   3. Set wind:
 
-    gz topic -t /wind -m gz.msgs.Vector3d -p "x: 5, y: 5, z: 0"
+    gz topic -t /wind -m gz.msgs.Vector3d -p "x: 3, y: 3, z: 0"
   
   4. Set max sail angle in degrees:
 
@@ -793,30 +793,12 @@ With ros2:
         <fluid_density>1025</fluid_density>
         <propeller_diameter>0.125</propeller_diameter>
       </plugin>
-
-      <!-- Drag on the rudder to make it function -->
-      <!--plugin
-        filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-        <air_density>1025</air_density>
-        <cla>6.3</cla>
-        <cla_stall>-6.3</cla_stall>
-        <cda>1.14</cda>
-        <cda_stall>1.14</cda_stall>
-        <alpha_stall>.785</alpha_stall>
-        <a0>0</a0>
-        <area>0.0225</area>
-        <upward>0 1 0</upward>
-        <forward>1 0 0</forward>
-        <link_name>rudder_link</link_name>
-        <cp>0 0 0</cp>
-      </plugin-->
-
+      
       <plugin filename="libRudderDynamics.so"
       name="rudder_dynamics::RudderDynamics">
         <link_name>rudder_link</link_name>
-        <clmax>1.45</clmax>
-        <cdmax>1.32</cdmax>
+        <clmax>2.36</clmax>
+        <cdmax>4.16</cdmax>
         <area>.0225</area>
         <fluid_density>1025</fluid_density>
         <forward>1 0 0</forward>
@@ -824,116 +806,58 @@ With ros2:
       </plugin>
 
       <!-- Drag on the hull parts -->
-       <!-- TODO: get cla, cda, alpha stall, cla_stall, and cda_stall for hull -->
-      <plugin
-        filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-        <air_density>1025</air_density>
-        <cla>1</cla>
-        <cla_stall>0</cla_stall>
-        <cda>0.3</cda>
-        <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
-        <a0>0</a0>
-        <area>0.03716499375</area>
-        <upward>0 0 1</upward>
-        <forward>1 0 0</forward>
+      <!-- TODO: get clmax, cdmax for hull -->
+      <plugin filename="libRudderDynamics.so"
+      name="rudder_dynamics::RudderDynamics">
         <link_name>left_front_link</link_name>
-        <cp>0 0 0</cp>
+        <clmax>2</clmax>
+        <cdmax>4</cdmax>
+        <area>0.03716499375</area>
+        <fluid_density>1025</fluid_density>
+        <forward>1 0 0</forward>
+        <upward>0 0 1</upward>
       </plugin>
 
-      <plugin
-        filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-        <air_density>1025</air_density>
-        <cla>1</cla>
-        <cla_stall>0</cla_stall>
-        <cda>0.3</cda>
-        <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
-        <a0>0</a0>
-        <area>0.03716499375</area>
-        <upward>0 0 1</upward>
-        <forward>1 0 0</forward>
+      <plugin filename="libRudderDynamics.so"
+      name="rudder_dynamics::RudderDynamics">
         <link_name>right_front_link</link_name>
-        <cp>0 0 0</cp>
+        <clmax>2</clmax>
+        <cdmax>4</cdmax>
+        <area>0.03716499375</area>
+        <fluid_density>1025</fluid_density>
+        <forward>1 0 0</forward>
+        <upward>0 0 1</upward>
       </plugin>
 
-      <plugin
-        filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-        <air_density>1025</air_density>
-        <cla>1</cla>
-        <cla_stall>0</cla_stall>
-        <cda>0.3</cda>
-        <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
-        <a0>0</a0>
-        <area>0.03716499375</area>
-        <upward>0 0 1</upward>
-        <forward>1 0 0</forward>
-        <link_name>right_back_link</link_name>
-        <cp>0 0 0</cp>
-      </plugin>
-
-      <plugin
-        filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-        <air_density>1025</air_density>
-        <cla>1</cla>
-        <cla_stall>0</cla_stall>
-        <cda>0.3</cda>
-        <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
-        <a0>0</a0>
-        <area>0.03716499375</area>
-        <upward>0 0 1</upward>
-        <forward>1 0 0</forward>
+      <plugin filename="libRudderDynamics.so"
+      name="rudder_dynamics::RudderDynamics">
         <link_name>left_back_link</link_name>
-        <cp>0 0 0</cp>
-      </plugin>
-
-      <plugin
-        filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-        <air_density>1025</air_density>
-        <cla>.1</cla>
-        <cla_stall>0</cla_stall>
-        <cda>0.003</cda>
-        <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
-        <a0>0</a0>
-        <area>0.0175425</area>
-        <upward>0 0 1</upward>
+        <clmax>2</clmax>
+        <cdmax>4</cdmax>
+        <area>0.03716499375</area>
+        <fluid_density>1025</fluid_density>
         <forward>1 0 0</forward>
-        <link_name>keel_connector_link</link_name>
-        <cp>0 0 0</cp>
-      </plugin>
-
-      <plugin
-        filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-        <air_density>1025</air_density>
-        <cla>1</cla>
-        <cla_stall>0</cla_stall>
-        <cda>0.3</cda>
-        <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
-        <a0>0</a0>
-        <area>0.00962977362</area>
         <upward>0 0 1</upward>
-        <forward>1 0 0</forward>
-        <link_name>keel_link</link_name>
-        <cp>0 0 0</cp>
       </plugin>
 
-
+      <plugin filename="libRudderDynamics.so"
+      name="rudder_dynamics::RudderDynamics">
+        <link_name>right_back_link</link_name>
+        <clmax>2</clmax>
+        <cdmax>4</cdmax>
+        <area>0.03716499375</area>
+        <fluid_density>1025</fluid_density>
+        <forward>1 0 0</forward>
+        <upward>0 0 1</upward>
+      </plugin>
+      
+      <!-- Sail dynamics plugin -->
       <!-- TODO: get values for clmax and cdmax (cl vs alpha and cd vs alpha curves) -->
       <plugin filename="libFoilDynamics.so"
       name="foil_dynamics::FoilDynamics">
         <link_name>sail_link</link_name>
         <clmax>1</clmax>
-        <cdmax>2</cdmax>
+        <cdmax>1.5</cdmax>
         <cop>0.33033 0.45733 0</cop>
         <area>.75</area>
         <fluid_density>1.225</fluid_density>

@@ -9,7 +9,6 @@
 #include <gz/sim/components/World.hh>
 #include <gz/transport/Node.hh>
 #include <gz/plugin/Register.hh>
-#include <gz/msgs/wind.pb.h>
 #include <gz/msgs/Utility.hh>
 
 #include <gz/math/Vector2.hh>
@@ -51,11 +50,11 @@ namespace sail_limits
     /// \brief The rotation joint
     gz::sim::Joint joint_{gz::sim::kNullEntity};
 
-    /// \brief Initial joint limits
-    gz::math::Vector2d limit_{-1.6, 1.6};
+    /// \brief Current joint posiiton
+    double currentPosition_;
 
-    /// \brief Joint limit 2 for smoother motion
-    gz::math::Vector2d limit2_{-1.6, 1.6};
+    /// \brief Jint limits
+    std::vector<gz::math::Vector2d> limit_{{-1.6, 1.6}, {-1.6, 1.6}, {-1.6, 1.6}, {-1.6, 1.6}, {-1.6, 1.6}, {-1.6, 1.6}, {-1.6, 1.6}, {-1.6, 1.6}};
 
     /// \brief Gazebo communication node.
     gz::transport::Node node_;
