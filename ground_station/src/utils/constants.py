@@ -1,35 +1,19 @@
-"""
-Module containing constants for the ground station application.
-
-Constants:
-- TelemetryStatus: Enum representing the status of telemetry data fetching.
-- ICONS: A namespace containing application icons.
-- YELLOW, PURPLE, BLUE, WHITE, RED, GREY, GREEN: Color constants for the application.
-- PALLETTE: A QPalette object for the application's color scheme.
-- STYLE_SHEET: A string containing the application's style sheet.
-- WINDOW_BOX: QRect defining the main window dimensions.
-- TEN_SECOND_TIMER, HALF_SECOND_TIMER, TEN_MS_TIMER, ONE_MS_TIMER: QTimer objects for various intervals.
-- TELEMETRY_SERVER_URL: Base URL for the telemetry server.
-- TELEMETRY_SERVER_ENDPOINTS: Dictionary of endpoints for the telemetry server.
-- WAYPOINTS_SERVER_URL: URL for the local waypoints server.
-- TOP_LEVEL_DIR, SRC_DIR, DATA_DIR: Paths to the main directories of the application.
-- HTML_MAP_PATH, HTML_MAP: Path and content of the HTML file used by the map widget in the ground station.
-- HTML_CAMERA_PATH, HTML_CAMERA: Path and content of the HTML file used by the camera widget.
-- ASSETS_DIR, AUTO_PILOT_PARAMS_DIR, BOAT_DATA_DIR, BOAT_DATA_LIMITS_DIR, BUOY_DATA_DIR: Paths to various data directories.
-"""
+"""Module containing constants for the ground station application."""
 
 import os
 import shutil
-import requests
-from utils import misc
-from requests.adapters import HTTPAdapter
-from urllib.parse import urljoin
-from pathlib import PurePath
-from qtpy.QtCore import Qt, QRect, QTimer
-from qtpy.QtGui import QColor, QPalette
-from types import SimpleNamespace
+import time
 from enum import auto
+from pathlib import PurePath
+from types import SimpleNamespace
+from urllib.parse import urljoin
+
+import httpx
+from qtpy.QtCore import QRect, Qt
+from qtpy.QtGui import QColor, QPalette
 from strenum import StrEnum
+
+from utils import misc
 
 
 class TelemetryStatus(StrEnum):
@@ -38,8 +22,9 @@ class TelemetryStatus(StrEnum):
 
     Attributes
     ----------
-    `SUCCESS`: Indicates that telemetry data was fetched successfully. \\
-    `FAILURE`: Indicates that telemetry data fetching failed.
+    - `SUCCESS`: Indicates that telemetry data was fetched successfully.
+    - `FAILURE`: Indicates that telemetry data fetching failed.
+    - `WRONG_FORMAT`: Indicates that the fetched telemetry data was in an incorrect format.
 
     Inherits
     --------
@@ -48,6 +33,7 @@ class TelemetryStatus(StrEnum):
 
     SUCCESS = auto()
     FAILURE = auto()
+    WRONG_FORMAT = auto()
 
 
 # see `main.py` for where this is set
@@ -118,6 +104,8 @@ TEN_MS_TIMER = misc.create_timer(10)
 
 ONE_MS_TIMER = misc.create_timer(1)
 
+START_TIME = time.time()
+
 # server ports
 ASSET_SERVER_PORT = 8000
 GO_SERVER_PORT = 3001
@@ -128,7 +116,8 @@ WAYPOINTS_SERVER_URL = f"http://localhost:{GO_SERVER_PORT}/waypoints"
 # base url for telemetry server (the CIA is inside of my brain...)
 TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
 
-TELEMETRY_SERVER_INSTANCE_ID: int = -1  # -1 means no instance selected
+TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE: int = -1  # -1 means no instance selected
+TELEMETRY_SERVER_INSTANCE_ID: int = TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE
 HAS_TELEMETRY_SERVER_INSTANCE_CHANGED: bool = False
 
 # endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint` + `/`
@@ -176,11 +165,10 @@ TELEMETRY_SERVER_ENDPOINTS = dict(
     **_waypoints_endpoints,
 )
 
-TELEMETRY_TIMEOUT_SECONDS = 5
+TELEMETRY_TIMEOUT_SECONDS = 10
 TELEMETRY_RETRY_ATTEMPTS = 3
 
-REQ_SESSION = requests.Session()
-REQ_SESSION.mount(TELEMETRY_SERVER_URL, HTTPAdapter(max_retries=TELEMETRY_RETRY_ATTEMPTS))
+REQ_SESSION = httpx.Client(timeout=TELEMETRY_TIMEOUT_SECONDS, http2=True)
 
 try:
     # should be the path to wherever `ground_station` is located

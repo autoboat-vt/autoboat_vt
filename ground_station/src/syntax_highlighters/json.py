@@ -1,7 +1,8 @@
 from qtpy.QtCore import QRegularExpression
 from qtpy.QtGui import QFont
-from utils.constants import WHITE, YELLOW, PURPLE, BLUE
+
 from syntax_highlighters.base_highlighter import BaseHighlighter
+from utils.constants import BLUE, PURPLE, WHITE, YELLOW
 
 
 class JsonHighlighter(BaseHighlighter):

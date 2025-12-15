@@ -1,14 +1,17 @@
 import time
-import requests
+from collections import deque
+from typing import Any
+from urllib.parse import urljoin
+
 import numpy as np
 import numpy.typing as npt
-from urllib.parse import urljoin
-from typing import Any
-from utils import constants, thread_classes, misc
-
-from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QWidget, QGridLayout, QCheckBox, QDialog
 import pyqtgraph as pg
+from httpx import RequestError
+from qtpy.QtCore import Qt, Signal
+from qtpy.QtWidgets import QCheckBox, QDialog, QGridLayout, QWidget
+
+from utils import constants, misc
+from utils.thread_classes import BoatStatusThreadRouter
 
 
 class GraphViewer(QWidget):
@@ -20,19 +23,24 @@ class GraphViewer(QWidget):
     `QWidget`
     """
 
+    boat_data_signal = Signal(tuple)
+
     def __init__(self) -> None:
         super().__init__()
 
         self.timer = misc.copy_qtimer(constants.TEN_MS_TIMER)
         self.plots: list[pg.PlotItem] = []
-        self.time_stopped: float = 0
-        self.time_started: float = 0
+        self.fetch_interval_ms: int = 0
+
+        self.time_stopped: float | None = None
+        self.time_started: float | None = None
+
         self.important_keys: list[str] = ["speed", "distance_to_next_waypoint", "bearing", "heading", "true_wind_speed"]
         self.available_keys: list[str] = []
 
-        self.history_length: int = 500
-        self.x_axis: list[float] = []
-        self.data: dict[str, list[npt.NDArray[np.float64]]] = {}
+        self.history_length: int = 200
+        self.x_axis: deque[np.float64] = deque(maxlen=self.history_length)
+        self.data: dict[str, deque[npt.NDArray[np.float64]]] = {}
 
         self.main_layout = QGridLayout()
 
@@ -40,92 +48,100 @@ class GraphViewer(QWidget):
         self.main_layout.addWidget(self.graph_layout_widget, 0, 0, 1, 2)
 
         self.open_graphs_dialog_button = misc.pushbutton_maker("Select Graphs", constants.ICONS.cog, self.select_graphs)
-        self.unpause_button = misc.pushbutton_maker("Unpause Graphs", constants.ICONS.play, self.unpause_timer)
-        self.pause_button = misc.pushbutton_maker(
-            "Pause Graphs", constants.ICONS.pause, self.pause_timer, is_clickable=False
-        )
-        self.main_layout.addWidget(self.unpause_button, 1, 0)
-        self.main_layout.addWidget(self.pause_button, 1, 1)
-        self.main_layout.addWidget(self.open_graphs_dialog_button, 2, 0, 1, 2)
+        self.clear_graphs_button = misc.pushbutton_maker("Clear Graphs", constants.ICONS.refresh, self.clear_graphs)
+
+        self.main_layout.addWidget(self.clear_graphs_button, 1, 0)
+        self.main_layout.addWidget(self.open_graphs_dialog_button, 1, 1)
         self.setLayout(self.main_layout)
 
-        self.telemetry_handler = thread_classes.TelemetryUpdater()
-        self.timer.timeout.connect(self.update_graph_start)
-        self.telemetry_handler.boat_data_fetched.connect(self.update_graph)
+        self.telemetry_handler = BoatStatusThreadRouter.BoatStatusFetcherThread()
+        self.telemetry_handler.response.connect(self.update_graph)
+        self.telemetry_handler.start()
 
-    def update_graph(self, boat_data: dict[str, Any]) -> None:
+    def update_graph(self, request_result: tuple[dict[str, Any], constants.TelemetryStatus]) -> None:
         """Update the graphs with new telemetry data.
 
         Parameters
         ----------
-        boat_data
-            A dictionary containing the latest telemetry data.
+        request_result
+            A tuple containing:
+                - a dictionary of boat status,
+                - a `TelemetryStatus` enum value indicating the status of the request.
         """
 
-        try:
-            self.available_keys = {k: v for k, v in boat_data.items() if isinstance(v, (int, float))}
-            boat_data = {k: v for k, v in boat_data.items() if k in self.important_keys}
-            current_time = time.time()
+        if not constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
+            self.boat_data_signal.emit(request_result)
+            boat_data, telemetry_status = request_result
 
-            if len(self.x_axis) < self.history_length:
+            if telemetry_status is not constants.TelemetryStatus.SUCCESS:
+                print("[Warning] Failed to fetch telemetry data for graphs, skipping update.")
+                return
+
+            try:
+                self.available_keys = {
+                    key
+                    for key in boat_data
+                    if isinstance(boat_data[key], (int, float)) and key != "current_waypoint_index"
+                }
+                filtered_values = {key: float(boat_data.get(key, np.nan)) for key in self.important_keys}
+
+                current_time = time.time() - constants.START_TIME
                 self.x_axis.append(current_time)
-                for key in boat_data.keys():
+
+                for key, val in filtered_values.items():
                     if key not in self.data:
-                        self.data[key] = [np.array([boat_data[key]], dtype=np.float64)]
+                        self.data[key] = deque(maxlen=self.history_length)
+                    self.data[key].append(np.array([val], dtype=np.float64))
 
-                    else:
-                        self.data[key].append(np.array([boat_data[key]], dtype=np.float64))
+                if not self.plots:
+                    num_keys = len(self.important_keys)
+                    last_is_odd = num_keys % 2 == 1
 
-            else:
-                self.x_axis.pop(0)
-                self.x_axis.append(current_time)
-                for key in boat_data.keys():
-                    if key not in self.data:
-                        self.data[key] = [np.array([boat_data[key]], dtype=np.float64)]
+                    for i, key in enumerate(self.data):
+                        if last_is_odd and i == num_keys - 1:
+                            plot_row = i // 2
+                            plot_col = 0
+                            col_span = 2
+                        else:
+                            plot_row = i // 2
+                            plot_col = i % 2
+                            col_span = 1
 
-                    else:
-                        self.data[key].pop(0)
-                        self.data[key].append(np.array([boat_data[key]], dtype=np.float64))
+                        plot_title = key.replace("_", " ").title()
+                        plot_item = self.graph_layout_widget.addPlot(
+                            row=plot_row, col=plot_col, colspan=col_span, title=plot_title
+                        )
 
-            if not self.plots:
-                num_keys = len(self.important_keys)
-                last_is_odd = num_keys % 2 == 1
+                        if col_span == 1:
+                            plot_item.setPreferredWidth(400)
 
-                for i, key in enumerate(self.data.keys()):
-                    # make last plot span 2 columns if number of plots is odd
-                    if last_is_odd and i == num_keys - 1:
-                        plot_row = i // 2
-                        plot_col = 0
-                        col_span = 2
-                    else:
-                        plot_row = i // 2
-                        plot_col = i % 2
-                        col_span = 1
+                        plot_item.setMouseEnabled(x=True, y=True)
+                        plot_item.setLabel("bottom", "Time", "s")
+                        plot_item.showGrid(x=True, y=True)
 
-                    plot_title = key.replace("_", " ").title()
-                    plot_item = self.graph_layout_widget.addPlot(
-                        row=plot_row, col=plot_col, colspan=col_span, title=plot_title
-                    )
+                        self.plots.append(plot_item)
+                        curve = plot_item.plot(pen=pg.mkPen(color=(255, 0, 0)))
 
-                    # set equal preferred widths for all plots
-                    if col_span == 1:
-                        plot_item.setPreferredWidth(400)
+                        y = np.concatenate(list(self.data[key]))
+                        x = list(self.x_axis)[-len(y) :]
+                        curve.setData(x, y)
 
-                    plot_item.setMouseEnabled(x=True, y=True)
-                    plot_item.setLabel("bottom", "Time", "s")
-                    plot_item.showGrid(x=True, y=True)
+                else:
+                    for i, key in enumerate(self.data.keys()):
+                        curve = self.plots[i].listDataItems()[0]
+                        y = np.concatenate(list(self.data[key]))
+                        x = list(self.x_axis)[-len(y) :]
+                        curve.setData(x, y)
 
-                    self.plots.append(plot_item)
-                    curve = plot_item.plot(pen=pg.mkPen(color=(255, 0, 0)))
-                    curve.setData(self.x_axis, np.concatenate(self.data[key]))
+            except Exception as e:
+                print(f"[Error] Failed to update graphs: {e}")
 
-            else:
-                for i, key in enumerate(self.data.keys()):
-                    curve = self.plots[i].listDataItems()[0]
-                    curve.setData(self.x_axis, np.concatenate(self.data[key]))
-
-        except Exception as e:
-            print(f"[Error] Failed to update graphs: {e}")
+        else:
+            self.x_axis.clear()
+            self.data.clear()
+            self.plots.clear()
+            self.graph_layout_widget.clear()
+            self.boat_data_signal.emit(({}, request_result[1]))
 
     def select_graphs(self) -> None:
         """Open a dialog to select which graphs to display."""
@@ -137,8 +153,7 @@ class GraphViewer(QWidget):
                     urljoin(
                         constants.TELEMETRY_SERVER_ENDPOINTS["get_boat_status"],
                         str(constants.TELEMETRY_SERVER_INSTANCE_ID),
-                    ),
-                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                    )
                 ).json()
 
                 if not isinstance(response, dict):
@@ -149,7 +164,7 @@ class GraphViewer(QWidget):
                 }
                 print("[Info] Successfully pulled available telemetry keys from server.")
 
-            except requests.exceptions.RequestException:
+            except RequestError:
                 print("[Error] Failed to connect to telemetry server to fetch available keys.")
                 return
 
@@ -181,46 +196,14 @@ class GraphViewer(QWidget):
         self.graph_layout_widget.clear()
         print(f"[Info] Selected graphs updated: {', '.join(selected_keys)}")
 
-    def pause_timer(self) -> None:
-        """Pause the timer which fetches data for the plots."""
-
-        self.time_stopped = time.time()
-        self.timer.stop()
+    def clear_graphs(self) -> None:
+        """Clear all graphs and data."""
 
         self.x_axis.clear()
         self.data.clear()
         self.plots.clear()
         self.graph_layout_widget.clear()
-
-        self.pause_button.setDisabled(True)
-        self.unpause_button.setDisabled(False)
-        print("[Info] Graph widget paused.")
-
-    def unpause_timer(self) -> None:
-        """Unpause the timer which fetches data for the plots."""
-
-        self.time_started = time.time()
-        elapsed_time = self.time_started - self.time_stopped
-        self.timer.start()
-        self.pause_button.setDisabled(False)
-        self.unpause_button.setDisabled(True)
-
-        print(f"[Info] Graph widget unpaused after being paused for {elapsed_time:.2f} seconds.")
-
-    def update_graph_start(self) -> None:
-        """Start the telemetry data fetching thread."""
-
-        if constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
-            self.timer.stop()
-            self.x_axis.clear()
-            self.data.clear()
-            self.plots.clear()
-            self.graph_layout_widget.clear()
-            self.pause_button.setDisabled(True)
-            self.unpause_button.setDisabled(False)
-
-        if not self.telemetry_handler.isRunning():
-            self.telemetry_handler.start()
+        print("[Info] Cleared all graphs and data.")
 
 
 class GraphSelectionDialog(QDialog):

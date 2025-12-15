@@ -24,7 +24,7 @@ __all__ = [
 from .autopilot_param_editor.editor import AutopilotParamEditor
 from .camera_widget.camera import CameraWidget
 from .console_output import ConsoleOutputWidget
-from .groundstation import GroundStationWidget
 from .graph_viewer import GraphViewer
+from .groundstation import GroundStationWidget
 from .instance_handler import InstanceHandler
 from .popup_edit import TextEditWindow

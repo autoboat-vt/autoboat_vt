@@ -44,23 +44,15 @@ pydict2class
 dataclass_wizard
 click
 pympler
-ruff
-
-
 
 # Groundstation
-urllib3
 QtAwesome
-python-dateutil
-PyQtWebEngine
-PyQt5
 QtPy
+PyQt5
+PyQtWebEngine
 pyqtgraph
-packaging
-idna
-charset-normalizer
+httpx
 jsonc-parser
-requests
 PyYAML
 pytz
-strenum
+StrEnum

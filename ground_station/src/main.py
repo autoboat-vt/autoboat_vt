@@ -1,33 +1,32 @@
-import sys
-import threading
 import http.server
 import socketserver
+import sys
+import threading
+
+from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 
 from utils import constants, misc
 from widgets import (
-    GroundStationWidget,
-    ConsoleOutputWidget,
     AutopilotParamEditor,
     CameraWidget,
-    InstanceHandler,
+    ConsoleOutputWidget,
     GraphViewer,
+    GroundStationWidget,
+    InstanceHandler,
 )
-from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 
 
 class MainWindow(QMainWindow):
-    """
-    Main window for the ground station application.
-    """
+    """Main window for the ground station application."""
 
     @staticmethod
     def start_asset_server() -> None:
         """Start a quiet HTTP server for static assets."""
 
-        Handler = lambda *args, **kwargs: http.server.SimpleHTTPRequestHandler(
-            *args, directory=constants.ASSETS_DIR.as_posix(), **kwargs
-        )
-        with socketserver.TCPServer(("", constants.ASSET_SERVER_PORT), Handler) as httpd:
+        def handler(*args: tuple, **kwargs: dict) -> http.server.SimpleHTTPRequestHandler:
+            return http.server.SimpleHTTPRequestHandler(*args, directory=constants.ASSETS_DIR.as_posix(), **kwargs)
+
+        with socketserver.TCPServer(("", constants.ASSET_SERVER_PORT), handler) as httpd:
             print(f"[Info] Serving HTTP assets on port {constants.ASSET_SERVER_PORT}...")
             httpd.serve_forever()
 
@@ -47,6 +46,7 @@ class MainWindow(QMainWindow):
 
             if constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
                 self.load_main_tabs()
+
             else:
                 self.main_widget.addTab(self.instance_handler, "Instance Handler")
                 self.check_timer = misc.copy_qtimer(constants.TEN_MS_TIMER)
@@ -64,12 +64,14 @@ class MainWindow(QMainWindow):
     def load_main_tabs(self) -> None:
         try:
             self.main_widget.addTab(self.instance_handler, "Instance Handler")
-            self.main_widget.addTab(GroundStationWidget(), "Ground Station")
-            self.main_widget.addTab(GraphViewer(), "Graph Viewer")
+            graph_viewer = GraphViewer()
+            self.main_widget.addTab(GroundStationWidget(graph_viewer.boat_data_signal), "Ground Station")
+            self.main_widget.addTab(graph_viewer, "Graph Viewer")
             self.main_widget.addTab(AutopilotParamEditor(), "Autopilot Parameters")
             self.main_widget.addTab(CameraWidget(), "Camera Feed")
             self.main_widget.setCurrentIndex(2)
             print("[Info] Main application tabs loaded.")
+
         except Exception as e:
             print(f"Error loading main tabs: {e}")
 

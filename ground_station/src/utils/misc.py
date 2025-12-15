@@ -1,14 +1,23 @@
 """
 Module containing miscellaneous utility functions and classes for the ground station application.
+
+Functions:
+- get_icons: Load and return a set of icons for the application.
+- pushbutton_maker: Create a QPushButton with specified features.
+- show_message_box: Show a message box with specified title, message, icon, and buttons
+- show_input_dialog: Show an input dialog to get user input.
+- create_timer: Create a QTimer with specified interval and single-shot status.
+- copy_qtimer: Create a copy of a QTimer with the same interval and single-shot status.
 """
 
-import qtawesome as qta
-from qtpy.QtWidgets import QPushButton, QMessageBox, QInputDialog, QCheckBox
-from qtpy.QtCore import QTimer
-from qtpy.QtGui import QIcon
+from collections.abc import Callable
 from types import SimpleNamespace
 from typing import TypeVar
-from collections.abc import Callable
+
+import qtawesome as qta
+from qtpy.QtCore import QTimer
+from qtpy.QtGui import QIcon
+from qtpy.QtWidgets import QCheckBox, QInputDialog, QMessageBox, QPushButton
 
 T = TypeVar("T")
 
@@ -144,7 +153,7 @@ def show_message_box(
     icon
         An optional icon to display in the message box.
     buttons
-        A list of standard buttons to show. Defaults to `[QMessageBox.Ok]`. \\
+        A list of standard buttons to show. Defaults to `[QMessageBox.Ok]`. <br>
         Example: `[QMessageBox.Yes, QMessageBox.No]`
     remember_choice_option
         If `True`, adds a "Remember my choice" checkbox to the message box.
@@ -206,7 +215,7 @@ def show_input_dialog(
     default_value
         The default value to show in the input field.
     input_type
-        The type to convert the input to. Defaults to `str`. \\
+        The type to convert the input to. Defaults to `str`. <br>
         Example: `int`, `float`, etc.
 
     Returns
