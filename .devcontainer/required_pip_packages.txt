@@ -51,8 +51,6 @@ QtPy
 PyQt5
 PyQtWebEngine
 pyqtgraph
-httpx
-httpx[http2]
 jsonc-parser
 PyYAML
 pytz
