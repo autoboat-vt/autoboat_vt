@@ -7,7 +7,7 @@ from pathlib import PurePath
 from typing import Any, Literal
 from urllib.parse import urljoin
 
-from httpx import RequestError
+from requests.exceptions import RequestException
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import (
@@ -317,7 +317,7 @@ class GroundStationWidget(QWidget):
                 self.browser.page().runJavaScript(js_code)
                 print(f"[Info] Waypoints sent successfully. Waypoints: {self.waypoints}")
 
-            except RequestError as e:
+            except RequestException as e:
                 print(f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")
 
         else:
@@ -330,7 +330,7 @@ class GroundStationWidget(QWidget):
                     json=self.waypoints,
                 )
 
-            except RequestError as e:
+            except RequestException as e:
                 print(f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")
 
     def pull_waypoints(self) -> None:
@@ -361,7 +361,7 @@ class GroundStationWidget(QWidget):
             self.can_pull_waypoints = False
             self.pull_waypoints_button.setDisabled(not self.can_pull_waypoints)
 
-        except RequestError as e:
+        except RequestException as e:
             print(f"[Error] Failed to pull waypoints. Exception: {e}")
 
     def clear_waypoints(self) -> None:

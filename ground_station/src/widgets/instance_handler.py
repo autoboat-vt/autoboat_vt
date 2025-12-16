@@ -11,7 +11,7 @@ from urllib.parse import urljoin
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-from httpx import RequestError
+from requests.exceptions import RequestException
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QComboBox,
@@ -276,7 +276,7 @@ class InstanceHandler(QWidget):
                         constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
                     ).json()
 
-            except RequestError:
+            except RequestException:
                 self.connection_history.append(constants.TelemetryStatus.FAILURE)
                 return
 
@@ -320,7 +320,7 @@ class InstanceHandler(QWidget):
                             f"The instance you were connected to, #{instance_id}, has been removed. A new instance has been created with ID #{new_instance_id} and you have been connected to it."
                         )
 
-                    except RequestError as e:
+                    except RequestException as e:
                         print(f"[Error] Failed to create a new instance, Error: {e}")
 
         for instance in instances:
@@ -379,7 +379,7 @@ class InstanceHandler(QWidget):
             self.widgets_by_id[new_instance_id] = new_widget
             print(f"[Info] Created new instance with ID #{new_instance_id}.")
 
-        except RequestError as e:
+        except RequestException as e:
             print(f"[Error] Failed to create a new instance: {e}")
 
         except ValueError as e:
@@ -403,7 +403,7 @@ class InstanceHandler(QWidget):
 
             print(f"[Info] {alert_message}")
 
-        except RequestError as e:
+        except RequestException as e:
             print(f"[Error] Failed to delete all instances: {e}")
 
     def filter_instances(self, text: str) -> None:
@@ -643,7 +643,7 @@ class InstanceWidget(QFrame):
                 self.instance_identifier = new_name
                 print(f"[Info] Instance #{self.instance_id} name updated to {self.instance_identifier}.")
 
-            except RequestError as e:
+            except RequestException as e:
                 print(f"[Error] Failed to update identifier for instance #{self.instance_id}: {e}")
 
         else:
@@ -667,7 +667,7 @@ class InstanceWidget(QFrame):
                 constants.START_TIME = time.time()
                 print(f"[Info] Connected to instance #{self.instance_id} ({self.instance_identifier}).")
 
-            except RequestError as e:
+            except RequestException as e:
                 print(f"[Error] Failed to connect to instance #{self.instance_id}: {e}")
 
     def on_delete_clicked(self) -> None:
@@ -689,7 +689,7 @@ class InstanceWidget(QFrame):
                     f"[Info] Instance #{self.instance_id} deleted and new instance created with ID #{constants.TELEMETRY_SERVER_INSTANCE_ID}."
                 )
 
-            except RequestError as e:
+            except RequestException as e:
                 print(f"[Error] Failed to delete instance #{self.instance_id}: {e}")
 
         else:
@@ -699,5 +699,5 @@ class InstanceWidget(QFrame):
                 )
                 print(f"[Info] Instance #{self.instance_id} deleted successfully.")
 
-            except RequestError as e:
+            except RequestException as e:
                 print(f"[Error] Failed to delete instance #{self.instance_id}: {e}")

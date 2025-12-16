@@ -4,7 +4,7 @@ from pathlib import PurePath
 from typing import Any
 from urllib.parse import urljoin
 
-from httpx import RequestError
+from requests.exceptions import RequestException
 from jsonc_parser.parser import JsoncParser
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
@@ -144,7 +144,7 @@ class AutopilotParamEditor(QWidget):
                 json=existing_data,
             )
             print("[Info] All parameters sent successfully.")
-        except RequestError as e:
+        except RequestException as e:
             print(f"[Error] Failed to send all parameters: {e}")
 
     def pull_all_parameters(self) -> None:
@@ -171,7 +171,7 @@ class AutopilotParamEditor(QWidget):
                         print(f"[Warning] {widget.name} not found in pulled data.")
 
             print("[Info] All parameters pulled successfully.")
-        except RequestError as e:
+        except RequestException as e:
             print(f"[Error] Failed to pull all parameters: {e}")
 
     def load_parameters_from_file(self) -> None:
@@ -431,7 +431,7 @@ class AutopilotParamWidget(QFrame):
                 )
             ).json()
 
-        except RequestError as e:
+        except RequestException as e:
             print(f"[Error] Failed to fetch existing autopilot parameters. Cannot send {self.name}: {e}")
             return
 
@@ -452,7 +452,7 @@ class AutopilotParamWidget(QFrame):
                 )
                 print(f"[Info] Successfully sent {self.name} with value {self.value}.")
 
-            except RequestError as e:
+            except RequestException as e:
                 print(f"[Error] Failed to send {self.name} with value {self.value}: {e}")
                 return
 
@@ -489,7 +489,7 @@ class AutopilotParamWidget(QFrame):
             else:
                 print(f"[Warning] {self.name} not found in pulled data.")
 
-        except RequestError as e:
+        except RequestException as e:
             print(f"[Error] Failed to pull value for {self.name}: {e}")
 
         self.reset_button.setEnabled(True)

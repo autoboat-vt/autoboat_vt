@@ -8,7 +8,7 @@ from pathlib import PurePath
 from types import SimpleNamespace
 from urllib.parse import urljoin
 
-import httpx
+import requests
 from qtpy.QtCore import QRect, Qt
 from qtpy.QtGui import QColor, QPalette
 from strenum import StrEnum
@@ -168,7 +168,10 @@ TELEMETRY_SERVER_ENDPOINTS = dict(
 TELEMETRY_TIMEOUT_SECONDS = 10
 TELEMETRY_RETRY_ATTEMPTS = 3
 
-REQ_SESSION = httpx.Client(timeout=TELEMETRY_TIMEOUT_SECONDS, http2=True)
+REQ_SESSION = requests.Session()
+ADAPTER = requests.adapters.HTTPAdapter(max_retries=TELEMETRY_RETRY_ATTEMPTS)
+REQ_SESSION.mount("http://", ADAPTER)
+REQ_SESSION.mount("https://", ADAPTER)
 
 try:
     # should be the path to wherever `ground_station` is located

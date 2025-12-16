@@ -6,7 +6,7 @@ from urllib.parse import urljoin
 import numpy as np
 import numpy.typing as npt
 import pyqtgraph as pg
-from httpx import RequestError
+from requests.exceptions import RequestException
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QCheckBox, QDialog, QGridLayout, QWidget
 
@@ -164,7 +164,7 @@ class GraphViewer(QWidget):
                 }
                 print("[Info] Successfully pulled available telemetry keys from server.")
 
-            except RequestError:
+            except RequestException:
                 print("[Error] Failed to connect to telemetry server to fetch available keys.")
                 return
 

@@ -19,7 +19,7 @@ __all__ = [
 
 from urllib.parse import urljoin
 
-from httpx import RequestError
+from requests import RequestException
 from qtpy.QtCore import QThread, Signal
 
 from utils import constants
@@ -75,7 +75,7 @@ class AutopilotThreadRouter:
                 if not isinstance(data, dict):
                     raise TypeError
 
-            except RequestError:
+            except RequestException:
                 self.response.emit(({}, constants.TelemetryStatus.FAILURE))
 
             except TypeError:
@@ -124,7 +124,7 @@ class AutopilotThreadRouter:
                 if not isinstance(data, dict):
                     raise TypeError
 
-            except RequestError:
+            except RequestException:
                 self.response.emit(({}, constants.TelemetryStatus.FAILURE))
 
             except TypeError:
@@ -184,7 +184,7 @@ class BoatStatusThreadRouter:
                     if not isinstance(data, dict):
                         raise TypeError
 
-                except RequestError:
+                except RequestException:
                     self.response.emit(({}, constants.TelemetryStatus.FAILURE))
 
                 except TypeError:
@@ -241,7 +241,7 @@ class InstanceManagerThreadRouter:
                 if not all(isinstance(instance, dict) for instance in data):
                     raise TypeError
 
-            except RequestError:
+            except RequestException:
                 self.response.emit(([], constants.TelemetryStatus.FAILURE))
 
             except TypeError:
@@ -308,7 +308,7 @@ class WaypointThreadRouter:
                     if not all(isinstance(cord, (int, float)) for cord in waypoint):
                         raise TypeError
 
-            except RequestError:
+            except RequestException:
                 self.response.emit(([], constants.TelemetryStatus.FAILURE))
 
             except TypeError:
@@ -359,7 +359,7 @@ class WaypointThreadRouter:
                         if not all(isinstance(cord, (int, float)) for cord in waypoint):
                             raise TypeError
 
-                except RequestError:
+                except RequestException:
                     self.response.emit(([], constants.TelemetryStatus.FAILURE))
 
                 except TypeError:
@@ -408,7 +408,7 @@ class ImageFetcher(QThread):
             if base64_encoded_image is None:
                 raise ValueError("Image data is None")
 
-        except RequestError:
+        except RequestException:
             print("[Warning] Failed to fetch image. Using cool guy image.")
             with open(constants.ASSETS_DIR / "cool-guy-base64.txt") as f:
                 base64_encoded_image = f.read()
