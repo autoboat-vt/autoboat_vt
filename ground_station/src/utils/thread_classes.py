@@ -2,265 +2,371 @@
 Module containing classes for handling background tasks in the ground station application.
 
 Contains:
-- TelemetryUpdater: Fetches telemetry data from the telemetry server.
-- InstanceFetcher: Fetches the currently available instances from the telemetry server.
-- LocalWaypointFetcher: Fetches waypoints from the local server.
-- RemoteWaypointFetcher: Fetches waypoints from the telemetry server.
-- TelemetryUpdater: Fetches telemetry data from the telemetry server.
+- AutopilotThreadRouter: Class containing `QThread` classes dealing with the `autopilot_parameters` endpoint.
+- BoatStatusThreadRouter: Class containing `QThread` classes dealing with the `boat_status` endpoint.
+- InstanceManagerThreadRouter: Class containing `QThread` classes dealing with the `instance_manager` endpoint.
+- WaypointThreadRouter: Class containing `QThread` classes dealing with waypoints, both from the `waypoints` endpoint and the local server.
+- ImageFetcher: `QThread` class for fetching images from the telemetry server.
 """
 
-__all__ = ["ImageFetcher", "LocalWaypointFetcher", "RemoteWaypointFetcher", "TelemetryUpdater"]
+__all__ = [
+    "AutopilotThreadRouter",
+    "BoatStatusThreadRouter",
+    "InstanceManagerThreadRouter",
+    "WaypointThreadRouter",
+    "ImageFetcher",
+]
 
-import requests
-from utils import constants
 from urllib.parse import urljoin
+
+from requests import RequestException
 from qtpy.QtCore import QThread, Signal
 
+from utils import constants
 
-class TelemetryUpdater(QThread):
+
+class AutopilotThreadRouter:
     """
-    Thread to fetch telemetry data from the telemetry server.
+    Class containing `QThread` classes dealing with the `autopilot_parameters` endpoint.
 
-    Inherits
-    --------
-    `QThread`
-
-    Attributes
+    Subclasses
     ----------
-    boat_data_fetched: `Signal`
-        Signal to send boat data to the main thread. Emits a dictionary containing telemetry data.
-
-    request_url_change: `Signal`
-        Signal to request a change in the telemetry server URL.
-        <ul>
-        <li> <code>SUCCESS</code> indicates that the telemetry server is reachable and waypoints were fetched successfully.</li>
-        <li> <code>FAILURE</code> indicates that the telemetry server is not reachable and waypoints could not be fetched.</li>
-        </ul>
+    - `ParamFetcherThread` -> Fetches autopilot parameters.
+    - `DefaultsFetcherThread` -> Fetches default autopilot parameters.
     """
 
-    boat_data_fetched = Signal(dict)
-    request_url_change = Signal(constants.TelemetryStatus)
+    class ParamFetcherThread(QThread):
+        """
+        Thread to fetch autopilot parameters from the telemetry server.
 
-    def __init__(self) -> None:
-        super().__init__()
+        Inherits
+        -------
+        `QThread`
 
-    def get_boat_data(self) -> None:
-        """Fetch boat data from the telemetry server and emit it."""
+        Attributes
+        ----------
+        response
+            Signal to send autopilot parameters to the main thread. Emits a tuple containing:
+                - a dictionary of autopilot parameters,
+                - a `TelemetryStatus` enum value indicating the status of the request.
+        """
 
-        try:
-            boat_status = constants.REQ_SESSION.get(
-                urljoin(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["get_boat_status"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)
-                ),
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-            ).json()
+        response = Signal(tuple)
 
-            if not isinstance(boat_status, dict):
-                raise TypeError
+        def __init__(self) -> None:
+            super().__init__()
 
-            self.request_url_change.emit(constants.TelemetryStatus.SUCCESS)
+        def run(self) -> None:
+            """Run the thread to fetch autopilot parameters from the telemetry server."""
 
-        except requests.exceptions.RequestException:
-            boat_status = {}
-            self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
+            self.get_params()
 
-        except TypeError:
-            print(
-                f"[Warning] Telemetry data is not in expected format. Using empty dict. \nExpected: {dict}, Received: {boat_status}"
-            )
-            boat_status = {}
-            self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
+        def get_params(self) -> None:
+            """Fetch autopilot parameters from the telemetry server and emit them."""
 
-        self.boat_data_fetched.emit(boat_status)
+            try:
+                data = constants.REQ_SESSION.get(
+                    urljoin(
+                        constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
+                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                    )
+                ).json()
 
-    def run(self) -> None:
-        """Run the thread to fetch boat data from the telemetry server."""
-
-        self.get_boat_data()
-
-
-class InstanceFetcher(QThread):
-    """
-    Thread to fetch the currently available instances from the telemetry server.
-
-    Inherits
-    -------
-    `QThread`
-
-    Attributes
-    ----------
-    instances_fetched: `Signal`
-        Signal to send instances to the main thread. Emits a list of dictionaries containing instance data.
-
-    request_url_change: `Signal`
-        Signal to request a change in the telemetry server URL.
-        <ul>
-        <li> <code>SUCCESS</code> indicates that the telemetry server is reachable and waypoints were fetched successfully.</li>
-        <li> <code>FAILURE</code> indicates that the telemetry server is not reachable and waypoints could not be fetched.</li>
-        </ul>
-    """
-
-    instances_fetched: list[dict] = Signal(list)
-    request_url_change: constants.TelemetryStatus = Signal(constants.TelemetryStatus)
-
-    def __init__(self) -> None:
-        super().__init__()
-
-    def run(self) -> None:
-        """Run the thread to fetch instances from the telemetry server."""
-
-        self.get_instances()
-
-    def get_instances(self) -> None:
-        """Fetch instances from the telemetry server and emit them."""
-
-        try:
-            instances = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["get_all_instance_info"],
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-            ).json()
-
-            if not isinstance(instances, list):
-                raise TypeError
-
-            if not all(isinstance(instance, dict) for instance in instances):
-                raise TypeError
-
-            self.request_url_change.emit(constants.TelemetryStatus.SUCCESS)
-
-        except requests.exceptions.RequestException:
-            instances = []
-            self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
-
-        except TypeError:
-            print(
-                f"[Warning] Instances data is not in expected format. Using empty list.\nExpected: {list[dict]}, Received: {instances}",
-            )
-            instances = []
-            self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
-
-        self.instances_fetched.emit(instances)
-
-
-class LocalWaypointFetcher(QThread):
-    """
-    Thread to fetch waypoints from the local server.
-
-    Inherits
-    -------
-    `QThread`
-
-    Attributes
-    ----------
-    waypoints_fetched: `Signal`
-        Signal to send waypoints to the main thread. Emits a list of lists containing
-        waypoints, where each waypoint is a list of `[latitude, longitude]`.
-    """
-
-    waypoints_fetched = Signal(list)
-
-    def __init__(self) -> None:
-        super().__init__()
-
-    def run(self) -> None:
-        """Run the thread to fetch waypoints from the local server."""
-
-        self.get_waypoints()
-
-    def get_waypoints(self) -> None:
-        """Fetch waypoints from the local server and emit them."""
-
-        try:
-            waypoints = constants.REQ_SESSION.get(constants.WAYPOINTS_SERVER_URL).json()
-
-            if not isinstance(waypoints, list):
-                raise TypeError
-
-            for waypoint in waypoints:
-                if not isinstance(waypoint, (tuple, list)):
-                    raise TypeError
-                if not all(isinstance(cord, (int, float)) for cord in waypoint):
+                if not isinstance(data, dict):
                     raise TypeError
 
-        except requests.exceptions.RequestException as e:
-            print(f"[Warning] Failed to fetch waypoints. Using empty list. Exception: {e}")
-            waypoints = []
+            except RequestException:
+                self.response.emit(({}, constants.TelemetryStatus.FAILURE))
 
-        except TypeError:
-            print(
-                f"[Warning] Waypoints data is not in expected format. Using empty list.\nExpected: {list[list[float]]}, Received: {waypoints}",
-            )
-            waypoints = []
+            except TypeError:
+                self.response.emit(({}, constants.TelemetryStatus.WRONG_FORMAT))
 
-        self.waypoints_fetched.emit(waypoints)
+            else:
+                self.response.emit((data, constants.TelemetryStatus.SUCCESS))
+
+    class DefaultsFetcherThread(QThread):
+        """
+        Thread to fetch default autopilot parameters from the telemetry server.
+
+        Inherits
+        -------
+        `QThread`
+
+        Attributes
+        ----------
+        response
+            Signal to send default autopilot parameters to the main thread. Emits a tuple containing:
+                - a dictionary of default autopilot parameters,
+                - a `TelemetryStatus` enum value indicating the status of the request.
+        """
+
+        response = Signal(tuple)
+
+        def __init__(self) -> None:
+            super().__init__()
+
+        def run(self) -> None:
+            """Run the thread to fetch default autopilot parameters from the telemetry server."""
+
+            self.get_defaults()
+
+        def get_defaults(self) -> None:
+            """Fetch default autopilot parameters from the telemetry server and emit them."""
+
+            try:
+                data = constants.REQ_SESSION.get(
+                    urljoin(
+                        constants.TELEMETRY_SERVER_ENDPOINTS["get_default_autopilot_parameters"],
+                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                    )
+                ).json()
+
+                if not isinstance(data, dict):
+                    raise TypeError
+
+            except RequestException:
+                self.response.emit(({}, constants.TelemetryStatus.FAILURE))
+
+            except TypeError:
+                self.response.emit(({}, constants.TelemetryStatus.WRONG_FORMAT))
+
+            else:
+                self.response.emit((data, constants.TelemetryStatus.SUCCESS))
 
 
-class RemoteWaypointFetcher(QThread):
+class BoatStatusThreadRouter:
     """
-    Thread to fetch waypoints from the telemetry server.
+    Class containing `QThread` classes dealing with the `boat_status` endpoint.
 
-    Inherits
-    -------
-    `QThread`
-
-    Attributes
+    Subclasses
     ----------
-    waypoints_fetched: `Signal`
-        Signal to send waypoints to the main thread. Emits a list of lists containing
-        waypoints, where each waypoint is a list of `[latitude, longitude]`.
-
-    request_url_change: `Signal`
-        Signal to request a change in the telemetry server URL. Emits a value from the `constants.TelemetryStatus`. \\
-        `SUCCESS` indicates that the telemetry server is reachable and waypoints were fetched successfully. \\
-        `FAILURE` indicates that the telemetry server is not reacha le and waypoints could not be fetched.
+    - `BoatStatusFetcherThread` -> Fetches boat status via WebSocket.
     """
 
-    waypoints_fetched = Signal(list)
-    request_url_change = Signal(constants.TelemetryStatus)
+    class BoatStatusFetcherThread(QThread):
+        """
+        Thread to fetch boat status from the telemetry server via HTTP polling.
 
-    def __init__(self) -> None:
-        super().__init__()
+        Inherits
+        -------
+        `QThread`
 
-    def run(self) -> None:
-        """Run the thread to fetch waypoints from the telemetry server."""
+        Attributes
+        ----------
+        response
+            Signal to send boat status to the main thread. Emits a tuple containing:
+                - a dictionary of boat status,
+                - a `TelemetryStatus` enum value indicating the status of the request.
+        """
 
-        self.get_waypoints()
+        response = Signal(tuple)
 
-    def get_waypoints(self) -> None:
-        """Fetch waypoints from the telemetry server and emit them."""
+        def __init__(self) -> None:
+            super().__init__()
 
-        try:
-            waypoints = constants.REQ_SESSION.get(
-                urljoin(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)
-                ),
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-            ).json()
+        def run(self) -> None:
+            """Run the thread to fetch boat status from the telemetry server."""
 
-            if not isinstance(waypoints, list):
-                raise TypeError
+            self.get_boat_status()
 
-            for waypoint in waypoints:
-                if not isinstance(waypoint, (tuple, list)):
+        def get_boat_status(self) -> None:
+            """Fetch boat status from the telemetry server and emit it continuously."""
+
+            while True:
+                try:
+                    data = constants.REQ_SESSION.get(
+                        urljoin(
+                            constants.TELEMETRY_SERVER_ENDPOINTS["get_boat_status"],
+                            str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                        )
+                    ).json()
+
+                    if not isinstance(data, dict):
+                        raise TypeError
+
+                except RequestException:
+                    self.response.emit(({}, constants.TelemetryStatus.FAILURE))
+
+                except TypeError:
+                    self.response.emit(({}, constants.TelemetryStatus.WRONG_FORMAT))
+
+                else:
+                    self.response.emit((data, constants.TelemetryStatus.SUCCESS))
+
+
+class InstanceManagerThreadRouter:
+    """
+    Class containing `QThread` classes dealing with the `instance_manager` endpoint.
+
+    Subclasses
+    ----------
+    - `InstanceFetcherThread` -> Fetches instances.
+    """
+
+    class InstanceFetcherThread(QThread):
+        """
+        Thread to fetch instances from the telemetry server.
+
+        Inherits
+        -------
+        `QThread`
+
+        Attributes
+        ----------
+        response
+            Signal to send instances to the main thread. Emits a tuple containing:
+                - a list of dictionaries representing instances,
+                - a `TelemetryStatus` enum value indicating the status of the request.
+        """
+
+        response = Signal(tuple)
+
+        def __init__(self) -> None:
+            super().__init__()
+
+        def run(self) -> None:
+            """Run the thread to fetch instances from the telemetry server."""
+
+            self.get_instances()
+
+        def get_instances(self) -> None:
+            """Fetch instances from the telemetry server and emit them."""
+
+            try:
+                data = constants.REQ_SESSION.get(constants.TELEMETRY_SERVER_ENDPOINTS["get_all_instance_info"]).json()
+
+                if not isinstance(data, list):
                     raise TypeError
 
-                if not all(isinstance(cord, (int, float)) for cord in waypoint):
+                if not all(isinstance(instance, dict) for instance in data):
                     raise TypeError
 
-            self.request_url_change.emit(constants.TelemetryStatus.SUCCESS)
+            except RequestException:
+                self.response.emit(([], constants.TelemetryStatus.FAILURE))
 
-        except requests.exceptions.RequestException:
-            waypoints = []
-            self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
+            except TypeError:
+                self.response.emit(([], constants.TelemetryStatus.WRONG_FORMAT))
 
-        except TypeError:
-            print(
-                f"[Warning] Waypoints data is not in expected format. Using empty list.\nExpected: {list[list[float]]}, Received: {waypoints}",
-            )
-            waypoints = []
-            self.request_url_change.emit(constants.TelemetryStatus.FAILURE)
+            else:
+                self.response.emit((data, constants.TelemetryStatus.SUCCESS))
 
-        self.waypoints_fetched.emit(waypoints)
+
+class WaypointThreadRouter:
+    """
+    Class containing `QThread` classes dealing with waypoints.
+
+    Subclasses
+    ----------
+    - `RemoteFetcherThread` -> Fetches waypoints from the telemetry server.
+    - `LocalFetcherThread` -> Fetches waypoints from the local server.
+    """
+
+    class RemoteFetcherThread(QThread):
+        """
+        Thread to fetch waypoints from the telemetry server.
+
+        Inherits
+        -------
+        `QThread`
+
+        Attributes
+        ----------
+        response
+            Signal to send waypoints to the main thread. Emits a tuple containing:
+                - a list of waypoints, where each waypoint is a list of `[latitude, longitude]`,
+                - a `TelemetryStatus` enum value indicating the status of the request.
+        """
+
+        response = Signal(tuple)
+
+        def __init__(self) -> None:
+            super().__init__()
+
+        def run(self) -> None:
+            """Run the thread to fetch waypoints from the telemetry server."""
+
+            self.get_waypoints()
+
+        def get_waypoints(self) -> None:
+            """Fetch waypoints from the telemetry server and emit them."""
+
+            try:
+                data = constants.REQ_SESSION.get(
+                    urljoin(
+                        constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"],
+                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                    )
+                ).json()
+
+                if not isinstance(data, list):
+                    raise TypeError
+
+                for waypoint in data:
+                    if not isinstance(waypoint, (tuple, list)):
+                        raise TypeError
+
+                    if not all(isinstance(cord, (int, float)) for cord in waypoint):
+                        raise TypeError
+
+            except RequestException:
+                self.response.emit(([], constants.TelemetryStatus.FAILURE))
+
+            except TypeError:
+                self.response.emit(([], constants.TelemetryStatus.WRONG_FORMAT))
+
+            else:
+                self.response.emit((data, constants.TelemetryStatus.SUCCESS))
+
+    class LocalFetcherThread(QThread):
+        """
+        Thread to fetch waypoints from the local server.
+
+        Inherits
+        -------
+        `QThread`
+
+        Attributes
+        ----------
+        response
+            Signal to send waypoints to the main thread. Emits a tuple containing:
+                - a list of waypoints, where each waypoint is a list of `[latitude, longitude]`,
+                - a `TelemetryStatus` enum value indicating the status of the request.
+        """
+
+        response = Signal(tuple)
+
+        def __init__(self) -> None:
+            super().__init__()
+
+        def run(self) -> None:
+            """Run the thread to fetch waypoints from the local server."""
+
+            self.get_waypoints()
+
+        def get_waypoints(self) -> None:
+            """Fetch waypoints from the local server and emit them."""
+
+            while True:
+                try:
+                    data = constants.REQ_SESSION.get(constants.WAYPOINTS_SERVER_URL).json()
+
+                    if not isinstance(data, list):
+                        raise TypeError
+
+                    for waypoint in data:
+                        if not isinstance(waypoint, (tuple, list)):
+                            raise TypeError
+                        if not all(isinstance(cord, (int, float)) for cord in waypoint):
+                            raise TypeError
+
+                except RequestException:
+                    self.response.emit(([], constants.TelemetryStatus.FAILURE))
+
+                except TypeError:
+                    self.response.emit(([], constants.TelemetryStatus.WRONG_FORMAT))
+
+                else:
+                    self.response.emit((data, constants.TelemetryStatus.SUCCESS))
 
 
 class ImageFetcher(QThread):
@@ -273,11 +379,11 @@ class ImageFetcher(QThread):
 
     Attributes
     ----------
-    image_fetched: `Signal`
+    data_fetched
         Signal to send image to the main thread. Emits a base64 encoded string of the image.
     """
 
-    image_fetched = Signal(str)
+    data_fetched = Signal(str)
 
     def __init__(self) -> None:
         super().__init__()
@@ -295,15 +401,14 @@ class ImageFetcher(QThread):
                 urljoin(
                     constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
                     str(constants.TELEMETRY_SERVER_INSTANCE_ID),
-                ),
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                )
             ).json()
 
             base64_encoded_image = image_data.get("current_camera_image")
             if base64_encoded_image is None:
                 raise ValueError("Image data is None")
 
-        except requests.exceptions.RequestException:
+        except RequestException:
             print("[Warning] Failed to fetch image. Using cool guy image.")
             with open(constants.ASSETS_DIR / "cool-guy-base64.txt") as f:
                 base64_encoded_image = f.read()
@@ -313,4 +418,4 @@ class ImageFetcher(QThread):
             with open(constants.ASSETS_DIR / "cool-guy-base64.txt") as f:
                 base64_encoded_image = f.read()
 
-        self.image_fetched.emit(base64_encoded_image)
+        self.data_fetched.emit(base64_encoded_image)

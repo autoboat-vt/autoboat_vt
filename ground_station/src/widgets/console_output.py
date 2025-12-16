@@ -1,10 +1,10 @@
 import sys
 from datetime import datetime
-import pytz
 
+import pytz
 from qtpy.QtCore import QThread, Signal
-from qtpy.QtGui import QTextCursor, QCloseEvent
-from qtpy.QtWidgets import QWidget, QVBoxLayout, QTextEdit
+from qtpy.QtGui import QCloseEvent, QTextCursor
+from qtpy.QtWidgets import QTextEdit, QVBoxLayout, QWidget
 
 from syntax_highlighters import ConsoleHighlighter
 

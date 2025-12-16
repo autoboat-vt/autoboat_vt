@@ -1,4 +1,4 @@
-from qtpy.QtGui import QSyntaxHighlighter, QTextCharFormat, QFont, QColor
+from qtpy.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCharFormat
 
 
 class BaseHighlighter(QSyntaxHighlighter):
@@ -50,4 +50,4 @@ class BaseHighlighter(QSyntaxHighlighter):
         NotImplementedError
         """
 
-        raise NotImplementedError("Subclasses must implement highlightBlock()")
+        raise NotImplementedError("Subclasses must implement highlightBlock()!")

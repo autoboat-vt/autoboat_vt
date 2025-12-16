@@ -47,19 +47,13 @@ pympler
 ruff
 jetson-stats
 
-
 # Groundstation
-urllib3
 QtAwesome
-python-dateutil
-PyQtWebEngine
-PyQt5
 QtPy
-packaging
-idna
-charset-normalizer
+PyQt5
+PyQtWebEngine
+pyqtgraph
 jsonc-parser
-requests
 PyYAML
 pytz
-strenum
+StrEnum

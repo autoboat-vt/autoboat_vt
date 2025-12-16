@@ -1,28 +1,35 @@
-import requests
+from __future__ import annotations
+
 import random
-from utils import constants, thread_classes, misc
-from urllib.parse import urljoin
+import time
+from collections import deque
 from datetime import datetime, timezone
-from typing import Any
-from collections.abc import Callable
 from enum import auto
-from strenum import StrEnum
+from typing import TYPE_CHECKING, Any
+from urllib.parse import urljoin
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+from requests.exceptions import RequestException
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
-    QApplication,
-    QWidget,
+    QComboBox,
+    QFormLayout,
     QFrame,
     QGridLayout,
-    QHBoxLayout,
-    QVBoxLayout,
-    QScrollArea,
-    QLineEdit,
-    QLabel,
-    QFormLayout,
-    QMessageBox,
     QGroupBox,
-    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QScrollArea,
+    QVBoxLayout,
+    QWidget,
 )
+from strenum import StrEnum
+
+from utils import constants, misc
+from utils.thread_classes import InstanceManagerThreadRouter
 
 
 class InstanceInfo:
@@ -54,7 +61,7 @@ class InstanceInfo:
             self.updated_at = self.utc_to_local(datetime.fromisoformat(data["updated_at"]))
 
         except (KeyError, TypeError, ValueError) as e:
-            raise ValueError(f"Invalid instance_info data: {e}")
+            raise ValueError("Invalid instance_info data!") from e
 
     def as_dict(self) -> dict[str, Any]:
         """
@@ -97,8 +104,8 @@ class InstanceInfo:
 
 class InstanceHandler(QWidget):
     """
-    This widget is responsible for providing a interface that allows users to \\
-    select a instance of the simulation to connect to. Additionally, this interface \\
+    This widget is responsible for providing a interface that allows users to <br>
+    select a instance of the simulation to connect to. Additionally, this interface <br>
     will allow users to manage instances that are no longer running but still available.
 
     Inherits
@@ -114,12 +121,16 @@ class InstanceHandler(QWidget):
         ----------
         TIME_SINCE_UPDATED
             Sort by time since last update.
+        USER_ALPHABETICAL
+            Sort by user in alphabetical order.
         INSTANCE_ID
             Sort by instance ID.
         INSTANCE_NAME
             Sort by instance name.
         CREATED_AT
             Sort by creation timestamp.
+        RANDOM_SORT
+            Sort randomly.
         NO_SORT
             No sorting applied.
 
@@ -129,9 +140,11 @@ class InstanceHandler(QWidget):
         """
 
         TIME_SINCE_UPDATED = auto()
+        USER_ALPHABETICAL = auto()
         INSTANCE_ID = auto()
         INSTANCE_NAME = auto()
         CREATED_AT = auto()
+        RANDOM_SORT = auto()
         NO_SORT = auto()
 
     def __init__(self) -> None:
@@ -143,7 +156,7 @@ class InstanceHandler(QWidget):
         self.sort_by: InstanceHandler.SortBy = InstanceHandler.SortBy.TIME_SINCE_UPDATED
         self.on_sort_by_changed(self.sort_by)
 
-        self.connection_history: list[constants.TelemetryStatus] = []
+        self.connection_history: deque[constants.TelemetryStatus] = deque(maxlen=2)
         self.current_search_text: str = ""
 
         self.main_layout = QGridLayout()
@@ -211,12 +224,9 @@ class InstanceHandler(QWidget):
         self.main_layout.addWidget(self.scroll, 4, 0)
         self.main_layout.addWidget(self.button_groupbox, 5, 0)
 
-        self.instance_fetcher = thread_classes.InstanceFetcher()
+        self.instance_fetcher = InstanceManagerThreadRouter.InstanceFetcherThread()
         self.timer.timeout.connect(self.update_instances_starter)
-
-        self.instance_fetcher.instances_fetched.connect(self.update_instances)
-        self.instance_fetcher.request_url_change.connect(self.instance_fetch_failure)
-
+        self.instance_fetcher.response.connect(self.update_instances)
         self.timer.start()
 
     def update_instances_starter(self) -> None:
@@ -225,27 +235,34 @@ class InstanceHandler(QWidget):
         if not self.instance_fetcher.isRunning():
             self.instance_fetcher.start()
 
-    def update_instances(self, instances: list[dict]) -> None:
+    def update_instances(self, request_result: tuple[list[dict], constants.TelemetryStatus]) -> None:
         """
         Update the instance widgets based on the fetched instances.
 
         Parameters
         ----------
-        instances
-            A list of dictionaries containing instance data.
+        request_result
+            A tuple containing:
+            - a list of instance information dictionaries,
+            - a `TelemetryStatus` enum value indicating the status of the request.
         """
 
+        instances, telemetry_status = request_result
+
+        self.connection_history.append(telemetry_status)
+
+        # double check connection if we just reconnected to avoid false positives
         if (
             self.connection_history[-1] is constants.TelemetryStatus.SUCCESS
             and self.connection_history[0] is constants.TelemetryStatus.FAILURE
         ):
             try:
-                available_ids = constants.REQ_SESSION.get(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["get_all_ids"], timeout=constants.TELEMETRY_TIMEOUT_SECONDS
-                ).json()
+                available_ids = constants.REQ_SESSION.get(constants.TELEMETRY_SERVER_ENDPOINTS["get_all_ids"]).json()
 
-                if isinstance(available_ids, list) and all(
-                    isinstance(instance_id, int) for instance_id in available_ids
+                if (
+                    isinstance(available_ids, list)
+                    and available_ids
+                    and all(isinstance(instance_id, int) for instance_id in available_ids)
                 ):
                     constants.TELEMETRY_SERVER_INSTANCE_ID = random.choice(available_ids)
                     print(
@@ -257,11 +274,10 @@ class InstanceHandler(QWidget):
                     )
                     constants.TELEMETRY_SERVER_INSTANCE_ID = constants.REQ_SESSION.get(
                         constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
-                        timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                     ).json()
 
-            except requests.exceptions.RequestException:
-                self.connection_history[-1] = constants.TelemetryStatus.FAILURE
+            except RequestException:
+                self.connection_history.append(constants.TelemetryStatus.FAILURE)
                 return
 
         self.instances_container.setUpdatesEnabled(False)
@@ -296,8 +312,7 @@ class InstanceHandler(QWidget):
                 else:
                     try:
                         new_instance_id: int = constants.REQ_SESSION.get(
-                            constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
-                            timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                            constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"]
                         ).json()
                         constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
                         constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
@@ -305,7 +320,7 @@ class InstanceHandler(QWidget):
                             f"The instance you were connected to, #{instance_id}, has been removed. A new instance has been created with ID #{new_instance_id} and you have been connected to it."
                         )
 
-                    except requests.exceptions.RequestException as e:
+                    except RequestException as e:
                         print(f"[Error] Failed to create a new instance, Error: {e}")
 
         for instance in instances:
@@ -352,13 +367,11 @@ class InstanceHandler(QWidget):
 
         try:
             new_instance_id: int = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"]
             ).json()
 
             instance_info: dict[str, Any] = constants.REQ_SESSION.get(
-                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_instance_info"], str(new_instance_id)),
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_instance_info"], str(new_instance_id))
             ).json()
 
             new_widget = InstanceWidget(instance_info)
@@ -366,7 +379,7 @@ class InstanceHandler(QWidget):
             self.widgets_by_id[new_instance_id] = new_widget
             print(f"[Info] Created new instance with ID #{new_instance_id}.")
 
-        except requests.exceptions.RequestException as e:
+        except RequestException as e:
             print(f"[Error] Failed to create a new instance: {e}")
 
         except ValueError as e:
@@ -376,16 +389,12 @@ class InstanceHandler(QWidget):
         """Delete all instances from the telemetry server."""
 
         try:
-            constants.REQ_SESSION.delete(
-                constants.TELEMETRY_SERVER_ENDPOINTS["delete_all_instances"],
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
-            )
+            constants.REQ_SESSION.delete(constants.TELEMETRY_SERVER_ENDPOINTS["delete_all_instances"])
             alert_message = "All instances deleted successfully."
 
-            if constants.TELEMETRY_SERVER_INSTANCE_ID != -1:
+            if constants.TELEMETRY_SERVER_INSTANCE_ID != constants.TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE:
                 new_instance_id: int = constants.REQ_SESSION.get(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
-                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                    constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"]
                 ).json()
 
                 alert_message = f"All instances deleted. New instance created with ID #{new_instance_id}."
@@ -394,7 +403,7 @@ class InstanceHandler(QWidget):
 
             print(f"[Info] {alert_message}")
 
-        except requests.exceptions.RequestException as e:
+        except RequestException as e:
             print(f"[Error] Failed to delete all instances: {e}")
 
     def filter_instances(self, text: str) -> None:
@@ -417,7 +426,7 @@ class InstanceHandler(QWidget):
 
         self.update_status_label()
 
-    def on_sort_by_changed(self, sort_method: "InstanceHandler.SortBy") -> None:
+    def on_sort_by_changed(self, sort_method: InstanceHandler.SortBy) -> None:
         """
         Handle the sort by dropdown change event.
 
@@ -430,7 +439,17 @@ class InstanceHandler(QWidget):
         try:
             self.sort_by = InstanceHandler.SortBy(sort_method)
 
-            if self.sort_by == InstanceHandler.SortBy.INSTANCE_ID:
+            if self.sort_by == InstanceHandler.SortBy.TIME_SINCE_UPDATED:
+                self.sort_key: Callable[[InstanceWidget], float] = lambda w: (
+                    (datetime.now().astimezone() - w.updated_at).total_seconds()
+                    if (w.updated_at - w.created_at).total_seconds() > 1.0
+                    else float("inf")
+                )
+
+            elif self.sort_by == InstanceHandler.SortBy.USER_ALPHABETICAL:
+                self.sort_key: Callable[[InstanceWidget], str] = lambda w: w.user.lower()
+
+            elif self.sort_by == InstanceHandler.SortBy.INSTANCE_ID:
                 self.sort_key: Callable[[InstanceWidget], int] = lambda w: w.instance_id
 
             elif self.sort_by == InstanceHandler.SortBy.INSTANCE_NAME:
@@ -439,15 +458,11 @@ class InstanceHandler(QWidget):
             elif self.sort_by == InstanceHandler.SortBy.CREATED_AT:
                 self.sort_key: Callable[[InstanceWidget], datetime] = lambda w: w.created_at
 
-            elif self.sort_by == InstanceHandler.SortBy.TIME_SINCE_UPDATED:
-                self.sort_key: Callable[[InstanceWidget], float] = lambda w: (
-                    (datetime.now().astimezone() - w.updated_at).total_seconds()
-                    if (w.updated_at - w.created_at).total_seconds() > 1.0
-                    else float("inf")
-                )
+            elif self.sort_by == InstanceHandler.SortBy.RANDOM_SORT:
+                self.sort_key: Callable[[InstanceWidget], float] = lambda _: random.random()
 
             elif self.sort_by == InstanceHandler.SortBy.NO_SORT:
-                self.sort_key: Callable[[InstanceWidget], int] = lambda w: 0
+                self.sort_key: Callable[[InstanceWidget], int] = lambda _: 0
 
         except ValueError:
             print(f"[Warning] Unknown sort method selected: {sort_method}. Defaulting to INSTANCE_ID.")
@@ -475,32 +490,10 @@ class InstanceHandler(QWidget):
         else:
             self.status_label.setText(f"{status_prefix}{instance_count} instances found")
 
-    def instance_fetch_failure(self, telemetry_status: constants.TelemetryStatus) -> None:
-        """
-        Handles the case where fetching instances from the telemetry server fails.
-
-        Parameters
-        ----------
-        telemetry_status
-            <ul>
-            <li> <code>SUCCESS</code> indicates that the telemetry server is reachable and instances were fetched successfully.</li>
-            <li> <code>FAILURE</code> indicates that the telemetry server is not reachable and instances could not be fetched.</li>
-            </ul>
-        """
-
-        if len(self.connection_history) < 2:
-            self.connection_history.append(telemetry_status)
-        else:
-            self.connection_history.pop(0)
-            self.connection_history.append(telemetry_status)
-
-        if telemetry_status == constants.TelemetryStatus.FAILURE:
-            print("[Warning] Failed to fetch instances from the telemetry server.")
-
 
 class InstanceWidget(QFrame):
     """
-    This widget is responsible for displaying the information of a single instance \\
+    This widget is responsible for displaying the information of a single instance <br>
     and providing controls to connect or disconnect from it.
 
     Parameters
@@ -645,15 +638,12 @@ class InstanceWidget(QFrame):
         if new_name not in ("", self.instance_identifier):
             try:
                 constants.REQ_SESSION.post(
-                    urljoin(
-                        constants.TELEMETRY_SERVER_ENDPOINTS["set_instance_name"], f"{self.instance_id}/{new_name}"
-                    ),
-                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["set_instance_name"], f"{self.instance_id}/{new_name}")
                 )
                 self.instance_identifier = new_name
                 print(f"[Info] Instance #{self.instance_id} name updated to {self.instance_identifier}.")
 
-            except requests.exceptions.RequestException as e:
+            except RequestException as e:
                 print(f"[Error] Failed to update identifier for instance #{self.instance_id}: {e}")
 
         else:
@@ -674,9 +664,10 @@ class InstanceWidget(QFrame):
 
                 constants.TELEMETRY_SERVER_INSTANCE_ID = self.instance_id
                 constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
+                constants.START_TIME = time.time()
                 print(f"[Info] Connected to instance #{self.instance_id} ({self.instance_identifier}).")
 
-            except requests.exceptions.RequestException as e:
+            except RequestException as e:
                 print(f"[Error] Failed to connect to instance #{self.instance_id}: {e}")
 
     def on_delete_clicked(self) -> None:
@@ -685,31 +676,28 @@ class InstanceWidget(QFrame):
         if self.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
             try:
                 new_instance_id: int = constants.REQ_SESSION.get(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
-                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                    constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"]
                 ).json()
                 constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
                 constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
 
                 constants.REQ_SESSION.delete(
-                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["delete_instance"], str(self.instance_id)),
-                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["delete_instance"], str(self.instance_id))
                 )
 
                 print(
                     f"[Info] Instance #{self.instance_id} deleted and new instance created with ID #{constants.TELEMETRY_SERVER_INSTANCE_ID}."
                 )
 
-            except requests.exceptions.RequestException as e:
+            except RequestException as e:
                 print(f"[Error] Failed to delete instance #{self.instance_id}: {e}")
 
         else:
             try:
                 constants.REQ_SESSION.delete(
-                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["delete_instance"], str(self.instance_id)),
-                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["delete_instance"], str(self.instance_id))
                 )
                 print(f"[Info] Instance #{self.instance_id} deleted successfully.")
 
-            except requests.exceptions.RequestException as e:
+            except RequestException as e:
                 print(f"[Error] Failed to delete instance #{self.instance_id}: {e}")
