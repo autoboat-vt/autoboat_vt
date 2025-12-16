@@ -58,7 +58,7 @@ class TempPowerStatsPublisher(Node):
                 except:
                     continue
             
-            cpu_utilization_percents.append(value) 
+                cpu_utilization_percents.append(value) 
         
             
         jetson_stats_message.cpu_utilization_percent = float(sum(cpu_utilization_percents)/len(cpu_utilization_percents))
