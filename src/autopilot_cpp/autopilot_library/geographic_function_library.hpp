@@ -26,7 +26,7 @@
 
 // choose vincenty for more precise but slower calculations
 // choose haversine for less precise but faster calculations
-constexpr std::string DISTANCE_FUNCTION_TO_USE = "haversine";
+const std::string DISTANCE_FUNCTION_TO_USE = "haversine";
 
 
 // Constants taken from here: https://en.wikipedia.org/wiki/World_Geodetic_System
@@ -34,18 +34,6 @@ constexpr double WGS84_A = 6378137.0;              // semi-major axis
 constexpr double WGS84_E2 = 6.69437999014e-3;      // eccentricity^2
 constexpr double WGS84_F = 1 / 298.257223563;     // flattening
 
-
-
-double get_distance(double latitude1, double longitude1, double latitude2, double longitude2) {
-    if (DISTANCE_FUNCTION_TO_USE == "vincenty") 
-        return get_distance_vincenty(latitude1, longitude1, latitude2, longitude2);
-
-    else if (DISTANCE_FUNCTION_TO_USE == "haversine")
-        return get_distance_haversine(latitude1, longitude1, latitude2, longitude2);
-
-    else 
-        throw std::runtime_error("DISTANCE_FUNCTION_TO_USE must be either vincenty or haversine");
-}
 
 
 
@@ -95,7 +83,7 @@ double get_distance_vincenty(double latitude1, double longitude1, double latitud
         sin_sigma = sqrt(pow((cos(u2) * sin(lam)), 2.) + pow(cos(u1)*sin(u2) - sin(u1)*cos(u2)*cos(lam), 2.));
         if (sin_sigma == 0.) {
             // Coincident points, prevent division by zero resulting in NaN.
-            return {0., 0.};
+            return 0.;
         }
         cos_sigma = sin(u1) * sin(u2) + cos(u1) * cos(u2) * cos(lam);
         sigma = atan(sin_sigma / cos_sigma);
@@ -118,9 +106,23 @@ double get_distance_vincenty(double latitude1, double longitude1, double latitud
     const double B = (usq / 1024) * (256 + usq * (-128 + usq * (74 - 47 * usq)));
     const double delta_sig = B * sin_sigma * (cos2sigma + 0.25 * B * (cos_sigma * (-1 + 2 * pow(cos2sigma, 2.)) - (1. / 6) * B * cos2sigma * (-3 + 4 * pow(sin_sigma, 2.)) * (-3 + 4 * pow(cos2sigma, 2.))));
     const double dis = rpol * A * (sigma - delta_sig);
-    const double azi1 = atan2((cos(u2) * sin(lam)), (cos(u1) * sin(u2) - sin(u1) * cos(u2) * cos(lam)));
+    // const double azi1 = atan2((cos(u2) * sin(lam)), (cos(u1) * sin(u2) - sin(u1) * cos(u2) * cos(lam)));
 
     return dis;
+}
+
+
+
+
+double get_distance(double latitude1, double longitude1, double latitude2, double longitude2) {
+    if (DISTANCE_FUNCTION_TO_USE == "vincenty") 
+        return get_distance_vincenty(latitude1, longitude1, latitude2, longitude2);
+
+    else if (DISTANCE_FUNCTION_TO_USE == "haversine")
+        return get_distance_haversine(latitude1, longitude1, latitude2, longitude2);
+
+    else 
+        throw std::runtime_error("DISTANCE_FUNCTION_TO_USE must be either vincenty or haversine");
 }
 
 

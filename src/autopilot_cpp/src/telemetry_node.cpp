@@ -99,7 +99,7 @@ public:
 
 
         // timers
-        boat_status_timer_ = this->create_wall_timer(300ms, std::bind(&TelemetryNode::write_boat_status_to_telemetry_server, this));
+        boat_status_timer_ = this->create_wall_timer(50ms, std::bind(&TelemetryNode::write_boat_status_to_telemetry_server, this));
         waypoints_timer_ = this->create_wall_timer(500ms, std::bind(&TelemetryNode::read_waypoints_from_telemetry_server, this));
         autopilot_params_timer_ = this->create_wall_timer(500ms, std::bind(&TelemetryNode::read_autopilot_parameters_from_telemetry_server, this));
 
@@ -243,7 +243,7 @@ private:
         return {r, theta_deg};
     }
 
-    // TODO: FIX THIS
+    // TODO: MAKE THIS USE THE GEOGRAPHIC FUNCTION LIBRARY
     double get_distance_between_positions(double lat1, double lon1, double lat2, double lon2) {
         // Haversine in meters
         const double R = 6371000.0;
@@ -315,7 +315,7 @@ private:
     // ------------------------------------------------------------
     void write_boat_status_to_telemetry_server() {    
         
-        print_cpu_and_ram_stats();
+        // print_cpu_and_ram_stats();
 
         auto start = std::chrono::steady_clock::now();
 

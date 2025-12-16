@@ -1,1 +1,0 @@
-#include <autopilot_cpp/sailboat_autopilot.hpp>
