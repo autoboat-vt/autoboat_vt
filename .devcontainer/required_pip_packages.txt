@@ -46,6 +46,8 @@ click
 pympler
 ruff
 jetson-stats
+pynput
+
 
 # Groundstation
 QtAwesome
