@@ -60,11 +60,11 @@ install(TARGETS motorboat_autopilot DESTINATION lib/${PROJECT_NAME})
 
 
 # create sailboat autopilot node executable
-add_executable(sailboat_autopilot src/sailboat_autopilot_node.cpp)
-target_include_directories(sailboat_autopilot PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> ${CMAKE_CURRENT_SOURCE_DIR})
-ament_target_dependencies(sailboat_autopilot rclcpp std_msgs geometry_msgs sensor_msgs autoboat_msgs)
-target_link_libraries(sailboat_autopilot nlohmann_json::nlohmann_json yaml-cpp)
-install(TARGETS sailboat_autopilot DESTINATION lib/${PROJECT_NAME})
+# add_executable(sailboat_autopilot src/sailboat_autopilot_node.cpp)
+# target_include_directories(sailboat_autopilot PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> ${CMAKE_CURRENT_SOURCE_DIR})
+# ament_target_dependencies(sailboat_autopilot rclcpp std_msgs geometry_msgs sensor_msgs autoboat_msgs)
+# target_link_libraries(sailboat_autopilot nlohmann_json::nlohmann_json yaml-cpp)
+# install(TARGETS sailboat_autopilot DESTINATION lib/${PROJECT_NAME})
 
 
 if(BUILD_TESTING)

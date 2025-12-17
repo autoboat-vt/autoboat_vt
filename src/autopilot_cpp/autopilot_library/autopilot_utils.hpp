@@ -5,47 +5,59 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <nlohmann/json.hpp>
+#include <yaml-cpp/yaml.h>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
-// Include your previously defined geographic library
 #include "geographic_function_library.hpp"
+#include "position.hpp"
 
-// --- Enums ---
+
+using json = nlohmann::json;
+
+
+
 
 enum class SailboatAutopilotMode {
-    Disabled = 0, Full_RC = 1, Hold_Best_Sail = 2, Hold_Heading = 3,
-    Hold_Heading_And_Best_Sail = 4, Waypoint_Mission = 5
+    Disabled = 0, 
+    Full_RC = 1, 
+    Hold_Best_Sail = 2, 
+    Hold_Heading = 3,
+    Hold_Heading_And_Best_Sail = 4, 
+    Waypoint_Mission = 5
 };
 
 enum class SailboatStates {
-    NORMAL = 0, CW_TACKING = 1, CCW_TACKING = 2, STALL = 3
+    NORMAL = 0, 
+    CW_TACKING = 1, 
+    CCW_TACKING = 2, 
+    STALL = 3
 };
 
 enum class SailboatManeuvers {
-    AUTOPILOT_DISABLED = 0, STANDARD = 1, TACK = 2, JIBE = 3
+    AUTOPILOT_DISABLED = 0, 
+    STANDARD = 1, 
+    TACK = 2, 
+    JIBE = 3
 };
 
 enum class MotorboatAutopilotMode {
-    Disabled = 0, Full_RC = 1, Hold_Heading = 2, Waypoint_Mission = 3
+    Disabled = 0, 
+    Full_RC = 1, 
+    Hold_Heading = 2, 
+    Waypoint_Mission = 3
 };
 
 enum class MotorboatControls {
-    RPM = 0, DUTY_CYCLE = 1, CURRENT = 2
+    RPM = 0, 
+    DUTY_CYCLE = 1, 
+    CURRENT = 2
 };
 
-// --- Position Class Wrapper (to match your Python usage) ---
 
-struct Position {
-    double longitude;
-    double latitude;
 
-    Position(double lon = 0.0, double lat = 0.0) : longitude(lon), latitude(lat) {}
-    
-    std::pair<double, double> get_longitude_latitude() const {
-        return {longitude, latitude};
-    }
-};
 
-// --- Math & Utility Functions ---
+
 
 /**
  * Checks if two floats are within 0.001 of each other.
@@ -193,3 +205,46 @@ inline bool does_line_segment_intersect_circle(
 
     return false;
 }
+
+
+
+
+/** 
+ * Helper function to convert YAML nodes to JSON objects
+*/
+json yaml_to_json(const YAML::Node& node) {
+    if (node.IsScalar()) {        
+        bool b;
+        if (YAML::convert<bool>::decode(node, b)) return b;
+        
+        int64_t i;
+        if (YAML::convert<int64_t>::decode(node, i)) return i;
+        
+        float f;
+        if (YAML::convert<float>::decode(node, f)) return f;
+        
+        return node.as<std::string>();
+    }
+
+    if (node.IsSequence()) {
+        json j = json::array();
+        for (const auto& item : node) {
+            j.push_back(yaml_to_json(item));
+        }
+        return j;
+    }
+    
+    if (node.IsMap()) {
+        json j = json::object();
+        for (auto it = node.begin(); it != node.end(); ++it) {
+            j[it->first.as<std::string>()] = yaml_to_json(it->second);
+        }
+        return j;
+    }
+
+    return nullptr;
+}
+
+
+
+

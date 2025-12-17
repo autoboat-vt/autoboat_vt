@@ -33,40 +33,41 @@ using json = nlohmann::json;
 
 class TelemetryNode : public rclcpp::Node {
 public:
-    TelemetryNode(const std::string &telemetry_server_url_string = "https://vt-autoboat-telemetry.uk") : Node("telemetry_cpp") {
+    TelemetryNode(const std::string &telemetry_server_url_string_ = "https://vt-autoboat-telemetry.uk") : Node("telemetry_cpp") {
         
-        telemetry_server_url_ = cpr::Url{telemetry_server_url_string};
-        telemetry_server_url_string_ = telemetry_server_url_string;
+        telemetry_server_url_string = telemetry_server_url_string_;
+        telemetry_server_url = cpr::Url{telemetry_server_url_string};
 
-        write_boat_status_to_telemetry_server_session_.SetUrl(telemetry_server_url_);
-        read_waypoints_from_telemetry_server_session_.SetUrl(telemetry_server_url_);
-        read_autopilot_parameters_from_telemetry_server_session_.SetUrl(telemetry_server_url_);
+
+        write_boat_status_to_telemetry_server_session.SetUrl(telemetry_server_url);
+        read_waypoints_from_telemetry_server_session.SetUrl(telemetry_server_url);
+        read_autopilot_parameters_from_telemetry_server_session.SetUrl(telemetry_server_url);
 
 
         // default values
-        current_waypoint_index_ = 0;
-        position_latitude_ = 0.0;
-        position_longitude_ = 0.0;
+        current_waypoint_index = 0;
+        position_latitude = 0.0;
+        position_longitude = 0.0;
 
-        autopilot_mode_ = "N/A";
-        full_autonomy_maneuver_ = "N/A";
+        autopilot_mode = "N/A";
+        full_autonomy_maneuver = "N/A";
 
-        velocity_vector_x_ = 0.0;
-        velocity_vector_y_ = 0.0;
-        speed_ = 0.0;
-        heading_ = 0.0;
-        desired_heading_ = 0.0;
+        velocity_vector_x = 0.0;
+        velocity_vector_y = 0.0;
+        speed = 0.0;
+        heading = 0.0;
+        desired_heading = 0.0;
 
-        apparent_wind_x_ = 0.0;
-        apparent_wind_y_ = 0.0;
-        apparent_wind_speed_ = 0.0;
-        apparent_wind_angle_ = 0.0;
+        apparent_wind_x = 0.0;
+        apparent_wind_y = 0.0;
+        apparent_wind_speed = 0.0;
+        apparent_wind_angle = 0.0;
 
-        desired_sail_angle_ = 0.0;
-        desired_rudder_angle_ = 0.0;
+        desired_sail_angle = 0.0;
+        desired_rudder_angle = 0.0;
 
         // vesc telemetry
-        vesc_rpm_ = 0;
+        vesc_rpm = 0;
 
         
         
@@ -75,7 +76,7 @@ public:
             json response = get_response_from_telemetry_server("instance_manager/create");
 
             if (response.is_number_integer()) {
-                instance_id_ = response.get<int>();
+                instance_id = response.get<int>();
                 
                 // set user (use environment USER if present)
                 const char* user_env = std::getenv("USER");
@@ -87,8 +88,8 @@ public:
                 else 
                     user = "unknown";                    
 
-                post_json_to_telemetry_server("instance_manager/set_user/" + std::to_string(instance_id_) + "/" + user, json{});
-                RCLCPP_INFO(this->get_logger(), "Created new telemetry server instance with ID %d", instance_id_);
+                post_json_to_telemetry_server("instance_manager/set_user/" + std::to_string(instance_id) + "/" + user, json{});
+                RCLCPP_INFO(this->get_logger(), "Created new telemetry server instance with ID %d", instance_id);
                 
                 break;
             }
@@ -99,27 +100,27 @@ public:
 
 
         // timers
-        boat_status_timer_ = this->create_wall_timer(50ms, std::bind(&TelemetryNode::write_boat_status_to_telemetry_server, this));
-        waypoints_timer_ = this->create_wall_timer(500ms, std::bind(&TelemetryNode::read_waypoints_from_telemetry_server, this));
-        autopilot_params_timer_ = this->create_wall_timer(500ms, std::bind(&TelemetryNode::read_autopilot_parameters_from_telemetry_server, this));
+        boat_status_timer = create_wall_timer(50ms, std::bind(&TelemetryNode::write_boat_status_to_telemetry_server, this));
+        waypoints_timer = create_wall_timer(500ms, std::bind(&TelemetryNode::read_waypoints_from_telemetry_server, this));
+        autopilot_params_timer = create_wall_timer(500ms, std::bind(&TelemetryNode::read_autopilot_parameters_from_telemetry_server, this));
 
         // publishers
-        autopilot_parameters_pub_ = this->create_publisher<std_msgs::msg::String>("/autopilot_parameters", 10);
-        sensors_parameters_pub_ = this->create_publisher<std_msgs::msg::String>("/sensors_parameters", 10);
-        waypoints_list_pub_ = this->create_publisher<autoboat_msgs::msg::WaypointList>("/waypoints_list", 10);
+        autopilot_parameters_publisher = create_publisher<std_msgs::msg::String>("/autopilot_parameters", 10);
+        sensors_parameters_publisher = create_publisher<std_msgs::msg::String>("/sensors_parameters", 10);
+        waypoints_list_publisher = create_publisher<autoboat_msgs::msg::WaypointList>("/waypoints_list", 10);
 
         // subscriptions
-        desired_heading_sub_ = this->create_subscription<std_msgs::msg::Float32>("/desired_heading", 10, std::bind(&TelemetryNode::desired_heading_callback, this, std::placeholders::_1));
-        current_waypoint_index_sub_ = this->create_subscription<std_msgs::msg::Int32>("/current_waypoint_index", 10, std::bind(&TelemetryNode::current_waypoint_index_callback, this, std::placeholders::_1));
-        full_autonomy_maneuver_sub_ = this->create_subscription<std_msgs::msg::String>("/full_autonomy_maneuver", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::full_autonomy_maneuver_callback, this, std::placeholders::_1));
-        autopilot_mode_sub_ = this->create_subscription<std_msgs::msg::String>("/autopilot_mode", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::autopilot_mode_callback, this, std::placeholders::_1));
-        position_sub_ = this->create_subscription<sensor_msgs::msg::NavSatFix>("/position", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::position_callback, this, std::placeholders::_1));
-        velocity_sub_ = this->create_subscription<geometry_msgs::msg::Twist>("/velocity", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::velocity_callback, this, std::placeholders::_1));
-        heading_sub_ = this->create_subscription<std_msgs::msg::Float32>("/heading", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::heading_callback, this, std::placeholders::_1));
-        apparent_wind_sub_ = this->create_subscription<geometry_msgs::msg::Vector3>("/apparent_wind_vector", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::apparent_wind_vector_callback, this, std::placeholders::_1));
-        vesc_telemetry_sub_ = this->create_subscription<autoboat_msgs::msg::VESCTelemetryData>("/vesc_telemetry_data", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::vesc_telemetry_data_callback, this, std::placeholders::_1));
-        desired_sail_angle_sub_ = this->create_subscription<std_msgs::msg::Float32>("/desired_sail_angle", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::desired_sail_angle_callback, this, std::placeholders::_1));
-        desired_rudder_angle_sub_ = this->create_subscription<std_msgs::msg::Float32>("/desired_rudder_angle", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::desired_rudder_angle_callback, this, std::placeholders::_1));
+        desired_heading_listener = create_subscription<std_msgs::msg::Float32>("/desired_heading", 10, std::bind(&TelemetryNode::desired_heading_callback, this, std::placeholders::_1));
+        current_waypoint_index_listener = create_subscription<std_msgs::msg::Int32>("/current_waypoint_index", 10, std::bind(&TelemetryNode::current_waypoint_indexcallback, this, std::placeholders::_1));
+        full_autonomy_maneuver_listener = create_subscription<std_msgs::msg::String>("/full_autonomy_maneuver", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::full_autonomy_maneuver_callback, this, std::placeholders::_1));
+        autopilot_mode_listener = create_subscription<std_msgs::msg::String>("/autopilot_mode", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::autopilot_mode_callback, this, std::placeholders::_1));
+        position_listener = create_subscription<sensor_msgs::msg::NavSatFix>("/position", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::position_callback, this, std::placeholders::_1));
+        velocity_listener = create_subscription<geometry_msgs::msg::Twist>("/velocity", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::velocity_callback, this, std::placeholders::_1));
+        heading_listener = create_subscription<std_msgs::msg::Float32>("/heading", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::heading_callback, this, std::placeholders::_1));
+        apparent_wind_listener = create_subscription<geometry_msgs::msg::Vector3>("/apparent_wind_vector", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::apparent_wind_vector_callback, this, std::placeholders::_1));
+        vesc_telemetry_listener = create_subscription<autoboat_msgs::msg::VESCTelemetryData>("/vesc_telemetry_data", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::vesc_telemetry_data_callback, this, std::placeholders::_1));
+        desired_sail_angle_listener = create_subscription<std_msgs::msg::Float32>("/desired_sail_angle", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::desired_sail_angle_callback, this, std::placeholders::_1));
+        desired_rudder_angle_listener = create_subscription<std_msgs::msg::Float32>("/desired_rudder_angle", rclcpp::SensorDataQoS(), std::bind(&TelemetryNode::desired_rudder_angle_callback, this, std::placeholders::_1));
 
         RCLCPP_INFO(this->get_logger(), "TelemetryNode (C++) initialized");
     }
@@ -131,108 +132,112 @@ private:
     // ------------------------------------------------------------
     // PRIVATE VARIABLES
     // ------------------------------------------------------------
-    std::vector<std::pair<double,double>> current_waypoints_list_;
-    int current_waypoint_index_;
-    double position_latitude_, position_longitude_;
+    std::vector<std::pair<double,double>> current_waypoints_list;
+    int current_waypoint_index;
+    double position_latitude, position_longitude;
 
-    std::string autopilot_mode_;
-    std::string full_autonomy_maneuver_;
+    std::string autopilot_mode;
+    std::string full_autonomy_maneuver;
 
-    double velocity_vector_x_, velocity_vector_y_;
-    double speed_;
-    double heading_;
-    double desired_heading_;
+    double velocity_vector_x, velocity_vector_y;
+    double speed;
+    double heading;
+    double desired_heading;
 
-    double apparent_wind_x_, apparent_wind_y_;
-    double apparent_wind_speed_, apparent_wind_angle_;
-    double desired_sail_angle_, desired_rudder_angle_;
+    double apparent_wind_x, apparent_wind_y;
+    double apparent_wind_speed, apparent_wind_angle;
+    double desired_sail_angle, desired_rudder_angle;
 
     // vesc telemetry
-    int vesc_rpm_;
+    int vesc_rpm;
 
-    int instance_id_{-1};
-    cpr::Url telemetry_server_url_;
-    std::string telemetry_server_url_string_;
+    int instance_id = -1;
+    cpr::Url telemetry_server_url;
+    std::string telemetry_server_url_string;
 
-    cpr::Session write_boat_status_to_telemetry_server_session_;
-    cpr::Session read_waypoints_from_telemetry_server_session_;
-    cpr::Session read_autopilot_parameters_from_telemetry_server_session_;
+    cpr::Session write_boat_status_to_telemetry_server_session;
+    cpr::Session read_waypoints_from_telemetry_server_session;
+    cpr::Session read_autopilot_parameters_from_telemetry_server_session;
 
-    std::mutex mutex_;
+    std::mutex mutex;
 
 
 
     // ROS pubs/subs
-    rclcpp::TimerBase::SharedPtr boat_status_timer_;
-    rclcpp::TimerBase::SharedPtr waypoints_timer_;
-    rclcpp::TimerBase::SharedPtr autopilot_params_timer_;
+    rclcpp::TimerBase::SharedPtr boat_status_timer;
+    rclcpp::TimerBase::SharedPtr waypoints_timer;
+    rclcpp::TimerBase::SharedPtr autopilot_params_timer;
 
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr autopilot_parameters_pub_;
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr sensors_parameters_pub_;
-    rclcpp::Publisher<autoboat_msgs::msg::WaypointList>::SharedPtr waypoints_list_pub_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr autopilot_parameters_publisher;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr sensors_parameters_publisher;
+    rclcpp::Publisher<autoboat_msgs::msg::WaypointList>::SharedPtr waypoints_list_publisher;
 
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr desired_heading_sub_;
-    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr current_waypoint_index_sub_;
-    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr full_autonomy_maneuver_sub_;
-    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr autopilot_mode_sub_;
-    rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr position_sub_;
-    rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr velocity_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr heading_sub_;
-    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr apparent_wind_sub_;
-    rclcpp::Subscription<autoboat_msgs::msg::VESCTelemetryData>::SharedPtr vesc_telemetry_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr desired_sail_angle_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr desired_rudder_angle_sub_;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr desired_heading_listener;
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr current_waypoint_index_listener;
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr full_autonomy_maneuver_listener;
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr autopilot_mode_listener;
+    rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr position_listener;
+    rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr velocity_listener;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr heading_listener;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr apparent_wind_listener;
+    rclcpp::Subscription<autoboat_msgs::msg::VESCTelemetryData>::SharedPtr vesc_telemetry_listener;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr desired_sail_angle_listener;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr desired_rudder_angle_listener;
+
+
+
+
 
     // ------------------------------------------------------------
     // CALLBACKS
     // ------------------------------------------------------------
     void position_callback(const sensor_msgs::msg::NavSatFix::SharedPtr msg) {
-        position_latitude_ = msg->latitude;
-        position_longitude_ = msg->longitude;
+        position_latitude = msg->latitude;
+        position_longitude = msg->longitude;
     }
 
     void velocity_callback(const geometry_msgs::msg::Twist::SharedPtr msg) {
-        velocity_vector_x_ = msg->linear.x;
-        velocity_vector_y_ = msg->linear.y;
-        speed_ = std::hypot(velocity_vector_x_, velocity_vector_y_);
+        velocity_vector_x = msg->linear.x;
+        velocity_vector_y = msg->linear.y;
+        speed = std::hypot(velocity_vector_x, velocity_vector_y);
     }
 
     void heading_callback(const std_msgs::msg::Float32::SharedPtr msg) {
-        heading_ = msg->data;
+        heading = msg->data;
     }
 
     void apparent_wind_vector_callback(const geometry_msgs::msg::Vector3::SharedPtr msg) {
-        apparent_wind_x_ = msg->x;
-        apparent_wind_y_ = msg->y;
-        std::tie(apparent_wind_speed_, apparent_wind_angle_) = cartesian_vector_to_polar(apparent_wind_x_, apparent_wind_y_);
+        apparent_wind_x = msg->x;
+        apparent_wind_y = msg->y;
+        std::tie(apparent_wind_speed, apparent_wind_angle) = cartesian_vector_to_polar(apparent_wind_x, apparent_wind_y);
     }
 
     void desired_heading_callback(const std_msgs::msg::Float32::SharedPtr msg) {
-        desired_heading_ = msg->data;
+        desired_heading = msg->data;
     }
 
     void vesc_telemetry_data_callback(const autoboat_msgs::msg::VESCTelemetryData::SharedPtr msg) {
-        vesc_rpm_ = msg->rpm;
+        vesc_rpm = msg->rpm;
     }
 
-    void current_waypoint_index_callback(const std_msgs::msg::Int32::SharedPtr msg) {
-        current_waypoint_index_ = msg->data;
+    void current_waypoint_indexcallback(const std_msgs::msg::Int32::SharedPtr msg) {
+        current_waypoint_index = msg->data;
     }
     
     void full_autonomy_maneuver_callback(const std_msgs::msg::String::SharedPtr msg) {
-        full_autonomy_maneuver_ = msg->data;
+        full_autonomy_maneuver = msg->data;
     }
 
     void autopilot_mode_callback(const std_msgs::msg::String::SharedPtr msg) {
-        autopilot_mode_ = msg->data;
+        autopilot_mode = msg->data;
     }
 
     void desired_sail_angle_callback(const std_msgs::msg::Float32::SharedPtr msg) {
-        desired_sail_angle_ = msg->data;
+        desired_sail_angle = msg->data;
     }
 
     void desired_rudder_angle_callback(const std_msgs::msg::Float32::SharedPtr msg) {
-        desired_rudder_angle_ = msg->data;
+        desired_rudder_angle = msg->data;
     }
 
 
@@ -259,11 +264,11 @@ private:
         cpr::Response response;
 
         if (session != nullptr) {
-            session->SetUrl(telemetry_server_url_string_ + "/" + route);
+            session->SetUrl(telemetry_server_url_string + "/" + route);
             response = session->Get();
         }
         else {
-            response = cpr::Get(cpr::Url{telemetry_server_url_string_ + "/" + route});
+            response = cpr::Get(cpr::Url{telemetry_server_url_string + "/" + route});
         }
 
 
@@ -288,7 +293,7 @@ private:
         cpr::Response response;
         
         if (session != nullptr) {
-            session->SetUrl(telemetry_server_url_string_ + "/" + route);
+            session->SetUrl(telemetry_server_url_string + "/" + route);
             session->SetBody(cpr::Body{json_to_post.dump()});
             session->SetHeader({{"Content-Type", "application/json"}});
             response = session->Post();
@@ -296,19 +301,21 @@ private:
 
         else {
             response = cpr::Post(
-                cpr::Url{telemetry_server_url_string_ + "/" + route}, 
+                cpr::Url{telemetry_server_url_string + "/" + route}, 
                 cpr::Body{json_to_post.dump()},
                 cpr::Header{{"Content-Type", "application/json"}}
             );
         }
 
         if (response.error || response.status_code != 200) {
-            RCLCPP_WARN(this->get_logger(), "Could not connect to telemetry server route %s", (telemetry_server_url_string_ + "/" + route).c_str());
+            RCLCPP_WARN(this->get_logger(), "Could not connect to telemetry server route %s", (telemetry_server_url_string + "/" + route).c_str());
             return false;
         }
 
         return true;
     }
+
+
 
     // ------------------------------------------------------------
     // PERIODIC TASKS TIED TO TIMERS
@@ -323,59 +330,59 @@ private:
         double true_wind_x, true_wind_y, true_wind_speed, true_wind_angle;
         
         
-        true_wind_x = apparent_wind_x_ + velocity_vector_x_;
-        true_wind_y = apparent_wind_y_ + velocity_vector_y_;
+        true_wind_x = apparent_wind_x + velocity_vector_x;
+        true_wind_y = apparent_wind_y + velocity_vector_y;
         std::tie(true_wind_speed, true_wind_angle) = cartesian_vector_to_polar(true_wind_x, true_wind_y);
         
 
 
         double distance_to_next_waypoint = 0.0;
-        if (!current_waypoints_list_.empty() && current_waypoint_index_ >= 0 && current_waypoint_index_ < (int)current_waypoints_list_.size()) {
-            double lat2 = current_waypoints_list_[current_waypoint_index_].first;
-            double lon2 = current_waypoints_list_[current_waypoint_index_].second;
-            distance_to_next_waypoint = get_distance_between_positions(position_latitude_, position_longitude_, lat2, lon2);
+        if (!current_waypoints_list.empty() && current_waypoint_index >= 0 && current_waypoint_index < (int)current_waypoints_list.size()) {
+            double lat2 = current_waypoints_list[current_waypoint_index].first;
+            double lon2 = current_waypoints_list[current_waypoint_index].second;
+            distance_to_next_waypoint = get_distance_between_positions(position_latitude, position_longitude, lat2, lon2);
         }
 
 
         json boat_status_json = json::object(); 
 
         
-        boat_status_json["position"] = {position_latitude_, position_longitude_};
-        boat_status_json["state"] = autopilot_mode_;
-        boat_status_json["full_autonomy_maneuver"] = full_autonomy_maneuver_;
-        boat_status_json["speed"] = speed_;
-        boat_status_json["velocity_vector"] = {velocity_vector_x_, velocity_vector_y_};
-        boat_status_json["bearing"] = desired_heading_;
-        boat_status_json["heading"] = heading_;
+        boat_status_json["position"] = {position_latitude, position_longitude};
+        boat_status_json["state"] = autopilot_mode;
+        boat_status_json["full_autonomy_maneuver"] = full_autonomy_maneuver;
+        boat_status_json["speed"] = speed;
+        boat_status_json["velocity_vector"] = {velocity_vector_x, velocity_vector_y};
+        boat_status_json["bearing"] = desired_heading;
+        boat_status_json["heading"] = heading;
         boat_status_json["true_wind_speed"] = true_wind_speed;
         boat_status_json["true_wind_angle"] = true_wind_angle;
-        boat_status_json["apparent_wind_speed"] = apparent_wind_speed_;
-        boat_status_json["apparent_wind_angle"] = apparent_wind_angle_;
-        boat_status_json["sail_angle"] = desired_sail_angle_;
-        boat_status_json["rudder_angle"] = desired_rudder_angle_;
-        boat_status_json["current_waypoint_index"] = current_waypoint_index_;
+        boat_status_json["apparent_wind_speed"] = apparent_wind_speed;
+        boat_status_json["apparent_wind_angle"] = apparent_wind_angle;
+        boat_status_json["sail_angle"] = desired_sail_angle;
+        boat_status_json["rudder_angle"] = desired_rudder_angle;
+        boat_status_json["current_waypoint_index"] = current_waypoint_index;
         boat_status_json["distance_to_next_waypoint"] = distance_to_next_waypoint;
 
         // vesc telemetry
-        boat_status_json["vesc_telemetry_data_rpm"] = vesc_rpm_;
+        boat_status_json["vesc_telemetry_data_rpm"] = vesc_rpm;
 
 
         // POST to telemetry server (ignore failures)
-        bool ok = post_json_to_telemetry_server("boat_status/set/" + std::to_string(instance_id_), boat_status_json, &write_boat_status_to_telemetry_server_session_);
+        bool ok = post_json_to_telemetry_server("boat_status/set/" + std::to_string(instance_id), boat_status_json, &write_boat_status_to_telemetry_server_session);
         if (!ok) RCLCPP_WARN(this->get_logger(), "Failed to POST boat status");
 
 
 
         auto end = std::chrono::steady_clock::now();
         std::chrono::duration<double, std::milli> elapsed_ms = end - start;
-        std::cout << "Time elapsed: " << elapsed_ms.count() << " ms" << std::endl;
+        RCLCPP_INFO(this->get_logger(),  "Time elapsed: %lf ms", elapsed_ms.count());
     }
 
 
 
     void read_waypoints_from_telemetry_server() {
 
-        json response = get_response_from_telemetry_server("waypoints/get_new/" + std::to_string(instance_id_), &read_waypoints_from_telemetry_server_session_);
+        json response = get_response_from_telemetry_server("waypoints/get_new/" + std::to_string(instance_id), &read_waypoints_from_telemetry_server_session);
         
         if (response.is_object() && response.empty()) {
             RCLCPP_DEBUG(this->get_logger(), "No new waypoints received from telemetry server.");
@@ -404,19 +411,19 @@ private:
         }
 
         
-        current_waypoints_list_ = new_waypoints;
-        waypoints_list_pub_->publish(waypoint_list_msg);
+        current_waypoints_list = new_waypoints;
+        waypoints_list_publisher->publish(waypoint_list_msg);
     }
 
 
     void read_autopilot_parameters_from_telemetry_server() {
-        json response = get_response_from_telemetry_server("autopilot_parameters/get_new/" + std::to_string(instance_id_), &read_autopilot_parameters_from_telemetry_server_session_);
+        json response = get_response_from_telemetry_server("autopilot_parameters/get_new/" + std::to_string(instance_id), &read_autopilot_parameters_from_telemetry_server_session);
 
         if (response.is_object() && response.empty()) return;
 
         std_msgs::msg::String msg;
         msg.data = response.dump();
-        autopilot_parameters_pub_->publish(msg);
+        autopilot_parameters_publisher->publish(msg);
 
     }
 

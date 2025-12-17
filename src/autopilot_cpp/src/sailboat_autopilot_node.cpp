@@ -23,15 +23,15 @@ using namespace std::chrono_literals;
 class SailboatAutopilotNode : public rclcpp::Node {
 
 public:
-    SailboatAutopilotNode() : Node("sailboat_autopilot") {
+    SailboatAutopilotNode() : Node("sailboat_autopilot_cpp") {
         load_parameters();
         autopilot = std::make_unique<SailboatAutopilot>(params);
 
         auto sensor_qos = rclcpp::SensorDataQoS();
 
         // Subscriptions
-        sub_rc = create_subscription<autoboat_msgs::msg::RCData>("/rc_data", sensor_qos, std::bind(&SailboatAutopilotNode::rc_cb, this, std::placeholders::_1));
-        sub_pos = create_subscription<sensor_msgs::msg::NavSatFix>("/position", sensor_qos, std::bind(&SailboatAutopilotNode::pos_cb, this, std::placeholders::_1));
+        rc_data_subscriber = create_subscription<autoboat_msgs::msg::RCData>("/rc_data", sensor_qos, std::bind(&SailboatAutopilotNode::rc_cb, this, std::placeholders::_1));
+        position_subscriber = create_subscription<sensor_msgs::msg::NavSatFix>("/position", sensor_qos, std::bind(&SailboatAutopilotNode::pos_cb, this, std::placeholders::_1));
         sub_wind = create_subscription<geometry_msgs::msg::Vector3>("/apparent_wind_vector", sensor_qos, std::bind(&SailboatAutopilotNode::wind_cb, this, std::placeholders::_1));
         sub_head = create_subscription<std_msgs::msg::Float32>("/heading", sensor_qos, std::bind(&SailboatAutopilotNode::head_cb, this, std::placeholders::_1));
         sub_waypoints = create_subscription<autoboat_msgs::msg::WaypointList>("/waypoints_list", 10, std::bind(&SailboatAutopilotNode::waypoint_cb, this, std::placeholders::_1));
@@ -41,11 +41,32 @@ public:
         pub_rudder = create_publisher<std_msgs::msg::Float32>("/desired_rudder_angle", sensor_qos);
         pub_mode = create_publisher<std_msgs::msg::String>("/autopilot_mode", sensor_qos);
 
-        timer = create_wall_timer(std::chrono::duration<double>(1.0/params["autopilot_refresh_rate"]), 
-            std::bind(&SailboatAutopilotNode::update_loop, this));
+        timer = create_wall_timer(std::chrono::duration<double>(1.0/params["autopilot_refresh_rate"]), std::bind(&SailboatAutopilotNode::update_loop, this));
     }
 
 private:
+
+    std::map<std::string, double> params;
+    std::unique_ptr<SailboatAutopilot> autopilot;
+    SailboatAutopilotMode mode = SailboatAutopilotMode::Full_RC;
+    
+    Position current_pos;
+    std::array<double, 2> awa_vec = {0,0};
+    double current_heading = 0;
+    double heading_to_hold = 0;
+    double joy_ly = 0, joy_rx = 0;
+    int prev_toggle_f = 0;
+
+    rclcpp::TimerBase::SharedPtr timer;
+    rclcpp::Subscription<autoboat_msgs::msg::RCData>::SharedPtr rc_data_subscriber;
+    rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr position_subscriber;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr sub_wind;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr sub_head;
+    rclcpp::Subscription<autoboat_msgs::msg::WaypointList>::SharedPtr sub_waypoints;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pub_sail, pub_rudder;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_mode;
+
+    
     void load_parameters() {
         YAML::Node config = YAML::LoadFile("config/sailboat_default_parameters.yaml");
         params["autopilot_refresh_rate"] = config["autopilot_refresh_rate"].as<double>(10.0);
@@ -121,27 +142,9 @@ private:
         pub_sail->publish(s_msg);
         pub_rudder->publish(r_msg);
     }
-
-    std::map<std::string, double> params;
-    std::unique_ptr<SailboatAutopilot> autopilot;
-    SailboatAutopilotMode mode = SailboatAutopilotMode::Full_RC;
-    
-    Position current_pos;
-    std::array<double, 2> awa_vec = {0,0};
-    double current_heading = 0;
-    double heading_to_hold = 0;
-    double joy_ly = 0, joy_rx = 0;
-    int prev_toggle_f = 0;
-
-    rclcpp::TimerBase::SharedPtr timer;
-    rclcpp::Subscription<autoboat_msgs::msg::RCData>::SharedPtr sub_rc;
-    rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr sub_pos;
-    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr sub_wind;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr sub_head;
-    rclcpp::Subscription<autoboat_msgs::msg::WaypointList>::SharedPtr sub_waypoints;
-    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pub_sail, pub_rudder;
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_mode;
 };
+
+
 
 int main(int argc, char **argv) {
     rclcpp::init(argc, argv);

@@ -73,12 +73,16 @@ class VESCPublisher(Node):
             if(msg.control_type_for_vesc == "rpm"):
                 self.motorVal = msg.desired_vesc_rpm * MOTOR_POLE_PAIRS
                 self.motor.set_rpm(int(self.motorVal))
+                
             elif(msg.control_type_for_vesc == "duty_cycle"):
                 self.motorVal = msg.desired_vesc_duty_cycle
                 self.motor.set_duty_cycle(int(self.motorVal))
+            
             else:
                 self.motorVal = msg.desired_vesc_current
                 self.motor.set_current(int(self.motorVal))
+                
+
         except:
             self.get_logger().error("Disconnected from the VESC")
             self.destroy_node()

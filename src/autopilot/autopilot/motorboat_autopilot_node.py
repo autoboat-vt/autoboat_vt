@@ -54,8 +54,8 @@ class MotorboatAutopilotNode(Node):
 
         self.should_propeller_motor_be_powered_publisher = self.create_publisher(Bool, "/should_propeller_motor_be_powered", qos_profile=10)
         self.propeller_motor_control_struct_publisher = self.create_publisher(msg_type=VESCControlData, topic="/propeller_motor_control_struct", qos_profile=qos_profile_sensor_data)
+        
         self.desired_rudder_angle_publisher = self.create_publisher(msg_type=Float32, topic="/desired_rudder_angle", qos_profile=qos_profile_sensor_data)
-
         self.zero_rudder_encoder_publisher = self.create_publisher(msg_type=Bool, topic="/zero_rudder_encoder", qos_profile=10)
 
         self.heading_pid_controller = Discrete_PID(sample_period=(1 / self.parameters["autopilot_refresh_rate"]), Kp=1, Ki=0, Kd=0, n=1)

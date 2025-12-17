@@ -15,6 +15,8 @@
 // https://en.wikipedia.org/wiki/World_Geodetic_System
 
 
+
+
 #pragma once
 
 #include <tuple>
@@ -22,6 +24,7 @@
 #include <array>
 #include <vector>
 #include <stdexcept>
+
 
 
 // choose vincenty for more precise but slower calculations
@@ -58,8 +61,9 @@ double get_distance_haversine(double latitude1, double longitude1, double latitu
 // https://en.wikipedia.org/wiki/Vincenty%27s_formulae 
 double get_distance_vincenty(double latitude1, double longitude1, double latitude2, double longitude2) {
     using namespace std;
-    constexpr double req = WGS84_A;             //Radius at equator
-    constexpr double flat = WGS84_F;    //flattening of earth
+
+    constexpr double req = WGS84_A;             // Radius at equator
+    constexpr double flat = WGS84_F;            // Flattening of earth
     constexpr double rpol = (1 - flat) * req;
 
     double sin_sigma, cos_sigma, sigma, sin_alpha, cos_sq_alpha, cos2sigma;
@@ -178,7 +182,7 @@ double calculate_bearing(double latitude1, double longitude1, double latitude2, 
 // -------------------------
 // LLA to ECEF
 // -------------------------
-inline std::array<double,3> lla2ecef(double lat_deg, double lon_deg, double alt_m)
+inline std::array<double, 3> lla2ecef(double lat_deg, double lon_deg, double alt_m)
 {
     double lat = lat_deg * M_PI / 180.0;
     double lon = lon_deg * M_PI / 180.0;
@@ -197,10 +201,12 @@ inline std::array<double,3> lla2ecef(double lat_deg, double lon_deg, double alt_
     return {x, y, z};
 }
 
+
+
 // -------------------------
 // ECEF to LLA (iterative)
 // -------------------------
-inline std::array<double,3> ecef2lla(double x, double y, double z)
+inline std::array<double, 3> ecef2lla(double x, double y, double z)
 {
     double lon = std::atan2(y, x);
 
@@ -235,8 +241,10 @@ inline std::array<double,3> ecef2lla(double x, double y, double z)
     };
 }
 
-// Build ECEFtoNED rotation matrix
-inline std::array<std::array<double,3>,3> nedRotation(double lat_deg, double lon_deg)
+
+
+// Build ECEF to NED rotation matrix
+inline std::array<std::array<double, 3>, 3> nedRotation(double lat_deg, double lon_deg)
 {
     double lat = lat_deg * M_PI / 180.0;
     double lon = lon_deg * M_PI / 180.0;
@@ -256,7 +264,7 @@ inline std::array<std::array<double,3>,3> nedRotation(double lat_deg, double lon
 
 
 // multiply matrix * vector
-inline std::array<double,3> matmul(const std::array<std::array<double,3>,3> &C, const std::array<double,3> &v) {
+inline std::array<double, 3> matmul(const std::array<std::array<double,3>,3> &C, const std::array<double,3> &v) {
     return {
         C[0][0]*v[0] + C[0][1]*v[1] + C[0][2]*v[2],
         C[1][0]*v[0] + C[1][1]*v[1] + C[1][2]*v[2],
@@ -269,19 +277,25 @@ inline std::array<double,3> matmul(const std::array<std::array<double,3>,3> &C, 
 // -------------------------
 // ECEF to NED
 // -------------------------
-inline std::array<double,3> ecef2ned(const std::array<double,3> &ecef_vector, double reference_latitude, double reference_longitude) {
-    auto C = nedRotation(reference_latitude, reference_longitude);
-    return matmul(C, ecef_vector);
+inline std::array<float, 3> ecef2ned(const std::array<double,3> &ecef_vector, double reference_latitude, double reference_longitude) {
+    std::array<std::array<double, 3>, 3> C = nedRotation(reference_latitude, reference_longitude);
+    std::array<double, 3> result_double_precision = matmul(C, ecef_vector);
+    std::array<float, 3> result_single_precision;
+    std::copy(std::begin(result_double_precision), std::end(result_double_precision), std::begin(result_single_precision));
+
+    return result_single_precision;
 }
+
+
 
 // -------------------------
 // NED to ECEF
 // -------------------------
-inline std::array<double,3> ned2ecef(const std::array<double,3> &ned_vector, double reference_latitude, double reference_longitude) {
-    auto C = nedRotation(reference_latitude, reference_longitude);
+inline std::array<double, 3> ned2ecef(const std::array<double,3> &ned_vector, double reference_latitude, double reference_longitude) {
+    std::array<std::array<double, 3>, 3> C = nedRotation(reference_latitude, reference_longitude);
 
     // Use transpose
-    std::array<std::array<double,3>,3> Ct {{
+    std::array<std::array<double, 3>, 3> Ct {{
         {C[0][0], C[1][0], C[2][0]},
         {C[0][1], C[1][1], C[2][1]},
         {C[0][2], C[1][2], C[2][2]}
@@ -290,24 +304,28 @@ inline std::array<double,3> ned2ecef(const std::array<double,3> &ned_vector, dou
     return matmul(Ct, ned_vector);
 }
 
+
+
 // -------------------------
 // LLA to NED
 // -------------------------
-inline std::array<double,3> lla2ned(double latitude, double longitude, double altitude, double reference_latitude, double reference_longitude, double reference_altitude) {
-    auto e = lla2ecef(latitude, longitude, altitude);
-    auto e0 = lla2ecef(reference_latitude, reference_longitude, reference_altitude);
+inline std::array<float, 3> lla2ned(double latitude, double longitude, double altitude, double reference_latitude, double reference_longitude, double reference_altitude) {
+    std::array<double, 3> e = lla2ecef(latitude, longitude, altitude);
+    std::array<double, 3> e0 = lla2ecef(reference_latitude, reference_longitude, reference_altitude);
 
     return ecef2ned({e[0]-e0[0], e[1]-e0[1], e[2]-e0[2]}, reference_latitude, reference_longitude);
 }
 
+
+
 // -------------------------
 // NED to LLA
 // -------------------------
-inline std::array<double,3> ned2lla(const std::array<double,3> &ned_vector, double reference_latitude, double reference_longitude, double reference_altitude) {
-    auto e0 = lla2ecef(reference_latitude, reference_longitude, reference_altitude);
-    auto e_rel = ned2ecef(ned_vector, reference_latitude, reference_longitude);
+inline std::array<double, 3> ned2lla(const std::array<double,3> &ned_vector, double reference_latitude, double reference_longitude, double reference_altitude) {
+    std::array<double, 3> e0 = lla2ecef(reference_latitude, reference_longitude, reference_altitude);
+    std::array<double, 3> e_rel = ned2ecef(ned_vector, reference_latitude, reference_longitude);
 
-    std::array<double,3> ecef = {
+    std::array<double, 3> ecef = {
         e0[0] + e_rel[0],
         e0[1] + e_rel[1],
         e0[2] + e_rel[2]

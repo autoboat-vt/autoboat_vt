@@ -3,7 +3,13 @@
 
 class DiscretePID {
 public:
-    DiscretePID(double sample_period_, double Kp_, double Ki_, double Kd_, double n_) {
+
+    DiscretePID() {
+        DiscretePID(1.0, 0.0, 0.0, 0.0, 1.0);
+    }
+
+
+    DiscretePID(float sample_period_, float Kp_, float Ki_, float Kd_, float n_) {
         sample_period = sample_period_;
         Kp = Kp_;
         Ki = Ki_;
@@ -16,7 +22,7 @@ public:
     }
 
 
-    void set_gains(double Kp = -1.0, double Ki = -1.0, double Kd = -1.0, double n = -1.0, double sample_period = -1.0) {
+    void set_gains(float Kp = -1.0, float Ki = -1.0, float Kd = -1.0, float n = -1.0, float sample_period = -1.0) {
         if (Kp >= 0.0) this->Kp = Kp;
         if (Ki >= 0.0) this->Ki = Ki;
         if (Kd >= 0.0) this->Kd = Kd;
@@ -24,6 +30,7 @@ public:
         if (sample_period >= 0.0) this->sample_period = sample_period;
     }
 
+    
     void reset() {
         prev_output1 = 0.0;
         prev_output2 = 0.0;
@@ -31,18 +38,19 @@ public:
         prev_error2  = 0.0;
     }
 
-    double step(double error) {
-        double a0 = 1 + n * sample_period;
-        double a1 = -(2 + n * sample_period);
-        double a2 = 1;
 
-        double b0 = Kp * (1 + n * sample_period) + Ki * sample_period * (1 + n * sample_period) + Kd * n;
+    float step(float error) {
+        float a0 = 1 + n * sample_period;
+        float a1 = -(2 + n * sample_period);
+        float a2 = 1;
 
-        double b1 = -(Kp * (2 + n * sample_period) + Ki * sample_period + 2 * Kd * n);
+        float b0 = Kp * (1 + n * sample_period) + Ki * sample_period * (1 + n * sample_period) + Kd * n;
 
-        double b2 = Kp + Kd * n;
+        float b1 = -(Kp * (2 + n * sample_period) + Ki * sample_period + 2 * Kd * n);
 
-        double output = -(a1 / a0) * prev_output1 - (a2 / a0) * prev_output2 + (b0 / a0) * error + (b1 / a0) * prev_error1 + (b2 / a0) * prev_error2;
+        float b2 = Kp + Kd * n;
+
+        float output = -(a1 / a0) * prev_output1 - (a2 / a0) * prev_output2 + (b0 / a0) * error + (b1 / a0) * prev_error1 + (b2 / a0) * prev_error2;
 
         prev_output2 = prev_output1;
         prev_output1 = output;
@@ -53,19 +61,19 @@ public:
     }
 
 
-    inline double operator()(double error) { return step(error); }
+    inline float operator()(float error) { return step(error); }
 
 
 
 private:
-    double sample_period;
-    double Kp, Ki, Kd, n;
+    float sample_period;
+    float Kp, Ki, Kd, n;
 
 
-    double prev_output1;
-    double prev_output2;
+    float prev_output1;
+    float prev_output2;
 
 
-    double prev_error1;
-    double prev_error2;
+    float prev_error1;
+    float prev_error2;
 };
