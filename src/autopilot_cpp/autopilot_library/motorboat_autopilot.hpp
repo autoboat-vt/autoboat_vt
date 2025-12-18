@@ -1,10 +1,9 @@
-// #include <autopilot_cpp/motorboat_autopilot.hpp>
-// #include <rclcpp/rclcpp.hpp>
+#include <vector>
+
 
 #include "discrete_pid.hpp"
 #include "autopilot_utils.hpp"
 #include "position.hpp"
-#include <vector>
 
 
 using json = nlohmann::json;
@@ -21,9 +20,7 @@ class MotorboatAutopilot {
 
 public:
 
-    MotorboatAutopilot() {
-        
-    }
+    MotorboatAutopilot() {}
 
 
     MotorboatAutopilot(std::map<std::string, json> autopilot_parameters_) {
@@ -38,22 +35,27 @@ public:
             autopilot_parameters["heading_n_gain"].get<float>()
         );
 
+        waypoints.clear();
+        current_waypoint_index = 0;
+        rudder_angle_to_heading_pid_controller.reset();
+
         //     self.logger = logger
-        //     self.waypoints: list[Position] = None        
         //     self.current_state = SailboatStates.NORMAL
         
-        //     self.current_waypoint_index = 0
 
     }
 
 
     void reset() {
-
+        waypoints.clear();
+        current_waypoint_index = 0;
+        rudder_angle_to_heading_pid_controller.reset();
     }
 
 
-    void update_waypoints_list(std::vector<Position>) {
-        
+    void update_waypoints_list(const std::vector<Position>& waypoints_list) {
+        waypoints = waypoints_list;
+        current_waypoint_index = 0;
     }
 
 
@@ -62,11 +64,11 @@ public:
 
         // Update PID gains in case they were changed via YAML/JSON
         rudder_angle_to_heading_pid_controller.set_gains(
+            1.0 / autopilot_parameters["autopilot_refresh_rate"].get<float>(), // sample_period
             autopilot_parameters["heading_p_gain"].get<float>(),
             autopilot_parameters["heading_i_gain"].get<float>(),
             autopilot_parameters["heading_d_gain"].get<float>(),
-            autopilot_parameters["heading_n_gain"].get<float>(),
-            1.0 / autopilot_parameters["autopilot_refresh_rate"].get<float>() // sample_period
+            autopilot_parameters["heading_n_gain"].get<float>()
         );
 
         float rudder_angle = rudder_angle_to_heading_pid_controller.step(error);
@@ -89,7 +91,9 @@ public:
 
 
 
+
 private:
+    
     DiscretePID rudder_angle_to_heading_pid_controller;
     
     std::map<std::string, json> autopilot_parameters;

@@ -56,7 +56,6 @@ public:
 
         
         motorboat_autopilot = MotorboatAutopilot(autopilot_parameters);
-        pid_controller = DiscretePID(0.1, 1.0, 0.0, 0.0, 1.0);
         
         rclcpp::SensorDataQoS sensor_qos = rclcpp::SensorDataQoS();
         
@@ -321,6 +320,7 @@ private:
         should_propeller_motor_be_powered_publisher->publish(should_propeller_motor_be_powered_msg);
     }
 };
+
 
 
 
