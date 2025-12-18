@@ -1,5 +1,5 @@
-#ifndef FOIL_DYNAMICS_HH
-#define FOIL_DYNAMICS_HH
+#ifndef RUDDER_DYNAMICS_HH
+#define RUDDER_DYNAMICS_HH
 
 #include <gz/sim/System.hh>
 #include <gz/sim/Model.hh>
@@ -18,16 +18,16 @@
 #include <rclcpp/rclcpp.hpp>
 #include <string>
 
-namespace foil_dynamics
+namespace rudder_dynamics
 {
-  class FoilDynamics
+  class RudderDynamics
       : public gz::sim::System,
         public gz::sim::ISystemConfigure,
         public gz::sim::ISystemPreUpdate
   {
   public:
-    FoilDynamics();
-    ~FoilDynamics() override;
+    RudderDynamics();
+    ~RudderDynamics() override;
 
     // Called once when the plugin is loaded
     void Configure(const gz::sim::Entity &_entity,
@@ -44,13 +44,13 @@ namespace foil_dynamics
 
   private:
     /// \brief The model entity
-    gz::sim::Model model_{gz::sim::kNullEntity};
+    gz::sim::Model model_{{gz::sim::kNullEntity}};
 
     /// \brief The model name (for logging)
     std::string modelName_;
 
-    /// \brief The hydrodynamic link
-    gz::sim::Link link_{gz::sim::kNullEntity};
+    /// \brief The hydrodynamic links
+    std::vector<gz::sim::Link> links_{gz::sim::kNullEntity};
 
     /// \brief Fluid density [kg/m^3]
     double rho_{1000.1};
@@ -73,12 +73,9 @@ namespace foil_dynamics
     /// \brief Initial coefficient of drag / angle of attack (in radians) slope 
     double cdmax_{1.0};
 
-    /// \brief Initial wind
-    gz::math::Vector3d wind_{0, 0, 0};
-
     /// \brief Gazebo communication node.
     gz::transport::Node node_;
   };
-} // namespace foil_dynamics
+}
 
 #endif
