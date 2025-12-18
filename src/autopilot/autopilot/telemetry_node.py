@@ -1,7 +1,5 @@
 #!usr/bin/python3
 
-# TODO: ADD TRACKING OF THE ACTUAL SAIL AND RUDDER ANGLES TO THE TELEMETRY DATA
-
 from .autopilot_library.utils import *
 
 import rclpy
@@ -15,6 +13,7 @@ from cv_bridge import CvBridge
 from urllib.parse import urljoin
 
 import numpy as np
+import numpy.typing as npt
 import time, json, requests
 import cv2
 import yaml
@@ -23,7 +22,7 @@ import base64
 from typing import Any
 
 # don't put '/' at the end of the URL
-TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
+TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk:8443"
 
 
 class TelemetryNode(Node):
@@ -39,41 +38,47 @@ class TelemetryNode(Node):
 
     def __init__(self) -> None:
         super().__init__("telemetry")
-
-        # DEFAULT VALUES IN CASE THESE ARE NEVER SENT THROUGH ROS OR THE TELEMETRY SERVER
+        
+        # region DEFAULT VALUES IN CASE THESE ARE NEVER SENT THROUGH ROS OR THE TELEMETRY SERVER
+        
         # If these values aren't changing then the ros node or telemetry server thats supposed to be sending these values may not be working correctly
+        self.autopilot_mode: str = "N/A"
+        self.full_autonomy_maneuver: str = "N/A"
+
         self.current_waypoints_list: list[tuple[float, float]] = []
-        self.current_waypoint_index = 0
+        self.current_waypoint_index: int = 0
+        
+        # see https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/NavSatFix.html
         self.position = NavSatFix(latitude=0.0, longitude=0.0)
 
-        self.autopilot_mode = "N/A"
-        self.full_autonomy_maneuver = "N/A"
+        self.velocity_vector: npt.NDArray[np.float64] = np.zeros(2, dtype=np.float64)
+        self.speed: float = 0.0
 
-        self.velocity_vector = np.array([0.0, 0.0])
-        self.speed = 0.0
-        self.heading = 0.0
-        self.desired_heading = 0.0
+        self.heading: float = 0.0
+        self.desired_heading: float = 0.0
 
-        self.apparent_wind_vector = np.array([0.0, 0.0])
-        self.apparent_wind_speed = 0.0
-        self.apparent_wind_angle = 0.0
+        self.desired_sail_angle: float = 0.0
+        self.desired_rudder_angle: float = 0.0
 
-        self.base64_encoded_current_rgb_image = None
+        self.apparent_wind_vector: npt.NDArray[np.float64] = np.zeros(2, dtype=np.float64)
+        self.apparent_wind_speed: float = 0.0
+        self.apparent_wind_angle: float = 0.0
 
-        self.desired_sail_angle = 0.0
-        self.desired_rudder_angle = 0.0
+        self.base64_encoded_current_rgb_image: str = None
 
-        self.vesc_telemetry_data_rpm = 0
-        self.vesc_telemetry_data_duty_cycle = 0
-        self.vesc_telemetry_data_amp_hours = 0
-        self.vesc_telemetry_data_amp_hours_charged = 0
-        self.vesc_telemetry_data_current_to_vesc = 0
-        self.vesc_telemetry_data_voltage_to_motor = 0
-        self.vesc_telemetry_data_voltage_to_vesc = 0
-        self.vesc_telemetry_data_wattage_to_motor = 0
-        self.vesc_telemetry_data_time_since_vesc_startup_in_ms = 0
-        self.vesc_telemetry_data_motor_temperature = 0
-        self.vesc_telemetry_data_vesc_temperature = 0
+        self.vesc_telemetry_data_rpm: float = 0.0
+        self.vesc_telemetry_data_duty_cycle: float = 0.0
+        self.vesc_telemetry_data_amp_hours: float = 0.0
+        self.vesc_telemetry_data_amp_hours_charged: float = 0.0
+        self.vesc_telemetry_data_current_to_vesc: float = 0.0
+        self.vesc_telemetry_data_voltage_to_motor: float = 0.0
+        self.vesc_telemetry_data_voltage_to_vesc: float = 0.0
+        self.vesc_telemetry_data_wattage_to_motor: float = 0.0
+        self.vesc_telemetry_data_time_since_vesc_startup_in_ms: float = 0.0
+        self.vesc_telemetry_data_motor_temperature: float = 0.0
+        self.vesc_telemetry_data_vesc_temperature: float = 0.0
+
+        # endregion DEFAULT VALUES IN CASE THESE ARE NEVER SENT THROUGH ROS OR THE TELEMETRY SERVER
 
         self.logger = self.get_logger()
 
@@ -90,17 +95,17 @@ class TelemetryNode(Node):
                 break
 
         self.create_timer(0.01, self.update_boat_status) # 10 ms
-        self.create_timer(0.5, self.update_waypoints_from_telemetry)
+        self.create_timer(0.5, self.update_waypoints_from_telemetry) # 500 ms
         self.create_timer(0.5, self.update_autopilot_parameters_from_telemetry)
 
         self.cv_bridge = CvBridge()
 
         current_folder_path = os.path.dirname(os.path.realpath(__file__))
-        print(current_folder_path)
         with open(current_folder_path + "/config/sailboat_default_parameters.yaml", "r") as stream:
             self.autopilot_parameters_dictionary: dict = yaml.safe_load(stream)
 
         # region DECLARE ROS2 PUBLISHERS AND SUBSCRIBERS
+        
         self.autopilot_parameters_publisher = self.create_publisher(msg_type=String, topic="/autopilot_parameters", qos_profile=10)
 
         self.sensors_parameters_publisher = self.create_publisher(msg_type=String, topic="/sensors_parameters", qos_profile=10)
@@ -175,7 +180,10 @@ class TelemetryNode(Node):
             callback=self.desired_rudder_angle_callback,
             qos_profile=qos_profile_sensor_data,
         )
+    
         # endregion DECLARE ROS2 PUBLISHERS AND SUBSCRIBERS
+
+    # region ROS2 CALLBACK FUNCTIONS
 
     def position_callback(self, position: NavSatFix) -> None:
         """
@@ -188,7 +196,7 @@ class TelemetryNode(Node):
         """
 
         self.position = position
-
+    
     def velocity_callback(self, velocity_vector: Twist) -> None:
         """
         Callback function for the velocity topic. Updates the boat's current velocity vector and speed.
@@ -299,6 +307,9 @@ class TelemetryNode(Node):
 
     def camera_rgb_image_callback(self, camera_rgb_image: Image) -> None:
         """
+        Callback function for the camera RGB image topic. Updates the boat's current RGB image in base64 encoded format.
+
+        Note
         Refer to this stack overflow post: https://stackoverflow.com/questions/40928205/python-opencv-image-to-byte-string-for-json-transfer
         
         Parameters
@@ -307,7 +318,7 @@ class TelemetryNode(Node):
             The current RGB image from the boat's camera.
         """
 
-        rgb_image_cv = self.cv_bridge.imgmsg_to_cv2(camera_rgb_image, "rgb8")
+        rgb_image_cv = self.cv_bridge.imgmsg_to_cv2(camera_rgb_image, desired_encoding="rgb8")
         rgb_image_cv = rgb_image_cv[80:1200, 40:680]  # crop the image to 640,640
         retval, buffer = cv2.imencode(".jpg", rgb_image_cv)
 
@@ -334,12 +345,31 @@ class TelemetryNode(Node):
         self.desired_sail_angle = desired_sail_angle.data
 
     def desired_rudder_angle_callback(self, desired_rudder_angle: Float32) -> None:
+        """
+        Callback function for the desired rudder angle topic. Updates the boat's desired rudder angle.
+
+        Parameters
+        ----------
+        desired_rudder_angle
+            The desired rudder angle of the boat.
+        """
+
         self.desired_rudder_angle = desired_rudder_angle.data
 
     def should_terminate_callback(self, msg: Bool) -> None:
-        if msg.data == False:
-            return
-        rclpy.shutdown()
+        """
+        Callback function for the should terminate topic. Shuts down the node if the message data is True.
+        
+        Parameters
+        ----------
+        msg
+            The message indicating whether to terminate the node.
+        """
+
+        if msg.data:
+            rclpy.shutdown()
+    
+    # endregion ROS2 CALLBACK FUNCTIONS
 
     def get_raw_response_from_telemetry_server(self, route: str, session: requests.Session = None) -> Any:
         """
@@ -368,9 +398,13 @@ class TelemetryNode(Node):
 
     def update_boat_status(self) -> None:
         """
-        Gathers data from the autopilot and sensors through ROS, and then this node makes an API call to send that data over to the groundstation so that it can view what is going on.
+        Gathers data from the autopilot and sensors through ROS, and then this node  
+        makes an API call to send that data over to the groundstation so that it can view what is going on.
 
-        THIS IS BUGGED. YOU NEED TO ACCOUNT FOR THE VELOCITY VECTOR BEING MEASURED GLOBALLY RATHER THAN THE APPARENT WIND VECTOR WHICH IS MEASURED LOCALLY.
+        Note
+        -------
+        THIS IS BUGGED. YOU NEED TO ACCOUNT FOR THE VELOCITY VECTOR BEING MEASURED GLOBALLY  
+        RATHER THAN THE APPARENT WIND VECTOR WHICH IS MEASURED LOCALLY.
         """
 
         true_wind_vector = self.apparent_wind_vector + self.velocity_vector
@@ -435,14 +469,13 @@ class TelemetryNode(Node):
         start_time = time.time()
         try:
             self.boat_status_session.post(urljoin(TELEMETRY_SERVER_URL, f"boat_status/set/{self.instance_id}"), json=boat_status_dictionary)
+
         except Exception as e:
             self.logger.info(f"Could not connect to telemetry server to send boat status update. \nError: {e}")
-            
-        self.logger.info(f"{time.time() - start_time}")
 
     def update_waypoints_from_telemetry(self) -> None:
         """
-        Makes an API call to gather the waypoints that the groundstation set,
+        Makes an API call to gather the waypoints that the groundstation set,  
         and then publishes the waypoints over ROS so that the autopilot can see them.
         """
 
@@ -504,7 +537,7 @@ class TelemetryNode(Node):
         self.autopilot_parameters_publisher.publish(serialized_autopilot_parameters_string)
 
 
-def main():
+def main() -> None:
     rclpy.init()
     telemetry_node = TelemetryNode()
     rclpy.spin(telemetry_node)

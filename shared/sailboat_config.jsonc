@@ -26,17 +26,7 @@
         "description": "Maximum angle to sail before changing tacks, in degrees."
     },
 
-    // Autopilot and navigation parameters
-    "autopilot_refresh_rate": {
-        "type": "float",
-        "default": 50.0,
-        "description": "Refresh rate for the autopilot in seconds."
-    },
-    "waypoint_accuracy": {
-        "type": "float",
-        "default": 5.0,
-        "description": "The accuracy required to consider a waypoint reached, in meters."
-    },
+    // Tacking and jibing parameters
     "perform_forced_jibe_instead_of_tack": {
         "type": "bool",
         "default": false,

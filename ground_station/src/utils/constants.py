@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from urllib.parse import urljoin
 
 import requests
-from qtpy.QtCore import QRect, Qt
+from qtpy.QtCore import Qt, QRect, QSizeF, QPoint
 from qtpy.QtGui import QColor, QPalette
 from strenum import StrEnum
 
@@ -86,8 +86,9 @@ STYLE_SHEET = """
     }
 """
 
-# window dimensions
-WINDOW_BOX = QRect(100, 100, 800, 600)
+# window size and box
+WINDOW_SIZE = QSizeF(w=800, h=600)
+WINDOW_BOX = QRect(atopLeft=QPoint(xpos=100, ypos=100), asize=WINDOW_SIZE)
 
 # timers
 THIRTY_SECOND_TIMER = misc.create_timer(30_000)
@@ -104,24 +105,24 @@ TEN_MS_TIMER = misc.create_timer(10)
 
 ONE_MS_TIMER = misc.create_timer(1)
 
-START_TIME = time.time()
+START_TIME: float = time.time()
 
 # server ports
-ASSET_SERVER_PORT = 8000
-GO_SERVER_PORT = 3001
+ASSET_SERVER_PORT: int = 8000
+GO_SERVER_PORT: int = 3001
 
 # url for local waypoints server
-WAYPOINTS_SERVER_URL = f"http://localhost:{GO_SERVER_PORT}/waypoints"
+WAYPOINTS_SERVER_URL: str = f"http://localhost:{GO_SERVER_PORT}/waypoints"
 
 # base url for telemetry server (the CIA is inside of my brain...)
-TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
+TELEMETRY_SERVER_URL: str = "https://vt-autoboat-telemetry.uk"
 
 TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE: int = -1  # -1 means no instance selected
 TELEMETRY_SERVER_INSTANCE_ID: int = TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE
 HAS_TELEMETRY_SERVER_INSTANCE_CHANGED: bool = False
 
 # endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint` + `/`
-_instance_manager_endpoints = {
+_instance_manager_endpoints: dict[str, str] = {
     "create_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/create"),
     "delete_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/delete/"),
     "delete_all_instances": urljoin(TELEMETRY_SERVER_URL, "instance_manager/delete_all"),
@@ -136,13 +137,13 @@ _instance_manager_endpoints = {
     "get_all_ids": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_ids"),
 }
 
-_boat_status_endpoints = {
+_boat_status_endpoints: dict[str, str] = {
     "get_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/get/"),
     "get_new_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/get_new/"),
     "test_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/test/"),
 }
 
-_autopilot_parameters_endpoints = {
+_autopilot_parameters_endpoints: dict[str, str] = {
     "get_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get/"),
     "get_new_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_new/"),
     "get_default_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_default/"),
@@ -151,14 +152,14 @@ _autopilot_parameters_endpoints = {
     "test_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/test/"),
 }
 
-_waypoints_endpoints = {
+_waypoints_endpoints: dict[str, str] = {
     "get_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/get/"),
     "get_new_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/get_new/"),
     "set_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/set/"),
     "test_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/test/"),
 }
 
-TELEMETRY_SERVER_ENDPOINTS = dict(
+TELEMETRY_SERVER_ENDPOINTS: dict[str, str] = dict(
     **_instance_manager_endpoints,
     **_boat_status_endpoints,
     **_autopilot_parameters_endpoints,

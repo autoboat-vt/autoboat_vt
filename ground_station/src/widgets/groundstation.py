@@ -43,7 +43,7 @@ class GroundStationWidget(QWidget):
 
     def __init__(self, boat_status_source: Signal) -> None:
         super().__init__()
-        self.fake_position: tuple[float] = (0, 0)
+        self.fake_position: tuple[float] = (0.0, 0.0)
         self.fake_heading: float = 180.0
 
         self.waypoints: list[list[float]] = []
