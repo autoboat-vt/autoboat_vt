@@ -12,7 +12,6 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix
 from autopilot import Position 
-from tf_transformations import euler_from_quaternion
 
 import json, yaml
 import os, time

@@ -1,10 +1,14 @@
 import numpy as np
 from enum import Enum
 
+
 import geopy
+from geopy.distance import geodesic
 import geopy.distance
 import pyproj
+from sensor_msgs.msg import NavSatFix
 
+from nav_msgs.msg import Odometry
 from .position import Position
 
 
@@ -161,6 +165,36 @@ def get_distance_between_positions(position1: Position, position2: Position):
 
     
 
+# def NavSatFixFromOdometry(odometry: Odometry, lat0, lon0):
+#     pose = odometry.pose.pose
+#     x = pose.position.x
+#     y = pose.position.y
+#     quat = pose.orientation
+#     quatArray = np.array([quat.x, quat.y, quat.z, quat.w])
+#     quatArray /= np.linalg.norm(quatArray)
+
+#     origin = (lat0,lon0)
+
+#     new_coords = geodesic(meters=y).destination(origin, 0) 
+#     new_coords = geodesic(meters=x).destination(new_coords, 90)
+#     lat_new = new_coords.latitude
+#     lon_new = new_coords.longitude
+
+   
+#     navSatFix = NavSatFix()
+#     navSatFix.latitude = lat_new
+#     navSatFix.longitude = lon_new
+#     navSatFix.altitude =0
+
+#     return navSatFix
+
+
+
+
+    
+
+             
+
 
 def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float) -> bool:
     """
@@ -186,6 +220,9 @@ def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float
         get_angle_between_vectors(boundary1_vector, angle_vector) + get_angle_between_vectors(angle_vector, boundary2_vector), 
         get_angle_between_vectors(boundary1_vector, boundary2_vector)
     )
+
+
+
 
     
     

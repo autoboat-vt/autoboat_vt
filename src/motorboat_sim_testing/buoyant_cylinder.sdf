@@ -38,9 +38,10 @@ ros2 topic pub motorboat/propeller_topic std_msgs/msg/Float64 'data: 5'
 
 With ROS2 autopilot node:
 0. Start the simulation (in ../launch/):
-ros2 launch <simtest class="launch py">
+    ros2 launch simtest.launch.py
+
 1. Move the rudder: 
-      ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
+ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
 2. Propel the vehicle:
  ros2 topic pub /propeller_sim_rpm std_msgs/msg/Float64 'data: 5'
 
@@ -428,7 +429,7 @@ ros2 launch <simtest class="launch py">
 
         <inertial>
           <pose>0 0 0 0 0 0</pose>
-          <mass>6.9</mass>
+          <mass>6.8</mass>
           <inertia>
             <ixx>0.065</ixx>
             <ixy>0</ixy>
@@ -462,7 +463,7 @@ ros2 launch <simtest class="launch py">
 
         <inertial>
           <pose>0 0 0 0 0 0</pose>
-          <mass>6.9</mass>
+          <mass>6.8</mass>
           <inertia>
             <ixx>0.065</ixx>
             <ixy>0</ixy>
@@ -542,7 +543,7 @@ ros2 launch <simtest class="launch py">
           <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>0.05 0.05 0.05</size>
+              <size>0.05 0.05 .05</size>
             </box>
           </geometry>
         </visual>
@@ -570,7 +571,7 @@ ros2 launch <simtest class="launch py">
           <pose>0 0 0 0 0 0</pose>
           <mass>0.5</mass>
           <inertia>
-            <ixx>0.00174</ixx>
+            <ixx>0.00141</ixx>
             <ixy>0.0000000000076</ixy>
             <ixz>0.0000000000076</ixz>
             <iyy>0.00174</iyy>
@@ -604,8 +605,8 @@ ros2 launch <simtest class="launch py">
         <axis>
           <xyz>0 0 1</xyz>
           <limit>
-            <lower>-1e+12</lower>
-            <upper>1e+12</upper>
+            <lower>-.61</lower>
+            <upper>.61</upper>
           </limit>
           <dynamics>
             <damping>1</damping>
@@ -642,7 +643,7 @@ ros2 launch <simtest class="launch py">
         <topic>propeller_topic</topic>
         <joint_name>propeller_joint</joint_name>
         <fluid_density>1025</fluid_density>
-        <propeller_diameter>0.05</propeller_diameter>
+        <propeller_diameter>0.3</propeller_diameter>
       </plugin>
 
       <!-- Drag on the rudder to make it function -->
@@ -650,14 +651,14 @@ ros2 launch <simtest class="launch py">
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>.11</cla>
+        <cla>.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>.02</cda>
+        <cda>1</cda>
         <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
+        <alpha_stall>5</alpha_stall>
         <a0>0</a0>
-        <area>.1</area>
-        <upward>0 1 0</upward>
+        <area>.052</area>
+        <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>rudder_link</link_name>
         <cp>0 0 0</cp>
@@ -670,9 +671,9 @@ ros2 launch <simtest class="launch py">
         <air_density>1025</air_density>
         <cla>.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>0.003</cda>
+        <cda>1</cda>
         <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
+        <alpha_stall>5</alpha_stall>
         <a0>0</a0>
         <area>0.135</area>
         <upward>0 0 1</upward>
@@ -687,9 +688,9 @@ ros2 launch <simtest class="launch py">
         <air_density>1025</air_density>
         <cla>.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>0.003</cda>
+        <cda>1</cda>
         <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
+        <alpha_stall>5</alpha_stall>
         <a0>0</a0>
         <area>0.135</area>
         <upward>0 0 1</upward>
@@ -704,9 +705,9 @@ ros2 launch <simtest class="launch py">
         <air_density>1025</air_density>
         <cla>.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>0.003</cda>
+        <cda>1</cda>
         <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
+        <alpha_stall>5</alpha_stall>
         <a0>0</a0>
         <area>0.135</area>
         <upward>0 0 1</upward>
@@ -721,9 +722,9 @@ ros2 launch <simtest class="launch py">
         <air_density>1025</air_density>
         <cla>.1</cla>
         <cla_stall>0</cla_stall>
-        <cda>0.003</cda>
+        <cda>1</cda>
         <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
+        <alpha_stall>5</alpha_stall>
         <a0>0</a0>
         <area>0.135</area>
         <upward>0 0 1</upward>
@@ -737,69 +738,69 @@ ros2 launch <simtest class="launch py">
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>left_front_link</link_name>
-        <xUabsU>-6</xUabsU>
-        <xU>-6</xU>
+        <xUabsU>-0.62282</xUabsU>
+        <xU>0</xU>
         <yVabsV>-6</yVabsV>
-        <yV>-6</yV>
-        <zWabsW>-6</zWabsW>
-        <zW>-6</zW>
+        <yV>0</yV>
+        <zWabsW>-6.0127</zWabsW>
+        <zW>0</zW>
         <kPabsP>-0.5</kPabsP>
-        <kP>-0.5</kP>
-        <mQabsQ>-5</mQabsQ>
-        <mQ>-5</mQ>
+        <kP>0</kP>
+        <mQabsQ>-6.32698957</mQabsQ>
+        <mQ>0</mQ>
         <nRabsR>-0.6</nRabsR>
-        <nR>-0.6</nR>
+        <nR>0</nR>
       </plugin>
       <plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>right_front_link</link_name>
-        <xUabsU>-6</xUabsU>
-        <xU>-6</xU>
+        <xUabsU>-0.62282</xUabsU>
+        <xU>0</xU>
         <yVabsV>-6</yVabsV>
-        <yV>-6</yV>
-        <zWabsW>-6</zWabsW>
-        <zW>-6</zW>
+        <yV>0</yV>
+        <zWabsW>-6.0127</zWabsW>
+        <zW>0</zW>
         <kPabsP>-0.5</kPabsP>
-        <kP>-0.5</kP>
-        <mQabsQ>-5</mQabsQ>
-        <mQ>-5</mQ>
+        <kP>0</kP>
+        <mQabsQ>-6.32698957</mQabsQ>
+        <mQ>0</mQ>
         <nRabsR>-0.6</nRabsR>
-        <nR>-0.6</nR>
+        <nR>0</nR>
       </plugin>
       <plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>right_back_link</link_name>
-        <xUabsU>-6</xUabsU>
-        <xU>-6</xU>
+        <xUabsU>-0.62282</xUabsU>
+        <xU>0</xU>
         <yVabsV>-6</yVabsV>
-        <yV>-6</yV>
-        <zWabsW>-6</zWabsW>
-        <zW>-6</zW>
+        <yV>0</yV>
+        <zWabsW>-6.0127</zWabsW>
+        <zW>0</zW>
         <kPabsP>-0.5</kPabsP>
-        <kP>-0.5</kP>
-        <mQabsQ>-5</mQabsQ>
-        <mQ>-5</mQ>
+        <kP>0</kP>
+        <mQabsQ>-6.32698957</mQabsQ>
+        <mQ>0</mQ>
         <nRabsR>-0.6</nRabsR>
-        <nR>-0.6</nR>
+        <nR>0</nR>
       </plugin>
       <plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>left_back_link</link_name>
-        <xUabsU>-6</xUabsU>
-        <xU>-6</xU>
+        <xUabsU>-0.62282</xUabsU>
+        <xU>0</xU>
         <yVabsV>-6</yVabsV>
-        <yV>-6</yV>
-        <zWabsW>-6</zWabsW>
-        <zW>-6</zW>
+        <yV>0</yV>
+        <zWabsW>-6.0127</zWabsW>
+        <zW>0</zW>
         <kPabsP>-0.5</kPabsP>
-        <kP>-0.5</kP>
-        <mQabsQ>-5</mQabsQ>
-        <mQ>-5</mQ>
+        <kP>0</kP>
+        <mQabsQ>-6.32698957</mQabsQ>
+        <mQ>0</mQ>
         <nRabsR>-0.6</nRabsR>
-        <nR>-0.6</nR>
+        <nR>0</nR>
       </plugin>
 
     </model>

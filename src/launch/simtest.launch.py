@@ -37,7 +37,7 @@ def generate_launch_description():
 
             respawn=True,
             respawn_delay=2.0,
-            remappings=[('/rudder','/desired_rudder_angle'),('/motorboat/propeller_topic', '/propeller_sim_rpm')],
+            remappings=[('/rudder','/desired_rudder_angle'),('/motorboat/propeller_topic', '/propeller_sim_rpm'), ('/navsat', '/position')],
             output="log"
         ),
         Node(
@@ -47,17 +47,9 @@ def generate_launch_description():
                        '/rudder@std_msgs/msg/Float64]gz.msgs.Double',
                        '/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
                        '/navsat@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat'],
-            remappings=[('/rudder','/desired_rudder_angle'),('/motorboat/propeller_topic', '/propeller_sim_rpm')],
+            remappings=[('/rudder','/desired_rudder_angle'),('/motorboat/propeller_topic', '/propeller_sim_rpm'),('/navsat','/position')],
 
             output='screen'
-        ),
-        Node(
-            package='robot_localization',
-            executable='navsat_transform_node',
-            name='navsat_transform_node',
-            remappings=[('/odometry','/navSat')],
-            respawn = True,
-            
         ),
 
     ]
