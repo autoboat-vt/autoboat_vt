@@ -30,18 +30,6 @@ def generate_launch_description():
         ),
 
         # Bridging and remapping Gazebo topics to ROS 2 (replace with your own topics)
-        Node(
-            package='ros_gz_bridge',
-            executable='parameter_bridge',
-            arguments=['motorboat/propeller_topic@std_msgs/msg/Float64]gz.msgs.Double',
-                       '/rudder@std_msgs/msg/Float64]gz.msgs.Double',
-                       '/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
-                       '/navsat@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat'],
-            remappings=[('/rudder','/desired_rudder_angle'),('motorboat/propeller_topic', '/propeller_sim_rpm')],
-
-            output='screen'
-        ),
-
          Node(
             package='autopilot',
             executable='motorboat_autopilot',
@@ -49,9 +37,29 @@ def generate_launch_description():
 
             respawn=True,
             respawn_delay=2.0,
-            remappings=[('/rudder','/desired_rudder_angle',),('motorboat/propeller_topic','/propeller_sim_rpm')],
-            # output="log"
+            remappings=[('/rudder','/desired_rudder_angle'),('/motorboat/propeller_topic', '/propeller_sim_rpm')],
+            output="log"
         ),
+        Node(
+            package='ros_gz_bridge',
+            executable='parameter_bridge',
+            arguments=['/motorboat/propeller_topic@std_msgs/msg/Float64]gz.msgs.Double',
+                       '/rudder@std_msgs/msg/Float64]gz.msgs.Double',
+                       '/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
+                       '/navsat@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat'],
+            remappings=[('/rudder','/desired_rudder_angle'),('/motorboat/propeller_topic', '/propeller_sim_rpm')],
+
+            output='screen'
+        ),
+        Node(
+            package='robot_localization',
+            executable='navsat_transform_node',
+            name='navsat_transform_node',
+            remappings=[('/odometry','/navSat')],
+            respawn = True,
+            
+        ),
+
     ]
     
     
