@@ -796,7 +796,7 @@ With ros2:
       
       <plugin filename="libRudderDynamics.so"
       name="rudder_dynamics::RudderDynamics">
-        <link0>rudder_link</link0>
+        <link_name>rudder_link</link_name>
         <clmax>2.36</clmax>
         <cdmax>4.16</cdmax>
         <area>.0225</area>
@@ -809,10 +809,7 @@ With ros2:
       <!-- TODO: get clmax, cdmax for hull -->
       <plugin filename="libRudderDynamics.so"
       name="rudder_dynamics::RudderDynamics">
-        <link0>left_front_link</link0>
-        <link1>right_front_link</link1>
-        <link2>left_back_link</link2>
-        <link3>right_back_link</link3>
+        <link_name>left_front_link</link_name>
         <clmax>2</clmax>
         <cdmax>4</cdmax>
         <area>0.03716499375</area>
@@ -821,6 +818,39 @@ With ros2:
         <upward>0 0 1</upward>
       </plugin>
 
+      <plugin filename="libRudderDynamics.so"
+      name="rudder_dynamics::RudderDynamics">
+        <link_name>right_front_link</link_name>
+        <clmax>2</clmax>
+        <cdmax>4</cdmax>
+        <area>0.03716499375</area>
+        <fluid_density>1025</fluid_density>
+        <forward>1 0 0</forward>
+        <upward>0 0 1</upward>
+      </plugin>
+
+      <plugin filename="libRudderDynamics.so"
+      name="rudder_dynamics::RudderDynamics">
+        <link_name>left_back_link</link_name>
+        <clmax>2</clmax>
+        <cdmax>4</cdmax>
+        <area>0.03716499375</area>
+        <fluid_density>1025</fluid_density>
+        <forward>1 0 0</forward>
+        <upward>0 0 1</upward>
+      </plugin>
+
+      <plugin filename="libRudderDynamics.so"
+      name="rudder_dynamics::RudderDynamics">
+        <link_name>right_back_link</link_name>
+        <clmax>2</clmax>
+        <cdmax>4</cdmax>
+        <area>0.03716499375</area>
+        <fluid_density>1025</fluid_density>
+        <forward>1 0 0</forward>
+        <upward>0 0 1</upward>
+      </plugin>
+      
       <!-- Sail dynamics plugin -->
       <!-- TODO: get values for clmax and cdmax (cl vs alpha and cd vs alpha curves) -->
       <plugin filename="libFoilDynamics.so"
@@ -853,69 +883,69 @@ With ros2:
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>left_front_link</link_name>
-        <xUabsU>-.6</xUabsU>
-        <xU>-.6</xU>
-        <yVabsV>-.6</yVabsV>
-        <yV>-.6</yV>
+        <xUabsU>-6</xUabsU>
+        <xU>-6</xU>
+        <yVabsV>-6</yVabsV>
+        <yV>-6</yV>
         <zWabsW>-60</zWabsW>
         <zW>-60</zW>
         <kPabsP>-0.5</kPabsP>
         <kP>-0.5</kP>
         <mQabsQ>-5</mQabsQ>
         <mQ>-5</mQ>
-        <nRabsR>-6</nRabsR>
-        <nR>-6</nR>
+        <nRabsR>-0.6</nRabsR>
+        <nR>-0.6</nR>
       </plugin>
       <plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>right_front_link</link_name>
-        <xUabsU>-.6</xUabsU>
-        <xU>-.6</xU>
-        <yVabsV>-.6</yVabsV>
-        <yV>-.6</yV>
+        <xUabsU>-6</xUabsU>
+        <xU>-6</xU>
+        <yVabsV>-6</yVabsV>
+        <yV>-6</yV>
         <zWabsW>-60</zWabsW>
         <zW>-60</zW>
         <kPabsP>-0.5</kPabsP>
         <kP>-0.5</kP>
         <mQabsQ>-5</mQabsQ>
         <mQ>-5</mQ>
-        <nRabsR>-6</nRabsR>
-        <nR>-6</nR>
+        <nRabsR>-0.6</nRabsR>
+        <nR>-0.6</nR>
       </plugin>
       <plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>right_back_link</link_name>
-        <xUabsU>-.6</xUabsU>
-        <xU>-.6</xU>
-        <yVabsV>-.6</yVabsV>
-        <yV>-.6</yV>
+        <xUabsU>-6</xUabsU>
+        <xU>-6</xU>
+        <yVabsV>-6</yVabsV>
+        <yV>-6</yV>
         <zWabsW>-60</zWabsW>
         <zW>-60</zW>
         <kPabsP>-0.5</kPabsP>
         <kP>-0.5</kP>
         <mQabsQ>-5</mQabsQ>
         <mQ>-5</mQ>
-        <nRabsR>-6</nRabsR>
-        <nR>-6</nR>
+        <nRabsR>-0.6</nRabsR>
+        <nR>-0.6</nR>
       </plugin>
       <plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>left_back_link</link_name>
-        <xUabsU>-.6</xUabsU>
-        <xU>-.6</xU>
-        <yVabsV>-.6</yVabsV>
-        <yV>-.6</yV>
+        <xUabsU>-6</xUabsU>
+        <xU>-6</xU>
+        <yVabsV>-6</yVabsV>
+        <yV>-6</yV>
         <zWabsW>-60</zWabsW>
         <zW>-60</zW>
         <kPabsP>-0.5</kPabsP>
         <kP>-0.5</kP>
         <mQabsQ>-5</mQabsQ>
         <mQ>-5</mQ>
-        <nRabsR>-6</nRabsR>
-        <nR>-6</nR>
+        <nRabsR>-0.6</nRabsR>
+        <nR>-0.6</nR>
       </plugin>
       <plugin
         filename="gz-sim-hydrodynamics-system"
