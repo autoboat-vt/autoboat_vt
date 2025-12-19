@@ -3,15 +3,16 @@ from .autopilot_library.discrete_pid import Discrete_PID
 from .autopilot_library.utils import *
 
 
+
 import rclpy
-from rclpy.qos import qos_profile_sensor_data, QoSProfile, ReliabilityPolicy
+from rclpy.qos import qos_profile_sensor_data
 from rclpy.node import Node
 from autoboat_msgs.msg import WaypointList, RCData, VESCControlData
 from std_msgs.msg import Float32, String, Int32, Bool, Float64
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix
-from autopilot import Position 
+# from autopilot import Position 
 
 import json, yaml
 import os, time
@@ -97,11 +98,12 @@ class MotorboatAutopilotNode(Node):
 
         # default values
         self.position = NavSatFix()
-        self.velocity = np.array([0.0, 0.0])
+        # self.velocity = np.array([0.0, 0.0])
         self.speed = 0.0
         self.heading = 0.0
         self.rudder_angle = 0.0
         self.odometry = Odometry()
+        self.velocity = Twist()
 
         self.autopilot_mode = MotorboatAutopilotMode.Waypoint_Mission
         self.should_propeller_motor_be_powered = False
@@ -248,8 +250,12 @@ class MotorboatAutopilotNode(Node):
         self.position = Position(longitude=position.longitude, latitude=position.latitude)
 
     def velocity_callback(self, velocity: Twist):
-        self.velocity = self.odometry.twist
-        self.velocity = np.array([velocity.linear.x, velocity.linear.y])
+        twist = Twist()
+        twist.linear = self.odometry.twist.twist.linear
+        twist.angular = self.odometry.twist.twist.angular
+        velocity = twist
+        self.velocity = velocity
+        # self.velocity = np.array([velocity.linear.x, velocity.linear.y])
         self.speed = np.sqrt(velocity.linear.x**2 + velocity.linear.y**2)
 
     def odometry_callback(self, odometry: Odometry):
@@ -355,7 +361,7 @@ class MotorboatAutopilotNode(Node):
         desired_rudder_angle = self.step()
 
         self.velocity_publisher.publish(self.velocity)
-        self.heading_publisher.publish(self.heading)
+        self.heading_publisher.publish(Float32(data=self.heading))
 
         
 
@@ -379,7 +385,7 @@ class MotorboatAutopilotNode(Node):
         else:
             self.desired_heading_publisher.publish(Float32(data=0.))
 
-        if desired_rudder_angle != None:
+        if desired_rudder_angle is not None:
             self.desired_rudder_angle_publisher.publish(Float64(data=float(desired_rudder_angle)))
 
         # Manually check whether the RC has disconnected if we have not received data from the remote control for 3 second
