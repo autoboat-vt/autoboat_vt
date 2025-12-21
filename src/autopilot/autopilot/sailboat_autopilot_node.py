@@ -277,6 +277,7 @@ class SailboatAutopilotNode(Node):
 
         return rudder_angle, sail_angle
 
+
     def update_ros_topics(self):
         """
         This is the main function that is called constantely by the timer.

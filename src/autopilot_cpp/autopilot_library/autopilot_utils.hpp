@@ -18,7 +18,7 @@ using json = nlohmann::json;
 
 
 
-enum class SailboatAutopilotMode {
+enum class SailboatAutopilotModes {
     Disabled = 0, 
     Full_RC = 1, 
     Hold_Best_Sail = 2, 

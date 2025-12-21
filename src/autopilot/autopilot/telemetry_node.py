@@ -115,82 +115,26 @@ class TelemetryNode(Node):
         with open(current_folder_path + "/config/sailboat_default_parameters.yaml", "r") as stream:
             self.autopilot_parameters_dictionary: dict = yaml.safe_load(stream)
 
-        # region DECLARE ROS2 PUBLISHERS AND SUBSCRIBERS
+        
+        
         self.autopilot_parameters_publisher = self.create_publisher(msg_type=String, topic="/autopilot_parameters", qos_profile=10)
-
         self.sensors_parameters_publisher = self.create_publisher(msg_type=String, topic="/sensors_parameters", qos_profile=10)
-
         self.waypoints_list_publisher = self.create_publisher(msg_type=WaypointList, topic="/waypoints_list", qos_profile=10)
+        self.desired_heading_listener = self.create_subscription(msg_type=Float32, topic="/desired_heading", callback=self.desired_heading_callback, qos_profile=10)
+        self.current_waypoint_index_listener = self.create_subscription(msg_type=Int32, topic="/current_waypoint_index", callback=self.current_waypoint_index_callback, qos_profile=10)
+        self.full_autonomy_maneuver_listener = self.create_subscription(msg_type=String, topic="/full_autonomy_maneuver", callback=self.full_autonomy_maneuver_callback, qos_profile=qos_profile_sensor_data)
 
-        self.desired_heading_listener = self.create_subscription(
-            msg_type=Float32, topic="/desired_heading", callback=self.desired_heading_callback, qos_profile=10
-        )
+        self.autopilot_mode_listener = self.create_subscription(msg_type=String, topic="/autopilot_mode", callback=self.autopilot_mode_callback, qos_profile=qos_profile_sensor_data)
+        self.position_listener = self.create_subscription(msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=qos_profile_sensor_data)
+        self.velocity_listener = self.create_subscription(msg_type=Twist, topic="/velocity", callback=self.velocity_callback, qos_profile=qos_profile_sensor_data)
+        self.heading_listener = self.create_subscription(msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=qos_profile_sensor_data)
+        self.apparent_wind_vector_listener = self.create_subscription(msg_type=Vector3, topic="/apparent_wind_vector", callback=self.apparent_wind_vector_callback, qos_profile=qos_profile_sensor_data)
 
-        self.current_waypoint_index_listener = self.create_subscription(
-            msg_type=Int32, topic="/current_waypoint_index", callback=self.current_waypoint_index_callback, qos_profile=10
-        )
-
-        self.full_autonomy_maneuver_listener = self.create_subscription(
-            msg_type=String,
-            topic="/full_autonomy_maneuver",
-            callback=self.full_autonomy_maneuver_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
-
-        self.autopilot_mode_listener = self.create_subscription(
-            msg_type=String,
-            topic="/autopilot_mode",
-            callback=self.autopilot_mode_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
-
-        self.position_listener = self.create_subscription(
-            msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=qos_profile_sensor_data
-        )
-
-        self.velocity_listener = self.create_subscription(
-            msg_type=Twist, topic="/velocity", callback=self.velocity_callback, qos_profile=qos_profile_sensor_data
-        )
-
-        self.heading_listener = self.create_subscription(
-            msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=qos_profile_sensor_data
-        )
-
-        self.apparent_wind_vector_listener = self.create_subscription(
-            msg_type=Vector3,
-            topic="/apparent_wind_vector",
-            callback=self.apparent_wind_vector_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
-
-        self.camera_rgb_image_listener = self.create_subscription(
-            msg_type=Image,
-            topic="/camera/camera/color/image_raw",
-            callback=self.camera_rgb_image_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
-
-        self.vesc_telemetry_data_listener = self.create_subscription(
-            msg_type=VESCTelemetryData,
-            topic="/vesc_telemetry_data",
-            callback=self.vesc_telemetry_data_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
-
-        self.desired_sail_angle_listener = self.create_subscription(
-            msg_type=Float32,
-            topic="/desired_sail_angle",
-            callback=self.desired_sail_angle_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
-
-        self.desired_rudder_angle_listener = self.create_subscription(
-            msg_type=Float32,
-            topic="/desired_rudder_angle",
-            callback=self.desired_rudder_angle_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
-        # endregion DECLARE ROS2 PUBLISHERS AND SUBSCRIBERS
+        self.camera_rgb_image_listener = self.create_subscription(msg_type=Image, topic="/camera/camera/color/image_raw", callback=self.camera_rgb_image_callback, qos_profile=qos_profile_sensor_data,)
+        self.vesc_telemetry_data_listener = self.create_subscription(msg_type=VESCTelemetryData, topic="/vesc_telemetry_data", callback=self.vesc_telemetry_data_callback, qos_profile=qos_profile_sensor_data)
+        self.desired_sail_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_sail_angle", callback=self.desired_sail_angle_callback, qos_profile=qos_profile_sensor_data)
+        self.desired_rudder_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_rudder_angle", callback=self.desired_rudder_angle_callback, qos_profile=qos_profile_sensor_data,)
+        
 
     def position_callback(self, position: NavSatFix) -> None:
         """

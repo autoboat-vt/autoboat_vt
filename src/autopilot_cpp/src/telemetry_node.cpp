@@ -375,7 +375,7 @@ private:
 
         auto end = std::chrono::steady_clock::now();
         std::chrono::duration<double, std::milli> elapsed_ms = end - start;
-        RCLCPP_INFO(this->get_logger(),  "Time elapsed: %lf ms", elapsed_ms.count());
+        // RCLCPP_INFO(this->get_logger(),  "Time elapsed: %lf ms", elapsed_ms.count());
     }
 
 

@@ -34,7 +34,7 @@ using json = nlohmann::json;
 
 class SailboatAutopilotNode : public rclcpp::Node {
 
-    public:
+public:
     SailboatAutopilotNode() : Node("sailboat_autopilot") {
 
 
@@ -66,10 +66,11 @@ class SailboatAutopilotNode : public rclcpp::Node {
         desired_sail_angle_publisher = create_publisher<std_msgs::msg::Float32>("/desired_sail_angle", sensor_qos);
         desired_rudder_angle_publisher = create_publisher<std_msgs::msg::Float32>("/desired_rudder_angle", sensor_qos);
         autopilot_mode_publisher = create_publisher<std_msgs::msg::String>("/autopilot_mode", sensor_qos);
+        full_autonomy_maneuver_publisher = create_publisher<std_msgs::msg::String>("/full_autonomy_maneuver", sensor_qos);
         waypoint_index_publisher = create_publisher<std_msgs::msg::Int32>("/current_waypoint_index", 10);
         desired_heading_publisher = create_publisher<std_msgs::msg::Float32>("/desired_heading", 10);
-
-        autopilot_refresh_timer = create_wall_timer(std::chrono::duration<double>(1.0/autopilot_parameters["autopilot_refresh_rate"].get<float>()), std::bind(&SailboatAutopilotNode::update_ros_topics, this));
+        autopilot_refresh_timer = create_wall_timer(std::chrono::duration<double>(1.0 / autopilot_parameters["autopilot_refresh_rate"].get<float>()), std::bind(&SailboatAutopilotNode::update_ros_topics, this));
+    
     }
 
 
@@ -79,18 +80,28 @@ private:
     
     std::map<std::string, json> autopilot_parameters;
     SailboatAutopilot sailboat_autopilot;
-    SailboatAutopilotMode autopilot_mode = SailboatAutopilotMode::Disabled;
     
     Position current_position = {0.0, 0.0};
-    std::array<float, 2> global_velocity_vector = {0.0, 0.0};
-    std::array<float, 2> apparent_wind_vector = {0.0, 0.0};
+    std::array<float, 2> current_global_velocity_vector = {0.0, 0.0};
+    std::array<float, 2> current_apparent_wind_vector = {0.0, 0.0};
+
     float current_heading = 0.0;
     float heading_to_hold = 0.0;
+
     float joystick_left_y = 0.0;
     float joystick_right_x = 0.0;
 
+    bool should_zero_rudder_encoder = false;
+    bool should_zero_winch_encoder = false;
+
+    bool has_rudder_encoder_been_zeroed = false;
+    bool has_winch_encoder_been_zeroed = false;
+    
+
+
     autoboat_msgs::msg::RCData previous_rc_data;
 
+    rclcpp::TimerBase::SharedPtr autopilot_refresh_timer;
 
     rclcpp::Subscription<autoboat_msgs::msg::RCData>::SharedPtr rc_data_listener;
     rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr position_listener;
@@ -98,12 +109,13 @@ private:
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr heading_listener;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr apparent_wind_vector_listener;
     rclcpp::Subscription<autoboat_msgs::msg::WaypointList>::SharedPtr waypoints_list_listener;
+
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr desired_sail_angle_publisher, desired_rudder_angle_publisher, desired_heading_publisher;
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr zero_rudder_encoder_publisher, zero_winch_encoder_publisher;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr autopilot_mode_publisher;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr full_autonomy_maneuver_publisher;
     rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr waypoint_index_publisher;
 
-
-    rclcpp::TimerBase::SharedPtr autopilot_refresh_timer;
 
 
 
@@ -113,39 +125,62 @@ private:
             heading_to_hold = current_heading;
         }
 
+
+        // Are we trying to zero the rudder?
+        if (previous_rc_data.button_d == false && msg->button_d == true) {
+            should_zero_rudder_encoder = true;
+            has_rudder_encoder_been_zeroed = false;
+        }
+
+        else if (has_rudder_encoder_been_zeroed) {
+            should_zero_rudder_encoder = false;
+        }
+
+        // Are we trying to zero the winch?
+        if (previous_rc_data.button_a == false && msg->button_a == true) {
+            should_zero_winch_encoder = true;
+            has_winch_encoder_been_zeroed = false;
+        }
+
+        else if (has_winch_encoder_been_zeroed) {
+            should_zero_winch_encoder = false;
+        }
+
+
         joystick_left_y = msg->joystick_left_y; 
         joystick_right_x = msg->joystick_right_x;
 
         if (msg->toggle_b != 0) {
-            autopilot_mode = SailboatAutopilotMode::Disabled;
+            sailboat_autopilot.current_autopilot_mode = SailboatAutopilotModes::Disabled;
         }
 
         else if (msg->toggle_f == 2) {
-            autopilot_mode = SailboatAutopilotMode::Waypoint_Mission;
+            sailboat_autopilot.current_autopilot_mode = SailboatAutopilotModes::Waypoint_Mission;
         }
 
         else if (msg->toggle_f == 1) {
 
             if (msg->toggle_c == 0) {
-                autopilot_mode = SailboatAutopilotMode::Hold_Heading;
+                sailboat_autopilot.current_autopilot_mode = SailboatAutopilotModes::Hold_Heading;
             }
 
             else if (msg->toggle_c == 1) {
-                autopilot_mode = SailboatAutopilotMode::Hold_Best_Sail;
+                sailboat_autopilot.current_autopilot_mode = SailboatAutopilotModes::Hold_Best_Sail;
             }
 
             else {
-                autopilot_mode = SailboatAutopilotMode::Hold_Heading_And_Best_Sail;
+                sailboat_autopilot.current_autopilot_mode = SailboatAutopilotModes::Hold_Heading_And_Best_Sail;
             }
         } 
         
         else {
-            autopilot_mode = SailboatAutopilotMode::Full_RC;
+            sailboat_autopilot.current_autopilot_mode = SailboatAutopilotModes::Full_RC;
         }
         
         
         previous_rc_data = *msg;
     }
+    
 
     void position_callback(const sensor_msgs::msg::NavSatFix::SharedPtr msg) { 
         current_position = Position(msg->longitude, msg->latitude); 
@@ -156,11 +191,11 @@ private:
     }
     
     void apparent_wind_vector_callback(const geometry_msgs::msg::Vector3::SharedPtr msg) { 
-        apparent_wind_vector = {msg->x, msg->y}; 
+        current_apparent_wind_vector = {msg->x, msg->y}; 
     }
     
     void velocity_callback(const geometry_msgs::msg::Twist::SharedPtr msg) { 
-        global_velocity_vector = {msg->linear.x, msg->linear.y}; 
+        current_global_velocity_vector = {msg->linear.x, msg->linear.y}; 
     }
     
 
@@ -211,61 +246,78 @@ private:
 
 
     void update_ros_topics() {
-        float desired_sail_angle = 0.0; 
-        float desired_rudder_angle = 0.0;
-        
-        bool active = true;
 
-        switch(autopilot_mode) {
-            case SailboatAutopilotMode::Waypoint_Mission: {
-                auto res = sailboat_autopilot.run_waypoint_mission_step(current_position, global_velocity_vector, current_heading, apparent_wind_vector);
-                desired_sail_angle = res.first; 
-                desired_rudder_angle = res.second;
-                break;
-            }
-
-            case SailboatAutopilotMode::Hold_Heading: {
-                desired_rudder_angle = sailboat_autopilot.get_optimal_rudder_angle(current_heading, heading_to_hold);
-                desired_sail_angle = sailboat_autopilot.run_rc_control(joystick_left_y, joystick_right_x).first;
-                break;
-            }
-            
-            case SailboatAutopilotMode::Hold_Best_Sail: {
-                auto [apparent_wind_speed, apparent_wind_angle] = cartesian_vector_to_polar(apparent_wind_vector[0], apparent_wind_vector[1]);
-                desired_sail_angle = sailboat_autopilot.get_optimal_sail_angle(apparent_wind_angle);
-                desired_rudder_angle = sailboat_autopilot.run_rc_control(joystick_left_y, joystick_right_x).second;
-                break;
-            }
-            
-            case SailboatAutopilotMode::Hold_Heading_And_Best_Sail: {
-                auto [apparent_wind_speed, apparent_wind_angle] = cartesian_vector_to_polar(apparent_wind_vector[0], apparent_wind_vector[1]);
-                desired_sail_angle = sailboat_autopilot.get_optimal_sail_angle(apparent_wind_angle);
-                desired_rudder_angle = sailboat_autopilot.get_optimal_rudder_angle(current_heading, heading_to_hold);
-                break;
-            }
-            
-            case SailboatAutopilotMode::Full_RC: {
-                auto res = sailboat_autopilot.run_rc_control(joystick_left_y, joystick_right_x);
-                desired_sail_angle = res.first; 
-                desired_rudder_angle = res.second;
-                break;
-            }
-            
-            default: { 
-                active = false; break;
-        
-            }
+        if (sailboat_autopilot.get_current_waypoints_list().size() == 0) {
+            return;
         }
 
 
-        if (active) {
-            desired_sail_angle_publisher->publish(std_msgs::msg::Float32().set__data(desired_sail_angle));
-            desired_rudder_angle_publisher->publish(std_msgs::msg::Float32().set__data(desired_rudder_angle));
-        
-            std_msgs::msg::Int32 waypoint_index_message; 
-            waypoint_index_message.data = sailboat_autopilot.current_waypoint_index;
-            waypoint_index_publisher->publish(waypoint_index_message);
+        auto [desired_rudder_angle, desired_sail_angle] = sailboat_autopilot.step(
+            current_position, current_global_velocity_vector, current_heading, current_apparent_wind_vector,
+            heading_to_hold, joystick_right_x, joystick_left_y
+        );
+
+
+        // This happens if the autopilot is currently in the "Disabled" mode
+        if (desired_rudder_angle == NAN || desired_sail_angle == NAN) {
+            return;
         }
+
+
+        // autopilot_mode_publisher->publish(std_msgs::msg::String().set__data(autopilot_mode.name))
+        if (sailboat_autopilot.current_autopilot_mode == SailboatAutopilotModes::Waypoint_Mission) {
+            // full_autonomy_maneuver_publisher->publish(std_msgs::msg::String().set__data(sailboat_autopilot.current_state.name));
+        }
+
+        else {
+            full_autonomy_maneuver_publisher->publish(std_msgs::msg::String().set__data("N/A"));
+        }
+
+
+
+        // Publish the desired heading
+        if (sailboat_autopilot.current_autopilot_mode == SailboatAutopilotModes::Hold_Heading || sailboat_autopilot.current_autopilot_mode == SailboatAutopilotModes::Hold_Heading_And_Best_Sail) {
+            desired_heading_publisher->publish(std_msgs::msg::Float32().set__data(heading_to_hold));
+        }
+
+        else if (sailboat_autopilot.current_autopilot_mode == SailboatAutopilotModes::Waypoint_Mission && !sailboat_autopilot.get_current_waypoints_list().empty()) {
+            Position current_waypoint = sailboat_autopilot.get_current_waypoints_list()[sailboat_autopilot.get_current_waypoint_index()];
+
+            // TODO make it so that the bearing is the actual heading the autopilot is trying to follow (this is different when tacking)
+            // when tacking, the boat is not trying to head straight towards the waypoint, but rather, it is travelling on a tacking line
+            // maybe add a new ROOS topic specifically for the actual heading that the autopilot is trying to follow
+            float bearing_to_waypoint = get_bearing(current_position, current_waypoint);
+            desired_heading_publisher->publish(std_msgs::msg::Float32().set__data(bearing_to_waypoint));
+        }
+
+        else {
+            desired_heading_publisher->publish(std_msgs::msg::Float32().set__data(0.0));
+        }
+
+
+
+
+        if (should_zero_rudder_encoder) {
+            zero_rudder_encoder_publisher->publish(std_msgs::msg::Bool().set__data(should_zero_rudder_encoder));
+            has_rudder_encoder_been_zeroed = true;
+        }
+
+        if (should_zero_winch_encoder) {
+            zero_winch_encoder_publisher->publish(std_msgs::msg::Bool().set__data(should_zero_winch_encoder));
+            has_winch_encoder_been_zeroed = true;
+        }
+
+
+            
+
+        desired_sail_angle_publisher->publish(std_msgs::msg::Float32().set__data(desired_sail_angle));
+        desired_rudder_angle_publisher->publish(std_msgs::msg::Float32().set__data(desired_rudder_angle));
+    
+        
+        std_msgs::msg::Int32 waypoint_index_message; 
+        waypoint_index_message.data = sailboat_autopilot.get_current_waypoint_index();
+        waypoint_index_publisher->publish(waypoint_index_message);
+    
     }
 };
 
