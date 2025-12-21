@@ -5,7 +5,7 @@ class DiscretePID {
 public:
 
     DiscretePID() {
-        DiscretePID(1.0, 0.0, 0.0, 0.0, 1.0);
+        *this = DiscretePID(1.0, 0.0, 0.0, 0.0, 1.0);
     }
 
 

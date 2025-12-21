@@ -228,7 +228,7 @@ public:
             } 
             
             else {
-                return {0.0, autopilot_parameters["max_sail_angle"].get<float>()};
+                return {NAN, NAN};
             }
         }
         
