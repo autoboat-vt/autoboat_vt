@@ -169,8 +169,10 @@ public:
         float error = get_distance_between_angles(desired_heading, heading);
         float rudder_angle = rudder_pid_controller.step(error);
 
-        // std::cout << "error: " << error << std::endl;
-        // std::cout << "rudder_angle: " << rudder_angle << std::endl;
+        std::cout << "desired_heading: " << desired_heading << std::endl;
+        std::cout << "heading: " << heading << std::endl;
+        std::cout << "error: " << error << std::endl;
+        std::cout << "rudder_angle: " << rudder_angle << std::endl;
         
         return std::clamp((float)rudder_angle, autopilot_parameters["min_rudder_angle"].get<float>(), autopilot_parameters["max_rudder_angle"].get<float>());
     }
@@ -270,7 +272,6 @@ public:
                 current_waypoint_mission_state = SailboatStates::NORMAL;
             }
 
-            std::cout << "rudder angle: " << desired_rudder_angle << std::endl;
         }
 
         return {desired_rudder_angle, desired_sail_angle};

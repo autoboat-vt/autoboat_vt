@@ -393,26 +393,28 @@ private:
             return;
         }
 
-        autoboat_msgs::msg::WaypointList waypoint_list_msg;
+        autoboat_msgs::msg::WaypointList waypoint_list_message;
         std::vector<std::pair<double,double>> new_waypoints;
 
-        for (const auto &w : response) {
-            if (!w.is_array() || w.size() != 2) {
-            RCLCPP_WARN(this->get_logger(), "Invalid waypoint entry, skipping");
-            continue;
+        for (const auto &waypoint : response) {
+            if (!waypoint.is_array() || waypoint.size() != 2) {
+                RCLCPP_WARN(this->get_logger(), "Invalid waypoint entry, skipping");
+                continue;
             }
-            double lat = w[0].get<double>();
-            double lon = w[1].get<double>();
-            sensor_msgs::msg::NavSatFix nav;
-            nav.latitude = lat;
-            nav.longitude = lon;
-            waypoint_list_msg.waypoints.push_back(nav);
-            new_waypoints.emplace_back(lat, lon);
+
+            double latitude = waypoint[0].get<double>();
+            double longitude = waypoint[1].get<double>();
+            sensor_msgs::msg::NavSatFix nav_sat_fix_message;
+            nav_sat_fix_message.latitude = latitude;
+            nav_sat_fix_message.longitude = longitude;
+
+            waypoint_list_message.waypoints.push_back(nav_sat_fix_message);
+            new_waypoints.emplace_back(latitude, longitude);
         }
 
         
         current_waypoints_list = new_waypoints;
-        waypoints_list_publisher->publish(waypoint_list_msg);
+        waypoints_list_publisher->publish(waypoint_list_message);
     }
 
 

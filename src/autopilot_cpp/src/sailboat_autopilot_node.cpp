@@ -257,11 +257,17 @@ private:
             heading_to_hold, joystick_right_x, joystick_left_y
         );
 
-
+        std::cout << desired_rudder_angle << std::endl;
+        
         // This happens if the autopilot is currently in the "Disabled" mode
-        if (desired_rudder_angle == NAN || desired_sail_angle == NAN) {
+        if (std::isnan(desired_rudder_angle) || std::isnan(desired_sail_angle)) {
             return;
         }
+
+
+        desired_sail_angle_publisher->publish(std_msgs::msg::Float32().set__data(desired_sail_angle));
+        desired_rudder_angle_publisher->publish(std_msgs::msg::Float32().set__data(desired_rudder_angle));
+
 
 
         // autopilot_mode_publisher->publish(std_msgs::msg::String().set__data(autopilot_mode.name))
@@ -306,12 +312,6 @@ private:
             zero_winch_encoder_publisher->publish(std_msgs::msg::Bool().set__data(should_zero_winch_encoder));
             has_winch_encoder_been_zeroed = true;
         }
-
-
-            
-
-        desired_sail_angle_publisher->publish(std_msgs::msg::Float32().set__data(desired_sail_angle));
-        desired_rudder_angle_publisher->publish(std_msgs::msg::Float32().set__data(desired_rudder_angle));
     
         
         std_msgs::msg::Int32 waypoint_index_message; 

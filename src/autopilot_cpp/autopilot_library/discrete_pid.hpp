@@ -22,12 +22,13 @@ public:
     }
 
 
-    void set_gains(float Kp = -1.0, float Ki = -1.0, float Kd = -1.0, float n = -1.0, float sample_period = -1.0) {
-        if (Kp >= 0.0) this->Kp = Kp;
-        if (Ki >= 0.0) this->Ki = Ki;
-        if (Kd >= 0.0) this->Kd = Kd;
-        if (n  >= 0.0) this->n  = n;
-        if (sample_period >= 0.0) this->sample_period = sample_period;
+    void set_gains(float sample_period_ = -1.0, float Kp_ = -1.0, float Ki_ = -1.0, float Kd_ = -1.0, float n_ = -1.0) {
+        if (Kp_ >= 0.0) this->Kp = Kp_;
+        if (Ki_ >= 0.0) this->Ki = Ki_;
+        if (Kd_ >= 0.0) this->Kd = Kd_;
+        if (n_  >= 0.0) this->n  = n_;
+
+        if (sample_period_ >= 0.0) this->sample_period = sample_period;
     }
 
     
@@ -61,7 +62,9 @@ public:
     }
 
 
-    inline float operator()(float error) { return step(error); }
+    inline float operator()(float error) { 
+        return step(error); 
+    }
 
 
 

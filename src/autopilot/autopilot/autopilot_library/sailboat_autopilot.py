@@ -278,6 +278,8 @@ class SailboatAutopilot:
 
         return sail_angle, rudder_angle
 
+
+
     def get_optimal_sail_angle(self, apparent_wind_angle: float) -> float:
         """
         Given an apparent wind angle, there is generally a best sail angle to point your sail at based on the points of sail diagram,

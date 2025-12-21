@@ -176,6 +176,9 @@ class SailboatAutopilotNode(Node):
         """
 
         new_parameters_json: dict = json.loads(new_parameters.data)
+        
+        if new_parameters_json == None: return
+            
         for new_parameter_name, new_parameter_value in new_parameters_json.items():
             if new_parameter_name not in self.autopilot_parameters.keys():
                 print("WARNING: Attempted to set an autopilot parameter that the autopilot doesn't know")
@@ -188,6 +191,7 @@ class SailboatAutopilotNode(Node):
         if "autopilot_refresh_rate" in new_parameters_json.keys():
             self.destroy_timer(self.autopilot_refresh_timer)
             self.autopilot_refresh_timer = self.create_timer(1 / self.autopilot_parameters["autopilot_refresh_rate"], self.update_ros_topics)
+
 
     def default_autopilot_parameters_acknowledgement_callback(self, default_autopilot_parameters_acknowledgement: Bool):
         self.has_default_autopilot_parameters_been_received_by_telemetry_node = default_autopilot_parameters_acknowledgement.data
