@@ -168,11 +168,6 @@ public:
 
         float error = get_distance_between_angles(desired_heading, heading);
         float rudder_angle = rudder_pid_controller.step(error);
-
-        std::cout << "desired_heading: " << desired_heading << std::endl;
-        std::cout << "heading: " << heading << std::endl;
-        std::cout << "error: " << error << std::endl;
-        std::cout << "rudder_angle: " << rudder_angle << std::endl;
         
         return std::clamp((float)rudder_angle, autopilot_parameters["min_rudder_angle"].get<float>(), autopilot_parameters["max_rudder_angle"].get<float>());
     }

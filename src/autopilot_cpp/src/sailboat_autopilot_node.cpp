@@ -256,8 +256,7 @@ private:
             current_position, current_global_velocity_vector, current_heading, current_apparent_wind_vector,
             heading_to_hold, joystick_right_x, joystick_left_y
         );
-
-        std::cout << desired_rudder_angle << std::endl;
+        
         
         // This happens if the autopilot is currently in the "Disabled" mode
         if (std::isnan(desired_rudder_angle) || std::isnan(desired_sail_angle)) {
