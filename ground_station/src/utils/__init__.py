@@ -9,6 +9,4 @@ Includes:
 
 __all__ = ["constants", "misc", "thread_classes"]
 
-from . import constants
-from . import misc
-from . import thread_classes
+from . import constants, misc, thread_classes

@@ -45,20 +45,19 @@ dataclass_wizard
 click
 pympler
 ruff
-
+jetson-stats
+pynput
 
 
 # Groundstation
-urllib3
 QtAwesome
-python-dateutil
-PyQtWebEngine
-PyQt5
 QtPy
 idna
 charset-normalizer
+PyQt5
+PyQtWebEngine
+pyqtgraph
 jsonc-parser
-requests
 PyYAML
 pytz
-strenum
+StrEnum

@@ -1,12 +1,12 @@
+from qtpy.QtCore import QEvent, QRect, QSize, Qt, Signal
 from qtpy.QtGui import (
-    QFontDatabase,
-    QPainter,
     QColor,
-    QSyntaxHighlighter,
+    QFontDatabase,
     QFontMetrics,
+    QPainter,
+    QSyntaxHighlighter,
 )
-from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton, QPlainTextEdit
-from qtpy.QtCore import QSize, QRect, Qt, Signal, QEvent
+from qtpy.QtWidgets import QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
 
 
 class TextEditWindow(QWidget):
