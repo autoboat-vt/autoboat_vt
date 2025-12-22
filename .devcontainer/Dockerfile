@@ -6,7 +6,11 @@
 
 # NOTE: The reason why we are doing rm -rf /var/lib/apt/lists/* after every apt install is because of caching reasons
 
+
 FROM ros:humble
+
+USER root
+
 
 ARG USERNAME=autoboat_user
 ARG USER_UID=1000
@@ -18,21 +22,17 @@ ENV DEBIAN_FRONTEND=noninteractive
 # -------------------------------
 # Create user + sudo setup
 # -------------------------------
-RUN groupadd --gid $USER_GID $USERNAME \
+RUN apt update \
+   && groupadd --gid $USER_GID $USERNAME \
    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
-   && apt-get update \
-   && apt-get install -y --no-install-recommends sudo \
+   && apt install -y --no-install-recommends sudo \
    && echo "$USERNAME ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME \
-   && chmod 0440 /etc/sudoers.d/$USERNAME \
-   && rm -rf /var/lib/apt/lists/*
+   && chmod 0440 /etc/sudoers.d/$USERNAME
 
 # -------------------------------
 # Base system updates & required tools
 # ------------------------------- 
-RUN apt-get update \
-   && apt-get upgrade -y \
-   && apt-get install -y --no-install-recommends python3-pip cron usbutils udev nano git-lfs lsof \
-   && rm -rf /var/lib/apt/lists/*
+RUN apt install -y --no-install-recommends python3-pip cron usbutils udev nano git-lfs lsof
 
 # -------------------------------
 # Very unsafe sudo permissions
@@ -43,38 +43,36 @@ RUN echo "${USERNAME} ALL=(ALL) NOPASSWD: /usr/bin/chmod" >> /etc/sudoers \
 # -------------------------------
 # Install RealSense Camera
 # -------------------------------
-RUN sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list' \
+RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list' \
    && apt-get install curl -y \
    && curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add - \
    && apt update || true \
    && apt install ros-humble-librealsense2* -y \
    && apt install ros-humble-realsense2-* -y \
-   && rm /etc/apt/sources.list.d/ros-latest.list \
-   && rm -rf /var/lib/apt/lists/*
+   && rm /etc/apt/sources.list.d/ros-latest.list
+
 
 # -------------------------------
 # Install ROS/ Vision packages
 # -------------------------------
-RUN apt-get update \
+RUN apt update \
    && apt-get install -y --no-install-recommends ros-dev-tools python3-opencv ros-humble-vision-opencv \
-   && rm -rf /var/lib/apt/lists/* \
    && rm /etc/apt/sources.list.d/ros-latest.list || true
+
 
 # -------------------------------
 # Golang setup
 # -------------------------------
-RUN apt-get update \
-   && apt-get install -y --no-install-recommends software-properties-common \
+RUN apt install -y --no-install-recommends software-properties-common \
    && add-apt-repository ppa:longsleep/golang-backports -y \
-   && apt-get update \
-   && apt-get install -y --no-install-recommends golang-go \
-   && rm -rf /var/lib/apt/lists/*
+   && apt update \
+   && apt install -y --no-install-recommends golang-go
+
 
 # -------------------------------
 # X11 / GUI libraries
 # -------------------------------
-RUN apt-get update \
-   && apt-get install -y --fix-missing --no-install-recommends \
+RUN apt install -y --fix-missing --no-install-recommends \
    libx11-xcb1 \
    libxcb1 \
    libxcb-util1 \
@@ -92,15 +90,20 @@ RUN apt-get update \
    libxcb-glx0 \
    libxkbcommon-x11-0 \
    libxrender1 \
-   libasound2 \
-   && rm -rf /var/lib/apt/lists/*
+   libasound2
 
 # -------------------------------
 # Install Docker inside Docker
 # -------------------------------
-RUN apt-get update \
-   && apt-get install -y --no-install-recommends docker docker.io \
-   && rm -rf /var/lib/apt/lists/*
+RUN apt install -y --no-install-recommends docker docker.io
+
+
+
+# -------------------------------
+# Ensure that qt5 is installed properly so pyqt installation works
+# -------------------------------
+RUN apt-get install -y python3-pyqt5 python3-pyqt5.qtwebengine
+
 
 # -------------------------------
 # Python requirements (as user)

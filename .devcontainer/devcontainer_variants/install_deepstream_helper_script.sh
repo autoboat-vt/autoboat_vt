@@ -7,6 +7,8 @@
 
 # It might be necessary to run a gstreamer script once to initialize plugins
 
+
+
 # https://docs.nvidia.com/metropolis/deepstream/7.1/text/DS_Installation.html
 install_deepstream_x86() {
     echo -e "\nInstalling deepstream for x86_64"

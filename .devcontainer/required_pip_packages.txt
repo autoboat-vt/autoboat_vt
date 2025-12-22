@@ -52,8 +52,6 @@ packaging
 urllib3
 QtAwesome
 python-dateutil
-PyQtWebEngine==5.15.7
-PyQt5
 QtPy
 packaging
 idna

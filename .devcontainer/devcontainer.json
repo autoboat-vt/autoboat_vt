@@ -1,11 +1,11 @@
 {
     "name": "VT AutoBoat Development Container v1.2.0",
-    "image": "vtautoboat/autoboat_docker_dev_image:microros",
+    "image": "vtautoboat/autoboat_docker_dev_image",
     "initializeCommand": "bash .devcontainer/initializeCommand.sh",
     "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
     "privileged": true,
-    "remoteUser": "",
-    "containerUser": "",
+    "remoteUser": "autoboat_user",
+    "containerUser": "autoboat_user",
     "workspaceFolder": "/home/ws",
     "workspaceMount": "source=${localWorkspaceFolder},target=/home/ws/,type=bind",
     "customizations": {
