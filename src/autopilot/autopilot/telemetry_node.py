@@ -90,7 +90,12 @@ class TelemetryNode(Node):
             new_id = self.get_raw_response_from_telemetry_server("instance_manager/create", session=self.boat_status_session)
             if isinstance(new_id, int):
                 self.instance_id = new_id
-                self.boat_status_session.post(urljoin(TELEMETRY_SERVER_URL, f"instance_manager/set_user/{self.instance_id}/{os.environ['USER']}"))
+                
+                user_name = os.environ.get('USER')
+                if not user_name:
+                    user_name = "Unknown User"
+                    
+                self.boat_status_session.post(urljoin(TELEMETRY_SERVER_URL, f"instance_manager/set_user/{self.instance_id}/{user_name}"))
                 self.logger.info(f"Created new telemetry server instance with ID {self.instance_id}")
                 break
 
