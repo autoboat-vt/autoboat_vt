@@ -9,7 +9,7 @@ Without ros2:
 
   1. Move the rudder:
 
-    gz topic -t /rudder -m gz.msgs.Double -p 'data: .61'
+    gz topic -t /rudder -m gz.msgs.Double -p 'data: .4'
     
   1a. View rudder position:
 
@@ -17,7 +17,7 @@ Without ros2:
 
   2. Propel the vehicle:
 
-    gz topic -t motorboat/propeller_topic -m gz.msgs.Double -p 'data: 5000'
+    gz topic -t motorboat/propeller_topic -m gz.msgs.Double -p 'data: 500'
 
 
 With ros2:
@@ -28,12 +28,12 @@ With ros2:
 
   1. Move the rudder:
 
-    ros2 topic pub /rudder std_msgs/msg/Float64 'data: .61'
+    ros2 topic pub /rudder std_msgs/msg/Float64 'data: .4'
   
   
   2. Propel the vehicle:
 
-    ros2 topic pub motorboat/propeller_topic std_msgs/msg/Float64 'data: 5'
+    ros2 topic pub motorboat/propeller_topic std_msgs/msg/Float64 'data: 500'
 
 -->
 
