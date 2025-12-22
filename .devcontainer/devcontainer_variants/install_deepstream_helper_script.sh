@@ -7,8 +7,6 @@
 
 # It might be necessary to run a gstreamer script once to initialize plugins
 
-
-
 # https://docs.nvidia.com/metropolis/deepstream/7.1/text/DS_Installation.html
 install_deepstream_x86() {
     echo -e "\nInstalling deepstream for x86_64"
@@ -102,6 +100,11 @@ pip3 install ./pyds-1.2.0-*.whl
 # echo 'export LD_LIBRARY_PATH=/usr/local/cuda-12.6/targets/x86_64-linux/lib/stubs:$LD_LIBRARY_PATH' >> ~/.bashrc # fix from AI to fix pyds import
 # source ~/.bashrc
 
+# Compile the deepstream_yolo library
+echo -e "\n\nCompiling deepstream_yolo library\n\n"
+cd /home/ws/src/object_detection/object_detection/deepstream_yolo/
+export CUDA_VER=12.6
+make -C nvdsinfer_custom_impl_Yolo clean && make -C nvdsinfer_custom_impl_Yolo
 
 # Install ultralytics
 echo -e "\n\nInstalling ultralytics\n\n"
@@ -114,9 +117,13 @@ echo -e "\n\nInstalling Utils\n\n"
 sudo apt-get install -y v4l-utils
 
 
+gst-inspect-1.0 > /dev/null # initialize gstreamer plugins
+
 # sudo v4l2-ctl --list-devices # TODO: can we change permissions so this doesn't need to be run?
 
-# export IS_DEV_CONTAINER=true # I don't think this persists after script ends otherwise
+export IS_DEV_CONTAINER=true # I don't think this persists after script ends otherwise
 
 
 echo -e "\n\nDeepstream setup complete!\n\n"
+
+cd /home/ws/

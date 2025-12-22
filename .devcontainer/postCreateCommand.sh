@@ -103,6 +103,9 @@ if [[ "$DEVCONTAINER_VARIANT" == "deepstream" || "$DEVCONTAINER_VARIANT" == "dee
 
     sudo chmod -R 777 src/object_detection/object_detection
 
+    rm -rf ~/.cache/gstreamer-1.0/
+    gst-inspect-1.0 nvstreammux
+
 fi
 
 # TODO: DELETE THESE TEMPORARY FILES FROM THE DOCKER IMAGE IF THEY HAVE ALREADY BEEN INSTALLED
