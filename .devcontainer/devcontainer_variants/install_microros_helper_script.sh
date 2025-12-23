@@ -68,7 +68,7 @@ find "/tmp/src/microros/dependencies/micro_ros_agent/install" -type d -name "mic
 
 
 # Build the micro_ros_agent package
-colcon build --symlink-install --parallel-workers 16
+colcon build --parallel-workers 16
 source "/tmp/src/microros/dependencies/micro_ros_agent/install/local_setup.bash"
 
 
