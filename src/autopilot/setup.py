@@ -26,7 +26,8 @@ setup(
         'console_scripts': [
             'sailboat_autopilot = autopilot.sailboat_autopilot_node:main',
             'motorboat_autopilot = autopilot.motorboat_autopilot_node:main',
-            'telemetry = autopilot.telemetry_node:main'
+            'telemetry = autopilot.telemetry_node:main',
+            'autopilot_transform = autopilot.autopilot_transform_node:main'
         ],
     },
 )

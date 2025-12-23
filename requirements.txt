@@ -1,3 +1,54 @@
+# # Coordinate Conversions
+# navpy
+# pygeodesy
+# utm
+# geopy
+# pyproj
+
+# # Serial/ Hardware communication
+# pyserial
+# sparkfun-ublox-gps
+# pyubx2
+# crsf-parser
+# spidev
+
+# # Simulation/ RL
+# gymnasium==0.28.1
+# moviepy
+# msgpack-python==0.5.6
+# pyzmq==25.0.2
+# pydantic
+# multiexit
+
+# # Image processing/ Object Detection
+# opencv-python
+# Pillow
+# imageio-ffmpeg
+
+# # Telemetry/ Internet
+# requests
+
+# # documentation
+# mkdocs
+# mkdocs-material
+
+# # Misc
+# numpy
+# tqdm
+# pandas
+# docker
+# matplotlib
+# pydict2class
+# dataclass_wizard
+# click
+# pympler
+# ruff
+
+
+
+# This file is primarily for building new docker images, and it is what the Dockerfile references when it preinstalls all of its pip packages
+# If you would like to add a new python dependency, you should add it to this 
+
 # Coordinate Conversions
 navpy
 pygeodesy
@@ -21,19 +72,18 @@ pydantic
 multiexit
 
 # Image processing/ Object Detection
-opencv-python
 Pillow
 imageio-ffmpeg
 
 # Telemetry/ Internet
 requests
 
-# documentation
+# Documentation
 mkdocs
 mkdocs-material
 
 # Misc
-numpy
+numpy==1.26.4
 tqdm
 pandas
 docker
@@ -43,3 +93,17 @@ dataclass_wizard
 click
 pympler
 ruff
+jetson-stats
+pynput
+
+
+# Groundstation
+QtAwesome
+QtPy
+PyQt5
+PyQtWebEngine
+pyqtgraph
+jsonc-parser
+PyYAML
+pytz
+StrEnum
