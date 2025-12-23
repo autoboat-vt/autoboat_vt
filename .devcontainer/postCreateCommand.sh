@@ -54,18 +54,18 @@ echo sudo service cron start >> ~/.bashrc
 # For example the raspberry pi pico udev rule would just make it so that the file descriptor for the raspberry pi pico device
 # Would always be at the file: /dev/pico
 # You can read more about udev rules here: https://opensource.com/article/18/11/udev
-if [ -f "/etc/udev/rules.d/99-autoboat-udev.rules" ]; then
-    rm -f /etc/udev/rules.d/99-autoboat-udev.rules
-fi
+# if [ -f "/etc/udev/rules.d/99-autoboat-udev.rules" ]; then
+#     rm -f /etc/udev/rules.d/99-autoboat-udev.rules
+# fi
 
-sudo echo ACTION=="add", ATTRS{idVendor}=="2E8A", ATTRS{idProduct}=="0005", SYMLINK+="pico", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
-sudo echo ACTION=="add", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", SYMLINK+="gps", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
-# sudo echo ACTION=="add", ATTRS{idVendor}=="8086", ATTRS{idProduct}=="0b5c", SYMLINK+="camera", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
-sudo echo ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="A9001WL3", SYMLINK+="rc", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
-sudo echo ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="ABSCDYAB", SYMLINK+="wind_sensor", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
+# sudo echo ACTION=="add", ATTRS{idVendor}=="2E8A", ATTRS{idProduct}=="0005", SYMLINK+="pico", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
+# sudo echo ACTION=="add", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", SYMLINK+="gps", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
+# # sudo echo ACTION=="add", ATTRS{idVendor}=="8086", ATTRS{idProduct}=="0b5c", SYMLINK+="camera", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
+# sudo echo ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="A9001WL3", SYMLINK+="rc", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
+# sudo echo ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="ABSCDYAB", SYMLINK+="wind_sensor", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
 
-sudo udevadm control --reload-rules
-sudo udevadm trigger
+# sudo udevadm control --reload-rules
+# sudo udevadm trigger
 
 
 

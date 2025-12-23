@@ -8,11 +8,11 @@ docker build -t vtautoboat/autoboat_docker_dev_image:yolo --platform linux/amd64
 docker build -t vtautoboat/autoboat_docker_dev_image:deepstream_and_yolo --platform linux/amd64 -f .devcontainer/devcontainer_variants/Dockerfile.deepstream_and_yolo .
 
 
-docker push vtautoboat/autoboat_docker_dev_image:latest
-docker push vtautoboat/autoboat_docker_dev_image:microros
-docker push vtautoboat/autoboat_docker_dev_image:deepstream
-docker push vtautoboat/autoboat_docker_dev_image:yolo
-docker push vtautoboat/autoboat_docker_dev_image:deepstream_and_yolo
+sudo docker push vtautoboat/autoboat_docker_dev_image:latest
+sudo docker push vtautoboat/autoboat_docker_dev_image:microros
+sudo docker push vtautoboat/autoboat_docker_dev_image:deepstream
+sudo docker push vtautoboat/autoboat_docker_dev_image:yolo
+sudo docker push vtautoboat/autoboat_docker_dev_image:deepstream_and_yolo
 
 
 
@@ -27,11 +27,11 @@ docker build -t vtautoboat/autoboat_docker_dev_image:yolo_arm --platform linux/a
 docker build -t vtautoboat/autoboat_docker_dev_image:deepstream_and_yolo_arm --platform linux/arm64 -f .devcontainer/devcontainer_variants/Dockerfile.deepstream_and_yolo .
 
 
-docker push vtautoboat/autoboat_docker_dev_image:latest_arm
-docker push vtautoboat/autoboat_docker_dev_image:microros_arm
-docker push vtautoboat/autoboat_docker_dev_image:deepstream_arm
-docker push vtautoboat/autoboat_docker_dev_image:yolo_arm
-docker push vtautoboat/autoboat_docker_dev_image:deepstream_and_yolo_arm
+sudo docker push vtautoboat/autoboat_docker_dev_image:latest_arm
+sudo docker push vtautoboat/autoboat_docker_dev_image:microros_arm
+sudo docker push vtautoboat/autoboat_docker_dev_image:deepstream_arm
+sudo docker push vtautoboat/autoboat_docker_dev_image:yolo_arm
+sudo docker push vtautoboat/autoboat_docker_dev_image:deepstream_and_yolo_arm
 
 
 
