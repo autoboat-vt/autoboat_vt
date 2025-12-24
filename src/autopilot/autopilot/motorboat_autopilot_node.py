@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from typing import Any
 
 import rclpy
 import yaml
@@ -20,7 +21,7 @@ from .autopilot_library.utils import *
 class MotorboatAutopilotNode(Node):
     """
     Handles communications between the autopilot (`autopilot_library/motorboat_autopilot.py`) and all of the other nodes/topics through ROS2.
-    
+
     The autopilot takes in a bunch of sensor data and waypoints (list of gps positions that represent waypoints) and attempts to traverses through the waypoints by continuously publishing to the propeller motor control struct and rudder angle topics.
 
     The main function that you should pay attention to is `update_ros_topics`, since this is the function that is called periodically on a timer.
@@ -33,7 +34,7 @@ class MotorboatAutopilotNode(Node):
 
         cur_folder_path = os.path.dirname(os.path.realpath(__file__))
         with open(cur_folder_path + "/config/motorboat_default_parameters.yaml", "r") as stream:
-            self.parameters: dict = yaml.safe_load(stream)
+            self.parameters: dict[str, Any] = yaml.safe_load(stream)
 
         # this is temporarily using the sailboat autopilot object for now since we still need to implement the motorboat autopilot object
         self.motorboat_autopilot = MotorboatAutopilot(parameters=self.parameters, logger=self.get_logger())
@@ -90,43 +91,44 @@ class MotorboatAutopilotNode(Node):
             sample_period=(1 / self.parameters["autopilot_refresh_rate"]), Kp=1, Ki=0, Kd=0, n=1
         )
 
-        self.max_rpm = 10000
+        self.max_rpm: float = 10000
 
         # default values
         self.position = Position(longitude=0.0, latitude=0.0)
-        self.velocity = np.array([0.0, 0.0])
-        self.speed = 0.0
-        self.heading = 0.0
-        self.rudder_angle = 0.0
+        self.velocity: npt.NDArray[np.float64] = np.array([0.0, 0.0])
+        self.speed: float = 0.0
+        self.heading: float = 0.0
+        self.rudder_angle: float = 0.0
 
-        self.autopilot_mode = MotorboatAutopilotMode.Hold_Heading
-        self.should_propeller_motor_be_powered = False
-        self.should_zero_encoder = False
-        self.encoder_has_been_zeroed = False
-        self.heading_to_hold = 0.0
-
-        self.last_rc_data_time = 0.0  # used to check whether we have disconnected from the remote controller
-        self.joystick_left_x = 0.0
-        self.joystick_left_y = 0.0
-        self.joystick_right_x = 0.0
-        self.joystick_right_y = 0.0
-
-        self.button_a = 0
-        self.toggle_b = 0
-        self.toggle_c = 0
-        self.button_d = 0
-        self.toggle_e = 0
-        self.toggle_f = 0
-
+        self.autopilot_mode: MotorboatAutopilotMode = MotorboatAutopilotMode.HOLD_HEADING
         self.propeller_motor_control_mode: MotorboatControls = MotorboatControls.RPM
+        self.should_propeller_motor_be_powered: bool = False
+        self.should_zero_encoder: bool = False
+        self.encoder_has_been_zeroed: bool = False
+        self.heading_to_hold: float = 0.0
+
+        self.last_rc_data_time: float = 0.0  # used to check whether we have disconnected from the remote controller
+        self.joystick_left_x: float = 0.0
+        self.joystick_left_y: float = 0.0
+        self.joystick_right_x: float = 0.0
+        self.joystick_right_y: float = 0.0
+
+        self.button_a: int = 0
+        self.toggle_b: int = 0
+        self.toggle_c: int = 0
+        self.button_d: int = 0
+        self.toggle_e: int = 0
+        self.toggle_f: int = 0
 
     def rc_data_callback(self, rc_data_message: RCData) -> None:
         """
         This callback is called whenever there is new data about what is being pressed on the remote control.
-        Whenever this callback is called, a couple of things happen: first, we check whether or not we are trying to zero
-        the rudder and if we have, then we should handle that. Second, we need to keep track of if we are entering
-        hold heading mode, and if we are, then we need to keep track of the current heading, since that heading is the one we will need to hold.
-        Thirdly, we set the SailboatAutopilotMode based on a specific combination of toggles to determine whether we are in full rc mode,
+        Whenever this callback is called, a couple of things happen:
+        1. We check whether or not we are trying to zero the rudder and if we have, then we should handle that.
+
+        2. We need to keep track of if we are entering hold heading mode, and if we are, then we need to keep track of the current heading, since that heading is the one we will need to hold.
+
+        3. We set the SailboatAutopilotMode based on a specific combination of toggles to determine whether we are in full rc mode,
         full autopilot mode, or one of the semi autonomous modes. Finally, we need to set the propeller control mode based on the toggles
         to determine whether we are controlling the propeller based on current output, duty cycle output, or propeller RPM.
 
@@ -141,16 +143,18 @@ class MotorboatAutopilotNode(Node):
             self.heading_to_hold = self.heading
 
         # Are we trying to zero the rudder?
-        if self.button_d == False and rc_data_message.button_d == True:
+        if self.button_d is False and rc_data_message.button_d is True:
             self.should_zero_encoder = True
             self.encoder_has_been_zeroed = False
+
         elif self.encoder_has_been_zeroed:
             self.should_zero_encoder = False
 
         self.joystick_left_x = rc_data_message.joystick_left_x
-        self.joystick_left_y = (
-            -1 * rc_data_message.joystick_left_y
-        )  # this is negated because positive throttle ends up making the boat go in reverse
+
+        # this is negated because positive throttle ends up making the boat go in reverse
+        self.joystick_left_y = -1 * rc_data_message.joystick_left_y
+
         self.joystick_right_x = rc_data_message.joystick_right_x
         self.joystick_right_y = rc_data_message.joystick_right_y
 
@@ -195,12 +199,19 @@ class MotorboatAutopilotNode(Node):
 
     def autopilot_parameters_callback(self, new_parameters: String) -> None:
         """
-        Receives a serialized json (as a string) of parameters and sets them as constants.
-        Any constant can be set as long as they are in the json
+        Updates the autopilot parameters based on the input JSON string.
+
+        NOTE: Only parameters that already exist in the autopilot will be updated.
+
+        Parameters
+        ----------
+        new_parameters
+            A JSON string that contains the new parameters to set for the autopilot.
         """
+
         new_parameters_json: dict = json.loads(new_parameters.data)
         for new_parameter_name, new_parameter_value in new_parameters_json.items():
-            if new_parameter_name not in self.parameters.keys():
+            if new_parameter_name not in self.parameters:
                 print("WARNING: Attempted to set an autopilot parameter that the autopilot doesn't know")
                 print("If you would like to make a new autopilot parameter, please edit default_parameters.yaml")
                 continue
@@ -216,41 +227,84 @@ class MotorboatAutopilotNode(Node):
 
     def waypoints_list_callback(self, waypoint_list: WaypointList) -> None:
         """
-        Convert the list of ROS2 Nav Sat Fix objects to a list of Position objects, which are a custom datatype that has some useful helper methods.
-        The Position object should be simpler to do calculations with
+        Callback function that is called whenever there is a new waypoint list message. Converts the list of ROS2 `NavSatFix` objects to a list of `Position` objects, which are a custom datatype that has some useful helper methods.
+
+        Does not directly set the waypoints in the motorboat autopilot object, instead it calls the `update_waypoints_list` method of the motorboat autopilot object.
+
+        Parameters
+        ----------
+        waypoint_list
+            A ROS2 message that contains a list of waypoints as `NavSatFix` objects.
         """
+
         if len(waypoint_list.waypoints) == 0:
             return
 
         self.motorboat_autopilot.reset()
 
         waypoint_navsatfixes: list[NavSatFix] = waypoint_list.waypoints
-        waypoint_positions: list[Position] = []
-
-        for navsatfix in waypoint_navsatfixes:
-            waypoint_positions.append(Position(navsatfix.longitude, navsatfix.latitude))
+        waypoint_positions: list[Position] = [
+            Position(longitude=wp.longitude, latitude=wp.latitude) for wp in waypoint_navsatfixes
+        ]
 
         self.motorboat_autopilot.update_waypoints_list(waypoint_positions)
 
-    def position_callback(self, position: NavSatFix):
+    def position_callback(self, position: NavSatFix) -> None:
+        """
+        Callback function that is called whenever there is a new position message. Updates the current position of the boat.
+
+        Parameters
+        ----------
+        position
+            A ROS2 message that contains the current GPS position of the boat.
+        """
+
         self.position = Position(longitude=position.longitude, latitude=position.latitude)
 
-    def velocity_callback(self, velocity: Twist):
-        self.velocity = np.array([velocity.linear.x, velocity.linear.y])
-        self.speed = np.sqrt(velocity.linear.x**2 + velocity.linear.y**2)
+    def velocity_callback(self, velocity: Twist) -> None:
+        """
+        Callback function that is called whenever there is a new velocity message. Updates the current velocity of the boat.
 
-    def heading_callback(self, heading: Float32):
+        Parameters
+        ----------
+        velocity
+            A ROS2 message that contains the current velocity of the boat in the local NED frame.
+        """
+
+        self.velocity = np.array([velocity.linear.x, velocity.linear.y], dtype=np.float64)
+        self.speed = np.linalg.norm(self.velocity)
+
+    def heading_callback(self, heading: Float32) -> None:
+        """
+        Callback function that is called whenever there is a new heading message. Updates the current heading of the boat.
+
+        Parameters
+        ----------
+        heading
+            A ROS2 message that contains the current heading of the boat measured counter-clockwise from true east.
+        """
+
         self.heading = heading.data
 
-    def get_optimal_rudder_angle(self, heading, desired_heading):
+    def get_optimal_rudder_angle(self, heading, desired_heading) -> float:
         """
-        Args:
-            heading (float): the current heading of the boat measured counter-clockwise from true east
-            desired_heading (float): the current desired heading of the boat measured counter-clockwise from true east
+        Uses a PID controller to determine the optimal rudder angle to turn the boat from its current heading to the desired heading.
 
-        Returns:
-            float: the angle we should turn the rudder in order to turn from our current heading to the desired heading
+        Parameters
+        -----------
+        heading
+            The current heading of the boat measured counter-clockwise from true east.
+        desired_heading
+            The current desired heading of the boat measured counter-clockwise from true east.
+
+        Returns
+        -------
+        float
+            The angle we should turn the rudder in order to turn from our current heading to the desired heading.
         """
+
+        min_rudder_angle: float = self.parameters["min_rudder_angle"]
+        max_rudder_angle: float = self.parameters["max_rudder_angle"]
         error = get_distance_between_angles(desired_heading, heading)
 
         # ensure that the gains are updated properly and if we get a new gain from the telemetry server, it gets properly updated
@@ -262,51 +316,59 @@ class MotorboatAutopilotNode(Node):
             sample_period=self.parameters["autopilot_refresh_rate"],
         )
 
-        rudder_angle = self.heading_pid_controller(error)
-        rudder_angle = np.clip(rudder_angle, self.parameters["min_rudder_angle"], self.parameters["max_rudder_angle"])
+        rudder_angle: float = np.clip(self.heading_pid_controller(error), min_rudder_angle, max_rudder_angle)
         return rudder_angle
 
     def run_rc_control(self, joystick_left_y: float, joystick_right_x: float) -> tuple[float, float]:
         """
         Formulas used: https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio
 
-        Args:
-            joystick_left_y (float): the value of the Y joystick from -100 to 100.
-                -100 means the joystick is fully down and 100 means the joystick is fully up.
+        Parameters
+        -----------
+        joystick_left_y
+            The value of the Y joystick from `-100` to `100` where
+            - `-100` means the joystick is fully down
+            - `100` means the joystick is fully up.
 
-            joystick_right_x (float): the value of the X joystick from -100 to 100.
-                -100 means the joystick is fully to the left and 100 means the joystick is fully to the right.
+        joystick_right_x
+            The value of the X joystick from `-100` to `100` where
+            - `-100` means the joystick is fully left
+            - `100` means the joystick is fully right.
 
-        Returns:
-            tuple[float, float]: the desired (sail_angle, rudder_angle) that the boat should use to sail
+        Returns
+        -------
+        tuple[float, float]
+            The desired (sail_angle, rudder_angle) that the boat should use to sail.
         """
 
-        min_sail_angle, max_sail_angle = self.parameters["min_sail_angle"], self.parameters["max_sail_angle"]
-        sail_angle = (((joystick_left_y - -100) * (max_sail_angle - min_sail_angle)) / (100 - -100)) + min_sail_angle
+        min_sail_angle: float = self.parameters["min_sail_angle"]
+        max_sail_angle: float = self.parameters["max_sail_angle"]
+        sail_angle = ((joystick_left_y + 100) / 200) * (max_sail_angle - min_sail_angle) + min_sail_angle
 
-        min_rudder_angle, max_rudder_angle = self.parameters["min_rudder_angle"], self.parameters["max_rudder_angle"]
+        min_rudder_angle: float = self.parameters["min_rudder_angle"]
+        max_rudder_angle: float = self.parameters["max_rudder_angle"]
         rudder_angle = (
             ((joystick_right_x - -100) * (max_rudder_angle - min_rudder_angle)) / (100 - -100)
         ) + min_rudder_angle
 
         return sail_angle, rudder_angle
 
-    def step(self) -> float:
+    def step(self) -> float | None:
         """
         TODO Document what this function does maybe?
         """
 
         if (
-            self.autopilot_mode == MotorboatAutopilotMode.Waypoint_Mission
-            and self.motorboat_autopilot.waypoints != None
+            self.autopilot_mode == MotorboatAutopilotMode.WAYPOINT_MISSION
+            and self.motorboat_autopilot.waypoints != []
         ):
             return 0.0  # this is unimplemented for now
             # _, rudder_angle = self.motorboat_autopilot.run_waypoint_mission_step(self.position, self.velocity, self.heading, self.apparent_wind_angle)
 
-        elif self.autopilot_mode == MotorboatAutopilotMode.Hold_Heading:
+        elif self.autopilot_mode == MotorboatAutopilotMode.HOLD_HEADING:
             rudder_angle = self.get_optimal_rudder_angle(self.heading, self.heading_to_hold)
 
-        elif self.autopilot_mode == MotorboatAutopilotMode.Full_RC:
+        elif self.autopilot_mode == MotorboatAutopilotMode.FULL_RC:
             _, rudder_angle = self.run_rc_control(self.joystick_left_y, self.joystick_right_x)
 
         else:
@@ -330,7 +392,7 @@ class MotorboatAutopilotNode(Node):
         # else:
         #     self.full_autonomy_maneuver_publisher.publish(String(data="N/A"))
 
-        if self.autopilot_mode == MotorboatAutopilotMode.Hold_Heading:
+        if self.autopilot_mode == MotorboatAutopilotMode.HOLD_HEADING:
             self.desired_heading_publisher.publish(Float32(data=float(self.heading_to_hold)))
 
         # elif self.autopilot_mode == MotorboatAutopilotMode.Waypoint_Mission and self.motorboat_autopilot.waypoints != None:

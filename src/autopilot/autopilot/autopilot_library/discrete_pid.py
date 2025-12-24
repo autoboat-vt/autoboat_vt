@@ -30,11 +30,11 @@ class Discrete_PID:
         self.Kd = Kd
         self.n = n
 
-        self.prev_output1 = 0.0
-        self.prev_output2 = 0.0
+        self.prev_output1: float = 0.0
+        self.prev_output2: float = 0.0
 
-        self.prev_error1 = 0.0
-        self.prev_error2 = 0.0
+        self.prev_error1: float = 0.0
+        self.prev_error2: float = 0.0
 
     def set_gains(
         self,

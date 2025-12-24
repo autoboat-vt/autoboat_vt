@@ -3,6 +3,7 @@ import os
 
 import rclpy
 import yaml
+from typing import Any
 from geometry_msgs.msg import Twist, Vector3
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
@@ -26,12 +27,12 @@ class SailboatAutopilotNode(Node):
     NOTE: All units are in standard SI units and angles are generally measured in degrees unless otherwise specified
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("sailboat_autopilot")
 
         current_folder_path = os.path.dirname(os.path.realpath(__file__))
         with open(current_folder_path + "/config/sailboat_default_parameters.yaml", "r") as stream:
-            self.autopilot_parameters: dict = yaml.safe_load(stream)
+            self.autopilot_parameters: dict[str, Any] = yaml.safe_load(stream)
 
         self.sailboat_autopilot = SailboatAutopilot(self.autopilot_parameters, logger=self.get_logger())
 
@@ -104,13 +105,13 @@ class SailboatAutopilotNode(Node):
 
         # Default values
         self.position = Position(longitude=0.0, latitude=0.0)
-        self.global_velocity = np.array([0.0, 0.0])
-        self.speed = 0.0
-        self.heading = 0.0
-        self.apparent_wind_vector = np.array([0.0, 0.0])
-        self.apparent_wind_angle = 0.0
-        self.sail_angle = 0.0
-        self.rudder_angle = 0.0
+        self.global_velocity: npt.NDArray[np.float64] = np.array([0.0, 0.0], dtype=np.float64)
+        self.speed: float = 0.0
+        self.heading: float = 0.0
+        self.apparent_wind_vector: npt.NDArray[np.float64] = np.array([0.0, 0.0], dtype=np.float64)
+        self.apparent_wind_angle: float = 0.0
+        self.sail_angle: float = 0.0
+        self.rudder_angle: float = 0.0
 
         self.has_default_autopilot_parameters_been_received_by_telemetry_node = False
 
@@ -120,24 +121,24 @@ class SailboatAutopilotNode(Node):
         self.should_zero_winch_encoder = False
         self.winch_encoder_has_been_zeroed = False
 
-        self.autopilot_mode = (
-            SailboatAutopilotMode.Waypoint_Mission
-        )  # Should this be by default: SailboatAutopilotMode.Full_RC
-        self.heading_to_hold = 0.0
+        # Should this be by default: SailboatAutopilotMode.Full_RC
+        self.autopilot_mode: SailboatAutopilotMode = SailboatAutopilotMode.WAYPOINT_MISSION
 
-        self.joystick_left_x = 0.0
-        self.joystick_left_y = 0.0
-        self.joystick_right_x = 0.0
-        self.joystick_right_y = 0.0
+        self.heading_to_hold: float = 0.0
 
-        self.button_a = 0
-        self.toggle_b = 0
-        self.toggle_c = 0
-        self.button_d = 0
-        self.toggle_e = 0
-        self.toggle_f = 0
+        self.joystick_left_x: float = 0.0
+        self.joystick_left_y: float = 0.0
+        self.joystick_right_x: float = 0.0
+        self.joystick_right_y: float = 0.0
 
-    def rc_data_callback(self, rc_data_message: RCData):
+        self.button_a: bool = False
+        self.toggle_b: int = 0
+        self.toggle_c: int = 0
+        self.button_d: bool = False
+        self.toggle_e: int = 0
+        self.toggle_f: int = 0
+
+    def rc_data_callback(self, rc_data_message: RCData) -> None:
         """
         This callback is called whenever there is new data about what is being pressed on the remote control.
         Whenever this callback is called, a couple of things happen: first, we check whether or not we are trying to zero
@@ -149,12 +150,13 @@ class SailboatAutopilotNode(Node):
         Args:
             rc_data_message (RCData): A struct that contains all of the data on what is pressed on the remote control
         """
+
         # This means we have entered hold heading mode, so keep track of the current heading since this is the target heading
         if rc_data_message.toggle_f == 1 and self.toggle_f != 1:
             self.heading_to_hold = self.heading
 
         # Are we trying to zero the rudder?
-        if self.button_d == False and rc_data_message.button_d == True:
+        if self.button_d is False and rc_data_message.button_d is True:
             self.should_zero_rudder_encoder = True
             self.rudder_encoder_has_been_zeroed = False
 
@@ -162,7 +164,7 @@ class SailboatAutopilotNode(Node):
             self.should_zero_rudder_encoder = False
 
         # Are we trying to zero the winch?
-        if self.button_a == False and rc_data_message.button_a == True:
+        if self.button_a is False and rc_data_message.button_a is True:
             self.should_zero_winch_encoder = True
             self.winch_encoder_has_been_zeroed = False
 
@@ -183,41 +185,41 @@ class SailboatAutopilotNode(Node):
 
         # kill switch
         if self.toggle_b != 0:
-            self.autopilot_mode = SailboatAutopilotMode.Disabled
+            self.autopilot_mode = SailboatAutopilotMode.DISABLED
 
         # full autonomy
         elif self.toggle_f == 2:
-            self.autopilot_mode = SailboatAutopilotMode.Waypoint_Mission
+            self.autopilot_mode = SailboatAutopilotMode.WAYPOINT_MISSION
 
         # hold heading to the direction that we started this mode in. the sail is controlled via RC
         elif self.toggle_f == 1 and self.toggle_c == 0:
-            self.autopilot_mode = SailboatAutopilotMode.Hold_Heading
+            self.autopilot_mode = SailboatAutopilotMode.HOLD_HEADING
 
         # choose the best sail angle based on the lookup table. the rudder is controlled via RC
         elif self.toggle_f == 1 and self.toggle_c == 1:
-            self.autopilot_mode = SailboatAutopilotMode.Hold_Best_Sail
+            self.autopilot_mode = SailboatAutopilotMode.HOLD_BEST_SAIL
 
         # hold heading and best sail
         elif self.toggle_f == 1 and self.toggle_c == 2:
-            self.autopilot_mode = SailboatAutopilotMode.Hold_Heading_And_Best_Sail
+            self.autopilot_mode = SailboatAutopilotMode.HOLD_HEADING_AND_BEST_SAIL
 
         # remote controlled
         elif self.toggle_f == 0:
-            self.autopilot_mode = SailboatAutopilotMode.Full_RC
+            self.autopilot_mode = SailboatAutopilotMode.FULL_RC
 
         # this should never happen
         else:
             print("WARNING: INCORRECT COMBINATION OF RC SWITCHES USED")
 
-    def autopilot_parameters_callback(self, new_parameters: String):
+    def autopilot_parameters_callback(self, new_parameters: String) -> None:
         """
         Receives a serialized json (as a string) of parameters and sets them as constants.
         Any constant can be set as long as they are in the json
         """
 
-        new_parameters_json: dict = json.loads(new_parameters.data)
+        new_parameters_json: dict[str, Any] = json.loads(new_parameters.data)
         for new_parameter_name, new_parameter_value in new_parameters_json.items():
-            if new_parameter_name not in self.autopilot_parameters.keys():
+            if new_parameter_name not in self.autopilot_parameters:
                 print("WARNING: Attempted to set an autopilot parameter that the autopilot doesn't know")
                 print("If you would like to make a new autopilot parameter, please edit default_parameters.yaml")
                 continue
@@ -231,12 +233,14 @@ class SailboatAutopilotNode(Node):
                 1 / self.autopilot_parameters["autopilot_refresh_rate"], self.update_ros_topics
             )
 
-    def default_autopilot_parameters_acknowledgement_callback(self, default_autopilot_parameters_acknowledgement: Bool):
+    def default_autopilot_parameters_acknowledgement_callback(
+        self, default_autopilot_parameters_acknowledgement: Bool
+    ) -> None:
         self.has_default_autopilot_parameters_been_received_by_telemetry_node = (
             default_autopilot_parameters_acknowledgement.data
         )
 
-    def waypoints_list_callback(self, waypoint_list: WaypointList):
+    def waypoints_list_callback(self, waypoint_list: WaypointList) -> None:
         """
         Convert the list of Nav Sat Fix objects (ROS2) to a list of Position objects, which are a custom datatype that has some useful helper methods.
         The Position object should be simpler to do calculations with, so we would rather deal with them. There are many helper functios in utils.py for using Position objects
@@ -250,37 +254,36 @@ class SailboatAutopilotNode(Node):
         self.sailboat_autopilot.reset()
 
         waypoint_navsatfixes_list: list[NavSatFix] = waypoint_list.waypoints
-        waypoint_positions_list: list[Position] = []
 
-        for navsatfix in waypoint_navsatfixes_list:
-            waypoint_positions_list.append(Position(navsatfix.longitude, navsatfix.latitude))
-
-        self.sailboat_autopilot.waypoints = waypoint_positions_list
+        self.sailboat_autopilot.waypoints = [
+            Position(longitude=waypoint.longitude, latitude=waypoint.latitude) for waypoint in waypoint_navsatfixes_list
+        ]
         self.sailboat_autopilot.current_waypoint_index = 0
 
-    def position_callback(self, position: NavSatFix):
+    def position_callback(self, position: NavSatFix) -> None:
         self.position = Position(longitude=position.longitude, latitude=position.latitude)
 
-    def velocity_callback(self, global_velocity: Twist):
+    def velocity_callback(self, global_velocity: Twist) -> None:
         self.global_velocity = np.array([global_velocity.linear.x, global_velocity.linear.y])
-        self.speed = np.sqrt(global_velocity.linear.x**2 + global_velocity.linear.y**2)
+        self.speed = np.linalg.norm(self.global_velocity)
 
-    def heading_callback(self, heading: Float32):
+    def heading_callback(self, heading: Float32) -> None:
         self.heading = heading.data
 
-    def apparent_wind_vector_callback(self, apparent_wind_vector: Vector3):
-        self.apparent_wind_vector = np.array([apparent_wind_vector.x, apparent_wind_vector.y])
+    def apparent_wind_vector_callback(self, apparent_wind_vector: Vector3) -> None:
+        self.apparent_wind_vector = np.array([apparent_wind_vector.x, apparent_wind_vector.y], dtype=np.float64)
         _, self.apparent_wind_angle = cartesian_vector_to_polar(apparent_wind_vector.x, apparent_wind_vector.y)
 
-    def publish_default_autopilot_parameters_timer_callback(self):
+    def publish_default_autopilot_parameters_timer_callback(self) -> None:
         """
-        Publish the default parameters so that the telemetry node/ telemetry server/ groundstation know which parameters it can change.
-        This should only be sent to the telemetry node once and then should never be received again once the telemetry node properly receives and parses it.
+        Publish the default parameters so that the telemetry node/telemetry server/groundstation 
+        know which parameters it can change. This should only be sent to the telemetry node once
+        and then should never be received again once the telemetry node properly receives and parses it.
         """
         if not self.has_default_autopilot_parameters_been_received_by_telemetry_node:
             self.default_autopilot_parameters_publisher.publish(String(data=json.dumps(self.autopilot_parameters)))
 
-    def step(self):
+    def step(self) -> tuple[float | None, float | None]:
         """
         TODO perhaps in the future, make this function state independent (aka using no self.position, self.global_velocity etc and just having them passed in as arguments)
         Computes the best sail and rudder angles for the current mode and state
@@ -289,24 +292,27 @@ class SailboatAutopilotNode(Node):
             sail angle or rudder angle are None if the autopilot doesn't have authority over them
         """
 
-        if self.autopilot_mode == SailboatAutopilotMode.Waypoint_Mission and self.sailboat_autopilot.waypoints != None:
+        if (
+            self.autopilot_mode == SailboatAutopilotMode.WAYPOINT_MISSION
+            and self.sailboat_autopilot.waypoints is not None
+        ):
             sail_angle, rudder_angle = self.sailboat_autopilot.run_waypoint_mission_step(
                 self.position, self.global_velocity, self.heading, self.apparent_wind_vector
             )
 
-        elif self.autopilot_mode == SailboatAutopilotMode.Hold_Best_Sail:
+        elif self.autopilot_mode == SailboatAutopilotMode.HOLD_BEST_SAIL:
             sail_angle = self.sailboat_autopilot.get_optimal_sail_angle(self.apparent_wind_angle)
             _, rudder_angle = self.sailboat_autopilot.run_rc_control(self.joystick_left_y, self.joystick_right_x)
 
-        elif self.autopilot_mode == SailboatAutopilotMode.Hold_Heading:
+        elif self.autopilot_mode == SailboatAutopilotMode.HOLD_HEADING:
             rudder_angle = self.sailboat_autopilot.get_optimal_rudder_angle(self.heading, self.heading_to_hold)
             sail_angle, _ = self.sailboat_autopilot.run_rc_control(self.joystick_left_y, self.joystick_right_x)
 
-        elif self.autopilot_mode == SailboatAutopilotMode.Hold_Heading_And_Best_Sail:
+        elif self.autopilot_mode == SailboatAutopilotMode.HOLD_HEADING_AND_BEST_SAIL:
             rudder_angle = self.sailboat_autopilot.get_optimal_rudder_angle(self.heading, self.heading_to_hold)
             sail_angle = self.sailboat_autopilot.get_optimal_sail_angle(self.apparent_wind_angle)
 
-        elif self.autopilot_mode == SailboatAutopilotMode.Full_RC:
+        elif self.autopilot_mode == SailboatAutopilotMode.FULL_RC:
             sail_angle, rudder_angle = self.sailboat_autopilot.run_rc_control(
                 self.joystick_left_y, self.joystick_right_x
             )
@@ -316,7 +322,7 @@ class SailboatAutopilotNode(Node):
 
         return rudder_angle, sail_angle
 
-    def update_ros_topics(self):
+    def update_ros_topics(self) -> None:
         """
         This is the main function that is called constantely by the timer.
         Updates the sail_angle and rudder_angle topics based on the output of stepping in the autopilot controller
@@ -328,7 +334,7 @@ class SailboatAutopilotNode(Node):
 
         # Publish the autonomy maneuever (aka whether we are currently CW tacking, CCW tacking, or normal sailing)
         self.autopilot_mode_publisher.publish(String(data=self.autopilot_mode.name))
-        if self.autopilot_mode == SailboatAutopilotMode.Waypoint_Mission:
+        if self.autopilot_mode == SailboatAutopilotMode.WAYPOINT_MISSION:
             self.full_autonomy_maneuver_publisher.publish(String(data=self.sailboat_autopilot.current_state.name))
 
         else:
@@ -336,13 +342,14 @@ class SailboatAutopilotNode(Node):
 
         # Publish the desired heading
         if (
-            self.autopilot_mode == SailboatAutopilotMode.Hold_Heading
-            or self.autopilot_mode == SailboatAutopilotMode.Hold_Heading_And_Best_Sail
+            self.autopilot_mode == SailboatAutopilotMode.HOLD_HEADING
+            or self.autopilot_mode == SailboatAutopilotMode.HOLD_HEADING_AND_BEST_SAIL
         ):
             self.desired_heading_publisher.publish(Float32(data=float(self.heading_to_hold)))
 
         elif (
-            self.autopilot_mode == SailboatAutopilotMode.Waypoint_Mission and self.sailboat_autopilot.waypoints != None
+            self.autopilot_mode == SailboatAutopilotMode.WAYPOINT_MISSION
+            and self.sailboat_autopilot.waypoints is not None
         ):
             current_waypoint = self.sailboat_autopilot.waypoints[self.sailboat_autopilot.current_waypoint_index]
 
@@ -373,7 +380,7 @@ class SailboatAutopilotNode(Node):
             self.winch_encoder_has_been_zeroed = True
 
 
-def main():
+def main() -> None:
     rclpy.init()
     sailboat_autopilot_node = SailboatAutopilotNode()
     rclpy.spin(sailboat_autopilot_node)

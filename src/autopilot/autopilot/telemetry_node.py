@@ -8,8 +8,6 @@ from typing import Any
 from urllib.parse import urljoin
 
 import cv2
-import numpy as np
-import numpy.typing as npt
 import rclpy
 import requests
 import yaml
@@ -95,12 +93,14 @@ class TelemetryNode(Node):
             )
             if isinstance(new_id, int):
                 self.instance_id = new_id
-                
-                user_name = os.environ.get('USER')
+
+                user_name = os.environ.get("USER")
                 if not user_name:
                     user_name = "Unknown User"
-                    
-                self.boat_status_session.post(urljoin(TELEMETRY_SERVER_URL, f"instance_manager/set_user/{self.instance_id}/{user_name}"))
+
+                self.boat_status_session.post(
+                    urljoin(TELEMETRY_SERVER_URL, f"instance_manager/set_user/{self.instance_id}/{user_name}")
+                )
                 self.logger.info(f"Created new telemetry server instance with ID {self.instance_id}")
                 break
 
@@ -499,7 +499,6 @@ class TelemetryNode(Node):
             "distance_to_next_waypoint": distance_to_next_waypoint,
         }
 
-        start_time = time.time()
         try:
             self.boat_status_session.post(
                 urljoin(TELEMETRY_SERVER_URL, f"boat_status/set/{self.instance_id}"),
