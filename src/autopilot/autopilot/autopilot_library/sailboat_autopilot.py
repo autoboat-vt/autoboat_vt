@@ -1,8 +1,9 @@
-from .discrete_pid import Discrete_PID
-from .utils import *
+from typing import Any
+
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from typing import Any
+from .discrete_pid import Discrete_PID
+from .utils import *
 
 
 class SailboatAutopilot:
@@ -73,7 +74,9 @@ class SailboatAutopilot:
         inner = np.clip(inner, -1, 1)
         return np.clip(np.rad2deg(np.arcsin(inner)), 0, no_sail_zone_size)
 
-    def _get_maneuver_from_desired_heading(self, heading: float, desired_heading: float, true_wind_angle: float) -> SailboatManeuvers:
+    def _get_maneuver_from_desired_heading(
+        self, heading: float, desired_heading: float, true_wind_angle: float
+    ) -> SailboatManeuvers:
         """
         A maneuver is basically a "mode" of sailing. During each of these "modes" we have to act differently, and this function
         helps us determine if we should switch sailing "modes". The three main types of sailing "modes" are STANDARD, TACK, and JIBE.
@@ -153,7 +156,10 @@ class SailboatAutopilot:
 
         # If desired heading it is not in any of the zones
         if not is_angle_between_boundaries(desired_heading, no_sail_zone_bounds[0], no_sail_zone_bounds[1]):
-            if self._get_maneuver_from_desired_heading(current_heading, desired_heading, true_wind_angle) == SailboatManeuvers.TACK:
+            if (
+                self._get_maneuver_from_desired_heading(current_heading, desired_heading, true_wind_angle)
+                == SailboatManeuvers.TACK
+            ):
                 return desired_heading, True  # tack over to desired heading
             else:
                 return desired_heading, False  # No tack
@@ -189,7 +195,11 @@ class SailboatAutopilot:
             return no_sail_zone_bounds[1], False  # No tack
 
     def run_waypoint_mission_step(
-        self, current_position: Position, global_velocity_vector: np.ndarray, heading: float, apparent_wind_vector: np.ndarray
+        self,
+        current_position: Position,
+        global_velocity_vector: np.ndarray,
+        heading: float,
+        apparent_wind_vector: np.ndarray,
     ) -> tuple[float, float]:
         """
         Assumes that there are waypoints inputted in the autopilot.
@@ -209,7 +219,9 @@ class SailboatAutopilot:
 
         boat_speed = np.sqrt(global_velocity_vector[0] ** 2 + global_velocity_vector[1] ** 2)
 
-        boat_speed, global_velocity_angle = cartesian_vector_to_polar(global_velocity_vector[0], global_velocity_vector[1])
+        boat_speed, global_velocity_angle = cartesian_vector_to_polar(
+            global_velocity_vector[0], global_velocity_vector[1]
+        )
         local_velocity_angle = global_velocity_angle - heading
         local_velocity_vector = boat_speed * np.array(
             [np.cos(np.deg2rad(local_velocity_angle)), np.sin(np.deg2rad(local_velocity_angle))]
@@ -219,7 +231,9 @@ class SailboatAutopilot:
         true_wind_vector = apparent_wind_vector + local_velocity_vector
 
         true_wind_speed, true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
-        apparent_wind_speed, apparent_wind_angle = cartesian_vector_to_polar(apparent_wind_vector[0], apparent_wind_vector[1])
+        apparent_wind_speed, apparent_wind_angle = cartesian_vector_to_polar(
+            apparent_wind_vector[0], apparent_wind_vector[1]
+        )
 
         global_true_wind_angle = (true_wind_angle + heading) % 360
 
@@ -270,7 +284,9 @@ class SailboatAutopilot:
             if self.parameters["perform_forced_jibe_instead_of_tack"]:
                 rudder_angle *= -1
 
-            if abs((heading - self.desired_tacking_angle)) % 360 < self.parameters["tack_tolerance"]:  # if we have finished the tack
+            if (
+                abs(heading - self.desired_tacking_angle) % 360 < self.parameters["tack_tolerance"]
+            ):  # if we have finished the tack
                 self.current_state = SailboatStates.NORMAL
 
         else:
@@ -357,6 +373,8 @@ class SailboatAutopilot:
         sail_angle = (((joystick_left_y - -100) * (max_sail_angle - min_sail_angle)) / (100 - -100)) + min_sail_angle
 
         min_rudder_angle, max_rudder_angle = self.parameters["min_rudder_angle"], self.parameters["max_rudder_angle"]
-        rudder_angle = (((joystick_right_x - -100) * (max_rudder_angle - min_rudder_angle)) / (100 - -100)) + min_rudder_angle
+        rudder_angle = (
+            ((joystick_right_x - -100) * (max_rudder_angle - min_rudder_angle)) / (100 - -100)
+        ) + min_rudder_angle
 
         return sail_angle, rudder_angle

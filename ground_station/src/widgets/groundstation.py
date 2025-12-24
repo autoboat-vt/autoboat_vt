@@ -67,7 +67,9 @@ class GroundStationWidget(QWidget):
         self.remember_waypoints_pull_service_status: bool = False
 
         # region timers
+        self.one_ms_timer = misc.copy_qtimer(constants.ONE_MS_TIMER)
         self.thirty_second_timer = misc.copy_qtimer(constants.THIRTY_SECOND_TIMER)
+        self.timers = [self.one_ms_timer, self.thirty_second_timer]
 
         # region define layouts
         self.main_layout = QGridLayout()
@@ -282,12 +284,14 @@ class GroundStationWidget(QWidget):
 
         self.local_waypoint_handler = thread_classes.WaypointThreadRouter.LocalFetcherThread()
         self.local_waypoint_handler.response.connect(self.update_waypoints_display)
-        self.local_waypoint_handler.start()
+        self.one_ms_timer.timeout.connect(self.local_waypoint_handler_starter)
 
         self.remote_waypoint_handler = thread_classes.WaypointThreadRouter.RemoteFetcherThread()
         self.remote_waypoint_handler.response.connect(self.check_telemetry_waypoints)
         self.thirty_second_timer.timeout.connect(self.remote_waypoint_handler_starter)
-        self.thirty_second_timer.start()
+        
+        for timer in self.timers:
+            timer.start()
 
         self.boat_status_source: Signal = boat_status_source
         self.boat_status_source.connect(self.update_telemetry_display)
@@ -665,6 +669,12 @@ class GroundStationWidget(QWidget):
 
         if not self.remote_waypoint_handler.isRunning():
             self.remote_waypoint_handler.start()
+
+    def local_waypoint_handler_starter(self) -> None:
+        """Starts the local waypoint handler thread."""
+
+        if not self.local_waypoint_handler.isRunning():
+            self.local_waypoint_handler.start()
 
     def update_waypoints_display(
         self, request_result: tuple[list[list[int | float]], constants.TelemetryStatus]

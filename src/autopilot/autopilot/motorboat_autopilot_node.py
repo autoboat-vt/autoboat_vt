@@ -1,32 +1,34 @@
-from .autopilot_library.motorboat_autopilot import MotorboatAutopilot
-from .autopilot_library.discrete_pid import Discrete_PID
-from .autopilot_library.utils import *
-
+import json
+import os
+import time
 
 import rclpy
-from rclpy.qos import qos_profile_sensor_data
-from rclpy.node import Node
-from autoboat_msgs.msg import WaypointList, RCData, VESCControlData
-from std_msgs.msg import Float32, String, Int32, Bool
+import yaml
 from geometry_msgs.msg import Twist
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import Bool, Float32, Int32, String
 
-import json, yaml
-import os, time
+from autoboat_msgs.msg import RCData, VESCControlData, WaypointList
+
+from .autopilot_library.discrete_pid import Discrete_PID
+from .autopilot_library.motorboat_autopilot import MotorboatAutopilot
+from .autopilot_library.utils import *
 
 
 class MotorboatAutopilotNode(Node):
     """
-    Handles communications between the autopilot (autopilot_library/motorboat_autopilot.py) and all of the other nodes/ topics through ROS2
-    The autopilot takes in a bunch of sensor data and waypoints (list of gps positions that represent waypoints)
-    and attempts to traverses through the waypoints by continuously publishing to the propeller motor control struct and rudder angle topics.
+    Handles communications between the autopilot (`autopilot_library/motorboat_autopilot.py`) and all of the other nodes/topics through ROS2.
+    
+    The autopilot takes in a bunch of sensor data and waypoints (list of gps positions that represent waypoints) and attempts to traverses through the waypoints by continuously publishing to the propeller motor control struct and rudder angle topics.
 
-    The main function that you should pay attention to is update_ros_topics, since this is the function that is called periodically on a timer.
+    The main function that you should pay attention to is `update_ros_topics`, since this is the function that is called periodically on a timer.
 
-    NOTE: All units are in standard SI units and angles are generally measured in degrees unless otherwise specified
+    NOTE: All units are in standard SI units and angles are generally measured in degrees unless otherwise specified.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("motorboat_autopilot")
 
         cur_folder_path = os.path.dirname(os.path.realpath(__file__))
@@ -37,12 +39,16 @@ class MotorboatAutopilotNode(Node):
         self.motorboat_autopilot = MotorboatAutopilot(parameters=self.parameters, logger=self.get_logger())
 
         # Initialize ros2 subscriptions, publishers, and timers
-        self.autopilot_refresh_timer = self.create_timer(1 / self.parameters["autopilot_refresh_rate"], self.update_ros_topics)
+        self.autopilot_refresh_timer = self.create_timer(
+            1 / self.parameters["autopilot_refresh_rate"], self.update_ros_topics
+        )
 
         self.autopilot_parameters_listener = self.create_subscription(
             String, "/autopilot_parameters", callback=self.autopilot_parameters_callback, qos_profile=10
         )
-        self.waypoints_list_listener = self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10)
+        self.waypoints_list_listener = self.create_subscription(
+            WaypointList, "/waypoints_list", self.waypoints_list_callback, 10
+        )
 
         self.position_listener = self.create_subscription(
             msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=qos_profile_sensor_data
@@ -58,7 +64,9 @@ class MotorboatAutopilotNode(Node):
         )
 
         self.current_waypoint_index_publisher = self.create_publisher(Int32, "/current_waypoint_index", 10)
-        self.autopilot_mode_publisher = self.create_publisher(String, "/autopilot_mode", qos_profile=qos_profile_sensor_data)
+        self.autopilot_mode_publisher = self.create_publisher(
+            String, "/autopilot_mode", qos_profile=qos_profile_sensor_data
+        )
         self.full_autonomy_maneuver_publisher = self.create_publisher(
             msg_type=String, topic="/full_autonomy_maneuver", qos_profile=qos_profile_sensor_data
         )
@@ -74,7 +82,9 @@ class MotorboatAutopilotNode(Node):
             msg_type=Float32, topic="/desired_rudder_angle", qos_profile=qos_profile_sensor_data
         )
 
-        self.zero_rudder_encoder_publisher = self.create_publisher(msg_type=Bool, topic="/zero_rudder_encoder", qos_profile=10)
+        self.zero_rudder_encoder_publisher = self.create_publisher(
+            msg_type=Bool, topic="/zero_rudder_encoder", qos_profile=10
+        )
 
         self.heading_pid_controller = Discrete_PID(
             sample_period=(1 / self.parameters["autopilot_refresh_rate"]), Kp=1, Ki=0, Kd=0, n=1
@@ -108,9 +118,9 @@ class MotorboatAutopilotNode(Node):
         self.toggle_e = 0
         self.toggle_f = 0
 
-        self.propeller_motor_control_mode = MotorboatControls.RPM
+        self.propeller_motor_control_mode: MotorboatControls = MotorboatControls.RPM
 
-    def rc_data_callback(self, rc_data_message: RCData):
+    def rc_data_callback(self, rc_data_message: RCData) -> None:
         """
         This callback is called whenever there is new data about what is being pressed on the remote control.
         Whenever this callback is called, a couple of things happen: first, we check whether or not we are trying to zero
@@ -183,7 +193,7 @@ class MotorboatAutopilotNode(Node):
         elif self.toggle_c == 2:
             self.propeller_motor_control_mode = MotorboatControls.CURRENT
 
-    def autopilot_parameters_callback(self, new_parameters: String):
+    def autopilot_parameters_callback(self, new_parameters: String) -> None:
         """
         Receives a serialized json (as a string) of parameters and sets them as constants.
         Any constant can be set as long as they are in the json
@@ -198,13 +208,15 @@ class MotorboatAutopilotNode(Node):
             self.parameters[new_parameter_name] = new_parameter_value
 
         # special cases to handle since they do not update automatically
-        if "autopilot_refresh_rate" in new_parameters_json.keys():
+        if "autopilot_refresh_rate" in new_parameters_json:
             self.destroy_timer(self.autopilot_refresh_timer)
-            self.autopilot_refresh_timer = self.create_timer(1 / self.parameters["autopilot_refresh_rate"], self.update_ros_topics)
+            self.autopilot_refresh_timer = self.create_timer(
+                1 / self.parameters["autopilot_refresh_rate"], self.update_ros_topics
+            )
 
-    def waypoints_list_callback(self, waypoint_list: WaypointList):
+    def waypoints_list_callback(self, waypoint_list: WaypointList) -> None:
         """
-        convert the list of ROS2 Nav Sat Fix objects to a list of Position objects, which are a custom datatype that has some useful helper methods.
+        Convert the list of ROS2 Nav Sat Fix objects to a list of Position objects, which are a custom datatype that has some useful helper methods.
         The Position object should be simpler to do calculations with
         """
         if len(waypoint_list.waypoints) == 0:
@@ -273,7 +285,9 @@ class MotorboatAutopilotNode(Node):
         sail_angle = (((joystick_left_y - -100) * (max_sail_angle - min_sail_angle)) / (100 - -100)) + min_sail_angle
 
         min_rudder_angle, max_rudder_angle = self.parameters["min_rudder_angle"], self.parameters["max_rudder_angle"]
-        rudder_angle = (((joystick_right_x - -100) * (max_rudder_angle - min_rudder_angle)) / (100 - -100)) + min_rudder_angle
+        rudder_angle = (
+            ((joystick_right_x - -100) * (max_rudder_angle - min_rudder_angle)) / (100 - -100)
+        ) + min_rudder_angle
 
         return sail_angle, rudder_angle
 
@@ -282,7 +296,10 @@ class MotorboatAutopilotNode(Node):
         TODO Document what this function does maybe?
         """
 
-        if self.autopilot_mode == MotorboatAutopilotMode.Waypoint_Mission and self.motorboat_autopilot.waypoints != None:
+        if (
+            self.autopilot_mode == MotorboatAutopilotMode.Waypoint_Mission
+            and self.motorboat_autopilot.waypoints != None
+        ):
             return 0.0  # this is unimplemented for now
             # _, rudder_angle = self.motorboat_autopilot.run_waypoint_mission_step(self.position, self.velocity, self.heading, self.apparent_wind_angle)
 
@@ -297,7 +314,7 @@ class MotorboatAutopilotNode(Node):
 
         return rudder_angle
 
-    def update_ros_topics(self):
+    def update_ros_topics(self) -> None:
         """
         This is the main function that is called constantely by the timer.
         Updates the propeller control struct and rudder angle topics based on the output of the autopilot controller
@@ -334,7 +351,10 @@ class MotorboatAutopilotNode(Node):
 
             self.propeller_motor_control_struct_publisher.publish(
                 VESCControlData(
-                    control_type_for_vesc="rpm", desired_vesc_current=0.0, desired_vesc_rpm=0.0, desired_vesc_duty_cycle=0.0
+                    control_type_for_vesc="rpm",
+                    desired_vesc_current=0.0,
+                    desired_vesc_rpm=0.0,
+                    desired_vesc_duty_cycle=0.0,
                 )
             )
 
@@ -345,7 +365,10 @@ class MotorboatAutopilotNode(Node):
 
                 self.propeller_motor_control_struct_publisher.publish(
                     VESCControlData(
-                        control_type_for_vesc="rpm", desired_vesc_current=0.0, desired_vesc_rpm=rpm_value, desired_vesc_duty_cycle=0.0
+                        control_type_for_vesc="rpm",
+                        desired_vesc_current=0.0,
+                        desired_vesc_rpm=rpm_value,
+                        desired_vesc_duty_cycle=0.0,
                     )
                 )
 
@@ -379,7 +402,7 @@ class MotorboatAutopilotNode(Node):
             self.encoder_has_been_zeroed = True
 
 
-def main():
+def main() -> None:
     rclpy.init()
     motorboat_autopilot_node = MotorboatAutopilotNode()
     rclpy.spin(motorboat_autopilot_node)

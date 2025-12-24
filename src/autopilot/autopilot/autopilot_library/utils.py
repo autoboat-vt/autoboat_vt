@@ -3,18 +3,19 @@ from enum import Enum
 import geopy
 import geopy.distance
 import numpy as np
+import numpy.typing as npt
 import pyproj
 
 from .position import Position
 
 
 class SailboatAutopilotMode(Enum):
-    Disabled = 0
-    Full_RC = 1
-    Hold_Best_Sail = 2
-    Hold_Heading = 3
-    Hold_Heading_And_Best_Sail = 4
-    Waypoint_Mission = 5
+    DISABLED = 0
+    FULL_RC = 1
+    HOLD_BEST_SAIL = 2
+    HOLD_HEADING = 3
+    HOLD_HEADING_AND_BEST_SAIL = 4
+    WAYPOINT_MISSION = 5
 
 
 class SailboatStates(Enum):
@@ -33,10 +34,10 @@ class SailboatManeuvers(Enum):
 
 
 class MotorboatAutopilotMode(Enum):
-    Disabled = 0
-    Full_RC = 1
-    Hold_Heading = 2
-    Waypoint_Mission = 3
+    DISABLED = 0
+    FULL_RC = 1
+    HOLD_HEADING = 2
+    WAYPOINT_MISSION = 3
 
 
 class MotorboatControls(Enum):
@@ -75,38 +76,43 @@ def cartesian_vector_to_polar(x: float, y: float) -> tuple[float, float]:
             Output direction is between 0 and 360 degrees
     """
 
-    # arctan2 doesn't like when we pass 2 zeros into it so we should cover that case
-    if x == 0.0 and y == 0.0:
+    magnitude: float = np.hypot(x, y)
+
+    if np.isclose(magnitude, 0.0):
         return 0.0, 0.0
 
-    magnitude = np.linalg.norm([x, y])
-    direction = np.arctan2(y, x)  # radians
-    direction = direction * (180 / np.pi)  # angle from -180 to 180 degrees
-    direction = direction % 360  # angle from 0 to 360 degrees
+    direction: float = np.degrees(np.arctan2(y, x)) % 360
     return magnitude, direction
 
 
-def get_angle_between_vectors(vector1: np.ndarray, vector2: np.ndarray) -> float:
+def get_angle_between_vectors(vector1: npt.NDArray[np.float64], vector2: npt.NDArray[np.float64]) -> float:
     """
     Args:
-        vector1 (np.ndarray)
-        vector2 (np.ndarray)
+        vector1 (np.array): The first vector.
+        vector2 (np.array): The second vector.
 
     Returns:
-        float: the smallest angle between vector1 and vector2
+        float: the smallest angle between `vector1` and `vector2`
     """
 
-    vector1_normalized = vector1 / np.linalg.norm(vector1)
-    vector2_normalized = vector2 / np.linalg.norm(vector2)
+    norm1: float = np.linalg.norm(vector1)
+    norm2: float = np.linalg.norm(vector2)
 
-    return np.rad2deg(np.arccos(np.clip(np.dot(vector1_normalized, vector2_normalized), -1, 1)))
+    if np.isclose(norm1, 0.0) or np.isclose(norm2, 0.0):
+        return 0.0
+
+    v1 = vector1 / norm1
+    v2 = vector2 / norm2
+
+    cos_theta: float = np.clip(np.dot(v1, v2), -1.0, 1.0)
+    return np.degrees(np.arccos(cos_theta))
 
 
 def get_distance_between_angles(angle1: float, angle2: float) -> float:
     """
     Takes two angles in degrees and computes the shortest angular distance between them.
 
-    For example if `angle1 = 30` degrees and `angle2 = 50` degrees, then the output of 
+    For example if `angle1 = 30` degrees and `angle2 = 50` degrees, then the output of
     this function would be 20 degrees.
 
     Note:
@@ -120,22 +126,21 @@ def get_distance_between_angles(angle1: float, angle2: float) -> float:
         float: the shortest angular distance between the two angles (in degrees)
     """
 
-    return -1 * ((float(angle1) - float(angle2) + 180) % 360 - 180)
+    return abs((angle1 - angle2 + 180) % 360 - 180)
 
 
 def get_bearing(current_position: Position, destination_position: Position) -> float:
     """
     Gets the bearing towards a specific destination point, from our current location.
 
-    The bearing is just the angle between two points on earth
-    (AKA which direction to travel in to get to the destination position from the current position)
+    The bearing is just the angle between two points on earth (AKA which direction to travel in to get to the destination position from the current position).
 
     Args:
-        current_position (Position): a Position object that represents the current position
-        destination_position (Position): a Position object that represents the position that you would like to travel towards
+        current_position (Position): The current position.
+        destination_position (Position): The destination position.
 
     Returns:
-        float: the bearing as an angle between 0 to 360, counter clockwise, measured from east.
+        float: The bearing as an angle between 0 to 360, counter clockwise, measured from east.
         This value tells you which direction you need to travel in to get to your destination.
     """
 
@@ -174,7 +179,7 @@ def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float
     Returns:
         bool: If "angle" is between "boundary1" and "boundary2", then return True and if not, then return False
     """
-    
+
     angle = np.deg2rad(angle)
     boundary1 = np.deg2rad(boundary1)
     boundary2 = np.deg2rad(boundary2)

@@ -90,15 +90,12 @@
 
                     this.min_zoom = 5;
                     this.max_zoom = 20;
-                    this.currentZoom = map_interface.map_options.zoom;
-
-                    this.waypointMarkers = new Map();
-                    this.buoyMarkers = new Map();
-                    this.focusedWaypoint = null;
-                    this.lastFocusedColor = map_interface.waypoint_color;
-
                     this.map = L.map("map", map_interface.map_options);
-                    this.currentZoom = this.map.getZoom();
+
+                    this.waypoint_markers = new Map();
+                    this.buoy_markers = new Map();
+                    this.focused_waypoint = null;
+                    this.last_focused_color = map_interface.waypoint_color;
 
                     L.tileLayer(
                         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -107,10 +104,10 @@
 
                     L.control.scale().addTo(this.map);
 
-                    let moveTimeout;
+                    let move_timeout;
                     this.map.on("move", () => {
-                        clearTimeout(moveTimeout);
-                        moveTimeout = setTimeout(
+                        clearTimeout(move_timeout);
+                        move_timeout = setTimeout(
                             () => this.handle_map_move(),
                             100
                         );
@@ -143,9 +140,9 @@
                  * Handles map movement to unfocus waypoints after a delay.
                  */
                 handle_map_move() {
-                    if (!this.focusedWaypoint) return;
+                    if (!this.focused_waypoint) return;
                     const diff = performance.now() - this.lastFocusedTimeStamp;
-                    if (diff > 1000) {
+                    if (diff > 500) {
                         this.unfocus_waypoint();
                     }
                 }
@@ -176,16 +173,16 @@
                  * Unfocuses the currently focused waypoint.
                  */
                 unfocus_waypoint() {
-                    if (this.focusedWaypoint) {
-                        const marker = this.waypointMarkers.get(
-                            this.focusedWaypoint
+                    if (this.focused_waypoint) {
+                        const marker = this.waypoint_markers.get(
+                            this.focused_waypoint
                         );
                         if (marker) {
                             marker.setIcon(
-                                map_interface.get_icon(this.lastFocusedColor)
+                                map_interface.get_icon(this.last_focused_color)
                             );
                         }
-                        this.focusedWaypoint = null;
+                        this.focused_waypoint = null;
                     }
                 }
 
@@ -218,10 +215,10 @@
                         }
                     };
 
-                    this.waypointMarkers.forEach(marker =>
+                    this.waypoint_markers.forEach(marker =>
                         updateMarker(marker)
                     );
-                    this.buoyMarkers.forEach(marker => updateMarker(marker));
+                    this.buoy_markers.forEach(marker => updateMarker(marker));
                 }
 
                 /**
@@ -257,7 +254,7 @@
                  */
                 add_waypoint(lat, lon) {
                     const key = `${lat},${lon}`;
-                    if (this.waypointMarkers.has(key)) {
+                    if (this.waypoint_markers.has(key)) {
                         console.log("Waypoint already exists.");
                         return;
                     }
@@ -268,7 +265,7 @@
                             map_interface.waypoint_color
                         )
                     }).addTo(this.map);
-                    this.waypointMarkers.set(key, marker);
+                    this.waypoint_markers.set(key, marker);
                     this.sync_waypoints();
                 }
 
@@ -279,13 +276,13 @@
                 remove_waypoint(index) {
                     const [lat, lon] = this.waypoints.splice(index, 1)[0];
                     const key = `${lat},${lon}`;
-                    const marker = this.waypointMarkers.get(key);
+                    const marker = this.waypoint_markers.get(key);
                     if (marker) {
                         this.map.removeLayer(marker);
-                        this.waypointMarkers.delete(key);
+                        this.waypoint_markers.delete(key);
                     }
-                    if (this.focusedWaypoint === key) {
-                        this.focusedWaypoint = null;
+                    if (this.focused_waypoint === key) {
+                        this.focused_waypoint = null;
                     }
                     this.sync_waypoints();
                 }
@@ -295,7 +292,7 @@
                  * @param {string} color
                  */
                 change_color_waypoints(color) {
-                    this.waypointMarkers.forEach(marker => {
+                    this.waypoint_markers.forEach(marker => {
                         marker.setIcon(map_interface.get_icon(color));
                     });
                 }
@@ -304,12 +301,12 @@
                  * Clears all waypoints from the map.
                  */
                 clear_waypoints() {
-                    this.waypointMarkers.forEach(marker => {
+                    this.waypoint_markers.forEach(marker => {
                         this.map.removeLayer(marker);
                     });
-                    this.waypointMarkers.clear();
+                    this.waypoint_markers.clear();
                     this.waypoints = [];
-                    this.focusedWaypoint = null;
+                    this.focused_waypoint = null;
                     this.sync_waypoints();
                 }
 
@@ -326,7 +323,7 @@
                     const marker = L.marker([lat, lon], {
                         icon: map_interface.get_icon(map_interface.buoy_color)
                     }).addTo(this.map);
-                    this.buoyMarkers.set(key, marker);
+                    this.buoy_markers.set(key, marker);
                 }
 
                 /**
@@ -336,10 +333,10 @@
                 remove_buoy(index) {
                     const [lat, lon] = this.buoys.splice(index, 1)[0];
                     const key = `${lat},${lon}`;
-                    const marker = this.buoyMarkers.get(key);
+                    const marker = this.buoy_markers.get(key);
                     if (marker) {
                         this.map.removeLayer(marker);
-                        this.buoyMarkers.delete(key);
+                        this.buoy_markers.delete(key);
                     }
                 }
 
@@ -347,10 +344,10 @@
                  * Clears all buoys from the map.
                  */
                 clear_buoys() {
-                    this.buoyMarkers.forEach(marker => {
+                    this.buoy_markers.forEach(marker => {
                         this.map.removeLayer(marker);
                     });
-                    this.buoyMarkers.clear();
+                    this.buoy_markers.clear();
                     this.buoys = [];
                 }
 
@@ -403,28 +400,37 @@
                 focus_map_on_marker(lat, lon) {
                     const key = `${lat},${lon}`;
                     const marker =
-                        this.waypointMarkers.get(key) ||
-                        this.buoyMarkers.get(key);
+                        this.waypoint_markers.get(key) ||
+                        this.buoy_markers.get(key);
 
                     if (!marker) return;
 
                     this.lastFocusedTimeStamp = performance.now();
                     this.map.setView([lat, lon], this.map.getZoom());
 
-                    if (this.focusedWaypoint && this.focusedWaypoint !== key) {
-                        const prevMarker = this.waypointMarkers.get(
-                            this.focusedWaypoint
+                    // Change previously focused waypoint back to its original color
+                    if (
+                        this.focused_waypoint &&
+                        this.focused_waypoint !== key
+                    ) {
+                        const prev_marker = this.waypoint_markers.get(
+                            this.focused_waypoint
                         );
-                        if (prevMarker) {
-                            prevMarker.setIcon(
-                                map_interface.get_icon(this.lastFocusedColor)
+                        if (prev_marker) {
+                            prev_marker.setIcon(
+                                map_interface.get_icon(this.last_focused_color)
                             );
                         }
                     }
 
-                    if (this.waypointMarkers.has(key)) {
-                        this.lastFocusedColor = map_interface.waypoint_color;
-                        this.focusedWaypoint = key;
+                    // Focus on the new waypoint if it exists
+                    if (this.waypoint_markers.has(key)) {
+                        this.focused_waypoint = key;
+                        this.last_focused_color =
+                            marker.options.icon.options.iconUrl
+                                .split("-")
+                                .slice(-1)[0]
+                                .replace(".png", "");
                         marker.setIcon(
                             map_interface.get_icon(
                                 map_interface.focused_waypoint_color

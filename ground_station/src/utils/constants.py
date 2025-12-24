@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from urllib.parse import urljoin
 
 import requests
-from qtpy.QtCore import Qt, QRect, QSizeF, QPoint
+from qtpy.QtCore import QPoint, QRect, QSize, Qt
 from qtpy.QtGui import QColor, QPalette
 from strenum import StrEnum
 
@@ -87,8 +87,8 @@ STYLE_SHEET = """
 """
 
 # window size and box
-WINDOW_SIZE = QSizeF(w=800, h=600)
-WINDOW_BOX = QRect(atopLeft=QPoint(xpos=100, ypos=100), asize=WINDOW_SIZE)
+WINDOW_SIZE = QSize(800, 600)
+WINDOW_BOX = QRect(QPoint(100, 100), WINDOW_SIZE)
 
 # timers
 THIRTY_SECOND_TIMER = misc.create_timer(30_000)

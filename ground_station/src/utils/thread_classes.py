@@ -346,27 +346,26 @@ class WaypointThreadRouter:
         def get_waypoints(self) -> None:
             """Fetch waypoints from the local server and emit them."""
 
-            while True:
-                try:
-                    data = constants.REQ_SESSION.get(constants.WAYPOINTS_SERVER_URL).json()
+            try:
+                data = constants.REQ_SESSION.get(constants.WAYPOINTS_SERVER_URL).json()
 
-                    if not isinstance(data, list):
+                if not isinstance(data, list):
+                    raise TypeError
+
+                for waypoint in data:
+                    if not isinstance(waypoint, (tuple, list)):
+                        raise TypeError
+                    if not all(isinstance(cord, (int, float)) for cord in waypoint):
                         raise TypeError
 
-                    for waypoint in data:
-                        if not isinstance(waypoint, (tuple, list)):
-                            raise TypeError
-                        if not all(isinstance(cord, (int, float)) for cord in waypoint):
-                            raise TypeError
+            except RequestException:
+                self.response.emit(([], constants.TelemetryStatus.FAILURE))
 
-                except RequestException:
-                    self.response.emit(([], constants.TelemetryStatus.FAILURE))
+            except TypeError:
+                self.response.emit(([], constants.TelemetryStatus.WRONG_FORMAT))
 
-                except TypeError:
-                    self.response.emit(([], constants.TelemetryStatus.WRONG_FORMAT))
-
-                else:
-                    self.response.emit((data, constants.TelemetryStatus.SUCCESS))
+            else:
+                self.response.emit((data, constants.TelemetryStatus.SUCCESS))
 
 
 class ImageFetcher(QThread):
