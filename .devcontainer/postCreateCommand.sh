@@ -26,11 +26,14 @@ pip install -e /home/ws/src/simulation/sailboat_gym/
 
 
 
+
+
 # Build the ros2 workspace for the first time
 # Building with symlink-install will allow us to edit python files without having to rebuild (which is super annoying!)
 # 
 source /opt/ros/humble/setup.bash
 echo source /opt/ros/humble/setup.bash >> "/home/autoboat_user/.bashrc"
+
 source /home/autoboat_user/.bashrc
 colcon build --symlink-install
 
