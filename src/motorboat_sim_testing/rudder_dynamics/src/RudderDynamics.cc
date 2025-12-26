@@ -35,22 +35,6 @@ void RudderDynamics::Configure(const gz::sim::Entity &_entity,
 
   modelName_ = model_.Name(_ecm);
 
-  // Load link
-  if (_sdf->HasElement("link_name"))
-  {
-    std::string linkName = _sdf->Get<std::string>("link_name");
-    auto linkEntity = model_.LinkByName(_ecm, linkName);
-    if (linkEntity == gz::sim::kNullEntity)
-    {
-      RCLCPP_ERROR(rclcpp::get_logger("RudderDynamics"), "Link [%s] not found", linkName.c_str());
-    }
-    else
-    {
-      link_ = gz::sim::Link(linkEntity);
-    }
-  }
-  link_.EnableVelocityChecks(_ecm);
-
   // Parse parameters
   if (_sdf->HasElement("cop"))
     cp_ = _sdf->Get<gz::math::Vector3d>("cop");
@@ -73,6 +57,30 @@ void RudderDynamics::Configure(const gz::sim::Entity &_entity,
   if (_sdf->HasElement("fluid_density"))
     rho_ = _sdf->Get<double>("fluid_density");
 
+  // Load links
+  std::vector<std::string> linkNames = {};
+  for (int i = 0; i < 200; i++) {
+    if (_sdf->HasElement("link" + std::to_string(i)))
+      linkNames.push_back(_sdf->Get<std::string>("link" + std::to_string(i)));
+    else
+      break;
+  }
+  
+  links_ = {};
+  for (std::string linkName : linkNames) {
+    auto linkEntity = model_.LinkByName(_ecm, linkName);
+    if (linkEntity == gz::sim::kNullEntity)
+    {
+      RCLCPP_ERROR(rclcpp::get_logger("RudderDynamics"), "Link [%s] not found", linkName.c_str());
+    }
+    else
+    {
+      links_.emplace_back(gz::sim::Link(linkEntity));
+      links_.back().EnableVelocityChecks(_ecm);
+      RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "RudderDynamics loaded for link [%s]", linkName.c_str());
+    }
+  }
+
   RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"),
               "RudderDynamics loaded for model [%s]", modelName_.c_str());
 }
@@ -85,17 +93,14 @@ void RudderDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   if (_info.paused)
     return;
 
-  if (!link_.Valid(_ecm))
-    return;
-
   // Get world linear velocity
-  auto optVel = link_.WorldLinearVelocity(_ecm);
+  auto optVel = links_[0].WorldLinearVelocity(_ecm);
   if (!optVel)
     return;
   gz::math::Vector3d vel = *optVel;
 
   // Get world pose
-  auto optPose = link_.WorldPose(_ecm);
+  auto optPose = links_[0].WorldPose(_ecm);
   if (!optPose)
     return;
   gz::math::Pose3d pose = *optPose;
@@ -148,7 +153,12 @@ void RudderDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "Force: %f %f %f\n\n", force.X(), force.Y(), force.Z());
 
   // Apply world force
-  link_.AddWorldForce(_ecm, force);
+  for (gz::sim::Link link : links_) {
+    if (link.Valid(_ecm))
+      link.AddWorldForce(_ecm, force);
+    else
+      RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "link failed to apply rudder.");
+  }
 }
 
 }
