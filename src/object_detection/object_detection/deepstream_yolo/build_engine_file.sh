@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ "$#" -lt 1 ]; then
-    echo -e "Usage: $0 <name_of_pt_file>"
+    echo -e "Usage: $0 <name_of_model_without_file_extension>"
     exit 1
 fi
 
@@ -13,19 +13,41 @@ else
     IS_DEV_CONTAINER=false
 fi
 
-if [ ! -f "$1" ]; then
-    echo -e "File $1 not found!"
+MODEL_NAME=$1
+PT_FILE="${MODEL_NAME}.pt"
+ONNX_FILE="${MODEL_NAME}.pt.onnx"
+ENGINE_FILE="${MODEL_NAME}_model_b1_gpu0_fp16.engine"
+
+if [ ! -d "pt_files" ]; then
+    mkdir pt_files
+fi
+
+if [ ! -f "pt_files/${PT_FILE}" ]; then
+    echo -e "File ${PT_FILE} not found in deepstream_yolo/pt_files/!"
     exit 1
 fi
 
-PT_FILE=$1
-
-if [ "$IS_DEV_CONTAINER" = true ]; then
-    python3 export_yolo11_dev_container.py -w $PT_FILE || exit 1
-else
-    python3 export_yolo11.py -w $PT_FILE || exit 1
+if [ ! -d "onnx_files" ]; then
+    mkdir onnx_files
 fi
 
-python3 modify_config_file.py $PT_FILE.onnx || exit 1
+if [ ! -d "engine_files" ]; then
+    mkdir engine_files
+fi
+
+if [ ! -d "label_files" ]; then
+    mkdir label_files
+fi
+
+if [ $IS_DEV_CONTAINER = true ]; then
+    python3 export_yolo11_dev_container.py -w "pt_files/${PT_FILE}" || exit 1
+else
+    python3 export_yolo11.py -w "pt_files/${PT_FILE}" || exit 1 # This is untested on jetson
+fi
+
+mv "pt_files/${ONNX_FILE}" ./onnx_files/
+mv "labels.txt" ./label_files/"${MODEL_NAME}_labels.txt"
+
+python3 modify_config_file.py $MODEL_NAME || exit 1
 
 python3 make_model_engine.py || exit 1

@@ -118,9 +118,8 @@ sudo apt-get install -y v4l-utils
 
 gst-inspect-1.0 > /dev/null # initialize gstreamer plugins
 
-# sudo v4l2-ctl --list-devices # TODO: can we change permissions so this doesn't need to be run?
+# sudo v4l2-ctl --list-devices
 
-export IS_DEV_CONTAINER=true # I don't think this persists after script ends otherwise
 echo -e "\n\nDeepstream setup complete!\n\n"
 
 cd /home/ws/

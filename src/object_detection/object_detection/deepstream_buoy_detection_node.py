@@ -34,6 +34,7 @@ else:
 SHOULD_SAVE_IMAGES = True
 NUM_IMAGES_TO_SAVE = 500
 
+# These are constants. Don't change these. Needed for a workaround with DeepStream 7.1 and JetPack 6.2
 COMPUTE_HW = 1
 MEMORY_TYPE = 0
 
@@ -52,6 +53,14 @@ if SHOULD_SAVE_IMAGES and not os.path.exists(f"{PATH_TO_SRC_DIR}/object_detectio
     os.makedirs(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results")
 
 class BuoyDetectionNode(Node):
+    """
+    Handles the Object Detection using DeepStream and YOLO models.
+
+    Credit:<br>
+    marcoslucianops (https://github.com/marcoslucianops/DeepStream-Yolo)<br>
+    DeepStream SDK Documentation (https://docs.nvidia.com/metropolis/deepstream/7.1/text/DS_Overview.html)<br>
+    DeepStream Python Examples (https://github.com/NVIDIA-AI-IOT/deepstream_python_apps)
+    """
     def __init__(self):
         super().__init__("buoy_detection")
         self.CAM_LIST = {
@@ -103,7 +112,6 @@ class BuoyDetectionNode(Node):
 
         streammux = Gst.ElementFactory.make("nvstreammux", "muxer")
         streammux.set_property('batch-size', 1)
-        # streammux.set_property('batched-push-timeout', MUXER_BATCH_TIMEOUT_USEC)
         
         # v4l2-ctl --list-devices
         # v4l2-ctl --device /dev/video0 --list-formats-ext
@@ -141,8 +149,9 @@ class BuoyDetectionNode(Node):
             # tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_NvSORT.yml')
             # tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_NvDeepSORT.yml')
             # tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_NvDCF_max_perf.yml')
-            tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_NvDCF_perf.yml')
+            # tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_NvDCF_perf.yml')
             # tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_NvDCF_accuracy.yml')
+            tracker.set_property('ll-config-file', f'{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_tracker_NvDCF_perf.yml')
             # tracker.set_property('compute-hw', COMPUTE_HW)
             tracker.set_property('tracking-id-reset-mode', 0)
         
@@ -353,7 +362,7 @@ class BuoyDetectionNode(Node):
                 break
         
         # Read threshold
-        attributes_lines = self.config_file_split[4].split('\n')
+        attributes_lines = self.config_file_split[5].split('\n')
         self.threshold = float(attributes_lines[2].split('=')[-1])
 
     def position_callback(self, msg):
@@ -364,62 +373,75 @@ class BuoyDetectionNode(Node):
         self.current_heading = msg.data
     
     def model_callback(self, msg):
+        # TODO: check if config file was modified externally and reload if so
+        self.file_lock.acquire() # Don't want multiple threads writing to the file at once
         new_model = msg.data
         if new_model != self.model and INFERENCE:
             onnx_lines = self.config_file_split[1].split('\n')
             engine_lines = self.config_file_split[2].split('\n')
+            labels_lines = self.config_file_split[3].split('\n')
 
             found_model_entry = False
             for i in range(len(onnx_lines)):
                 if onnx_lines[i].startswith('onnx-file='):
                     onnx_lines[i] = "#" + onnx_lines[i]
-                if onnx_lines[i].split('=')[-1] == f"{new_model}.pt.onnx":
-                    onnx_lines[i] = onnx_lines[i][1:] # uncomment line so it can be used
+                if onnx_lines[i] == f"#onnx-file=./onnx_files/{new_model}.pt.onnx":
+                    onnx_lines[i] = onnx_lines[i][1:] # uncomment line so the model can be used
                     found_model_entry = True
             
             for i in range(len(engine_lines)):
                 if engine_lines[i].startswith('model-engine-file='):
                     engine_lines[i] = "#" + engine_lines[i]
-                if engine_lines[i].split('=')[-1] == f"{new_model}_model_b1_gpu0_fp16.engine":
-                    engine_lines[i] = engine_lines[i][1:] # uncomment line so it can be used
+                if engine_lines[i] == f"#model-engine-file=./engine_files/{new_model}_model_b1_gpu0_fp16.engine":
+                    engine_lines[i] = engine_lines[i][1:] # uncomment line so the model can be used
+
+            for i in range(len(labels_lines)):
+                if labels_lines[i].startswith('labelfile-path='):
+                    labels_lines[i] = "#" + labels_lines[i]
+                if labels_lines[i] == f"#labelfile-path=./label_files/{new_model}_labels.txt":
+                    labels_lines[i] = labels_lines[i][1:] # uncomment line so the model can be used
             
-            if not found_model_entry: # Look for the new model file in the file system and add it if it exists
-                # TODO: add check for .pt file instead of just .onnx
-                if os.path.exists(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/{new_model}.pt.onnx"):
-                    onnx_lines.append(f"onnx-file={new_model}.pt.onnx")
-                    engine_lines.append(f"model-engine-file={new_model}_model_b1_gpu0_fp16.engine")
-                else:
-                    self.get_logger().error(f"Model {new_model}.pt.onnx not found, not updating model")
-                    return
+            # Should we add the new model if not found?
+            if not found_model_entry:
+                self.get_logger().info(f"Model {new_model}.pt.onnx not found, not updating model")
+                self.file_lock.release()
+                return
             
             onnx_content = "\n".join(onnx_lines)
             engine_content = "\n".join(engine_lines)
+            labels_content = "\n".join(labels_lines)
             self.config_file_split[1] = onnx_content
             self.config_file_split[2] = engine_content
+            self.config_file_split[3] = labels_content
             self.model = new_model
             self.update_config_file()
             self.get_logger().info(f"Updated model to {new_model}")
         else:
-            self.get_logger().error(f"Model is already {new_model}, not updating")
+            self.get_logger().info(f"Model is already {new_model}, not updating")
+        self.file_lock.release()
     
     def threshold_callback(self, msg):
-        new_threshold = msg.data
-        if float(new_threshold) != self.threshold:
-            attributes_lines = self.config_file_split[4].split('\n')
-            attributes_lines[2] = f"pre-cluster-threshold={new_threshold}"
-            self.config_file_split[4] = "\n".join(attributes_lines)
-            self.threshold = new_threshold
-            self.update_config_file()
-            self.get_logger().info(f"Updated threshold to {new_threshold}")
+        self.file_lock.acquire() # Don't want multiple threads writing to the file at once
+        new_threshold = float(msg.data)
+        if new_threshold != self.threshold:
+            if new_threshold >= 0.0 and new_threshold <= 1.0:
+                attributes_lines = self.config_file_split[4].split('\n')
+                attributes_lines[2] = f"pre-cluster-threshold={new_threshold}"
+                self.config_file_split[4] = "\n".join(attributes_lines)
+                self.threshold = new_threshold
+                self.update_config_file()
+                self.get_logger().info(f"Updated threshold to {new_threshold}")
+            else:
+                self.get_logger().info(f"Threshold {new_threshold} is out of range [0.0, 1.0], not updating")
         else:
             self.get_logger().info(f"Threshold is already {new_threshold}, not updating")
+        self.file_lock.release()
     
     def update_config_file(self):
-        self.file_lock.acquire()
+        # This doesn't need the file_lock because the caller already has it
         with open(PATH_TO_YOLO_CONFIG, 'w') as file:
             file.write("\n\n".join(self.config_file_split))
-        self.file_lock.release()
-        if INFERENCE:
+        if INFERENCE: # Should this check be here? Is it necessary?
             self.pipeline.get_by_name('pgie').set_property('config-file-path', PATH_TO_YOLO_CONFIG)
             self.get_logger().info("Reloaded config file in nvinfer")
         else:

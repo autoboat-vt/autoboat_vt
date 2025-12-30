@@ -7,7 +7,7 @@
 # might work better on jetpack 6.1, but I don't know.
 # Jetpack 6.2 might offer features that 6.1 doesn't have, and DeepStream 7.1 works with a fix.
 
-# It might be necessary to run a gstreamer script once to initialize plugins
+# This is largely untested on Jetson
 
 cd ~/
 sudo -v # Prompt for sudo password at start

@@ -3,31 +3,19 @@ gpu-id=0
 net-scale-factor=0.0039215697906911373
 model-color-format=0
 
-#onnx-file=yolo11n.pt.onnx
-#onnx-file=yolo11m_dynamic.pt.onnx
-#onnx-file=yolo11l_dynamic.pt.onnx
-#onnx-file=pretty_good_11l_train32.pt.onnx
-#onnx-file=dylans_model.pt.onnx
-#onnx-file=yolo11n.pt.onnx
-#onnx-file=yolo11n.pt.onnx
-#onnx-file=yolo11n.pt.onnx
-#onnx-file=yolo11n.pt.onnx
-onnx-file=yolo11n.pt.onnx
+# This is the onnx file section.
+# Onnx files are created by running export_yolo11.py
+onnx-file=./onnx_files/yolo11s.pt.onnx
 
-#model-engine-file=yolo11n_model_b1_gpu0_fp32.engine
-#model-engine-file=yolo11m_dynamic_model_b1_gpu0_fp32.engine
-#model-engine-file=yolo11m_dynamic_model_b1_gpu0_fp16.engine
-#model-engine-file=yolo11l_dynamic_model_b1_gpu0_fp16.engine
-#model-engine-file=pretty_good_11l_train32_model_b1_gpu0_fp16.engine
-#model-engine-file=dylans_model_b1_gpu0_fp16.engine
-#model-engine-file=yolo11n_model_b1_gpu0_fp16.engine
-#model-engine-file=yolo11n_model_b1_gpu0_fp16.engine
-#model-engine-file=yolo11n_model_b1_gpu0_fp16.engine
-#model-engine-file=yolo11n_model_b1_gpu0_fp16.engine
-model-engine-file=yolo11n_model_b1_gpu0_fp16.engine
+# This is the engine file section
+# Engine files are created by running the deepstream pipeline
+model-engine-file=./engine_files/yolo11s_model_b1_gpu0_fp16.engine
+
+# This is the label file section
+# Label files are created by running export_yolo11.py
+labelfile-path=./label_files/yolo11s_labels.txt
 
 #int8-calib-file=calib.table
-labelfile-path=labels.txt
 batch-size=1
 network-mode=2 # 0 for fp32, 1 for int8, 2 for fp16
 num-detected-classes=2

@@ -17,6 +17,10 @@ src/microros/dependencies/**
 src/object_detection/object_detection/deepstream_yolo/ultralytics/
 src/object_detection/object_detection/deepstream_yolo/labels.txt
 src/object_detection/object_detection/frame_results/
+src/object_detection/object_detection/deepstream_yolo/label_files/**
+src/object_detection/object_detection/deepstream_yolo/engine_files/**
+src/object_detection/object_detection/deepstream_yolo/pt_files/**
+src/object_detection/object_detection/deepstream_yolo/onnx_files/**
 
 # groundstation
 pkg
