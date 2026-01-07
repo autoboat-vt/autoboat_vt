@@ -1,10 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 
-option(BUILD_UNIT_TESTS "Build host-side unit tests" OFF)
+option(BUILD_UNIT_TESTS "Build host side unit tests" OFF)
 
 if(BUILD_UNIT_TESTS)
-    # Host-side unit tests using ROS 2 and Catch2
-    # This block runs BEFORE Pico SDK to avoid ARM cross-compilation
+    # Host CLI unit tests using ROS2 and Catch2
     project(pico_microros_tests CXX)
     set(CMAKE_CXX_STANDARD 17)
 
