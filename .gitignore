@@ -2,6 +2,7 @@
 .python-version
 **/__pycache__/**
 build
+build_unit_tests
 install
 log
 src/object_detection/object_detection/datasets
