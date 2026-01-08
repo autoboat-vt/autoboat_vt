@@ -237,13 +237,8 @@ void led_callback(const void *msg_in) {
 // -----------------------------------------------------
 
 void application_loop(rcl_timer_t *timer, int64_t last_call_time) {
-    (void)timer;  // unused
+    (void)timer;  // unused, was required by rcl_timer_callback_t
     (void)last_call_time;  // unused
-
-    // Publish heartbeat for testing (always runs, no hardware required)
-    static float heartbeat_count = 0;
-    test_msg.data = heartbeat_count++;
-    rcl_publish(&test_publisher, &test_msg, NULL);
 
     // -----------------------------------------------------
     // RUDDER CLOSED LOOP CONTROl
