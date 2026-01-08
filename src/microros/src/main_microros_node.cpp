@@ -8,6 +8,7 @@ rcl_subscription_t desired_rudder_angle_subscriber;
 rcl_subscription_t desired_winch_angle_subscriber;
 rcl_subscription_t zero_rudder_encoder_subscriber;
 rcl_subscription_t zero_winch_encoder_subscriber;
+rcl_subscription_t led_subscriber; // for testing
 rcl_publisher_t    current_rudder_angle_publisher;
 rcl_publisher_t    current_rudder_motor_angle_publisher;
 rcl_publisher_t    current_sail_angle_publisher;
@@ -19,6 +20,7 @@ rcl_timer_t        application_loop_timer;
 std_msgs__msg__Bool           should_propeller_motor_be_powered_msg;  
 std_msgs__msg__Bool           zero_rudder_encoder_msg;
 std_msgs__msg__Bool           zero_winch_encoder_msg;
+std_msgs__msg__Bool           led_msg; // for testing
 std_msgs__msg__Float32        compass_angle_msg;
 std_msgs__msg__Float32        current_winch_angle_msg;
 std_msgs__msg__Float32        current_sail_angle_msg;
@@ -51,6 +53,12 @@ void application_init(rcl_allocator_t *allocator, rclc_support_t *support, rclc_
     RCCHECK(rclc_node_init_default(&microros_node, "microros", "", support));
 
     RCCHECK(rclc_publisher_init_default(&test_publisher, &microros_node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), "/test_publisher"));
+
+    // -----------------------------------------------------
+    // INITIALIZE LED SUBSCRIBER (FOR TESTING)
+    // -----------------------------------------------------
+    RCCHECK(rclc_subscription_init_default(&led_subscriber, &microros_node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool), "/led"));
+    RCCHECK(rclc_executor_add_subscription(executor, &led_subscriber, &led_msg, &led_callback, ON_NEW_DATA));
 
     // -----------------------------------------------------
     // INITIALIZE ZEROING THE RUDDER AND WINCH ENCODERS SUBSCRIBERS
@@ -216,13 +224,21 @@ void zero_winch_encoder_callback(const void *msg_in) {
     }
 }
 
+// LED CALLBACK FOR TESTING
+void led_callback(const void *msg_in) {
+    const std_msgs__msg__Bool *led_msg = (const std_msgs__msg__Bool *)msg_in;
+    gpio_put(LED_PIN, led_msg->data ? 1 : 0);
+}
+
 
 
 // -----------------------------------------------------
 // MAIN APPLICATION LOOP
 // -----------------------------------------------------
 
-void application_loop() {
+void application_loop(rcl_timer_t *timer, int64_t last_call_time) {
+    (void)timer;  // unused, was required by rcl_timer_callback_t
+    (void)last_call_time;  // unused
 
     // -----------------------------------------------------
     // RUDDER CLOSED LOOP CONTROl

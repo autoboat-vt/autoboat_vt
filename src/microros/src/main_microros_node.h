@@ -117,7 +117,7 @@ void application_init(rcl_allocator_t *allocator, rclc_support_t *support, rclc_
 
 void uros_log(const char *msg, uint8_t severity, const char *file, const char *function);
 
-void application_loop();
+void application_loop(rcl_timer_t *timer, int64_t last_call_time);
 
 void desired_rudder_angle_received_callback(const void *msg_in);
 
@@ -128,6 +128,8 @@ void should_propeller_motor_be_powered_callback(const void *msg_in);
 void zero_rudder_encoder_callback(const void *msg_in);
 
 void zero_winch_encoder_callback(const void *msg_in);
+
+void led_callback(const void *msg_in);
 
 
 #endif
