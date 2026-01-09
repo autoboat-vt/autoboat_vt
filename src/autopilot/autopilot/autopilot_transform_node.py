@@ -30,16 +30,21 @@ class AutopilotTransformNode(Node):
         self.velocity_publisher =  self.create_publisher(Twist, "/velocity",qos_profile=10) 
         self.odometry_listener = self.create_subscription(msg_type=Odometry, topic="/odometry", callback=self.odometry_callback, qos_profile=10)
         self.heading_publisher = self.create_publisher(Float32, "heading",qos_profile=10)
+        self.rudder_listener = self.create_subscription(msg_type=Float64, topic="/rudder", callback=self.rudder_callback, qos_profile=10)
+        self.rudder_publisher = self.create_publisher(Float32,"/desired_rudder_angle", qos_profile=10)
 
         self.velocity = Twist()
         self.speed= 0.0
         self.heading = 0.0
         self.odometry = Odometry()
+        self.rudder = 0.0
     
 
     def odometry_callback(self, odometry: Odometry):
         self.odometry = odometry
 
+    def rudder_callback(self, rudder: Float64):
+        self.rudder = rudder
     
 
     def update_ros_topics(self):
@@ -63,6 +68,7 @@ class AutopilotTransformNode(Node):
         yaw = np.arctan2(2*(w*z + x*y) , 1 - 2*(pow(x,2) + pow(y, 2))) * 180 / np.pi % 360
 
         self.heading_publisher.publish(Float32(data=yaw))
+        self.rudder_publisher.publish(Float32(data=self.rudder))
 
 def main():
     rclpy.init()

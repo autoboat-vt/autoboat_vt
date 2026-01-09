@@ -117,7 +117,7 @@ class MotorboatAutopilot:
             tuple[float, float]: (propeller_rpm, rudder_angle) that the autopilot believes that we should take
         """
 
-        propeller_rpm = 100.0
+        propeller_rpm = 5000.0
         rudder_angle = 0.0
         if not self.waypoints: raise Exception("Expected route to be inputted into the autopilot. Field self.waypoints was not filled")
 
