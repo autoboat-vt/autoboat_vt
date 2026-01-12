@@ -60,71 +60,22 @@ class SailboatAutopilotNode(Node):
         self.autopilot_parameters_listener = self.create_subscription(msg_type=String, topic="/autopilot_parameters", callback=self.autopilot_parameters_callback, qos_profile=10)
         self.waypoints_list_listener = self.create_subscription(msg_type=WaypointList, topic="/waypoints_list", callback=self.waypoints_list_callback, qos_profile=10)
 
-        self.position_listener = self.create_subscription(
-            msg_type=NavSatFix,
-            topic="/position",
-            callback=self.position_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
-        self.velocity_listener = self.create_subscription(
-            msg_type=Twist,
-            topic="/velocity",
-            callback=self.velocity_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
-        self.heading_listener = self.create_subscription(
-            msg_type=Float32,
-            topic="/heading",
-            callback=self.heading_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
-        self.apparent_wind_vector_listener = self.create_subscription(
-            msg_type=Vector3,
-            topic="/apparent_wind_vector",
-            callback=self.apparent_wind_vector_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
-        self.rc_data_listener = self.create_subscription(
-            msg_type=RCData,
-            topic="/rc_data",
-            callback=self.rc_data_callback,
-            qos_profile=qos_profile_sensor_data,
-        )
+        self.position_listener = self.create_subscription(msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=qos_profile_sensor_data)
+        self.velocity_listener = self.create_subscription(msg_type=Twist, topic="/velocity", callback=self.velocity_callback, qos_profile=qos_profile_sensor_data)
+        self.heading_listener = self.create_subscription(msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=qos_profile_sensor_data)
+        self.apparent_wind_vector_listener = self.create_subscription(msg_type=Vector3, topic="/apparent_wind_vector", callback=self.apparent_wind_vector_callback, qos_profile=qos_profile_sensor_data)
+        self.rc_data_listener = self.create_subscription(msg_type=RCData, topic="/rc_data", callback=self.rc_data_callback, qos_profile=qos_profile_sensor_data)
 
-        self.current_waypoint_index_publisher = self.create_publisher(
-            msg_type=Int32, topic="/current_waypoint_index", qos_profile=10
-        )
-        self.autopilot_mode_publisher = self.create_publisher(
-            msg_type=String,
-            topic="/autopilot_mode",
-            qos_profile=qos_profile_sensor_data,
-        )
-        self.full_autonomy_maneuver_publisher = self.create_publisher(
-            msg_type=String,
-            topic="/full_autonomy_maneuver",
-            qos_profile=qos_profile_sensor_data,
-        )
-        self.desired_heading_publisher = self.create_publisher(
-            msg_type=Float32, topic="/desired_heading", qos_profile=10
-        )
+        self.current_waypoint_index_publisher = self.create_publisher(msg_type=Int32, topic="/current_waypoint_index", qos_profile=10)
+        self.autopilot_mode_publisher = self.create_publisher(msg_type=String, topic="/autopilot_mode", qos_profile=qos_profile_sensor_data)
+        self.full_autonomy_maneuver_publisher = self.create_publisher(msg_type=String, topic="/full_autonomy_maneuver", qos_profile=qos_profile_sensor_data)
+        self.desired_heading_publisher = self.create_publisher(msg_type=Float32, topic="/desired_heading", qos_profile=10)
 
-        self.desired_sail_angle_publisher = self.create_publisher(
-            msg_type=Float32,
-            topic="/desired_sail_angle",
-            qos_profile=qos_profile_sensor_data,
-        )
-        self.desired_rudder_angle_publisher = self.create_publisher(
-            msg_type=Float32,
-            topic="/desired_rudder_angle",
-            qos_profile=qos_profile_sensor_data,
-        )
+        self.desired_sail_angle_publisher = self.create_publisher(msg_type=Float32, topic="/desired_sail_angle", qos_profile=qos_profile_sensor_data)
+        self.desired_rudder_angle_publisher = self.create_publisher(msg_type=Float32, topic="/desired_rudder_angle", qos_profile=qos_profile_sensor_data)
 
-        self.zero_rudder_encoder_publisher = self.create_publisher(
-            msg_type=Bool, topic="/zero_rudder_encoder", qos_profile=10
-        )
-        self.zero_winch_encoder_publisher = self.create_publisher(
-            msg_type=Bool, topic="/zero_winch_encoder", qos_profile=10
-        )
+        self.zero_rudder_encoder_publisher = self.create_publisher(msg_type=Bool, topic="/zero_rudder_encoder", qos_profile=10)
+        self.zero_winch_encoder_publisher = self.create_publisher(msg_type=Bool, topic="/zero_winch_encoder", qos_profile=10)
 
         # Default values
         self.position = Position(longitude=0.0, latitude=0.0)
@@ -162,6 +113,7 @@ class SailboatAutopilotNode(Node):
         self.button_d: bool = False
         self.toggle_e: int = 0
         self.toggle_f: int = 0
+
 
 
     def rc_data_callback(self, rc_data_message: RCData) -> None:
@@ -274,15 +226,18 @@ class SailboatAutopilotNode(Node):
         ``NavSatFix`` message documentation: https://docs.ros2.org/foxy/api/sensor_msgs/msg/NavSatFix.html
         """
 
-        if waypoint_list.waypoints:
-            self.sailboat_autopilot.reset()
-            waypoint_navsatfixes_list: list[NavSatFix] = waypoint_list.waypoints
-            waypoint_positions_list: list[Position] = []
+        if len(waypoint_list.waypoints) == 0:
+            return
 
-            for navsatfix in waypoint_navsatfixes_list:
-                waypoint_positions_list.append(Position(navsatfix.longitude, navsatfix.latitude))
+        self.sailboat_autopilot.reset()
 
-            self.sailboat_autopilot.update_waypoints_list(waypoint_positions_list)
+        waypoint_navsatfixes: list[NavSatFix] = waypoint_list.waypoints
+        
+        waypoint_positions: list[Position] = []
+        for waypoint in waypoint_navsatfixes:
+            waypoint_positions.append(Position(longitude=waypoint.longitude, latitude=waypoint.latitude))
+
+        self.sailboat_autopilot.update_waypoints_list(waypoint_positions)
 
 
     def position_callback(self, position: NavSatFix) -> None:
