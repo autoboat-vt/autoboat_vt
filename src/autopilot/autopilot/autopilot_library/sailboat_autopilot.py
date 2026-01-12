@@ -5,15 +5,15 @@ import numpy.typing as npt
 from rclpy.impl.rcutils_logger import RcutilsLogger
 from typing_extensions import override
 
-from ..utils.constants import SailboatManeuvers, SailboatStates
-from ..utils.misc import (
+from .utils.constants import SailboatManeuvers, SailboatStates
+from .utils.misc import (
     cartesian_vector_to_polar,
     get_bearing,
     get_distance_between_angles,
     get_distance_between_positions,
     is_angle_between_boundaries,
 )
-from ..utils.position import Position
+from .utils.position import Position
 from .base_autopilot import BaseAutopilot
 
 
@@ -474,13 +474,13 @@ class SailboatAutopilot(BaseAutopilot):
         ----------
         joystick_left_y
             The value of the Y joystick from -100 to 100 where:
-            - `-100` means the joystick is fully down
-            - `100` means the joystick is fully up.
+            - ``-100`` means the joystick is fully down
+            - ``100`` means the joystick is fully up.
 
         joystick_right_x
             The value of the X joystick from -100 to 100 where:
-            - `-100` means the joystick is fully to the left
-            - `100` means the joystick is fully to the right.
+            - ``-100`` means the joystick is fully to the left
+            - ``100`` means the joystick is fully to the right.
 
         Returns
         -------

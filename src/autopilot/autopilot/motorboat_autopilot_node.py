@@ -13,7 +13,7 @@ from std_msgs.msg import Bool, Float32, Int32, String
 
 from autoboat_msgs.msg import RCData, VESCControlData, WaypointList
 
-from .autopilot_library.logic.motorboat_autopilot import MotorboatAutopilot
+from .autopilot_library.motorboat_autopilot import MotorboatAutopilot
 from .autopilot_library.utils.constants import (
     CONFIG_DIR,
     MotorboatAutopilotMode,
@@ -29,7 +29,7 @@ class MotorboatAutopilotNode(Node):
     The autopilot takes in a bunch of sensor data and waypoints and attempts to traverses through
     the waypoints by continuously publishing to the propeller motor control struct and rudder angle topics.
 
-    The main function that you should pay attention to is `update_ros_topics`, since this is the function that is called periodically on a timer.
+    The main function that you should pay attention to is ``update_ros_topics``, since this is the function that is called periodically on a timer.
 
     NOTE: All units are in standard SI units and angles are generally measured in degrees unless otherwise specified.
     """

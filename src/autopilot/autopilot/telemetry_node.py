@@ -40,7 +40,7 @@ class TelemetryNode(Node):
 
     Inherits
     -------
-    `Node`
+    ``Node``
     """
 
     def __init__(self) -> None:

@@ -12,7 +12,7 @@ from std_msgs.msg import Bool, Float32, Int32, String
 
 from autoboat_msgs.msg import RCData, WaypointList
 
-from .autopilot_library.logic.sailboat_autopilot import SailboatAutopilot
+from .autopilot_library.sailboat_autopilot import SailboatAutopilot
 from .autopilot_library.utils.constants import CONFIG_DIR, SailboatAutopilotMode
 from .autopilot_library.utils.misc import cartesian_vector_to_polar, get_bearing
 from .autopilot_library.utils.position import Position
@@ -23,7 +23,7 @@ class SailboatAutopilotNode(Node):
     The autopilot takes in a bunch of sensor data and waypoints and attempts to traverses through
     the waypoints by continuously publishing to the sail angle and rudder angle topics.
 
-    The main function that you should pay attention to is `update_ros_topics`, since this is the function that is called periodically on a timer.
+    The main function that you should pay attention to is ``update_ros_topics``, since this is the function that is called periodically on a timer.
 
     NOTE: All units are in standard SI units and angles are generally measured in degrees unless otherwise specified.
     """

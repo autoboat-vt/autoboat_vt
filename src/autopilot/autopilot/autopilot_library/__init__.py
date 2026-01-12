@@ -19,8 +19,8 @@ __all__ = [
     "constants",
 ]
 
-from .logic.motorboat_autopilot import MotorboatAutopilot
-from .logic.sailboat_autopilot import SailboatAutopilot
+from .motorboat_autopilot import MotorboatAutopilot
+from .sailboat_autopilot import SailboatAutopilot
 from .utils import constants, misc
 from .utils.discrete_pid import DiscretePID
 from .utils.position import Position

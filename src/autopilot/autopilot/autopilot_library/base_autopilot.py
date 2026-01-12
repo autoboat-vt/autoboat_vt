@@ -2,8 +2,8 @@ from typing import Any
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from ..utils.discrete_pid import DiscretePID
-from ..utils.position import Position
+from .utils.discrete_pid import DiscretePID
+from .utils.position import Position
 
 
 class BaseAutopilot:
