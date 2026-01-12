@@ -132,6 +132,7 @@ class SailboatAutopilotNode(Node):
         self.speed: float = 0.0
         self.heading: float = 0.0
         self.apparent_wind_vector: npt.NDArray[np.float64] = np.zeros(2, dtype=np.float64)
+        self.apparent_wind_vector: npt.NDArray[np.float64] = np.zeros(2, dtype=np.float64)
         self.apparent_wind_angle: float = 0.0
         self.sail_angle: float = 0.0
         self.rudder_angle: float = 0.0
@@ -145,6 +146,7 @@ class SailboatAutopilotNode(Node):
         self.winch_encoder_has_been_zeroed = False
 
         # Should this be by default: SailboatAutopilotMode.Full_RC
+        self.autopilot_mode: SailboatAutopilotMode = SailboatAutopilotMode.WAYPOINT_MISSION
         self.autopilot_mode: SailboatAutopilotMode = SailboatAutopilotMode.WAYPOINT_MISSION
 
         self.heading_to_hold: float = 0.0
@@ -289,6 +291,7 @@ class SailboatAutopilotNode(Node):
 
     def velocity_callback(self, global_velocity: Twist) -> None:
         self.global_velocity = np.array([global_velocity.linear.x, global_velocity.linear.y])
+        self.global_velocity = np.array([global_velocity.linear.x, global_velocity.linear.y])
         self.speed = np.linalg.norm(self.global_velocity)
 
 
@@ -337,12 +340,18 @@ class SailboatAutopilotNode(Node):
         elif self.autopilot_mode == SailboatAutopilotMode.HOLD_BEST_SAIL:
             sail_angle = self.sailboat_autopilot.get_optimal_sail_angle(self.apparent_wind_angle)
             _, rudder_angle = self.sailboat_autopilot.run_rc_control(self.joystick_left_y, self.joystick_right_x)
+            sail_angle = self.sailboat_autopilot.get_optimal_sail_angle(self.apparent_wind_angle)
+            _, rudder_angle = self.sailboat_autopilot.run_rc_control(self.joystick_left_y, self.joystick_right_x)
 
         elif self.autopilot_mode == SailboatAutopilotMode.HOLD_HEADING:
             rudder_angle = self.sailboat_autopilot.get_optimal_rudder_angle(self.heading, self.heading_to_hold)
             sail_angle, _ = self.sailboat_autopilot.run_rc_control(self.joystick_left_y, self.joystick_right_x)
+            rudder_angle = self.sailboat_autopilot.get_optimal_rudder_angle(self.heading, self.heading_to_hold)
+            sail_angle, _ = self.sailboat_autopilot.run_rc_control(self.joystick_left_y, self.joystick_right_x)
 
         elif self.autopilot_mode == SailboatAutopilotMode.HOLD_HEADING_AND_BEST_SAIL:
+            rudder_angle = self.sailboat_autopilot.get_optimal_rudder_angle(self.heading, self.heading_to_hold)
+            sail_angle = self.sailboat_autopilot.get_optimal_sail_angle(self.apparent_wind_angle)
             rudder_angle = self.sailboat_autopilot.get_optimal_rudder_angle(self.heading, self.heading_to_hold)
             sail_angle = self.sailboat_autopilot.get_optimal_sail_angle(self.apparent_wind_angle)
 
@@ -362,10 +371,12 @@ class SailboatAutopilotNode(Node):
         desired_sail_angle, desired_rudder_angle = self.step()
 
         self.current_waypoint_index_publisher.publish(Int32(data=self.sailboat_autopilot.current_waypoint_index))
+        self.current_waypoint_index_publisher.publish(Int32(data=self.sailboat_autopilot.current_waypoint_index))
 
         # Publish the autonomy maneuever (aka whether we are currently CW tacking, CCW tacking, or normal sailing)
         self.autopilot_mode_publisher.publish(String(data=self.autopilot_mode.name))
         if self.autopilot_mode == SailboatAutopilotMode.WAYPOINT_MISSION:
+            self.full_autonomy_maneuver_publisher.publish(String(data=self.sailboat_autopilot.current_state.name))
             self.full_autonomy_maneuver_publisher.publish(String(data=self.sailboat_autopilot.current_state.name))
 
         else:
@@ -383,6 +394,7 @@ class SailboatAutopilotNode(Node):
             # maybe add a new ROS topic specifically for the actual heading that the autopilot is trying to follow
             bearing_to_waypoint = get_bearing(self.position, current_waypoint)
             self.desired_heading_publisher.publish(Float32(data=float(bearing_to_waypoint)))
+            self.desired_heading_publisher.publish(Float32(data=float(bearing_to_waypoint)))
 
         else:
             self.desired_heading_publisher.publish(Float32(data=0.0))
@@ -394,12 +406,15 @@ class SailboatAutopilotNode(Node):
 
         if desired_sail_angle is not None:
             self.desired_sail_angle_publisher.publish(Float32(data=float(desired_sail_angle)))
+            self.desired_sail_angle_publisher.publish(Float32(data=float(desired_sail_angle)))
 
         if self.should_zero_rudder_encoder:
+            self.zero_rudder_encoder_publisher.publish(Bool(data=self.should_zero_rudder_encoder))
             self.zero_rudder_encoder_publisher.publish(Bool(data=self.should_zero_rudder_encoder))
             self.rudder_encoder_has_been_zeroed = True
 
         if self.should_zero_winch_encoder:
+            self.zero_winch_encoder_publisher.publish(Bool(data=self.should_zero_winch_encoder))
             self.zero_winch_encoder_publisher.publish(Bool(data=self.should_zero_winch_encoder))
             self.winch_encoder_has_been_zeroed = True
 
