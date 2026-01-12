@@ -50,5 +50,3 @@ class BaseAutopilot:
         waypoints_list
             A list of ``Position`` objects that form the path the boat should follow.
         """
-
-        pass

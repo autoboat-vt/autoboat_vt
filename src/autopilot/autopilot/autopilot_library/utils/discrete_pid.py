@@ -11,9 +11,7 @@ class DiscretePID:
     ``low_pass_filter_cutoff_frequency`` is represented by ``n`` to improve readability in the equations.
     """
 
-    def __init__(
-        self, sample_period: float, Kp: float, Ki: float, Kd: float, n: float
-    ) -> None:
+    def __init__(self, sample_period: float, Kp: float, Ki: float, Kd: float, n: float) -> None:
         """
         Parameters
         ----------
@@ -103,9 +101,7 @@ class DiscretePID:
     def reset(self) -> None:
         """Resets the PID controller to its initial state."""
 
-        self.__init__(
-            self.sample_period, self.Kp, self.Ki, self.Kd, self.n, self.sample_period
-        )
+        self.__init__(self.sample_period, self.Kp, self.Ki, self.Kd, self.n, self.sample_period)
 
     def step(self, error: float) -> float:
         """
@@ -131,11 +127,7 @@ class DiscretePID:
             + self.Ki * self.sample_period * (1 + self.n * self.sample_period)
             + self.Kd * self.n
         )
-        b1 = -(
-            self.Kp * (2 + self.n * self.sample_period)
-            + self.Ki * self.sample_period
-            + 2 * self.Kd * self.n
-        )
+        b1 = -(self.Kp * (2 + self.n * self.sample_period) + self.Ki * self.sample_period + 2 * self.Kd * self.n)
         b2 = self.Kp + self.Kd * self.n
 
         output = (

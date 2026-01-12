@@ -55,9 +55,7 @@ def cartesian_vector_to_polar(x: float, y: float) -> tuple[float, float]:
     return magnitude, direction
 
 
-def get_angle_between_vectors(
-    vector1: npt.NDArray[np.float64], vector2: npt.NDArray[np.float64]
-) -> float:
+def get_angle_between_vectors(vector1: npt.NDArray[np.float64], vector2: npt.NDArray[np.float64]) -> float:
     """
     Takes two vectors and computes the smallest angle between them in degrees.
 
@@ -77,9 +75,7 @@ def get_angle_between_vectors(
     vector1_normalized = vector1 / np.linalg.norm(vector1)
     vector2_normalized = vector2 / np.linalg.norm(vector2)
 
-    return np.rad2deg(
-        np.arccos(np.clip(np.dot(vector1_normalized, vector2_normalized), -1, 1))
-    )
+    return np.rad2deg(np.arccos(np.clip(np.dot(vector1_normalized, vector2_normalized), -1, 1)))
 
 
 def get_distance_between_angles(angle1: float, angle2: float) -> float:
@@ -130,9 +126,7 @@ def get_bearing(current_position: Position, destination_position: Position) -> f
     """
 
     current_longitude, current_latitude = current_position.get_longitude_latitude()
-    destination_longitude, destination_latitude = (
-        destination_position.get_longitude_latitude()
-    )
+    destination_longitude, destination_latitude = destination_position.get_longitude_latitude()
     azimuth_heading, _, _ = pyproj.Geod(ellps="WGS84").inv(
         current_longitude, current_latitude, destination_longitude, destination_latitude
     )
@@ -158,14 +152,10 @@ def get_distance_between_positions(position1: Position, position2: Position) -> 
         The distance between the two positions in meters.
     """
 
-    return geopy.distance.geodesic(
-        position1.get_longitude_latitude(), position2.get_longitude_latitude()
-    ).m
+    return geopy.distance.geodesic(position1.get_longitude_latitude(), position2.get_longitude_latitude()).m
 
 
-def is_angle_between_boundaries(
-    angle: float, boundary1: float, boundary2: float
-) -> bool:
+def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float) -> bool:
     """
     TODO Better documentation
 
@@ -195,9 +185,7 @@ def is_angle_between_boundaries(
     angle_angle_to_b2 = get_angle_between_vectors(angle_vector, boundary2_vector)
     angle_b1_to_b2 = get_angle_between_vectors(boundary1_vector, boundary2_vector)
 
-    return check_float_equivalence(
-        angle_b1_to_angle + angle_angle_to_b2, angle_b1_to_b2
-    )
+    return check_float_equivalence(angle_b1_to_angle + angle_angle_to_b2, angle_b1_to_b2)
 
 
 # ==============================================================================
@@ -238,9 +226,7 @@ def does_line_violate_no_sail_zone(
         Whether or not the line between the current position and the destination position violates the no sail zone.
     """
 
-    displacement = np.asarray(destination_position, dtype=np.float64) - np.asarray(
-        current_position, dtype=np.float64
-    )
+    displacement = np.asarray(destination_position, dtype=np.float64) - np.asarray(current_position, dtype=np.float64)
     normalized_displacement = displacement / np.linalg.norm(displacement)
 
     # The upwind angle is opposite to the wind angle (e.g., wind at 0° means upwind at 180°)
@@ -251,9 +237,7 @@ def does_line_violate_no_sail_zone(
     )
 
     # Find the angle between the upwind vector and displacement vector
-    angle_between: float = np.degrees(
-        np.arccos(np.clip(np.dot(up_wind_vector, normalized_displacement), -1, 1))
-    )
+    angle_between: float = np.degrees(np.arccos(np.clip(np.dot(up_wind_vector, normalized_displacement), -1, 1)))
 
     return angle_between < no_sail_zone_size
 
@@ -290,14 +274,8 @@ def does_line_segment_intersect_circle(
         Whether or not the line segment intersects the circle.
     """
 
-    if (
-        len(line_segment_start_position) != 2
-        or len(line_segment_end_position) != 2
-        or len(circle_position) != 2
-    ):
-        raise ValueError(
-            "All input positions must be of length 2 (i.e. x and y coordinates only)."
-        )
+    if len(line_segment_start_position) != 2 or len(line_segment_end_position) != 2 or len(circle_position) != 2:
+        raise ValueError("All input positions must be of length 2 (i.e. x and y coordinates only).")
 
     if circle_radius <= 0:
         raise ValueError("Circle radius must be positive.")

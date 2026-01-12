@@ -5,6 +5,7 @@ import numpy.typing as npt
 from rclpy.impl.rcutils_logger import RcutilsLogger
 from typing_extensions import override
 
+from .base_autopilot import BaseAutopilot
 from .utils.constants import SailboatManeuvers, SailboatStates
 from .utils.misc import (
     cartesian_vector_to_polar,
@@ -14,7 +15,6 @@ from .utils.misc import (
     is_angle_between_boundaries,
 )
 from .utils.position import Position
-from .base_autopilot import BaseAutopilot
 
 
 class SailboatAutopilot(BaseAutopilot):
@@ -85,9 +85,7 @@ class SailboatAutopilot(BaseAutopilot):
         tack_distance: float = self.parameters["tack_distance"]
         no_sail_zone_size: float = self.parameters["no_sail_zone_size"]
 
-        inner = (tack_distance / distance_to_waypoint) * np.sin(
-            np.deg2rad(no_sail_zone_size / 2)
-        )
+        inner = (tack_distance / distance_to_waypoint) * np.sin(np.deg2rad(no_sail_zone_size / 2))
         inner = np.clip(inner, -1, 1)
         return np.clip(np.rad2deg(np.arcsin(inner)), 0, no_sail_zone_size)
 
@@ -124,14 +122,10 @@ class SailboatAutopilot(BaseAutopilot):
         # Global True Upwind Angle                  180   225   270  315  359 | 0    45   90   135  180
         global_true_upwind_angle = (global_true_wind_angle + 180) % 360
 
-        if is_angle_between_boundaries(
-            global_true_wind_angle, heading, desired_heading
-        ):
+        if is_angle_between_boundaries(global_true_wind_angle, heading, desired_heading):
             return SailboatManeuvers.JIBE
 
-        elif is_angle_between_boundaries(
-            global_true_upwind_angle, heading, desired_heading
-        ):
+        elif is_angle_between_boundaries(global_true_upwind_angle, heading, desired_heading):
             return SailboatManeuvers.TACK
 
         else:
@@ -180,10 +174,8 @@ class SailboatAutopilot(BaseAutopilot):
         ) % 360  # goes in the opposite direction of the global apparent wind angle
 
         no_sail_zone_bounds = (
-            (global_apparent_up_wind_angle - self.parameters["no_sail_zone_size"] / 2)
-            % 360,  # lower bound
-            (global_apparent_up_wind_angle + self.parameters["no_sail_zone_size"] / 2)
-            % 360,  # upper bound
+            (global_apparent_up_wind_angle - self.parameters["no_sail_zone_size"] / 2) % 360,  # lower bound
+            (global_apparent_up_wind_angle + self.parameters["no_sail_zone_size"] / 2) % 360,  # upper bound
         )
 
         decision_zone_size = self._get_decision_zone_size(distance_to_waypoint)
@@ -193,13 +185,9 @@ class SailboatAutopilot(BaseAutopilot):
         )
 
         # If desired heading it is not in any of the zones
-        if not is_angle_between_boundaries(
-            desired_heading, no_sail_zone_bounds[0], no_sail_zone_bounds[1]
-        ):
+        if not is_angle_between_boundaries(desired_heading, no_sail_zone_bounds[0], no_sail_zone_bounds[1]):
             if (
-                self._get_maneuver_from_desired_heading(
-                    current_heading, desired_heading, true_wind_angle
-                )
+                self._get_maneuver_from_desired_heading(current_heading, desired_heading, true_wind_angle)
                 == SailboatManeuvers.TACK
             ):
                 return desired_heading, True  # tack over to desired heading
@@ -207,9 +195,7 @@ class SailboatAutopilot(BaseAutopilot):
                 return desired_heading, False  # No tack
 
         # If desired heading is in zone 1
-        if is_angle_between_boundaries(
-            desired_heading, decision_zone_bounds[1], no_sail_zone_bounds[1]
-        ):
+        if is_angle_between_boundaries(desired_heading, decision_zone_bounds[1], no_sail_zone_bounds[1]):
             # Starboard side of true wind
             if (current_heading - global_true_up_wind_angle) % 360 < 180:
                 return no_sail_zone_bounds[1], False  # No tack
@@ -219,9 +205,7 @@ class SailboatAutopilot(BaseAutopilot):
                 return no_sail_zone_bounds[1], True  # Starboard tack
 
         # If desired heading is in zone 3
-        if is_angle_between_boundaries(
-            desired_heading, decision_zone_bounds[0], no_sail_zone_bounds[0]
-        ):
+        if is_angle_between_boundaries(desired_heading, decision_zone_bounds[0], no_sail_zone_bounds[0]):
             # Starboard side of true wind
             if (current_heading - global_true_up_wind_angle) % 360 < 180:
                 return no_sail_zone_bounds[0], True  # Port tack
@@ -231,12 +215,8 @@ class SailboatAutopilot(BaseAutopilot):
                 return no_sail_zone_bounds[0], False  # No tack
 
         # If desired heading in zone 2
-        distance_to_lower_no_sail_zone = abs(
-            get_distance_between_angles(no_sail_zone_bounds[0], current_heading)
-        )
-        distance_to_upper_no_sail_zone = abs(
-            get_distance_between_angles(no_sail_zone_bounds[1], current_heading)
-        )
+        distance_to_lower_no_sail_zone = abs(get_distance_between_angles(no_sail_zone_bounds[0], current_heading))
+        distance_to_upper_no_sail_zone = abs(get_distance_between_angles(no_sail_zone_bounds[1], current_heading))
 
         if distance_to_lower_no_sail_zone < distance_to_upper_no_sail_zone:
             return no_sail_zone_bounds[0], False  # No tack
@@ -290,9 +270,7 @@ class SailboatAutopilot(BaseAutopilot):
         # https://en.wikipedia.org/wiki/Apparent_wind#/media/File:DiagramApparentWind.png
         true_wind_vector = apparent_wind_vector + local_velocity_vector
 
-        true_wind_speed, true_wind_angle = cartesian_vector_to_polar(
-            true_wind_vector[0], true_wind_vector[1]
-        )
+        true_wind_speed, true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
         apparent_wind_speed, apparent_wind_angle = cartesian_vector_to_polar(
             apparent_wind_vector[0], apparent_wind_vector[1]
         )
@@ -300,9 +278,7 @@ class SailboatAutopilot(BaseAutopilot):
         global_true_wind_angle = (true_wind_angle + heading) % 360
 
         desired_position = self.waypoints[self.current_waypoint_index]
-        distance_to_desired_position = get_distance_between_positions(
-            current_position, desired_position
-        )
+        distance_to_desired_position = get_distance_between_positions(current_position, desired_position)
 
         # HAS THE BOAT REACHED THE WAYPOINT?
         waypoint_accuracy: float = self.parameters["waypoint_accuracy"]
@@ -319,25 +295,19 @@ class SailboatAutopilot(BaseAutopilot):
         if self.current_state == SailboatStates.NORMAL:
             desired_heading = get_bearing(current_position, desired_position)
 
-            desired_heading, should_tack_condition1 = (
-                self._apply_decision_zone_tacking_logic(
-                    heading,
-                    desired_heading,
-                    true_wind_angle,
-                    apparent_wind_angle,
-                    distance_to_desired_position,
-                )
+            desired_heading, should_tack_condition1 = self._apply_decision_zone_tacking_logic(
+                heading,
+                desired_heading,
+                true_wind_angle,
+                apparent_wind_angle,
+                distance_to_desired_position,
             )
 
             global_true_up_wind_angle = (180 + global_true_wind_angle) % 360
-            should_tack_condition2 = is_angle_between_boundaries(
-                global_true_up_wind_angle, heading, desired_heading
-            )
+            should_tack_condition2 = is_angle_between_boundaries(global_true_up_wind_angle, heading, desired_heading)
 
             if should_tack_condition1 or should_tack_condition2:
-                optimal_rudder_angle = self.get_optimal_rudder_angle(
-                    heading, desired_heading
-                )
+                optimal_rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading)
 
                 self.desired_tacking_angle = desired_heading
 
@@ -366,16 +336,11 @@ class SailboatAutopilot(BaseAutopilot):
                 rudder_angle *= -1
 
             # if we have finished the tack
-            if (
-                abs(heading - self.desired_tacking_angle) % 360
-                < self.parameters["tack_tolerance"]
-            ):
+            if abs(heading - self.desired_tacking_angle) % 360 < self.parameters["tack_tolerance"]:
                 self.current_state = SailboatStates.NORMAL
 
         else:
-            raise Exception(
-                "Unsupported State Transition In `run_waypoint_mission_step`"
-            )
+            raise Exception("Unsupported State Transition In `run_waypoint_mission_step`")
 
         return sail_angle, rudder_angle
 
@@ -402,9 +367,7 @@ class SailboatAutopilot(BaseAutopilot):
         # these are for close hauled, close reach, beam reach, broad reach and running respectively
         # the angles were estimated from a sailing position diagram and adam should probably take a look and move things around as he sees fit
 
-        sail_positions: list[float] = self.parameters[
-            "sail_lookup_table_sail_positions"
-        ]
+        sail_positions: list[float] = self.parameters["sail_lookup_table_sail_positions"]
         wind_angles: list[float] = self.parameters["sail_lookup_table_wind_angles"]
 
         left = max(filter(lambda pos: pos <= float(apparent_wind_angle), wind_angles))
@@ -419,13 +382,8 @@ class SailboatAutopilot(BaseAutopilot):
                 if float(apparent_wind_angle) == wind_angles[i]:
                     sail_angle = sail_positions[i]
         else:
-            slope = (sail_positions[right] - sail_positions[left]) / (
-                wind_angles[right] - wind_angles[left]
-            )
-            sail_angle = (
-                slope * (float(apparent_wind_angle) - wind_angles[left])
-                + sail_positions[left]
-            )
+            slope = (sail_positions[right] - sail_positions[left]) / (wind_angles[right] - wind_angles[left])
+            sail_angle = slope * (float(apparent_wind_angle) - wind_angles[left]) + sail_positions[left]
 
         return sail_angle
 
@@ -463,9 +421,7 @@ class SailboatAutopilot(BaseAutopilot):
         rudder_angle: float = np.clip(rudder_angle, min_rudder_angle, max_rudder_angle)
         return rudder_angle
 
-    def run_rc_control(
-        self, joystick_left_y: float, joystick_right_x: float
-    ) -> tuple[float, float]:
+    def run_rc_control(self, joystick_left_y: float, joystick_right_x: float) -> tuple[float, float]:
         """
         Converts joystick inputs from a remote control into desired sail and rudder angles.
         Formulas used: https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio
@@ -493,14 +449,10 @@ class SailboatAutopilot(BaseAutopilot):
         min_rudder_angle: float = self.parameters["min_rudder_angle"]
         max_rudder_angle: float = self.parameters["max_rudder_angle"]
 
-        sail_angle = (
-            ((joystick_left_y - -100) * (max_sail_angle - min_sail_angle))
-            / (100 - -100)
-        ) + min_sail_angle
+        sail_angle = (((joystick_left_y - -100) * (max_sail_angle - min_sail_angle)) / (100 - -100)) + min_sail_angle
 
         rudder_angle = (
-            ((joystick_right_x - -100) * (max_rudder_angle - min_rudder_angle))
-            / (100 - -100)
+            ((joystick_right_x - -100) * (max_rudder_angle - min_rudder_angle)) / (100 - -100)
         ) + min_rudder_angle
 
         return sail_angle, rudder_angle
