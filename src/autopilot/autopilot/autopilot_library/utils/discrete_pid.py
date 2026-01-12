@@ -11,9 +11,7 @@ class DiscretePID:
     ``low_pass_filter_cutoff_frequency`` is represented by ``n`` to improve readability in the equations.
     """
 
-    def __init__(
-        self, sample_period: float, Kp: float, Ki: float, Kd: float, n: float
-    ) -> None:
+    def __init__(self, sample_period: float, Kp: float, Ki: float, Kd: float, n: float) -> None:
         """
         Parameters
         ----------
@@ -94,18 +92,20 @@ class DiscretePID:
             Sample period for the discrete PID controller.
         """
 
-        method_args: dict[str, float | None] = locals()
+        self.Kp = Kp or self.Kp
+        self.Ki = Ki or self.Ki
+        self.Kd = Kd or self.Kd
+        self.n =  n  or self.n
+        self.sample_period = sample_period or self.sample_period
 
-        for name, value in method_args.items():
-            if name != "self" and value is not None:
-                setattr(self, name, value)
+
 
     def reset(self) -> None:
         """Resets the PID controller to its initial state."""
 
-        self.__init__(
-            self.sample_period, self.Kp, self.Ki, self.Kd, self.n, self.sample_period
-        )
+        self.__init__(self.sample_period, self.Kp, self.Ki, self.Kd, self.n, self.sample_period)
+
+
 
     def step(self, error: float) -> float:
         """
@@ -126,25 +126,12 @@ class DiscretePID:
         a1 = -(2 + self.n * self.sample_period)
         a2 = 1
 
-        b0 = (
-            self.Kp * (1 + self.n * self.sample_period)
-            + self.Ki * self.sample_period * (1 + self.n * self.sample_period)
-            + self.Kd * self.n
-        )
-        b1 = -(
-            self.Kp * (2 + self.n * self.sample_period)
-            + self.Ki * self.sample_period
-            + 2 * self.Kd * self.n
-        )
+        b0 = self.Kp * (1 + self.n * self.sample_period) + self.Ki * self.sample_period * (1 + self.n * self.sample_period) + self.Kd * self.n
+        b1 = -(self.Kp * (2 + self.n * self.sample_period) + self.Ki * self.sample_period + 2 * self.Kd * self.n)
         b2 = self.Kp + self.Kd * self.n
 
-        output = (
-            -(a1 / a0) * self.prev_output1
-            - (a2 / a0) * self.prev_output2
-            + (b0 / a0) * error
-            + (b1 / a0) * self.prev_error1
-            + (b2 / a0) * self.prev_error2
-        )
+        output = -(a1 / a0) * self.prev_output1 - (a2 / a0) * self.prev_output2 + (b0 / a0) * error + (b1 / a0) * self.prev_error1 + (b2 / a0) * self.prev_error2
+        
 
         self.prev_output2 = self.prev_output1
         self.prev_output1 = output

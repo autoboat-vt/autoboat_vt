@@ -1,5 +1,3 @@
-"""Constants for the Autopilot Library."""
-
 from enum import Enum
 from pathlib import Path
 
@@ -41,5 +39,5 @@ class MotorboatControls(Enum):
     CURRENT = 2
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-CONFIG_DIR = BASE_DIR / "config"
+BASE_DIRECTORY = Path(__file__).resolve().parent.parent.parent
+CONFIG_DIRECTORY = BASE_DIRECTORY / "config"

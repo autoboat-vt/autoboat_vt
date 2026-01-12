@@ -2,16 +2,12 @@ from typing import Any
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from .base_autopilot import BaseAutopilot
+from .utils.discrete_pid import DiscretePID
+from .utils.position import Position
 
-
-class MotorboatAutopilot(BaseAutopilot):
+class MotorboatAutopilot:
     """
     A class containing algorithms to control a motorboat given sensor data.
-
-    Inherits
-    -------
-    ``BaseAutopilot``
     """
 
     def __init__(self, parameters: dict[str, Any], logger: RcutilsLogger) -> None:
@@ -19,7 +15,7 @@ class MotorboatAutopilot(BaseAutopilot):
         Parameters
         ----------
         parameters
-            Dictionary that should contain the information from the ``config/motorboat_default_parameters.json`` file.
+            Dictionary that should contain information from a file in the ```config``` folder.
 
         logger
             A logger to use instead of print statements which works a little better with ROS.
@@ -27,4 +23,35 @@ class MotorboatAutopilot(BaseAutopilot):
             https://docs.ros.org/en/humble/Tutorials/Demos/Logging-and-logger-configuration.html
         """
 
-        super().__init__(parameters, logger)
+        self.rudder_pid_controller = DiscretePID(
+            sample_period=(1 / parameters["autopilot_refresh_rate"]),
+            Kp=parameters["heading_p_gain"],
+            Ki=parameters["heading_i_gain"],
+            Kd=parameters["heading_d_gain"],
+            n=parameters["heading_n_gain"],
+        )
+
+        self.parameters = parameters
+        self.logger = logger
+
+        self.waypoints: list[Position] | None = None
+        self.current_waypoint_index: int = 0
+        
+        
+    def reset(self) -> None:
+        """Resets the autopilot to its initial state."""
+
+        self.__init__(self.parameters, self.logger)
+
+    
+    def update_waypoints_list(self, waypoints_list: list[Position]) -> None:
+        """
+        Updates the list of waypoints that the boat should follow.
+
+        Parameters
+        ----------
+        waypoints_list
+            A list of ``Position`` objects that form the path the boat should follow.
+        """
+
+        pass

@@ -21,8 +21,8 @@ from std_msgs.msg import Bool, Float32, Int32, String
 
 from autoboat_msgs.msg import VESCTelemetryData, WaypointList
 
-from .autopilot_library.utils.constants import CONFIG_DIR
-from .autopilot_library.utils.misc import (
+from .autopilot_library.utils.constants import CONFIG_DIRECTORY
+from .autopilot_library.utils.function_library import (
     cartesian_vector_to_polar,
     get_distance_between_positions,
 )
@@ -123,11 +123,9 @@ class TelemetryNode(Node):
 
         self.cv_bridge = CvBridge()
 
-        parameters_path = CONFIG_DIR / "sailboat_default_parameters.json"
+        parameters_path = CONFIG_DIRECTORY / "sailboat_default_parameters.json"
         with open(parameters_path, "r", encoding="utf-8") as parameters_file:
-            self.autopilot_parameters: dict[str, dict[str, Any]] = json.load(
-                parameters_file,
-            )
+            self.autopilot_parameters: dict[str, dict[str, Any]] = json.load(parameters_file)
 
         # region DECLARE ROS2 PUBLISHERS AND SUBSCRIBERS
 

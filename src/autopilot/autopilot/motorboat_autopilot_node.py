@@ -15,12 +15,12 @@ from autoboat_msgs.msg import RCData, VESCControlData, WaypointList
 
 from .autopilot_library.motorboat_autopilot import MotorboatAutopilot
 from .autopilot_library.utils.constants import (
-    CONFIG_DIR,
+    CONFIG_DIRECTORY,
     MotorboatAutopilotMode,
     MotorboatControls,
 )
 from .autopilot_library.utils.discrete_pid import DiscretePID
-from .autopilot_library.utils.misc import get_distance_between_angles
+from .autopilot_library.utils.function_library import get_distance_between_angles
 from .autopilot_library.utils.position import Position
 
 
@@ -39,7 +39,7 @@ class MotorboatAutopilotNode(Node):
 
         self.logger = self.get_logger()
 
-        parameters_path = CONFIG_DIR / "motorboat_default_parameters.json"
+        parameters_path = CONFIG_DIRECTORY / "motorboat_default_parameters.json"
         with open(parameters_path, "r", encoding="utf-8") as parameters_file:
             self.autopilot_parameters: dict[str, dict[str, Any]] = json.load(
                 parameters_file,
@@ -262,14 +262,11 @@ class MotorboatAutopilotNode(Node):
         """
 
         new_parameters_json: dict = json.loads(new_parameters.data)
+        
         for new_parameter_name, new_parameter_value in new_parameters_json.items():
             if new_parameter_name not in self.stripped_parameters:
-                print(
-                    "WARNING: Attempted to set an autopilot parameter that the autopilot doesn't know"
-                )
-                print(
-                    "If you would like to make a new autopilot parameter, please edit default_parameters.yaml"
-                )
+                print("WARNING: Attempted to set an autopilot parameter that the autopilot doesn't know")
+                print("If you would like to make a new autopilot parameter, please edit default_parameters.yaml")
                 continue
 
             self.parameters[new_parameter_name] = new_parameter_value
@@ -277,9 +274,9 @@ class MotorboatAutopilotNode(Node):
         # special cases to handle since they do not update automatically
         if "autopilot_refresh_rate" in new_parameters_json:
             self.destroy_timer(self.autopilot_refresh_timer)
-            self.autopilot_refresh_timer = self.create_timer(
-                1 / self.parameters["autopilot_refresh_rate"], self.update_ros_topics
-            )
+            self.autopilot_refresh_timer = self.create_timer(1 / self.parameters["autopilot_refresh_rate"], self.update_ros_topics)
+
+
 
     def waypoints_list_callback(self, waypoint_list: WaypointList) -> None:
         """
@@ -316,9 +313,7 @@ class MotorboatAutopilotNode(Node):
             A ROS2 message that contains the current GPS position of the boat.
         """
 
-        self.position = Position(
-            longitude=position.longitude, latitude=position.latitude
-        )
+        self.position = Position(longitude=position.longitude, latitude=position.latitude)
 
     def velocity_callback(self, velocity: Twist) -> None:
         """

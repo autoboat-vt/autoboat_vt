@@ -228,7 +228,7 @@ def main():
     # Parse config to find the ONNX and engine file names
     onnx_file = None
     engine_file = None
-    config_dir = os.path.dirname(PATH_TO_YOLO_CONFIG)
+    CONFIG_DIRECTORY = os.path.dirname(PATH_TO_YOLO_CONFIG)
     
     with open(PATH_TO_YOLO_CONFIG, 'r') as f:
         for line in f:
@@ -238,7 +238,7 @@ def main():
                 engine_file = line.split('=')[1].strip()
     
     if onnx_file:
-        onnx_path = os.path.join(config_dir, onnx_file)
+        onnx_path = os.path.join(CONFIG_DIRECTORY, onnx_file)
         if os.path.exists(onnx_path):
             print(f"✓ ONNX file found: {onnx_file}")
         else:
@@ -249,10 +249,10 @@ def main():
         return 1
     
     if engine_file:
-        target_engine_path = os.path.join(config_dir, engine_file)
+        target_engine_path = os.path.join(CONFIG_DIRECTORY, engine_file)
         # Default engine filename that DeepStream creates
         default_engine_file = "model_b1_gpu0_fp16.engine"
-        default_engine_path = os.path.join(config_dir, default_engine_file)
+        default_engine_path = os.path.join(CONFIG_DIRECTORY, default_engine_file)
         
         if os.path.exists(target_engine_path):
             print(f"⚠ Warning: Target engine file already exists: {engine_file}")

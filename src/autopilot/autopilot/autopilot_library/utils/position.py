@@ -98,9 +98,7 @@ class Position:
 
         return utm_coord.easting, utm_coord.northing
 
-    def set_local_coordinates(
-        self, local_x: float, local_y: float, reference_longitude: float, reference_latitude: float
-    ) -> None:
+    def set_local_coordinates(self, local_x: float, local_y: float, reference_longitude: float, reference_latitude: float) -> None:
         """
         Sets the position using local NED coordinates.
 
@@ -136,8 +134,6 @@ class Position:
         reference_latitude: float = reference_longitude_latitude[1]
         reference_longitude: float = reference_longitude_latitude[0]
 
-        local_y, local_x, _ = navpy.lla2ned(
-            self.latitude, self.longitude, 0, reference_latitude, reference_longitude, 0
-        )
+        local_y, local_x, _ = navpy.lla2ned(self.latitude, self.longitude, 0, reference_latitude, reference_longitude, 0)
 
         return np.array([local_x, local_y], dtype=np.float64)
