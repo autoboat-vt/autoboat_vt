@@ -41,9 +41,7 @@ class MotorboatAutopilotNode(Node):
 
         parameters_path = CONFIG_DIR / "motorboat_default_parameters.json"
         with open(parameters_path, "r", encoding="utf-8") as parameters_file:
-            self.autopilot_parameters: dict[str, dict[str, Any]] = json.load(
-                parameters_file,
-            )
+            self.autopilot_parameters: dict[str, dict[str, Any]] = json.load(parameters_file)
 
         # structured like {parameter_name: parameter_value}
         self.stripped_parameters: dict[str, Any] = {
@@ -61,13 +59,13 @@ class MotorboatAutopilotNode(Node):
         )
 
         self.autopilot_parameters_listener = self.create_subscription(
-            String,
-            "/autopilot_parameters",
+            msg_type=String,
+            topic="/autopilot_parameters",
             callback=self.autopilot_parameters_callback,
             qos_profile=10,
         )
         self.waypoints_list_listener = self.create_subscription(
-            WaypointList, "/waypoints_list", self.waypoints_list_callback, 10
+            msg_type=WaypointList, topic="/waypoints_list", callback=self.waypoints_list_callback, qos_profile=10
         )
 
         self.position_listener = self.create_subscription(
@@ -95,19 +93,23 @@ class MotorboatAutopilotNode(Node):
             qos_profile=qos_profile_sensor_data,
         )
 
-        self.current_waypoint_index_publisher = self.create_publisher(Int32, "/current_waypoint_index", 10)
+        self.current_waypoint_index_publisher = self.create_publisher(
+            msg_type=Int32, topic="/current_waypoint_index", qos_profile=10
+        )
         self.autopilot_mode_publisher = self.create_publisher(
-            String, "/autopilot_mode", qos_profile=qos_profile_sensor_data
+            msg_type=String, topic="/autopilot_mode", qos_profile=qos_profile_sensor_data
         )
         self.full_autonomy_maneuver_publisher = self.create_publisher(
             msg_type=String,
             topic="/full_autonomy_maneuver",
             qos_profile=qos_profile_sensor_data,
         )
-        self.desired_heading_publisher = self.create_publisher(Float32, "/desired_heading", qos_profile=10)
+        self.desired_heading_publisher = self.create_publisher(
+            msg_type=Float32, topic="/desired_heading", qos_profile=10
+        )
 
         self.should_propeller_motor_be_powered_publisher = self.create_publisher(
-            Bool, "/should_propeller_motor_be_powered", qos_profile=10
+            msg_type=Bool, topic="/should_propeller_motor_be_powered", qos_profile=10
         )
         self.propeller_motor_control_struct_publisher = self.create_publisher(
             msg_type=VESCControlData,
@@ -329,7 +331,7 @@ class MotorboatAutopilotNode(Node):
 
         self.heading = heading.data
 
-    def get_optimal_rudder_angle(self, heading, desired_heading) -> float:
+    def get_optimal_rudder_angle(self, heading: float, desired_heading: float) -> float:
         """
         Uses a PID controller to determine the optimal rudder angle to turn the boat from its current heading to the desired heading.
 

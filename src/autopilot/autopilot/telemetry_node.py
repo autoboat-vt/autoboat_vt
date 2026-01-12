@@ -563,10 +563,7 @@ class TelemetryNode(Node):
         if new_autopilot_parameters == {}:
             return
 
-        for (
-            new_autopilot_parameter_name,
-            new_autopilot_parameters_value,
-        ) in new_autopilot_parameters.items():
+        for new_autopilot_parameter_name, new_autopilot_parameters_value in new_autopilot_parameters.items():
             self.autopilot_parameters[new_autopilot_parameter_name] = new_autopilot_parameters_value
 
         # update the ROS2 topic so that the autopilot actually knows what the new parameters are

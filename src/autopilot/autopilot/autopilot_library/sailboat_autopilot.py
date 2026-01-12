@@ -164,14 +164,14 @@ class SailboatAutopilot(BaseAutopilot):
         """
 
         global_true_wind_angle = (current_heading + true_wind_angle) % 360
-        global_true_up_wind_angle = (
-            global_true_wind_angle + 180
-        ) % 360  # goes in the opposite direction of the global true wind angle
+
+        # goes in the opposite direction of the global true wind angle
+        global_true_up_wind_angle = (global_true_wind_angle + 180) % 360
 
         global_apparent_wind_angle = (current_heading + apparent_wind_angle) % 360
-        global_apparent_up_wind_angle = (
-            global_apparent_wind_angle + 180
-        ) % 360  # goes in the opposite direction of the global apparent wind angle
+
+        # goes in the opposite direction of the global apparent wind angle
+        global_apparent_up_wind_angle = (global_apparent_wind_angle + 180) % 360
 
         no_sail_zone_bounds = (
             (global_apparent_up_wind_angle - self.parameters["no_sail_zone_size"] / 2) % 360,  # lower bound
@@ -319,10 +319,7 @@ class SailboatAutopilot(BaseAutopilot):
             rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading)
             sail_angle = self.get_optimal_sail_angle(apparent_wind_angle)
 
-        elif self.current_state in (
-            SailboatStates.CW_TACKING,
-            SailboatStates.CCW_TACKING,
-        ):
+        elif self.current_state in (SailboatStates.CW_TACKING, SailboatStates.CCW_TACKING):
             sail_angle = self.get_optimal_sail_angle(apparent_wind_angle)
 
             if self.current_state == SailboatStates.CW_TACKING:

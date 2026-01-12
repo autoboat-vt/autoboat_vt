@@ -35,9 +35,7 @@ class SailboatAutopilotNode(Node):
 
         parameters_path = CONFIG_DIR / "sailboat_default_parameters.json"
         with open(parameters_path, "r", encoding="utf-8") as parameters_file:
-            self.autopilot_parameters: dict[str, dict[str, Any]] = json.load(
-                parameters_file,
-            )
+            self.autopilot_parameters: dict[str, dict[str, Any]] = json.load(parameters_file)
 
         # structured like {parameter_name: parameter_value}
         self.stripped_parameters: dict[str, Any] = {
@@ -294,10 +292,9 @@ class SailboatAutopilotNode(Node):
         if waypoint_list.waypoints:
             self.sailboat_autopilot.reset()
             waypoint_navsatfixes_list: list[NavSatFix] = waypoint_list.waypoints
-            waypoint_positions_list: list[Position] = []
-
-            for navsatfix in waypoint_navsatfixes_list:
-                waypoint_positions_list.append(Position(navsatfix.longitude, navsatfix.latitude))
+            waypoint_positions_list: list[Position] = [
+                Position(navsatfix.longitude, navsatfix.latitude) for navsatfix in waypoint_navsatfixes_list
+            ]
 
             self.sailboat_autopilot.update_waypoints_list(waypoint_positions_list)
 
@@ -386,9 +383,9 @@ class SailboatAutopilotNode(Node):
             self.full_autonomy_maneuver_publisher.publish(String(data="N/A"))
 
         # Publish the desired heading
-        if (
-            self.autopilot_mode == SailboatAutopilotMode.HOLD_HEADING
-            or self.autopilot_mode == SailboatAutopilotMode.HOLD_HEADING_AND_BEST_SAIL
+        if self.autopilot_mode in (
+            SailboatAutopilotMode.HOLD_HEADING,
+            SailboatAutopilotMode.HOLD_HEADING_AND_BEST_SAIL,
         ):
             self.desired_heading_publisher.publish(Float32(data=float(self.heading_to_hold)))
 
