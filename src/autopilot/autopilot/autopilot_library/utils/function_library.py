@@ -1,5 +1,3 @@
-"""Utility functions for the Autopilot Library."""
-
 import geopy
 import geopy.distance
 import numpy as np
@@ -186,6 +184,10 @@ def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float
     angle_b1_to_b2 = get_angle_between_vectors(boundary1_vector, boundary2_vector)
 
     return check_float_equivalence(angle_b1_to_angle + angle_angle_to_b2, angle_b1_to_b2)
+
+
+
+
 
 
 # ==============================================================================
