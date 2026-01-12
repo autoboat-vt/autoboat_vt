@@ -12,7 +12,6 @@ class DiscretePID:
     """
 
     def __init__(self, sample_period: float, Kp: float, Ki: float, Kd: float, n: float) -> None:
-    def __init__(self, sample_period: float, Kp: float, Ki: float, Kd: float, n: float) -> None:
         """
         Parameters
         ----------
