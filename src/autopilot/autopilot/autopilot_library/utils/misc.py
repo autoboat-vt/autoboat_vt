@@ -1,4 +1,4 @@
-from enum import Enum
+"""Utility functions for the Autopilot Library."""
 
 import geopy
 import geopy.distance
@@ -7,43 +7,6 @@ import numpy.typing as npt
 import pyproj
 
 from .position import Position
-
-
-class SailboatAutopilotMode(Enum):
-    DISABLED = 0
-    FULL_RC = 1
-    HOLD_BEST_SAIL = 2
-    HOLD_HEADING = 3
-    HOLD_HEADING_AND_BEST_SAIL = 4
-    WAYPOINT_MISSION = 5
-
-
-class SailboatStates(Enum):
-    NORMAL = 0
-    CW_TACKING = 1
-    CCW_TACKING = 2
-    STALL = 3
-    # JIBE = 4
-
-
-class SailboatManeuvers(Enum):
-    AUTOPILOT_DISABLED = 0
-    STANDARD = 1
-    TACK = 2
-    JIBE = 3
-
-
-class MotorboatAutopilotMode(Enum):
-    DISABLED = 0
-    FULL_RC = 1
-    HOLD_HEADING = 2
-    WAYPOINT_MISSION = 3
-
-
-class MotorboatControls(Enum):
-    RPM = 0
-    DUTY_CYCLE = 1
-    CURRENT = 2
 
 
 def check_float_equivalence(float1: float, float2: float) -> bool:
@@ -83,7 +46,7 @@ def cartesian_vector_to_polar(x: float, y: float) -> tuple[float, float]:
         Outputs a tuple of magnitude and direction (counter-clockwise from the x axis) of the inputted vector.
         Output direction is between 0 and 360 degrees.
     """
-    
+
     if x == 0.0 and y == 0.0:
         return 0.0, 0.0
 
@@ -91,7 +54,10 @@ def cartesian_vector_to_polar(x: float, y: float) -> tuple[float, float]:
     direction = np.degrees(np.arctan2(y, x)) % 360
     return magnitude, direction
 
-def get_angle_between_vectors(vector1: npt.NDArray[np.float64], vector2: npt.NDArray[np.float64]) -> float:
+
+def get_angle_between_vectors(
+    vector1: npt.NDArray[np.float64], vector2: npt.NDArray[np.float64]
+) -> float:
     """
     Takes two vectors and computes the smallest angle between them in degrees.
 
@@ -111,7 +77,9 @@ def get_angle_between_vectors(vector1: npt.NDArray[np.float64], vector2: npt.NDA
     vector1_normalized = vector1 / np.linalg.norm(vector1)
     vector2_normalized = vector2 / np.linalg.norm(vector2)
 
-    return np.rad2deg(np.arccos(np.clip(np.dot(vector1_normalized, vector2_normalized), -1, 1)))
+    return np.rad2deg(
+        np.arccos(np.clip(np.dot(vector1_normalized, vector2_normalized), -1, 1))
+    )
 
 
 def get_distance_between_angles(angle1: float, angle2: float) -> float:
@@ -162,7 +130,9 @@ def get_bearing(current_position: Position, destination_position: Position) -> f
     """
 
     current_longitude, current_latitude = current_position.get_longitude_latitude()
-    destination_longitude, destination_latitude = destination_position.get_longitude_latitude()
+    destination_longitude, destination_latitude = (
+        destination_position.get_longitude_latitude()
+    )
     azimuth_heading, _, _ = pyproj.Geod(ellps="WGS84").inv(
         current_longitude, current_latitude, destination_longitude, destination_latitude
     )
@@ -188,10 +158,14 @@ def get_distance_between_positions(position1: Position, position2: Position) -> 
         The distance between the two positions in meters.
     """
 
-    return geopy.distance.geodesic(position1.get_longitude_latitude(), position2.get_longitude_latitude()).m
+    return geopy.distance.geodesic(
+        position1.get_longitude_latitude(), position2.get_longitude_latitude()
+    ).m
 
 
-def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float) -> bool:
+def is_angle_between_boundaries(
+    angle: float, boundary1: float, boundary2: float
+) -> bool:
     """
     TODO Better documentation
 
@@ -221,7 +195,9 @@ def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float
     angle_angle_to_b2 = get_angle_between_vectors(angle_vector, boundary2_vector)
     angle_b1_to_b2 = get_angle_between_vectors(boundary1_vector, boundary2_vector)
 
-    return check_float_equivalence(angle_b1_to_angle + angle_angle_to_b2, angle_b1_to_b2)
+    return check_float_equivalence(
+        angle_b1_to_angle + angle_angle_to_b2, angle_b1_to_b2
+    )
 
 
 # ==============================================================================
@@ -230,8 +206,8 @@ def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float
 
 
 def does_line_violate_no_sail_zone(
-    current_position: list[float, float],
-    destination_position: list[float, float],
+    current_position: tuple[float, float],
+    destination_position: tuple[float, float],
     global_true_wind_angle: float,
     no_sail_zone_size: float,
 ) -> bool:
@@ -243,11 +219,11 @@ def does_line_violate_no_sail_zone(
     Parameters
     ----------
     current_position
-        A list that represents the current position in cartesian coordinates.
+        A tuple that represents the current position in cartesian coordinates.
         For example: `[x_coordinate, y_coordinate]` is the form that you should use.
 
     destination_position
-        A list that represents the position you want to directly travel to in cartesian coordinates.
+        A tuple that represents the position you want to directly travel to in cartesian coordinates.
         For example: `[x_coordinate, y_coordinate]` is the form that you should use.
 
     global_true_wind_angle
@@ -262,15 +238,22 @@ def does_line_violate_no_sail_zone(
         Whether or not the line between the current position and the destination position violates the no sail zone.
     """
 
-    displacement = np.asarray(destination_position) - np.asarray(current_position)
+    displacement = np.asarray(destination_position, dtype=np.float64) - np.asarray(
+        current_position, dtype=np.float64
+    )
     normalized_displacement = displacement / np.linalg.norm(displacement)
 
     # The upwind angle is opposite to the wind angle (e.g., wind at 0° means upwind at 180°)
-    global_true_upwind_rad = np.deg2rad((global_true_wind_angle + 180) % 360)
-    up_wind_vector = np.array([np.cos(global_true_upwind_rad), np.sin(global_true_upwind_rad)])
+    global_true_upwind_rad: float = np.deg2rad((global_true_wind_angle + 180) % 360)
+    up_wind_vector = np.array(
+        [np.cos(global_true_upwind_rad), np.sin(global_true_upwind_rad)],
+        dtype=np.float64,
+    )
 
     # Find the angle between the upwind vector and displacement vector
-    angle_between = np.degrees(np.arccos(np.clip(np.dot(up_wind_vector, normalized_displacement), -1, 1)))
+    angle_between: float = np.degrees(
+        np.arccos(np.clip(np.dot(up_wind_vector, normalized_displacement), -1, 1))
+    )
 
     return angle_between < no_sail_zone_size
 
@@ -307,8 +290,14 @@ def does_line_segment_intersect_circle(
         Whether or not the line segment intersects the circle.
     """
 
-    if len(line_segment_start_position) != 2 or len(line_segment_end_position) != 2 or len(circle_position) != 2:
-        raise ValueError("All input positions must be of length 2 (i.e. x and y coordinates only).")
+    if (
+        len(line_segment_start_position) != 2
+        or len(line_segment_end_position) != 2
+        or len(circle_position) != 2
+    ):
+        raise ValueError(
+            "All input positions must be of length 2 (i.e. x and y coordinates only)."
+        )
 
     if circle_radius <= 0:
         raise ValueError("Circle radius must be positive.")

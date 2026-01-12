@@ -1,33 +1,12 @@
 {
-    // Sail control parameters
     "sail_lookup_table_wind_angles": {
         "type": "list",
-        "default": [
-            0,
-            45,
-            90,
-            135,
-            180,
-            225,
-            270,
-            315,
-            360
-        ],
+        "default": [0, 45, 90, 135, 180, 225, 270, 315, 360],
         "description": "Wind angles for the lookup table in degrees."
     },
     "sail_lookup_table_sail_positions": {
         "type": "list",
-        "default": [
-            70.0,
-            50.0,
-            30.0,
-            10.0,
-            0.0,
-            10.0,
-            30.0,
-            50.0,
-            70.0
-        ],
+        "default": [70.0, 50.0, 30.0, 10.0, 0.0, 10.0, 30.0, 50.0, 70.0],
         "description": "Sail positions corresponding to the wind angles in the lookup table."
     },
     "no_sail_zone_size": {
@@ -45,7 +24,6 @@
         "default": 90.0,
         "description": "Maximum angle to sail before changing tacks, in degrees."
     },
-    // Autopilot and navigation parameters
     "autopilot_refresh_rate": {
         "type": "float",
         "default": 50.0,
@@ -68,15 +46,14 @@
     },
     "jibe_tolerance": {
         "type": "float",
-        "default": 10.0,
+        "default": 3.0,
         "description": "How close to jibe angle to stop steering around and start sailing along the jibe line."
     },
     "tack_tolerance": {
         "type": "float",
-        "default": 10.0,
+        "default": 3.0,
         "description": "How close to tacking angle to stop steering around and start sailing along the tack line."
     },
-    // Rudder control parameters
     "min_rudder_angle": {
         "type": "float",
         "default": -25.0,
@@ -86,6 +63,11 @@
         "type": "float",
         "default": 25.0,
         "description": "Maximum angle for the rudder, in degrees."
+    },
+    "rudder_hard_over": {
+        "type": "float",
+        "default": 25.0,
+        "description": "Hard over default for the rudder control, in radians."
     },
     "rudder_p_gain": {
         "type": "float",
@@ -107,30 +89,24 @@
         "default": 1.0,
         "description": "N gain for the rudder control."
     },
-    "rudder_hard_over": {
-        "type": "float",
-        "default": 25.0,
-        "description": "Hard over value for the rudder control, in radians."
-    },
-    // Heading control parameters
     "heading_p_gain": {
         "type": "float",
-        "default": 1.0,
+        "default": 0.3,
         "description": "Proportional gain for heading control."
     },
     "heading_i_gain": {
         "type": "float",
-        "default": 0.3,
+        "default": 0.0,
         "description": "Integral gain for heading control."
     },
     "heading_d_gain": {
         "type": "float",
-        "default": 0.2,
+        "default": 0.0,
         "description": "Derivative gain for heading control."
     },
     "heading_n_gain": {
         "type": "float",
-        "default": 1.0,
+        "default": 0.0,
         "description": "N gain for heading control."
     }
 }

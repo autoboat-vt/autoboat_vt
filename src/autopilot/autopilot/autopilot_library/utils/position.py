@@ -83,7 +83,7 @@ class Position:
         self.latitude = float(latitude)
         self.longitude = float(longitude)
 
-    def get_utm(self) -> tuple[float]:
+    def get_utm(self) -> tuple[float, float]:
         """
         Gets the UTM coordinates of this position.
 

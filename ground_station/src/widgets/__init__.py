@@ -1,5 +1,5 @@
 """
-Module for widgets in the ground station application.
+Package for widgets in the ground station application.
 
 Contains:
 - GroundStationWidget: Main widget for the ground station interface.

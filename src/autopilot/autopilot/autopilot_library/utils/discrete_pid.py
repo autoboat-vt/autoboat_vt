@@ -1,14 +1,19 @@
-class Discrete_PID:
+class DiscretePID:
     """
-    Main resource: https://www.scilab.org/discrete-time-pid-controller-implementation.
     Modified discrete PID controller using a low pass filter only for the derivative term.
+
+    Reference
+    ---------
+    https://www.scilab.org/discrete-time-pid-controller-implementation.
 
     Note
     ----
-    `low_pass_filter_cutoff_frequency` is represented by `n` to improve readability in the equations.
+    ``low_pass_filter_cutoff_frequency`` is represented by ``n`` to improve readability in the equations.
     """
 
-    def __init__(self, sample_period: float, Kp: float, Ki: float, Kd: float, n: float) -> None:
+    def __init__(
+        self, sample_period: float, Kp: float, Ki: float, Kd: float, n: float
+    ) -> None:
         """
         Parameters
         ----------
@@ -36,6 +41,23 @@ class Discrete_PID:
         self.prev_error1: float = 0.0
         self.prev_error2: float = 0.0
 
+    def __call__(self, error: float) -> float:
+        """
+        Calls the ``step`` method with the given error and returns the output.
+
+        Parameters
+        ----------
+        error
+            The current error value to be processed by the PID controller.
+
+        Returns
+        -------
+        float
+            The output of the PID controller after processing the input error.
+        """
+
+        return self.step(error)
+
     def set_gains(
         self,
         Kp: float | None = None,
@@ -45,8 +67,18 @@ class Discrete_PID:
         sample_period: float | None = None,
     ) -> None:
         """
-        Sets gains to specified value. If input is `None` then they are set as the already existing value.
-        So if `Kp` is `None` for instance then its value doesn't change.
+        Sets gains to the specified value. If an argument is ``None`` then they are set as the already existing value.
+
+        Examples
+        --------
+        Set ``Kp`` to 2.0 and ``Ki`` to 0.5, leaving ``Kd``, ``n``, and
+        ``sample_period`` unchanged::
+
+            >>> pid_controller.set_gains(Kp=2.0, Ki=0.5)
+
+        Leave all gains unchanged::
+
+            >>> pid_controller.set_gains()
 
         Parameters
         ----------
@@ -62,16 +94,18 @@ class Discrete_PID:
             Sample period for the discrete PID controller.
         """
 
-        self.Kp: float = Kp if Kp is not None else self.Kp
-        self.Ki: float = Ki if Ki is not None else self.Ki
-        self.Kd: float = Kd if Kd is not None else self.Kd
-        self.n: float = n if n is not None else self.n
-        self.sample_period: float = sample_period if sample_period is not None else self.sample_period
+        method_args: dict[str, float | None] = locals()
+
+        for name, value in method_args.items():
+            if name != "self" and value is not None:
+                setattr(self, name, value)
 
     def reset(self) -> None:
         """Resets the PID controller to its initial state."""
 
-        self.__init__(self.sample_period, self.Kp, self.Ki, self.Kd, self.n, self.sample_period)
+        self.__init__(
+            self.sample_period, self.Kp, self.Ki, self.Kd, self.n, self.sample_period
+        )
 
     def step(self, error: float) -> float:
         """
@@ -97,7 +131,11 @@ class Discrete_PID:
             + self.Ki * self.sample_period * (1 + self.n * self.sample_period)
             + self.Kd * self.n
         )
-        b1 = -(self.Kp * (2 + self.n * self.sample_period) + self.Ki * self.sample_period + 2 * self.Kd * self.n)
+        b1 = -(
+            self.Kp * (2 + self.n * self.sample_period)
+            + self.Ki * self.sample_period
+            + 2 * self.Kd * self.n
+        )
         b2 = self.Kp + self.Kd * self.n
 
         output = (
@@ -114,6 +152,3 @@ class Discrete_PID:
         self.prev_error1 = error
 
         return output
-
-    def __call__(self, error: float) -> float:
-        return self.step(error)

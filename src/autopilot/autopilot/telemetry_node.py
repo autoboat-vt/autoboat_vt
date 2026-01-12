@@ -8,9 +8,10 @@ from typing import Any
 from urllib.parse import urljoin
 
 import cv2
+import numpy as np
+import numpy.typing as npt
 import rclpy
 import requests
-import yaml
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Twist, Vector3
 from rclpy.node import Node
@@ -20,7 +21,12 @@ from std_msgs.msg import Bool, Float32, Int32, String
 
 from autoboat_msgs.msg import VESCTelemetryData, WaypointList
 
-from .autopilot_library.utils import *
+from .autopilot_library.utils.constants import CONFIG_DIR
+from .autopilot_library.utils.misc import (
+    cartesian_vector_to_polar,
+    get_distance_between_positions,
+)
+from .autopilot_library.utils.position import Position
 
 # don't put '/' at the end of the URL
 TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk:8443"
@@ -46,7 +52,7 @@ class TelemetryNode(Node):
         self.autopilot_mode: str = "N/A"
         self.full_autonomy_maneuver: str = "N/A"
 
-        self.current_waypoints_list: list[tuple[float, float]] = []
+        self.current_waypoints: list[tuple[float, float]] = []
         self.current_waypoint_index: int = 0
 
         # see https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/NavSatFix.html
@@ -61,7 +67,9 @@ class TelemetryNode(Node):
         self.desired_sail_angle: float = 0.0
         self.desired_rudder_angle: float = 0.0
 
-        self.apparent_wind_vector: npt.NDArray[np.float64] = np.zeros(2, dtype=np.float64)
+        self.apparent_wind_vector: npt.NDArray[np.float64] = np.zeros(
+            2, dtype=np.float64
+        )
         self.apparent_wind_speed: float = 0.0
         self.apparent_wind_angle: float = 0.0
 
@@ -99,9 +107,14 @@ class TelemetryNode(Node):
                     user_name = "Unknown User"
 
                 self.boat_status_session.post(
-                    urljoin(TELEMETRY_SERVER_URL, f"instance_manager/set_user/{self.instance_id}/{user_name}")
+                    urljoin(
+                        TELEMETRY_SERVER_URL,
+                        f"instance_manager/set_user/{self.instance_id}/{user_name}",
+                    )
                 )
-                self.logger.info(f"Created new telemetry server instance with ID {self.instance_id}")
+                self.logger.info(
+                    f"Created new telemetry server instance with ID {self.instance_id}"
+                )
                 break
 
         self.create_timer(0.01, self.update_boat_status)  # 10 ms
@@ -110,9 +123,11 @@ class TelemetryNode(Node):
 
         self.cv_bridge = CvBridge()
 
-        current_folder_path = os.path.dirname(os.path.realpath(__file__))
-        with open(current_folder_path + "/config/sailboat_default_parameters.yaml", "r") as stream:
-            self.autopilot_parameters_dictionary: dict = yaml.safe_load(stream)
+        parameters_path = CONFIG_DIR / "sailboat_default_parameters.json"
+        with open(parameters_path, "r", encoding="utf-8") as parameters_file:
+            self.autopilot_parameters: dict[str, dict[str, Any]] = json.load(
+                parameters_file,
+            )
 
         # region DECLARE ROS2 PUBLISHERS AND SUBSCRIBERS
 
@@ -238,7 +253,9 @@ class TelemetryNode(Node):
             The current velocity vector of the boat.
         """
 
-        self.velocity_vector = np.array([velocity_vector.linear.x, velocity_vector.linear.y])
+        self.velocity_vector = np.array(
+            [velocity_vector.linear.x, velocity_vector.linear.y], dtype=np.float64
+        )
         self.speed = np.linalg.norm(self.velocity_vector)
 
     def heading_callback(self, heading: Float32) -> None:
@@ -263,7 +280,9 @@ class TelemetryNode(Node):
             The current apparent wind vector of the boat.
         """
 
-        self.apparent_wind_vector = np.array([apparent_wind_vector.x, apparent_wind_vector.y])
+        self.apparent_wind_vector = np.array(
+            [apparent_wind_vector.x, apparent_wind_vector.y], dtype=np.float64
+        )
         self.apparent_wind_speed, self.apparent_wind_angle = cartesian_vector_to_polar(
             apparent_wind_vector.x, apparent_wind_vector.y
         )
@@ -280,7 +299,9 @@ class TelemetryNode(Node):
 
         self.desired_heading = desired_heading.data
 
-    def vesc_telemetry_data_callback(self, vesc_telemetry_data: VESCTelemetryData) -> None:
+    def vesc_telemetry_data_callback(
+        self, vesc_telemetry_data: VESCTelemetryData
+    ) -> None:
         """
         Callback function for the VESC telemetry data topic. Updates the boat's VESC telemetry data.
 
@@ -293,13 +314,19 @@ class TelemetryNode(Node):
         self.vesc_telemetry_data_rpm = vesc_telemetry_data.rpm
         self.vesc_telemetry_data_duty_cycle = vesc_telemetry_data.duty_cycle
         self.vesc_telemetry_data_amp_hours = vesc_telemetry_data.amp_hours
-        self.vesc_telemetry_data_amp_hours_charged = vesc_telemetry_data.amp_hours_charged
+        self.vesc_telemetry_data_amp_hours_charged = (
+            vesc_telemetry_data.amp_hours_charged
+        )
         self.vesc_telemetry_data_current_to_vesc = vesc_telemetry_data.current_to_vesc
         self.vesc_telemetry_data_voltage_to_motor = vesc_telemetry_data.voltage_to_motor
         self.vesc_telemetry_data_voltage_to_vesc = vesc_telemetry_data.voltage_to_vesc
         self.vesc_telemetry_data_wattage_to_motor = vesc_telemetry_data.wattage_to_motor
-        self.vesc_telemetry_data_time_since_vesc_startup_in_ms = vesc_telemetry_data.time_since_vesc_startup_in_ms
-        self.vesc_telemetry_data_motor_temperature = vesc_telemetry_data.motor_temperature
+        self.vesc_telemetry_data_time_since_vesc_startup_in_ms = (
+            vesc_telemetry_data.time_since_vesc_startup_in_ms
+        )
+        self.vesc_telemetry_data_motor_temperature = (
+            vesc_telemetry_data.motor_temperature
+        )
         self.vesc_telemetry_data_vesc_temperature = vesc_telemetry_data.vesc_temperature
 
     def current_waypoint_index_callback(self, current_waypoint_index: Int32) -> None:
@@ -351,7 +378,9 @@ class TelemetryNode(Node):
             The current RGB image from the boat's camera.
         """
 
-        rgb_image_cv = self.cv_bridge.imgmsg_to_cv2(camera_rgb_image, desired_encoding="rgb8")
+        rgb_image_cv = self.cv_bridge.imgmsg_to_cv2(
+            camera_rgb_image, desired_encoding="rgb8"
+        )
         rgb_image_cv = rgb_image_cv[80:1200, 40:680]  # crop the image to 640,640
         retval, buffer = cv2.imencode(".jpg", rgb_image_cv)
 
@@ -404,7 +433,9 @@ class TelemetryNode(Node):
 
     # endregion ROS2 CALLBACK FUNCTIONS
 
-    def get_raw_response_from_telemetry_server(self, route: str, session: requests.Session = None) -> Any:
+    def get_raw_response_from_telemetry_server(
+        self, route: str, session: requests.Session
+    ) -> Any:
         """
         This is essentially just a helper function to send a GET request to a specific telemetry server route and automatically retry if it cannot connect to that route.
 
@@ -413,7 +444,7 @@ class TelemetryNode(Node):
         route
             The specific route on the telemetry server to send the GET request to.
         session
-            An optional requests.Session object to use for the GET request.
+            The requests session to use for the GET request.
 
         Returns
         -------
@@ -424,10 +455,12 @@ class TelemetryNode(Node):
         try:
             return session.get(urljoin(TELEMETRY_SERVER_URL, route), timeout=10).json()
 
-        except Exception as e:
-            self.logger.info(f"Could not connect to telemetry server route {route}, retrying... \nError: {e}")
+        except Exception:
+            self.logger.error(
+                f"Could not connect to telemetry server route {route}, retrying..."
+            )
             time.sleep(0.5)
-            return self.get_raw_response_from_telemetry_server(route)
+            return self.get_raw_response_from_telemetry_server(route, session)
 
     def update_boat_status(self) -> None:
         """
@@ -441,15 +474,19 @@ class TelemetryNode(Node):
         """
 
         true_wind_vector = self.apparent_wind_vector + self.velocity_vector
-        self.true_wind_speed, self.true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
+        self.true_wind_speed, self.true_wind_angle = cartesian_vector_to_polar(
+            true_wind_vector[0], true_wind_vector[1]
+        )
 
-        if self.current_waypoints_list != []:
+        if self.current_waypoints != []:
             current_position = Position(self.position.latitude, self.position.longitude)
             next_waypoint_position = Position(
-                self.current_waypoints_list[self.current_waypoint_index][0],
-                self.current_waypoints_list[self.current_waypoint_index][1],
+                self.current_waypoints[self.current_waypoint_index][0],
+                self.current_waypoints[self.current_waypoint_index][1],
             )
-            distance_to_next_waypoint = get_distance_between_positions(current_position, next_waypoint_position)
+            distance_to_next_waypoint = get_distance_between_positions(
+                current_position, next_waypoint_position
+            )
 
         else:
             distance_to_next_waypoint = 0.0
@@ -506,7 +543,9 @@ class TelemetryNode(Node):
             )
 
         except Exception as e:
-            self.logger.info(f"Could not connect to telemetry server to send boat status update. \nError: {e}")
+            self.logger.error(
+                f"Could not connect to telemetry server to send boat status update. \nError: {e}"
+            )
 
     def update_waypoints_from_telemetry(self) -> None:
         """
@@ -514,53 +553,39 @@ class TelemetryNode(Node):
         and then publishes the waypoints over ROS so that the autopilot can see them.
         """
 
-        new_waypoints_list = self.get_raw_response_from_telemetry_server(
+        new_waypoints = self.get_raw_response_from_telemetry_server(
             urljoin(TELEMETRY_SERVER_URL, f"waypoints/get_new/{self.instance_id}"),
             session=self.waypoints_session,
         )
 
-        self.logger.info(f"{new_waypoints_list}")
-
-        if new_waypoints_list == {}:
+        if new_waypoints == {}:
             self.logger.info("No new waypoints received from telemetry server.")
             return
 
-        if not isinstance(new_waypoints_list, list):
-            self.logger.info(f"Invalid waypoints format: {new_waypoints_list}. Expected a list.")
+        self.logger.info(f"Received waypoints: {new_waypoints}")
+
+        if not isinstance(new_waypoints, list):
+            self.logger.error(
+                f"Invalid waypoints format: {new_waypoints}. Expected a list."
+            )
             return
 
-        # parse waypoints
-        waypoints_nav_sat_fix_list = []
-        for waypoint in new_waypoints_list:
-            try:
-                if not (isinstance(waypoint, list) or isinstance(waypoint, tuple)):
-                    raise TypeError("Waypoint is not a list or tuple.")
-
-                if len(waypoint) != 2:
-                    raise ValueError("Waypoint does not have exactly 2 elements.")
-                latitude, longitude = waypoint
-
-                if not (isinstance(latitude, float) or isinstance(latitude, int)):
-                    raise TypeError("Latitude is not a float or int.")
-                if not (isinstance(longitude, float) or isinstance(longitude, int)):
-                    raise TypeError("Longitude is not a float or int.")
-
-                waypoints_nav_sat_fix_list.append(NavSatFix(latitude=float(latitude), longitude=float(longitude)))
-
-            except (ValueError, TypeError) as e:
-                self.logger.info(f"Invalid waypoint format: {waypoint}. Error: {e}")
-                continue
-
-        self.current_waypoints_list = new_waypoints_list
-        self.waypoints_list_publisher.publish(WaypointList(waypoints=waypoints_nav_sat_fix_list))
+        self.current_waypoints = new_waypoints
+        waypoints_nav_sat_fix_list = [
+            NavSatFix(latitude=waypoint[0], longitude=waypoint[1])
+            for waypoint in self.current_waypoints
+        ]
+        self.waypoints_list_publisher.publish(
+            WaypointList(waypoints=waypoints_nav_sat_fix_list)
+        )
 
     def update_autopilot_parameters_from_telemetry(self) -> None:
         """
         Makes an API call to gather the autopilot parameters that the groundstation set,
-        and then publishes the autopilot parameters over ROS so that the autopilot can see them
+        and then publishes the autopilot parameters over ROS so that the autopilot can see them.
         """
 
-        new_autopilot_parameters_dictionary = self.get_raw_response_from_telemetry_server(
+        new_autopilot_parameters = self.get_raw_response_from_telemetry_server(
             urljoin(
                 TELEMETRY_SERVER_URL,
                 f"autopilot_parameters/get_new/{self.instance_id}",
@@ -568,18 +593,24 @@ class TelemetryNode(Node):
             session=self.autopilot_parameters_session,
         )
 
-        if new_autopilot_parameters_dictionary == {}:
+        if new_autopilot_parameters == {}:
             return
 
         for (
             new_autopilot_parameter_name,
             new_autopilot_parameters_value,
-        ) in new_autopilot_parameters_dictionary.items():
-            self.autopilot_parameters_dictionary[new_autopilot_parameter_name] = new_autopilot_parameters_value
+        ) in new_autopilot_parameters.items():
+            self.autopilot_parameters[new_autopilot_parameter_name] = (
+                new_autopilot_parameters_value
+            )
 
-        # if this is a new set of parameters, then update the ROS2 topic so that the autopilot actually knows what the new parameters are
-        serialized_autopilot_parameters_string = String(data=json.dumps(self.autopilot_parameters_dictionary))
-        self.autopilot_parameters_publisher.publish(serialized_autopilot_parameters_string)
+        # update the ROS2 topic so that the autopilot actually knows what the new parameters are
+        serialized_autopilot_parameters_string = String(
+            data=json.dumps(self.autopilot_parameters)
+        )
+        self.autopilot_parameters_publisher.publish(
+            serialized_autopilot_parameters_string
+        )
 
 
 def main() -> None:
