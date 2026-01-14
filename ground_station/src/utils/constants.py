@@ -4,13 +4,14 @@ import os
 import shutil
 import time
 from enum import auto
-from pathlib import PurePath
+from pathlib import Path
 from types import SimpleNamespace
 from urllib.parse import urljoin
 
 import requests
 from qtpy.QtCore import QPoint, QRect, QSize, Qt
 from qtpy.QtGui import QColor, QPalette
+import requests.adapters
 from strenum import StrEnum
 
 from utils import misc
@@ -108,8 +109,15 @@ ONE_MS_TIMER = misc.create_timer(1)
 START_TIME: float = time.time()
 
 # server ports
-ASSET_SERVER_PORT: int = 8000
-GO_SERVER_PORT: int = 3001
+ASSET_SERVER_PORT = 8000
+CDN_SERVER_PORT = 8080
+GO_SERVER_PORT = 3001
+
+JS_LIBRARIES: tuple[str, ...] = (
+    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css", 
+    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", 
+    "https://cdn.jsdelivr.net/gh/bbecquet/Leaflet.RotatedMarker@master/leaflet.rotatedMarker.js"
+)
 
 # url for local waypoints server
 WAYPOINTS_SERVER_URL: str = f"http://localhost:{GO_SERVER_PORT}/waypoints"
@@ -176,17 +184,17 @@ REQ_SESSION.mount("https://", ADAPTER)
 
 try:
     # should be the path to wherever `ground_station` is located
-    TOP_LEVEL_DIR = PurePath(os.getcwd())
+    TOP_LEVEL_DIR = Path(os.getcwd())
 
-    SRC_DIR = PurePath(TOP_LEVEL_DIR / "src")
-    DATA_DIR = PurePath(TOP_LEVEL_DIR / "app_data")
+    SRC_DIR = Path(TOP_LEVEL_DIR / "src")
+    DATA_DIR = Path(TOP_LEVEL_DIR / "app_data")
 
-    MAP_DIR = PurePath(SRC_DIR / "widgets" / "map_widget")
-    HTML_MAP_PATH = PurePath(MAP_DIR / "map.html")
+    MAP_DIR = Path(SRC_DIR / "widgets" / "map_widget")
+    HTML_MAP_PATH = Path(MAP_DIR / "map.html")
     HTML_MAP = open(HTML_MAP_PATH).read()
 
-    CAMERA_DIR = PurePath(SRC_DIR / "widgets" / "camera_widget")
-    HTML_CAMERA_PATH = PurePath(CAMERA_DIR / "camera.html")
+    CAMERA_DIR = Path(SRC_DIR / "widgets" / "camera_widget")
+    HTML_CAMERA_PATH = Path(CAMERA_DIR / "camera.html")
     HTML_CAMERA = open(HTML_CAMERA_PATH).read()
 
     if __name__ == "__main__":
@@ -196,18 +204,18 @@ try:
         if "autopilot_params" not in os.listdir(DATA_DIR):
             os.makedirs(DATA_DIR / "autopilot_params")
 
-        _autopilot_param_editor_dir = PurePath(SRC_DIR / "widgets" / "autopilot_param_editor")
+        _autopilot_param_editor_dir = Path(SRC_DIR / "widgets" / "autopilot_param_editor")
         if "params_temp.json" not in os.listdir(_autopilot_param_editor_dir):
             shutil.copyfile(
-                PurePath(DATA_DIR / "autopilot_params" / "params_default.jsonc"),
-                PurePath(_autopilot_param_editor_dir / "params_temp.json"),
+                Path(DATA_DIR / "autopilot_params" / "params_default.jsonc"),
+                Path(_autopilot_param_editor_dir / "params_temp.json"),
             )
 
-            with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "r") as f:
+            with open(Path(_autopilot_param_editor_dir / "params_temp.json"), "r") as f:
                 lines = f.readlines()
 
             # remove comments and empty lines
-            with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "w") as f:
+            with open(Path(_autopilot_param_editor_dir / "params_temp.json"), "w") as f:
                 for line in lines:
                     if not line.strip().startswith("//"):
                         f.write(line)
@@ -224,11 +232,12 @@ try:
         if "assets" not in os.listdir(DATA_DIR):
             raise Exception("Assets directory not found, please redownload the directory from GitHub.")
 
-    ASSETS_DIR = PurePath(DATA_DIR / "assets")
-    AUTO_PILOT_PARAMS_DIR = PurePath(DATA_DIR / "autopilot_params")
-    BOAT_DATA_DIR = PurePath(DATA_DIR / "boat_data")
-    BOAT_DATA_LIMITS_DIR = PurePath(DATA_DIR / "boat_data_bounds")
-    BUOY_DATA_DIR = PurePath(DATA_DIR / "buoy_data")
+    ASSETS_DIR = Path(DATA_DIR / "assets")
+    CDN_DIR = Path(DATA_DIR / "js_libraries_cache")
+    AUTO_PILOT_PARAMS_DIR = Path(DATA_DIR / "autopilot_params")
+    BOAT_DATA_DIR = Path(DATA_DIR / "boat_data")
+    BOAT_DATA_LIMITS_DIR = Path(DATA_DIR / "boat_data_bounds")
+    BUOY_DATA_DIR = Path(DATA_DIR / "buoy_data")
 
 except Exception as e:
     raise RuntimeError(f"Initialization error: {e}") from e

@@ -46,12 +46,16 @@ check_port() {
 
 GO_PORT=3001
 ASSET_SERVER_PORT=8000
+CDN_SERVER_PORT=8080
 
 echo "Checking Go server port $GO_PORT..."
 check_port "$GO_PORT"
 
 echo "Checking Asset server port $ASSET_SERVER_PORT..."
 check_port "$ASSET_SERVER_PORT"
+
+echo "Checking CDN server port $CDN_SERVER_PORT..."
+check_port "$CDN_SERVER_PORT"
 
 os_type=$(uname -s | tr '[:upper:]' '[:lower:]')
 arch_type=$(uname -m)
