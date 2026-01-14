@@ -22,7 +22,7 @@ from std_msgs.msg import Bool, Float32, Int32, String
 from autoboat_msgs.msg import VESCTelemetryData, WaypointList
 
 from .autopilot_library.utils.constants import CONFIG_DIRECTORY
-from .autopilot_library.utils.function_library import (
+from .autopilot_library.utils.utils_function_library import (
     cartesian_vector_to_polar,
     get_distance_between_positions,
 )

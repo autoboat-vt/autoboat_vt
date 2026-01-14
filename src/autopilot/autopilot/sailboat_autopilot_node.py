@@ -14,7 +14,7 @@ from autoboat_msgs.msg import RCData, WaypointList
 
 from .autopilot_library.sailboat_autopilot import SailboatAutopilot
 from .autopilot_library.utils.constants import CONFIG_DIRECTORY, SailboatAutopilotMode
-from .autopilot_library.utils.function_library import cartesian_vector_to_polar, get_bearing
+from .autopilot_library.utils.utils_function_library import cartesian_vector_to_polar, get_bearing
 from .autopilot_library.utils.position import Position
 
 
