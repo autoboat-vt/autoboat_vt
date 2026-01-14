@@ -58,7 +58,7 @@ class WindSensorPublisher(Node):
         super().__init__("wind_sensor_publisher")
         
         self.apparent_wind_vector_publisher = self.create_publisher(Vector3, '/apparent_wind_vector', qos_profile_sensor_data)
-        self.termination_listener = self.create_subscription(msg_type=Bool, topic="/should_terminate", callback=self.should_terminate_callback, qos_profile=10)
+        self.termination_listener = self.create_subscription(Bool, "/should_terminate", self.should_terminate_callback, 10)
         
         self.get_logger().info("creating wind sensor publisher")
         

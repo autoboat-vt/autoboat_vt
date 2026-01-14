@@ -49,33 +49,28 @@ class SailboatAutopilotNode(Node):
         self.autopilot_refresh_timer = self.create_timer(1 / self.autopilot_parameters["autopilot_refresh_rate"], self.update_ros_topics)
         self.publish_default_autopilot_parameters_timer = self.create_timer(0.1, self.publish_default_autopilot_parameters_timer_callback)
 
-        self.default_autopilot_parameters_publisher = self.create_publisher(msg_type=String, topic="/default_autopilot_parameters", qos_profile=1)
-        self.default_autopilot_parameters_acknowledgement_listener = self.create_subscription(
-            msg_type=Bool,
-            topic="/default_autopilot_parameters_acknowledgement",
-            callback=self.default_autopilot_parameters_acknowledgement_callback,
-            qos_profile=1,
-        )
+        self.default_autopilot_parameters_publisher = self.create_publisher(String, "/default_autopilot_parameters", 1)
+        self.create_subscription(Bool, "/default_autopilot_parameters_acknowledgement", self.default_autopilot_parameters_acknowledgement_callback, 1)
 
-        self.autopilot_parameters_listener = self.create_subscription(msg_type=String, topic="/autopilot_parameters", callback=self.autopilot_parameters_callback, qos_profile=10)
-        self.waypoints_list_listener = self.create_subscription(msg_type=WaypointList, topic="/waypoints_list", callback=self.waypoints_list_callback, qos_profile=10)
+        self.create_subscription(String, "/autopilot_parameters", self.autopilot_parameters_callback, 10)
+        self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10)
 
-        self.position_listener = self.create_subscription(msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=qos_profile_sensor_data)
-        self.velocity_listener = self.create_subscription(msg_type=Twist, topic="/velocity", callback=self.velocity_callback, qos_profile=qos_profile_sensor_data)
-        self.heading_listener = self.create_subscription(msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=qos_profile_sensor_data)
-        self.apparent_wind_vector_listener = self.create_subscription(msg_type=Vector3, topic="/apparent_wind_vector", callback=self.apparent_wind_vector_callback, qos_profile=qos_profile_sensor_data)
-        self.rc_data_listener = self.create_subscription(msg_type=RCData, topic="/rc_data", callback=self.rc_data_callback, qos_profile=qos_profile_sensor_data)
+        self.create_subscription(NavSatFix, "/position", self.position_callback, qos_profile_sensor_data)
+        self.create_subscription(Twist, "/velocity", self.velocity_callback, qos_profile_sensor_data)
+        self.create_subscription(Float32, "/heading", self.heading_callback, qos_profile_sensor_data)
+        self.create_subscription(Vector3, "/apparent_wind_vector", self.apparent_wind_vector_callback, qos_profile_sensor_data)
+        self.create_subscription(RCData, "/rc_data", self.rc_data_callback, qos_profile_sensor_data)
 
-        self.current_waypoint_index_publisher = self.create_publisher(msg_type=Int32, topic="/current_waypoint_index", qos_profile=10)
-        self.autopilot_mode_publisher = self.create_publisher(msg_type=String, topic="/autopilot_mode", qos_profile=qos_profile_sensor_data)
-        self.full_autonomy_maneuver_publisher = self.create_publisher(msg_type=String, topic="/full_autonomy_maneuver", qos_profile=qos_profile_sensor_data)
-        self.desired_heading_publisher = self.create_publisher(msg_type=Float32, topic="/desired_heading", qos_profile=10)
+        self.current_waypoint_index_publisher = self.create_publisher(Int32, "/current_waypoint_index", 10)
+        self.autopilot_mode_publisher = self.create_publisher(String, "/autopilot_mode", qos_profile_sensor_data)
+        self.full_autonomy_maneuver_publisher = self.create_publisher(String, "/full_autonomy_maneuver", qos_profile_sensor_data)
+        self.desired_heading_publisher = self.create_publisher(Float32, "/desired_heading", 10)
 
-        self.desired_sail_angle_publisher = self.create_publisher(msg_type=Float32, topic="/desired_sail_angle", qos_profile=qos_profile_sensor_data)
-        self.desired_rudder_angle_publisher = self.create_publisher(msg_type=Float32, topic="/desired_rudder_angle", qos_profile=qos_profile_sensor_data)
+        self.desired_sail_angle_publisher = self.create_publisher(Float32, "/desired_sail_angle", qos_profile_sensor_data)
+        self.desired_rudder_angle_publisher = self.create_publisher(Float32, "/desired_rudder_angle", qos_profile_sensor_data)
 
-        self.zero_rudder_encoder_publisher = self.create_publisher(msg_type=Bool, topic="/zero_rudder_encoder", qos_profile=10)
-        self.zero_winch_encoder_publisher = self.create_publisher(msg_type=Bool, topic="/zero_winch_encoder", qos_profile=10)
+        self.zero_rudder_encoder_publisher = self.create_publisher(Bool, "/zero_rudder_encoder", 10)
+        self.zero_winch_encoder_publisher = self.create_publisher(Bool, "/zero_winch_encoder", 10)
 
         # Default values
         self.position = Position(longitude=0.0, latitude=0.0)

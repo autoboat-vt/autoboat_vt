@@ -54,14 +54,13 @@ class VESCPublisher(Node):
         self.missed_measurements_in_a_row = 0
         self.last_command_time = 0
         
-        self.controlTypeSub = self.create_subscription(msg_type= VESCControlData, topic='/propeller_motor_control_struct', callback=self.receive_control_data_callback, qos_profile=qos_profile_sensor_data)
-        
+        self.create_subscription(VESCControlData, '/propeller_motor_control_struct', self.receive_control_data_callback, qos_profile_sensor_data)
         self.vesc_telemetry_data_publisher = self.create_publisher(VESCTelemetryData, "/vesc_telemetry_data", qos_profile_sensor_data)
         
         
         timer_period = 0.05  # seconds
         
-        self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.create_timer(timer_period, self.timer_callback)
     
     
     def receive_control_data_callback(self, msg: VESCControlData):

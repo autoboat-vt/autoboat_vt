@@ -103,15 +103,15 @@ class SimulationNode(Node):
         super().__init__("simulation")
         
         # NOTE: All units are in standard SI units and angle is measured in degrees        
-        self.position_publisher = self.create_publisher(msg_type=NavSatFix, topic="/position", qos_profile=qos_profile_sensor_data)
-        self.velocity_publisher = self.create_publisher(msg_type=Twist, topic="/velocity", qos_profile=qos_profile_sensor_data)
-        self.heading_publisher = self.create_publisher(msg_type=Float32, topic="/heading", qos_profile=qos_profile_sensor_data)
-        self.apparent_wind_vector_publisher = self.create_publisher(msg_type=Vector3, topic="/apparent_wind_vector", qos_profile=qos_profile_sensor_data)
+        self.position_publisher = self.create_publisher(NavSatFix, "/position", qos_profile_sensor_data)
+        self.velocity_publisher = self.create_publisher(Twist, "/velocity", qos_profile_sensor_data)
+        self.heading_publisher = self.create_publisher(Float32, "/heading", qos_profile_sensor_data)
+        self.apparent_wind_vector_publisher = self.create_publisher(Vector3, "/apparent_wind_vector", qos_profile_sensor_data)
         
-        self.rudder_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_rudder_angle", callback=self.desired_rudder_angle_callback, qos_profile=qos_profile_sensor_data)
-        self.sail_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_sail_angle", callback=self.desired_sail_angle_callback, qos_profile=qos_profile_sensor_data)
+        self.create_subscription(Float32, "/desired_rudder_angle", self.desired_rudder_angle_callback, qos_profile_sensor_data)
+        self.create_subscription(Float32, "/desired_sail_angle", self.desired_sail_angle_callback, qos_profile_sensor_data)
+        self.create_subscription(Bool, "/should_terminate", self.should_terminate_callback, 10)
         
-        self.termination_listener = self.create_subscription(msg_type=Bool, topic="/should_terminate", callback=self.should_terminate_callback, qos_profile=10)
         
         self.get_logger().info(f"Creating simulation docker container. If this is your first time running the simulation, this may take a while because it needs to download the docker image. Please wait...")
         

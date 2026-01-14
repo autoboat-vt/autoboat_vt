@@ -61,7 +61,7 @@ class RCPublisher(Node):
         self.callback_count = 0
                 
         self.rc_data_publisher = self.create_publisher(RCData, '/rc_data', qos_profile_sensor_data)
-        self.termination_listener = self.create_subscription(msg_type=Bool, topic="/should_terminate", callback=self.should_terminate_callback, qos_profile=10)
+        self.termination_listener = self.create_subscription(Bool, "/should_terminate", self.should_terminate_callback, 10)
 
 
 

@@ -86,7 +86,6 @@ class TelemetryNode(Node):
 
 
 
-
         self.logger = self.get_logger()
 
         self.boat_status_session = requests.Session()
@@ -109,7 +108,7 @@ class TelemetryNode(Node):
 
         self.create_timer(0.01, self.update_boat_status)  # 10 ms
         self.create_timer(0.5, self.update_waypoints_from_telemetry)  # 500 ms
-        self.create_timer(0.5, self.update_autopilot_parameters_from_telemetry)
+        self.create_timer(0.5, self.update_autopilot_parameters_from_telemetry) # 500 ms
 
         self.cv_bridge = CvBridge()
 
@@ -118,158 +117,29 @@ class TelemetryNode(Node):
             self.autopilot_parameters: dict[str, dict[str, Any]] = json.load(parameters_file)
 
 
+        self.autopilot_parameters_publisher = self.create_publisher(String, "/autopilot_parameters", 10)
+        self.sensors_parameters_publisher = self.create_publisher(String, "/sensors_parameters", 10)
 
-        self.autopilot_parameters_publisher = self.create_publisher(msg_type=String, topic="/autopilot_parameters", qos_profile=10)
-        self.sensors_parameters_publisher = self.create_publisher(msg_type=String, topic="/sensors_parameters", qos_profile=10)
-
-        self.waypoints_list_publisher = self.create_publisher(msg_type=WaypointList, topic="/waypoints_list", qos_profile=10)
-        self.desired_heading_listener = self.create_subscription(msg_type=Float32, topic="/desired_heading", callback=self.desired_heading_callback, qos_profile=10)
+        self.waypoints_list_publisher = self.create_publisher(WaypointList, "/waypoints_list", 10)
+        self.create_subscription(Float32, "/desired_heading", self.desired_heading_callback, 10)
         
-        self.current_waypoint_index_listener = self.create_subscription(msg_type=Int32, topic="/current_waypoint_index", callback=self.current_waypoint_index_callback, qos_profile=10)
-        self.full_autonomy_maneuver_listener = self.create_subscription(msg_type=String, topic="/full_autonomy_maneuver", callback=self.full_autonomy_maneuver_callback, qos_profile=qos_profile_sensor_data)
-        self.autopilot_mode_listener = self.create_subscription(msg_type=String, topic="/autopilot_mode", callback=self.autopilot_mode_callback, qos_profile=qos_profile_sensor_data)
+        self.create_subscription(Int32, "/current_waypoint_index", self.current_waypoint_index_callback, 10)
+        self.create_subscription(String, "/full_autonomy_maneuver", self.full_autonomy_maneuver_callback, qos_profile_sensor_data)
+        self.create_subscription(String, "/autopilot_mode", self.autopilot_mode_callback, qos_profile_sensor_data)
         
-        self.position_listener = self.create_subscription(msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=qos_profile_sensor_data)
-        self.velocity_listener = self.create_subscription(msg_type=Twist, topic="/velocity", callback=self.velocity_callback, qos_profile=qos_profile_sensor_data)
-        self.heading_listener = self.create_subscription(msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=qos_profile_sensor_data)
-        self.apparent_wind_vector_listener = self.create_subscription(msg_type=Vector3, topic="/apparent_wind_vector", callback=self.apparent_wind_vector_callback, qos_profile=qos_profile_sensor_data)
-        self.vesc_telemetry_data_listener = self.create_subscription(msg_type=VESCTelemetryData, topic="/vesc_telemetry_data", callback=self.vesc_telemetry_data_callback, qos_profile=qos_profile_sensor_data)
-        self.desired_sail_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_sail_angle", callback=self.desired_sail_angle_callback, qos_profile=qos_profile_sensor_data)
-        self.desired_rudder_angle_listener = self.create_subscription(msg_type=Float32, topic="/desired_rudder_angle", callback=self.desired_rudder_angle_callback, qos_profile=qos_profile_sensor_data)
+        self.create_subscription(NavSatFix, "/position", self.position_callback, qos_profile_sensor_data)
+        self.create_subscription(Twist, "/velocity", self.velocity_callback, qos_profile_sensor_data)
+        self.create_subscription(Float32, "/heading", self.heading_callback, qos_profile_sensor_data)
+        self.create_subscription(Vector3, "/apparent_wind_vector", self.apparent_wind_vector_callback, qos_profile_sensor_data)
+        self.create_subscription(VESCTelemetryData, "/vesc_telemetry_data", self.vesc_telemetry_data_callback, qos_profile_sensor_data)
+        self.create_subscription(Float32, "/desired_sail_angle", self.desired_sail_angle_callback, qos_profile_sensor_data)
+        self.create_subscription(Float32, "/desired_rudder_angle", self.desired_rudder_angle_callback, qos_profile_sensor_data)
         
-        self.camera_rgb_image_listener = self.create_subscription(msg_type=Image, topic="/camera/camera/color/image_raw", callback=self.camera_rgb_image_callback, qos_profile=qos_profile_sensor_data)
+        self.create_subscription(Image, "/camera/camera/color/image_raw", self.camera_rgb_image_callback, qos_profile_sensor_data)
 
- 
-
-    def position_callback(self, position: NavSatFix) -> None:
-        """
-        Callback function for the position topic. Updates the boat's current position.
-
-        Parameters
-        ----------
-        position
-            The current GPS position of the boat.
-        """
-
-        self.position = position
-
-
-    def velocity_callback(self, velocity_vector: Twist) -> None:
-        """
-        Callback function for the velocity topic. Updates the boat's current velocity vector and speed.
-
-        Parameters
-        ----------
-        velocity_vector
-            The current velocity vector of the boat.
-        """
-
-        self.velocity_vector = np.array([velocity_vector.linear.x, velocity_vector.linear.y], dtype=np.float64)
-        self.speed = np.linalg.norm(self.velocity_vector)
-
-
-    def heading_callback(self, heading: Float32) -> None:
-        """
-        Callback function for the heading topic. Updates the boat's current heading.
-
-        Parameters
-        ----------
-        heading
-            The current heading of the boat.
-        """
-
-        self.heading = heading.data
-
-
-    def apparent_wind_vector_callback(self, apparent_wind_vector: Vector3) -> None:
-        """
-        Callback function for the apparent wind vector topic. Updates the boat's current apparent wind vector, speed, and angle.
-
-        Parameters
-        ----------
-        apparent_wind_vector
-            The current apparent wind vector of the boat.
-        """
-
-        self.apparent_wind_vector = np.array([apparent_wind_vector.x, apparent_wind_vector.y], dtype=np.float64)
-        self.apparent_wind_speed, self.apparent_wind_angle = cartesian_vector_to_polar(apparent_wind_vector.x, apparent_wind_vector.y)
-
-
-    def desired_heading_callback(self, desired_heading: Float32) -> None:
-        """
-        Callback function for the desired heading topic. Updates the boat's desired heading.
-
-        Parameters
-        ----------
-        desired_heading
-            The desired heading of the boat.
-        """
-
-        self.desired_heading = desired_heading.data
-
-
-    def vesc_telemetry_data_callback(self, vesc_telemetry_data: VESCTelemetryData) -> None:
-        """
-        Callback function for the VESC telemetry data topic. Updates the boat's VESC telemetry data.
-
-        Parameters
-        ----------
-        vesc_telemetry_data
-            The current VESC telemetry data of the boat.
-        """
-
-        self.vesc_telemetry_data_rpm = vesc_telemetry_data.rpm
-        self.vesc_telemetry_data_duty_cycle = vesc_telemetry_data.duty_cycle
-        self.vesc_telemetry_data_amp_hours = vesc_telemetry_data.amp_hours
-        self.vesc_telemetry_data_amp_hours_charged = vesc_telemetry_data.amp_hours_charged
-        self.vesc_telemetry_data_current_to_vesc = vesc_telemetry_data.current_to_vesc
-        self.vesc_telemetry_data_voltage_to_motor = vesc_telemetry_data.voltage_to_motor
-        self.vesc_telemetry_data_voltage_to_vesc = vesc_telemetry_data.voltage_to_vesc
-        self.vesc_telemetry_data_wattage_to_motor = vesc_telemetry_data.wattage_to_motor
-        self.vesc_telemetry_data_time_since_vesc_startup_in_ms = vesc_telemetry_data.time_since_vesc_startup_in_ms
-        self.vesc_telemetry_data_motor_temperature = vesc_telemetry_data.motor_temperature
-        self.vesc_telemetry_data_vesc_temperature = vesc_telemetry_data.vesc_temperature
-
-
-    def current_waypoint_index_callback(self, current_waypoint_index: Int32) -> None:
-        """
-        Callback function for the current waypoint index topic. Updates the boat's current waypoint index.
-
-        Parameters
-        ----------
-        current_waypoint_index
-            The current waypoint index of the boat.
-        """
-
-        self.current_waypoint_index = current_waypoint_index.data
-
-
-    def full_autonomy_maneuver_callback(self, full_autonomy_maneuver: String) -> None:
-        """
-        Callback function for the full autonomy maneuver topic. Updates the boat's full autonomy maneuver.
-
-        Parameters
-        ----------
-        full_autonomy_maneuver
-            The current full autonomy maneuver of the boat.
-        """
-
-        self.full_autonomy_maneuver = full_autonomy_maneuver.data
-
-
-    def autopilot_mode_callback(self, autopilot_mode: String) -> None:
-        """
-        Callback function for the autopilot mode topic. Updates the boat's autopilot mode.
-
-        Parameters
-        ----------
-        autopilot_mode
-            The current autopilot mode of the boat.
-        """
-
-        self.autopilot_mode = autopilot_mode.data
-
-
+    
+    
+    
     def camera_rgb_image_callback(self, camera_rgb_image: Image) -> None:
         """
         Callback function for the camera RGB image topic. Updates the boat's current RGB image in base64 encoded format.
@@ -298,42 +168,63 @@ class TelemetryNode(Node):
         self.base64_encoded_current_rgb_image = base64.b64encode(buffer).decode()
 
 
+    def position_callback(self, position: NavSatFix) -> None:
+        self.position = position
+
+
+    def velocity_callback(self, velocity_vector: Twist) -> None:
+        self.velocity_vector = np.array([velocity_vector.linear.x, velocity_vector.linear.y], dtype=np.float64)
+        self.speed = np.linalg.norm(self.velocity_vector)
+
+
+    def heading_callback(self, heading: Float32) -> None:
+        self.heading = heading.data
+
+
+    def apparent_wind_vector_callback(self, apparent_wind_vector: Vector3) -> None:
+        self.apparent_wind_vector = np.array([apparent_wind_vector.x, apparent_wind_vector.y], dtype=np.float64)
+        self.apparent_wind_speed, self.apparent_wind_angle = cartesian_vector_to_polar(apparent_wind_vector.x, apparent_wind_vector.y)
+
+
+    def desired_heading_callback(self, desired_heading: Float32) -> None:
+        self.desired_heading = desired_heading.data
+
+
+    def vesc_telemetry_data_callback(self, vesc_telemetry_data: VESCTelemetryData) -> None:
+        self.vesc_telemetry_data_rpm = vesc_telemetry_data.rpm
+        self.vesc_telemetry_data_duty_cycle = vesc_telemetry_data.duty_cycle
+        self.vesc_telemetry_data_amp_hours = vesc_telemetry_data.amp_hours
+        self.vesc_telemetry_data_amp_hours_charged = vesc_telemetry_data.amp_hours_charged
+        self.vesc_telemetry_data_current_to_vesc = vesc_telemetry_data.current_to_vesc
+        self.vesc_telemetry_data_voltage_to_motor = vesc_telemetry_data.voltage_to_motor
+        self.vesc_telemetry_data_voltage_to_vesc = vesc_telemetry_data.voltage_to_vesc
+        self.vesc_telemetry_data_wattage_to_motor = vesc_telemetry_data.wattage_to_motor
+        self.vesc_telemetry_data_time_since_vesc_startup_in_ms = vesc_telemetry_data.time_since_vesc_startup_in_ms
+        self.vesc_telemetry_data_motor_temperature = vesc_telemetry_data.motor_temperature
+        self.vesc_telemetry_data_vesc_temperature = vesc_telemetry_data.vesc_temperature
+
+
+    def current_waypoint_index_callback(self, current_waypoint_index: Int32) -> None:
+        self.current_waypoint_index = current_waypoint_index.data
+
+
+    def full_autonomy_maneuver_callback(self, full_autonomy_maneuver: String) -> None:
+        self.full_autonomy_maneuver = full_autonomy_maneuver.data
+
+
+    def autopilot_mode_callback(self, autopilot_mode: String) -> None:
+        self.autopilot_mode = autopilot_mode.data
+
+
     def desired_sail_angle_callback(self, desired_sail_angle: Float32) -> None:
-        """
-        Callback function for the desired sail angle topic. Updates the boat's desired sail angle.
-
-        Parameters
-        ----------
-        desired_sail_angle
-            The desired sail angle of the boat.
-        """
-
         self.desired_sail_angle = desired_sail_angle.data
 
 
     def desired_rudder_angle_callback(self, desired_rudder_angle: Float32) -> None:
-        """
-        Callback function for the desired rudder angle topic. Updates the boat's desired rudder angle.
-
-        Parameters
-        ----------
-        desired_rudder_angle
-            The desired rudder angle of the boat.
-        """
-
         self.desired_rudder_angle = desired_rudder_angle.data
 
 
     def should_terminate_callback(self, msg: Bool) -> None:
-        """
-        Callback function for the should terminate topic. Shuts down the node if the message data is True.
-
-        Parameters
-        ----------
-        msg
-            The message indicating whether to terminate the node.
-        """
-
         if msg.data:
             rclpy.shutdown()
 

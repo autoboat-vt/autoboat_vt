@@ -50,24 +50,25 @@ class MotorboatAutopilotNode(Node):
 
         self.autopilot_refresh_timer = self.create_timer(1 / self.autopilot_parameters["autopilot_refresh_rate"], self.update_ros_topics)
 
-        self.autopilot_parameters_listener = self.create_subscription(msg_type=String, topic="/autopilot_parameters", callback=self.autopilot_parameters_callback, qos_profile=10)
-        self.waypoints_list_listener = self.create_subscription(msg_type=WaypointList, topic="/waypoints_list", callback=self.waypoints_list_callback, qos_profile=10)
+        self.create_subscription(String, "/autopilot_parameters", self.autopilot_parameters_callback, 10)
+        self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10)
 
-        self.position_listener = self.create_subscription(msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=qos_profile_sensor_data)
-        self.velocity_listener = self.create_subscription(msg_type=Twist, topic="/velocity", callback=self.velocity_callback, qos_profile=qos_profile_sensor_data)
-        self.heading_listener = self.create_subscription(msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=qos_profile_sensor_data)
-        self.rc_data_listener = self.create_subscription(msg_type=RCData, topic="/rc_data", callback=self.rc_data_callback, qos_profile=qos_profile_sensor_data)
+        self.create_subscription(NavSatFix, "/position", self.position_callback, qos_profile_sensor_data)
+        self.create_subscription(Twist, "/velocity", self.velocity_callback, qos_profile_sensor_data)
+        self.create_subscription(Float32, "/heading", self.heading_callback, qos_profile_sensor_data)
+        self.create_subscription(RCData, "/rc_data", self.rc_data_callback, qos_profile_sensor_data)
 
-        self.current_waypoint_index_publisher = self.create_publisher(msg_type=Int32, topic="/current_waypoint_index", qos_profile=10)
-        self.autopilot_mode_publisher = self.create_publisher(msg_type=String, topic="/autopilot_mode", qos_profile=qos_profile_sensor_data)
-        self.full_autonomy_maneuver_publisher = self.create_publisher(msg_type=String, topic="/full_autonomy_maneuver", qos_profile=qos_profile_sensor_data)
-        self.desired_heading_publisher = self.create_publisher(msg_type=Float32, topic="/desired_heading", qos_profile=10)
+        self.current_waypoint_index_publisher = self.create_publisher(Int32, "/current_waypoint_index", 10)
+        self.autopilot_mode_publisher = self.create_publisher(String, "/autopilot_mode", qos_profile_sensor_data)
+        self.full_autonomy_maneuver_publisher = self.create_publisher(String, "/full_autonomy_maneuver", qos_profile_sensor_data)
+        self.desired_heading_publisher = self.create_publisher(Float32, "/desired_heading", 10)
 
-        self.should_propeller_motor_be_powered_publisher = self.create_publisher(msg_type=Bool, topic="/should_propeller_motor_be_powered", qos_profile=10)
-        self.propeller_motor_control_struct_publisher = self.create_publisher(msg_type=VESCControlData, topic="/propeller_motor_control_struct", qos_profile=qos_profile_sensor_data)
-        self.desired_rudder_angle_publisher = self.create_publisher(msg_type=Float32, topic="/desired_rudder_angle", qos_profile=qos_profile_sensor_data)
+        self.should_propeller_motor_be_powered_publisher = self.create_publisher(Bool, "/should_propeller_motor_be_powered", 10)
+        self.propeller_motor_control_struct_publisher = self.create_publisher(VESCControlData, "/propeller_motor_control_struct", qos_profile_sensor_data)
+        self.desired_rudder_angle_publisher = self.create_publisher(Float32, "/desired_rudder_angle", qos_profile_sensor_data)
 
-        self.zero_rudder_encoder_publisher = self.create_publisher(msg_type=Bool, topic="/zero_rudder_encoder", qos_profile=10)
+        self.zero_rudder_encoder_publisher = self.create_publisher(Bool, "/zero_rudder_encoder", 10)
+
 
         self.heading_pid_controller = DiscretePID(sample_period=(1 / self.autopilot_parameters["autopilot_refresh_rate"]), Kp=1, Ki=0, Kd=0, n=1)
 
@@ -243,42 +244,15 @@ class MotorboatAutopilotNode(Node):
 
 
     def position_callback(self, position: NavSatFix) -> None:
-        """
-        Callback function that is called whenever there is a new position message. Updates the current position of the boat.
-
-        Parameters
-        ----------
-        position
-            A ROS2 message that contains the current GPS position of the boat.
-        """
-
         self.position = Position(longitude=position.longitude, latitude=position.latitude)
 
 
     def velocity_callback(self, velocity: Twist) -> None:
-        """
-        Callback function that is called whenever there is a new velocity message. Updates the current velocity of the boat.
-
-        Parameters
-        ----------
-        velocity
-            A ROS2 message that contains the current velocity of the boat in the local NED frame.
-        """
-
         self.velocity = np.array([velocity.linear.x, velocity.linear.y], dtype=np.float64)
         self.speed = np.linalg.norm(self.velocity)
 
 
     def heading_callback(self, heading: Float32) -> None:
-        """
-        Callback function that is called whenever there is a new heading message. Updates the current heading of the boat.
-
-        Parameters
-        ----------
-        heading
-            A ROS2 message that contains the current heading of the boat measured counter-clockwise from true east.
-        """
-
         self.heading = heading.data
 
 
