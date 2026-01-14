@@ -3,18 +3,18 @@ Package containing modules and classes which aid in the implementation of the au
 
 Contains:
 - constants: Module containing constant values used throughout the autopilot library.
-- function_library: Module with miscellaneous utility functions.
+- utils_function_library: Module with miscellaneous utility functions.
 - DiscretePID: Class implementing a discrete PID controller.
 - Position: Class representing a geographical position with latitude and longitude.
 """
 
 __all__ = [
     "constants",
-    "function_library",
+    "utils_function_library",
     "DiscretePID",
     "Position",
 ]
 
-from . import constants, function_library
+from . import constants, utils_function_library
 from .discrete_pid import DiscretePID
 from .position import Position

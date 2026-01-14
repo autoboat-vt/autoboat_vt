@@ -6,7 +6,7 @@ Includes:
 - SailboatAutopilot: Class implementing the autopilot logic for sailboats.
 - DiscretePID: Class implementing a discrete PID controller.
 - Position: Class representing a geographical position with latitude and longitude.
-- function_library: Module with miscellaneous utility functions.
+- utils_function_library: Module with miscellaneous utility functions.
 - constants: Module containing constant values used throughout the autopilot library.
 """
 
@@ -15,12 +15,12 @@ __all__ = [
     "MotorboatAutopilot",
     "Position",
     "SailboatAutopilot",
-    "function_library",
+    "utils_function_library",
     "constants",
 ]
 
 from .motorboat_autopilot import MotorboatAutopilot
 from .sailboat_autopilot import SailboatAutopilot
-from .utils import constants, function_library
+from .utils import constants, utils_function_library
 from .utils.discrete_pid import DiscretePID
 from .utils.position import Position
