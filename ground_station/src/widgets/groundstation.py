@@ -289,7 +289,7 @@ class GroundStationWidget(QWidget):
         self.remote_waypoint_handler = thread_classes.WaypointThreadRouter.RemoteFetcherThread()
         self.remote_waypoint_handler.response.connect(self.check_telemetry_waypoints)
         self.thirty_second_timer.timeout.connect(self.remote_waypoint_handler_starter)
-        
+
         for timer in self.timers:
             timer.start()
 
@@ -342,9 +342,7 @@ class GroundStationWidget(QWidget):
 
         try:
             remote_waypoints: list[list[float]] = constants.REQ_SESSION.get(
-                urljoin(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)
-                )
+                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"], str(constants.TELEMETRY_SERVER_INSTANCE_ID))
             ).json()
 
             if remote_waypoints:
@@ -676,9 +674,7 @@ class GroundStationWidget(QWidget):
         if not self.local_waypoint_handler.isRunning():
             self.local_waypoint_handler.start()
 
-    def update_waypoints_display(
-        self, request_result: tuple[list[list[int | float]], constants.TelemetryStatus]
-    ) -> None:
+    def update_waypoints_display(self, request_result: tuple[list[list[int | float]], constants.TelemetryStatus]) -> None:
         """
         Update waypoints display with waypoints fetched from the local server.
 
@@ -731,9 +727,7 @@ class GroundStationWidget(QWidget):
             self.right_tab1_table.resizeColumnsToContents()
             self.right_tab1_table.resizeRowsToContents()
 
-    def check_telemetry_waypoints(
-        self, request_result: tuple[list[list[int | float]], constants.TelemetryStatus]
-    ) -> None:
+    def check_telemetry_waypoints(self, request_result: tuple[list[list[int | float]], constants.TelemetryStatus]) -> None:
         """
         Check if the waypoints on the telemetry server are the same as the local waypoints.
         If they are different, show a dialog and let user decide whether to update the local waypoints.

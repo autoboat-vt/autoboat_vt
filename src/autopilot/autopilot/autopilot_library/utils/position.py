@@ -98,7 +98,9 @@ class Position:
 
         return utm_coord.easting, utm_coord.northing
 
-    def set_local_coordinates(self, local_x: float, local_y: float, reference_longitude: float, reference_latitude: float) -> None:
+    def set_local_coordinates(
+        self, local_x: float, local_y: float, reference_longitude: float, reference_latitude: float
+    ) -> None:
         """
         Sets the position using local NED coordinates.
 
@@ -114,9 +116,7 @@ class Position:
             The reference latitude for the NED frame.
         """
 
-        self.latitude, self.longitude, _ = navpy.ned2lla(
-            local_y, local_x, 0, reference_latitude, reference_longitude, 0
-        )
+        self.latitude, self.longitude, _ = navpy.ned2lla(local_y, local_x, 0, reference_latitude, reference_longitude, 0)
 
     def get_local_coordinates(self, reference_longitude_latitude: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         """

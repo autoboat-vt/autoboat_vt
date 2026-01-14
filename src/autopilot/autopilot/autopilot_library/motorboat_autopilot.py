@@ -7,9 +7,7 @@ from .utils.position import Position
 
 
 class MotorboatAutopilot:
-    """
-    A class containing algorithms to control a motorboat given sensor data.
-    """
+    """A class containing algorithms to control a motorboat given sensor data."""
 
     def __init__(self, parameters: dict[str, Any], logger: RcutilsLogger) -> None:
         """
@@ -37,14 +35,14 @@ class MotorboatAutopilot:
 
         self.waypoints: list[Position] | None = None
         self.current_waypoint_index: int = 0
-        
-        
+
+
     def reset(self) -> None:
         """Resets the autopilot to its initial state."""
 
         self.__init__(self.parameters, self.logger)
 
-    
+
     def update_waypoints_list(self, waypoints_list: list[Position]) -> None:
         """
         Updates the list of waypoints that the boat should follow.
@@ -54,5 +52,3 @@ class MotorboatAutopilot:
         waypoints_list
             A list of ``Position`` objects that form the path the boat should follow.
         """
-
-        pass

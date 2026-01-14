@@ -265,9 +265,7 @@ class InstanceHandler(QWidget):
                     and all(isinstance(instance_id, int) for instance_id in available_ids)
                 ):
                     constants.TELEMETRY_SERVER_INSTANCE_ID = random.choice(available_ids)
-                    print(
-                        f"[Info] Reconnected to telemetry server. New instance id is {constants.TELEMETRY_SERVER_INSTANCE_ID}."
-                    )
+                    print(f"[Info] Reconnected to telemetry server. New instance id is {constants.TELEMETRY_SERVER_INSTANCE_ID}.")
                 else:
                     print(
                         "[Info] Cannot find any instances on server when attempting to reconnect. Creating an instance to connect to."
@@ -285,9 +283,7 @@ class InstanceHandler(QWidget):
         # region update and create new instance widgets
         # note that new_ids is not necessarily a superset of existing_ids
         existing_ids = set(self.widgets_by_id.keys())
-        new_ids: set[int] = {
-            instance["instance_id"] for instance in instances if isinstance(instance.get("instance_id"), int)
-        }
+        new_ids: set[int] = {instance["instance_id"] for instance in instances if isinstance(instance.get("instance_id"), int)}
 
         # how this works:
         # a = {1, 2, 3, 4, 5}
@@ -366,9 +362,7 @@ class InstanceHandler(QWidget):
         """Create a new instance on the telemetry server."""
 
         try:
-            new_instance_id: int = constants.REQ_SESSION.get(
-                constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"]
-            ).json()
+            new_instance_id: int = constants.REQ_SESSION.get(constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"]).json()
 
             instance_info: dict[str, Any] = constants.REQ_SESSION.get(
                 urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_instance_info"], str(new_instance_id))
@@ -393,9 +387,7 @@ class InstanceHandler(QWidget):
             alert_message = "All instances deleted successfully."
 
             if constants.TELEMETRY_SERVER_INSTANCE_ID != constants.TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE:
-                new_instance_id: int = constants.REQ_SESSION.get(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"]
-                ).json()
+                new_instance_id: int = constants.REQ_SESSION.get(constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"]).json()
 
                 alert_message = f"All instances deleted. New instance created with ID #{new_instance_id}."
                 constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
@@ -478,15 +470,15 @@ class InstanceHandler(QWidget):
         else:
             connected_widget = self.widgets_by_id.get(constants.TELEMETRY_SERVER_INSTANCE_ID)
             if connected_widget:
-                status_prefix = f"✓ Connected to: {connected_widget.instance_identifier} (ID: {constants.TELEMETRY_SERVER_INSTANCE_ID}) | "
+                status_prefix = (
+                    f"✓ Connected to: {connected_widget.instance_identifier} (ID: {constants.TELEMETRY_SERVER_INSTANCE_ID}) | "
+                )
             else:
                 status_prefix = f"✓ Connected to instance #{constants.TELEMETRY_SERVER_INSTANCE_ID} | "
 
         if self.current_search_text:
             visible_count = sum(widget.isVisible() for widget in self.widgets_by_id.values())
-            self.status_label.setText(
-                f"{status_prefix}{visible_count} instances found matching '{self.current_search_text}'"
-            )
+            self.status_label.setText(f"{status_prefix}{visible_count} instances found matching '{self.current_search_text}'")
         else:
             self.status_label.setText(f"{status_prefix}{instance_count} instances found")
 
@@ -675,9 +667,7 @@ class InstanceWidget(QFrame):
 
         if self.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
             try:
-                new_instance_id: int = constants.REQ_SESSION.get(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"]
-                ).json()
+                new_instance_id: int = constants.REQ_SESSION.get(constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"]).json()
                 constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
                 constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
 

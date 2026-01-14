@@ -2,13 +2,14 @@
 import rospy
 from ublox_msgs.msg import NavHPPOSLLH, NavRELPOSNED9, NavVELNED
 
+
 class Talker(object):
     def __init__(self):
         self.itow = 0
-        self.pub1 = rospy.Publisher('msg1', NavHPPOSLLH, queue_size=2)
-        self.pub2 = rospy.Publisher('msg2', NavRELPOSNED9, queue_size=2)
-        self.pub3 = rospy.Publisher('msg3', NavVELNED, queue_size=2)
-        self.timer = rospy.Timer(rospy.Duration(0.2),self.publish)
+        self.pub1 = rospy.Publisher("msg1", NavHPPOSLLH, queue_size=2)
+        self.pub2 = rospy.Publisher("msg2", NavRELPOSNED9, queue_size=2)
+        self.pub3 = rospy.Publisher("msg3", NavVELNED, queue_size=2)
+        self.timer = rospy.Timer(rospy.Duration(0.2), self.publish)
 
     def publish(self, event):
         rospy.loginfo("TX %u", self.itow)
@@ -27,11 +28,13 @@ class Talker(object):
 
         self.itow += 1
 
+
 def main():
-    rospy.init_node('talker')
+    rospy.init_node("talker")
     talker = Talker()
     rospy.loginfo("Ready to transmit")
     rospy.spin()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

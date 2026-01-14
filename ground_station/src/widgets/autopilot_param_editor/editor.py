@@ -198,9 +198,7 @@ class AutopilotParamEditor(QWidget):
     def save_parameters_to_file(self) -> None:
         """Save parameters to a file."""
 
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, "Save Parameters to File", "", "JSON Files (*.json);;All Files (*)"
-        )
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save Parameters to File", "", "JSON Files (*.json);;All Files (*)")
         if not file_path:
             return
 
@@ -457,9 +455,7 @@ class AutopilotParamWidget(QFrame):
                 return
 
         else:
-            print(
-                f"[Error] Unexpected data format from telemetry server: {existing_data}. Expected a dictionary of parameters."
-            )
+            print(f"[Error] Unexpected data format from telemetry server: {existing_data}. Expected a dictionary of parameters.")
             return
 
         self.reset_button.setEnabled(True)
@@ -529,9 +525,7 @@ class AutopilotParamWidget(QFrame):
                 edited_data = float(edited_data)
 
             if not isinstance(edited_data, self.type):
-                raise TypeError(
-                    f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}."
-                )
+                raise TypeError(f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}.")
 
             with open(
                 PurePath(constants._autopilot_param_editor_dir / "params_temp.json"),
@@ -592,9 +586,7 @@ class AutopilotParamWidget(QFrame):
                 return
 
             if not isinstance(edited_data, self.type):
-                raise TypeError(
-                    f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}."
-                )
+                raise TypeError(f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}.")
 
         except TypeError:
             print(f"[Error] Invalid value for {self.name}. Resetting to previous value.")

@@ -56,5 +56,26 @@
         "amt22_encoder_library.h": "c",
         "*.def": "c"
     },
-    "C_Cpp.errorSquiggles": "disabled"
+    "C_Cpp.errorSquiggles": "disabled",
+
+    "ruff.path": ["/home/autoboat_user/.local/bin/ruff-autoboat"],
+
+    "evenBetterToml.schema.associations": {"pyproject.toml": false},
+    
+
+    // "editor.codeActionsOnSave": {
+    //     "source.fixAll.ruff": "explicit"
+    // },
+
+
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        // "ruff.lint.enable": true,
+        // "ruff.format.enable": true,
+        // "ruff.nativeServer": "on",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports.ruff": "explicit"
+        }
+    },
 }

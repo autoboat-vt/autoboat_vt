@@ -38,6 +38,7 @@ class MotorboatControls(Enum):
     DUTY_CYCLE = 1
     CURRENT = 2
 
+
 # don't put '/' at the end of the URL
 TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk:8443"
 

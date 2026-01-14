@@ -21,6 +21,7 @@ echo 'alias python="python3"' >> $AUTOBOAT_USER_HOME/.bashrc
 # And you don't have to reinstall them, the changes will automatically be visible if you run another script again
 pip install -e /home/ws/src/vesc/pyvesc/
 pip install -e /home/ws/src/simulation/sailboat_gym/
+pip install -r /home/ws/.devcontainer/required_pip_packages.txt
 
 # Build the ros2 workspace for the first time
 # Building with symlink-install will allow us to edit python files without having to rebuild (which is super annoying!) 
@@ -47,8 +48,8 @@ if [ -f "/etc/udev/rules.d/99-autoboat-udev.rules" ]; then
     rm -f /etc/udev/rules.d/99-autoboat-udev.rules
 fi
 
-sudo 'echo ACTION=="add", ATTRS{idVendor}=="2E8A", ATTRS{idProduct}=="0005", SYMLINK+="pico", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
-sudo 'echo ACTION=="add", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", SYMLINK+="gps", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
+sudo echo 'ACTION=="add", ATTRS{idVendor}=="2E8A", ATTRS{idProduct}=="0005", SYMLINK+="pico", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
+sudo echo 'ACTION=="add", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", SYMLINK+="gps", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
 # sudo echo 'ACTION=="add", ATTRS{idVendor}=="8086", ATTRS{idProduct}=="0b5c", SYMLINK+="camera", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
 sudo echo 'ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="A9001WL3", SYMLINK+="rc", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
 sudo echo 'ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="ABSCDYAB", SYMLINK+="wind_sensor", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules

@@ -79,9 +79,7 @@ class GraphViewer(QWidget):
 
             try:
                 self.available_keys = {
-                    key
-                    for key in boat_data
-                    if isinstance(boat_data[key], (int, float)) and key != "current_waypoint_index"
+                    key for key in boat_data if isinstance(boat_data[key], (int, float)) and key != "current_waypoint_index"
                 }
                 filtered_values = {key: float(boat_data.get(key, np.nan)) for key in self.important_keys}
 
@@ -175,9 +173,7 @@ class GraphViewer(QWidget):
         self.graph_dialog = GraphSelectionDialog(available_keys=self.available_keys, selected_keys=self.important_keys)
         self.graph_dialog.setWindowModality(Qt.ApplicationModal)
         self.graph_dialog.show()
-        self.graph_dialog.apply_button.clicked.connect(
-            lambda: self.apply_graph_selection(self.graph_dialog.selected_keys)
-        )
+        self.graph_dialog.apply_button.clicked.connect(lambda: self.apply_graph_selection(self.graph_dialog.selected_keys))
 
     def apply_graph_selection(self, selected_keys: list[str]) -> None:
         """
