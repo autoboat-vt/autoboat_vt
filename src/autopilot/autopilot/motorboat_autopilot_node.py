@@ -20,7 +20,6 @@ from .autopilot_library.utils.function_library import get_distance_between_angle
 from .autopilot_library.utils.position import Position
 
 
-
 class MotorboatAutopilotNode(Node):
     """
     The autopilot takes in a bunch of sensor data and waypoints and attempts to traverses through

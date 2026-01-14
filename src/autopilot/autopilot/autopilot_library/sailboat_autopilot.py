@@ -5,7 +5,6 @@ import numpy.typing as npt
 from rclpy.impl.rcutils_logger import RcutilsLogger
 from typing_extensions import override
 
-from .base_autopilot import BaseAutopilot
 from .utils.constants import SailboatManeuvers, SailboatStates
 from .utils.position import Position
 from .utils.discrete_pid import DiscretePID
@@ -133,10 +132,8 @@ class SailboatAutopilot:
         global_true_upwind_angle = (global_true_wind_angle + 180) % 360
 
         if is_angle_between_boundaries(global_true_wind_angle, heading, desired_heading):
-        if is_angle_between_boundaries(global_true_wind_angle, heading, desired_heading):
             return SailboatManeuvers.JIBE
 
-        elif is_angle_between_boundaries(global_true_upwind_angle, heading, desired_heading):
         elif is_angle_between_boundaries(global_true_upwind_angle, heading, desired_heading):
             return SailboatManeuvers.TACK
 
@@ -207,7 +204,6 @@ class SailboatAutopilot:
 
         # If desired heading is in zone 1
         if is_angle_between_boundaries(desired_heading, decision_zone_bounds[1], no_sail_zone_bounds[1]):
-        if is_angle_between_boundaries(desired_heading, decision_zone_bounds[1], no_sail_zone_bounds[1]):
             # Starboard side of true wind
             if (current_heading - global_true_up_wind_angle) % 360 < 180:
                 return no_sail_zone_bounds[1], False  # No tack
@@ -218,7 +214,6 @@ class SailboatAutopilot:
 
 
         # If desired heading is in zone 3
-        if is_angle_between_boundaries(desired_heading, decision_zone_bounds[0], no_sail_zone_bounds[0]):
         if is_angle_between_boundaries(desired_heading, decision_zone_bounds[0], no_sail_zone_bounds[0]):
             # Starboard side of true wind
             if (current_heading - global_true_up_wind_angle) % 360 < 180:
