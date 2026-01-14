@@ -439,8 +439,8 @@ class TelemetryNode(Node):
         }
 
         try:
-            route = urljoin(TELEMETRY_SERVER_URL, f"boat_status/set/{self.instance_id}")
-            self.boat_status_session.post(route=route, json=boat_status_dictionary)
+            url = urljoin(TELEMETRY_SERVER_URL, f"boat_status/set/{self.instance_id}")
+            self.boat_status_session.post(url=url, json=boat_status_dictionary)
 
         except Exception as e:
             self.logger.error(f"Could not connect to telemetry server to send boat status update. \nError: {e}")
