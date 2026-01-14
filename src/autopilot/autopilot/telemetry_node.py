@@ -21,15 +21,12 @@ from std_msgs.msg import Bool, Float32, Int32, String
 
 from autoboat_msgs.msg import VESCTelemetryData, WaypointList
 
-from .autopilot_library.utils.constants import CONFIG_DIRECTORY
+from .autopilot_library.utils.constants import CONFIG_DIRECTORY, TELEMETRY_SERVER_URL
 from .autopilot_library.utils.utils_function_library import (
     cartesian_vector_to_polar,
     get_distance_between_positions,
 )
 from .autopilot_library.utils.position import Position
-
-# don't put '/' at the end of the URL
-TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk:8443"
 
 
 class TelemetryNode(Node):

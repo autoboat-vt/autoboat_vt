@@ -3,7 +3,6 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 from rclpy.impl.rcutils_logger import RcutilsLogger
-from typing_extensions import override
 
 from .utils.constants import SailboatManeuvers, SailboatStates
 from .utils.position import Position
