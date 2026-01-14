@@ -5,6 +5,7 @@ from rclpy.impl.rcutils_logger import RcutilsLogger
 from .utils.discrete_pid import DiscretePID
 from .utils.position import Position
 
+
 class MotorboatAutopilot:
     """
     A class containing algorithms to control a motorboat given sensor data.
