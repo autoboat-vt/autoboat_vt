@@ -1,5 +1,6 @@
 import http.server
 import socketserver
+import mimetypes
 import sys
 import threading
 
@@ -23,11 +24,31 @@ class MainWindow(QMainWindow):
     def start_asset_server() -> None:
         """Start a quiet HTTP server for static assets."""
 
+        mimetypes.add_type("image/png", ".png")
+        mimetypes.add_type("text/plain", ".txt")
+
         def handler(*args: tuple, **kwargs: dict) -> http.server.SimpleHTTPRequestHandler:
             return http.server.SimpleHTTPRequestHandler(*args, directory=constants.ASSETS_DIR.as_posix(), **kwargs)
 
         with socketserver.TCPServer(("", constants.ASSET_SERVER_PORT), handler) as httpd:
             print(f"[Info] Serving HTTP assets on port {constants.ASSET_SERVER_PORT}...")
+            httpd.serve_forever()
+
+    @staticmethod
+    def start_cdn_server() -> None:
+        """Start a quiet HTTP server for CDN assets."""
+
+        mimetypes.add_type("text/javascript", ".js")
+        mimetypes.add_type("text/css", ".css")
+
+        def handler(*args: tuple, **kwargs: dict) -> http.server.SimpleHTTPRequestHandler:
+            return http.server.SimpleHTTPRequestHandler(*args, directory=constants.CDN_DIR.as_posix(), **kwargs)
+        
+        for link in constants.JS_LIBRARIES:
+            misc.cache_cdn_file(link, constants.CDN_DIR)
+
+        with socketserver.TCPServer(("", constants.CDN_SERVER_PORT), handler) as httpd:
+            print(f"[Info] Serving CDN assets on port {constants.CDN_SERVER_PORT}...")
             httpd.serve_forever()
 
     def __init__(self) -> None:
@@ -81,6 +102,7 @@ if __name__ == "__main__":
     constants.ICONS = misc.get_icons()
     window = MainWindow()
     threading.Thread(target=MainWindow.start_asset_server, daemon=True).start()
+    threading.Thread(target=MainWindow.start_cdn_server, daemon=True).start()
     app.setStyleSheet(constants.STYLE_SHEET)
     app.setPalette(constants.PALLETTE)
     app.setStyle("Fusion")

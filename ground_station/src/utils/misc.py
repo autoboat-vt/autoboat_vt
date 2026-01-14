@@ -8,11 +8,17 @@ Functions:
 - show_input_dialog: Show an input dialog to get user input.
 - create_timer: Create a QTimer with specified interval and single-shot status.
 - copy_qtimer: Create a copy of a QTimer with the same interval and single-shot status.
+- cache_cdn_file: Download and cache a file to serve in a local CDN server.
 """
 
+import os
 from collections.abc import Callable
 from types import SimpleNamespace
 from typing import TypeVar
+from pathlib import Path
+from requests import RequestException
+
+from utils import constants
 
 import qtawesome as qta
 from qtpy.QtCore import QTimer
@@ -291,3 +297,34 @@ def copy_qtimer(original: QTimer) -> QTimer:
     new_timer.setInterval(original.interval())
     new_timer.setSingleShot(original.isSingleShot())
     return new_timer
+
+def cache_cdn_file(url: str, save_dir: str) -> None:
+    """
+    Download and cache a CDN file locally.
+
+    Parameters
+    ----------
+    url
+        The URL of the CDN file to download.
+    save_dir
+        The directory to save the cached file.
+    """
+
+    file_name = url.split("/")[-1]
+    save_path = Path(save_dir) / file_name
+
+    try:
+        response = constants.REQ_SESSION.get(url)
+        response.raise_for_status()
+
+        with open(save_path, "wb") as file:
+            file.write(response.content)
+        
+        print(f"[Info] Cached CDN file '{file_name}' to '{save_path}'.")
+    
+    except RequestException as e:
+        if file_name in os.listdir(save_dir):
+            print(f"[Warning] Failed to download '{file_name}' from CDN, using cached version. Error: {e}")
+
+        else:
+            raise RuntimeError(f"Failed to download and cache CDN file '{file_name}': {e}") from e

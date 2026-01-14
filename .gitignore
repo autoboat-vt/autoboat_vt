@@ -22,8 +22,8 @@ src/object_detection/object_detection/frame_results/
 pkg
 ground_station/bin
 ground_station/go.sum
+ground_station/app_data/js_libraries_cache/**
 ground_station/last_build_time.txt
-ground_station/sailbot_groundstation.yml
 ground_station/src/widgets/autopilot_param_editor/params_temp.json
 
 ground_station/app_data/
@@ -38,7 +38,6 @@ ground_station/app_data/
 
 
 # src/object_detection
-
 src/object_detection/object_detection/runs/**
 src/object_detection/object_detection/test_results/**
 src/object_detection/object_detection/weights/**
