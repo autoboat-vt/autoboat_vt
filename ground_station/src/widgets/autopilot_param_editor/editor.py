@@ -1,6 +1,6 @@
 import json
 from copy import deepcopy
-from pathlib import PurePath
+from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
@@ -187,7 +187,7 @@ class AutopilotParamEditor(QWidget):
             return
 
         try:
-            data = JsoncParser.parse_file(PurePath(file_path))
+            data = JsoncParser.parse_file(Path(file_path))
             self.config = data
             self.add_parameters()
             self.update_status_label()
@@ -528,14 +528,14 @@ class AutopilotParamWidget(QFrame):
                 raise TypeError(f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}.")
 
             with open(
-                PurePath(constants._autopilot_param_editor_dir / "params_temp.json"),
+                Path(constants._autopilot_param_editor_dir / "params_temp.json"),
             ) as file:
                 temp_params = json.load(file)
 
             temp_params[self.name] = {"type": self.type.__name__, "value": edited_data}
 
             with open(
-                PurePath(constants._autopilot_param_editor_dir / "params_temp.json"),
+                Path(constants._autopilot_param_editor_dir / "params_temp.json"),
                 "w",
             ) as file:
                 json.dump(temp_params, file, indent=4)

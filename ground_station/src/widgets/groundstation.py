@@ -3,7 +3,7 @@ import json
 import os
 import time
 from functools import partial
-from pathlib import PurePath
+from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urljoin
 
@@ -384,7 +384,7 @@ class GroundStationWidget(QWidget):
         """
 
         try:
-            file_path = PurePath(constants.BOAT_DATA_DIR / f"boat_data_{time.time_ns()}.json")
+            file_path = Path(constants.BOAT_DATA_DIR / f"boat_data_{time.time_ns()}.json")
             with open(file_path, "w") as f:
                 json.dump(self.boat_data, f, indent=4)
 
@@ -447,7 +447,7 @@ class GroundStationWidget(QWidget):
                 "*.json",
             )
             if chosen_file == ("", ""):
-                chosen_file = [PurePath(constants.BOAT_DATA_LIMITS_DIR / "default.json")]
+                chosen_file = [Path(constants.BOAT_DATA_LIMITS_DIR / "default.json")]
             with open(chosen_file[0], "r") as f:
                 self.telemetry_data_limits = json.load(f)
 
@@ -465,7 +465,7 @@ class GroundStationWidget(QWidget):
         """
 
         try:
-            file_path = PurePath(
+            file_path = Path(
                 constants.BOAT_DATA_LIMITS_DIR / f"boat_data_bounds_{time.time_ns()}.json",
             )
             with open(file_path, "w") as f:
@@ -550,7 +550,7 @@ class GroundStationWidget(QWidget):
         """
 
         try:
-            file_path = PurePath(constants.BUOY_DATA_DIR / f"buoy_data_{time.time_ns()}.json")
+            file_path = Path(constants.BUOY_DATA_DIR / f"buoy_data_{time.time_ns()}.json")
             with open(file_path, "w") as f:
                 json.dump(self.buoys, f, indent=4)
 
@@ -580,7 +580,7 @@ class GroundStationWidget(QWidget):
                     "*.json",
                 )
                 if chosen_file == ("", ""):
-                    chosen_file = [PurePath(constants.BUOY_DATA_DIR / "default.json")]
+                    chosen_file = [Path(constants.BUOY_DATA_DIR / "default.json")]
 
                 with open(chosen_file[0], "r") as f:
                     self.buoys = json.load(f)
