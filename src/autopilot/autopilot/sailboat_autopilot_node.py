@@ -83,7 +83,6 @@ class SailboatAutopilotNode(Node):
         self.speed: float = 0.0
         self.heading: float = 0.0
         self.apparent_wind_vector: npt.NDArray[np.float64] = np.zeros(2, dtype=np.float64)
-        self.apparent_wind_vector: npt.NDArray[np.float64] = np.zeros(2, dtype=np.float64)
         self.apparent_wind_angle: float = 0.0
         self.sail_angle: float = 0.0
         self.rudder_angle: float = 0.0
@@ -249,7 +248,6 @@ class SailboatAutopilotNode(Node):
 
 
     def velocity_callback(self, global_velocity: Twist) -> None:
-        self.global_velocity = np.array([global_velocity.linear.x, global_velocity.linear.y])
         self.global_velocity = np.array([global_velocity.linear.x, global_velocity.linear.y])
         self.speed = np.linalg.norm(self.global_velocity)
 
