@@ -278,8 +278,8 @@ class SailboatAutopilot:
         # https://en.wikipedia.org/wiki/Apparent_wind#/media/File:DiagramApparentWind.png
         true_wind_vector = apparent_wind_vector + local_velocity_vector
 
-        true_wind_speed, true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
-        apparent_wind_speed, apparent_wind_angle = cartesian_vector_to_polar(apparent_wind_vector[0], apparent_wind_vector[1])
+        _, true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
+        _, apparent_wind_angle = cartesian_vector_to_polar(apparent_wind_vector[0], apparent_wind_vector[1])
 
         global_true_wind_angle = (true_wind_angle + heading) % 360
 

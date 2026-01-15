@@ -19,6 +19,8 @@ class Position:
         self.longitude = longitude
         self.latitude = latitude
 
+
+
     def set_longitude_latitude(self, longitude: float, latitude: float) -> None:
         """
         Sets the position using longitude and latitude.
@@ -57,6 +59,8 @@ class Position:
         """
 
         return np.array([self.latitude, self.longitude], dtype=np.float64)
+
+
 
     def set_utm(self, easting: int, northing: int, zone_number: int, hemisphere: str) -> None:
         """
@@ -97,6 +101,8 @@ class Position:
         utm_coord = pygeodesy.utm.toUtm8(latlong)
 
         return utm_coord.easting, utm_coord.northing
+
+
 
     def set_local_coordinates(
         self, local_x: float, local_y: float, reference_longitude: float, reference_latitude: float
