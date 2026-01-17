@@ -40,7 +40,15 @@ class MotorboatAutopilot:
     def reset(self) -> None:
         """Resets the autopilot to its initial state."""
 
-        self.__init__(self.parameters, self.logger)
+        self.rudder_pid_controller = DiscretePID(
+            sample_period=(1 / self.parameters["autopilot_refresh_rate"]),
+            Kp=self.parameters["heading_p_gain"],
+            Ki=self.parameters["heading_i_gain"],
+            Kd=self.parameters["heading_d_gain"],
+            n=self.parameters["heading_n_gain"],
+        )
+        self.waypoints = None
+        self.current_waypoint_index = 0
 
 
     def update_waypoints_list(self, waypoints_list: list[Position]) -> None:

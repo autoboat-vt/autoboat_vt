@@ -265,7 +265,7 @@ class MotorboatAutopilotNode(Node):
         Uses a PID controller to determine the optimal rudder angle to turn the boat from its current heading to the desired heading.
 
         Parameters
-        -----------
+        ----------
         heading
             The current heading of the boat measured counter-clockwise from true east.
         desired_heading
@@ -301,7 +301,7 @@ class MotorboatAutopilotNode(Node):
         Formulas used: https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio
 
         Parameters
-        -----------
+        ----------
         joystick_left_y
             The value of the Y joystick from `-100` to `100` where
             - `-100` means the joystick is fully down

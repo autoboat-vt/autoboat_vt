@@ -11,26 +11,26 @@ class DiscretePID:
     ``low_pass_filter_cutoff_frequency`` is represented by ``n`` to improve readability in the equations.
     """
 
-    def __init__(self, sample_period: float, Kp: float, Ki: float, Kd: float, n: float) -> None:
+    def __init__(self, sample_period: float, k_p: float, k_i: float, k_d: float, n: float) -> None:
         """
         Parameters
         ----------
         sample_period
             Sample period for the discrete PID controller.
-        Kp
+        k_p
             Proportional gain.
-        Ki
+        k_i
             Integral gain.
-        Kd
+        k_d
             Derivative gain.
         n
             Cutoff frequency for the low pass filter on the derivative term.
         """
 
         self.sample_period = sample_period
-        self.Kp = Kp
-        self.Ki = Ki
-        self.Kd = Kd
+        self.k_p = k_p
+        self.k_i = k_i
+        self.k_d = k_d
         self.n = n
 
         self.prev_output1: float = 0.0
@@ -43,7 +43,7 @@ class DiscretePID:
     def reset(self) -> None:
         """Resets the PID controller to its initial state."""
 
-        self.__init__(self.sample_period, self.Kp, self.Ki, self.Kd, self.n, self.sample_period)
+        self.__init__(self.sample_period, self.k_p, self.k_i, self.k_d, self.n, self.sample_period)
 
 
     def __call__(self, error: float) -> float:
@@ -68,9 +68,9 @@ class DiscretePID:
 
     def set_gains(
         self,
-        Kp: float | None = None,
-        Ki: float | None = None,
-        Kd: float | None = None,
+        k_p: float | None = None,
+        k_i: float | None = None,
+        k_d: float | None = None,
         n: float | None = None,
         sample_period: float | None = None,
     ) -> None:
@@ -80,10 +80,10 @@ class DiscretePID:
 
         Examples
         --------
-        Set ``Kp`` to 2.0 and ``Ki`` to 0.5, leaving ``Kd``, ``n``, and
+        Set ``k_p`` to 2.0 and ``k_i`` to 0.5, leaving ``k_d``, ``n``, and
         ``sample_period`` unchanged::
 
-            >>> pid_controller.set_gains(Kp=2.0, Ki=0.5)
+            >>> pid_controller.set_gains(k_p=2.0, k_i=0.5)
 
         Leave all gains unchanged::
 
@@ -91,11 +91,11 @@ class DiscretePID:
 
         Parameters
         ----------
-        Kp
+        k_p
             Proportional gain.
-        Ki
+        k_i
             Integral gain.
-        Kd
+        k_d
             Derivative gain.
         n
             Cutoff frequency for the low pass filter on the derivative term.
@@ -103,9 +103,9 @@ class DiscretePID:
             Sample period for the discrete PID controller.
         """
 
-        self.Kp = Kp or self.Kp
-        self.Ki = Ki or self.Ki
-        self.Kd = Kd or self.Kd
+        self.k_p = k_p or self.k_p
+        self.k_i = k_i or self.k_i
+        self.k_d = k_d or self.k_d
         self.n = n or self.n
         self.sample_period = sample_period or self.sample_period
 
@@ -130,12 +130,12 @@ class DiscretePID:
         a2 = 1
 
         b0 = (
-            self.Kp * (1 + self.n * self.sample_period)
-            + self.Ki * self.sample_period * (1 + self.n * self.sample_period)
-            + self.Kd * self.n
+            self.k_p * (1 + self.n * self.sample_period)
+            + self.k_i * self.sample_period * (1 + self.n * self.sample_period)
+            + self.k_d * self.n
         )
-        b1 = -(self.Kp * (2 + self.n * self.sample_period) + self.Ki * self.sample_period + 2 * self.Kd * self.n)
-        b2 = self.Kp + self.Kd * self.n
+        b1 = -(self.k_p * (2 + self.n * self.sample_period) + self.k_i * self.sample_period + 2 * self.k_d * self.n)
+        b2 = self.k_p + self.k_d * self.n
 
         output = (
             -(a1 / a0) * self.prev_output1

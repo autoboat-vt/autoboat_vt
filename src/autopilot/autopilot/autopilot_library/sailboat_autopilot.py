@@ -55,7 +55,19 @@ class SailboatAutopilot:
     def reset(self) -> None:
         """Resets the autopilot to its initial state."""
 
-        self.__init__(self.parameters, self.logger)
+        self.rudder_pid_controller = DiscretePID(
+            sample_period=(1 / self.parameters["autopilot_refresh_rate"]),
+            Kp=self.parameters["heading_p_gain"],
+            Ki=self.parameters["heading_i_gain"],
+            Kd=self.parameters["heading_d_gain"],
+            n=self.parameters["heading_n_gain"],
+        )
+
+        self.waypoints = None
+        self.current_waypoint_index = 0
+
+        self.current_state = SailboatStates.NORMAL
+        self.desired_tacking_angle = 0.0
 
 
     def update_waypoints_list(self, waypoints_list: list[Position]) -> None:
@@ -96,15 +108,18 @@ class SailboatAutopilot:
         inner = np.clip(inner, -1, 1)
         return np.clip(np.rad2deg(np.arcsin(inner)), 0, no_sail_zone_size)
 
-
     def _get_maneuver_from_desired_heading(
         self, heading: float, desired_heading: float, true_wind_angle: float
     ) -> SailboatManeuvers:
         """
+        Gets the maneuver that the boat should take based on its current heading, desired heading, and true wind angle.
+
         A maneuver is basically a "mode" of sailing. During each of these "modes" we have to act differently, and this function
-        helps us determine if we should switch sailing "modes". The three main types of sailing "modes" are ``STANDARD``, ``TACK``, and ``JIBE``.
-        In ``STANDARD``, we are just trying to face our boat towards a waypoint and sail directly towards that point. When we are in the ``TACK``
-        "mode", our goal is to complete a ``TACK`` across the wind, and when we are in the ``JIBE`` "mode", our goal is to complete a ``JIBE`` across the
+        helps us determine if we should switch sailing "modes".
+        
+        In ``STANDARD``, we are just trying to face our boat towards a waypoint and sail directly towards that point.
+        When we are in the ``TACK`` "mode", our goal is to complete a ``TACK`` across the wind, and when we are in the
+        ``JIBE`` "mode", our goal is to complete a ``JIBE`` across the
         wind. For more information about what tacking and jibing are, please read the following: https://captainsword.com/tacking-and-jibing
 
         Parameters
@@ -171,7 +186,8 @@ class SailboatAutopilot:
         Returns
         -------
         tuple[float, bool]
-            A tuple with the first element being the angle that the boat should be holding measured in degrees counter-clockwise from true east, and the second element being whether the boat would need to tack to reach that heading.
+            A tuple with the first element being the angle that the boat should be holding measured in degrees counter-clockwise
+            from true east, and the second element being whether the boat would need to tack to reach that heading.
         """
 
         global_true_wind_angle = (current_heading + true_wind_angle) % 360
@@ -245,24 +261,40 @@ class SailboatAutopilot:
         apparent_wind_vector: npt.NDArray[np.float64],
     ) -> tuple[float, float] | tuple[None, None]:
         """
-        Assumes that there are waypoints inputed in the autopilot.
+        Runs a single step of the waypoint mission algorithm to get the desired sail and
+        rudder angles to sail towards the next waypoint.
+
+        Note
+        ----
+        This function assumes that waypoints have already been set.
 
         Parameters
         ----------
         current_position
             A ``Position`` object that represents the boat's current latitude and longitude position.
+
         global_velocity_vector
-            Global velocity as a numpy array with 2 elements (x, y) in meters per second.
+            A ``NDArray`` with 2 elements where the first element is the velocity in the x direction, and the second
+            element is the velocity in the y direction. Both elements are in meters per second.
+
         heading
             Direction the boat is facing in degrees measured counter-clockwise from true east.
+
         apparent_wind_vector
-            A numpy array with 2 elements (x, y) in meters per second.
+            A ``NDArray`` with 2 elements where the first element is the apparent wind velocity in the x direction,
+            and the second element is the apparent wind velocity in the y direction. Both elements are in meters per second.
             Wind angle measured counter-clockwise from the centerline of the boat.
 
         Returns
         -------
         tuple[float, float] | tuple[None, None]
-            A tuple with the first element being the desired sail angle and the second element being the desired rudder angle to sail towards the next waypoint. If the boat has reached the final waypoint, then ``(None, None)`` is returned.
+            A tuple with the first element being the desired sail angle and desired rudder angle that the boat should use
+            to sail towards the next waypoint. If the boat has reached the final waypoint, ``(None, None)`` is returned.
+
+        Raises
+        ------
+        Exception
+            If no waypoints have been set for the sailboat autopilot.
         """
 
         if not self.waypoints:
@@ -321,7 +353,7 @@ class SailboatAutopilot:
             rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading)
             sail_angle = self.get_optimal_sail_angle(apparent_wind_angle)
 
-        elif self.current_state in (SailboatStates.CW_TACKING, SailboatStates.CCW_TACKING):
+        elif self.current_state in {SailboatStates.CW_TACKING, SailboatStates.CCW_TACKING}:
             sail_angle = self.get_optimal_sail_angle(apparent_wind_angle)
 
             if self.current_state == SailboatStates.CW_TACKING:
@@ -347,32 +379,30 @@ class SailboatAutopilot:
 
     def get_optimal_sail_angle(self, apparent_wind_angle: float) -> float:
         """
-        Given an apparent wind angle, there is generally a best sail angle to point your sail at based on the points of sail diagram,
-        and this function computes that. The points of sail diagram can be found here: https://americansailing.com/articles/points-of-sail
-        and all this function does is linearly interpolate between the points described in this chart.
+        Gets the optimal sail angle given the apparent wind angle using linear interpolation on a lookup table.
 
         Parameters
         ----------
         apparent_wind_angle
-            The apparent wind angle measured counter-clockwise from the centerline of the boat in degrees
+            The apparent wind angle measured counter-clockwise from the centerline of the boat in degrees.
 
         Returns
         -------
         float
-            The optimal sail angle from 0 to 90 degrees where:
-                - 0 degrees means the sail is fully in
-                - 90 degrees means the sail is fully out
+            The optimal sail angle from ``0`` to ``90`` degrees where:
+                - ``0`` degrees means the sail is fully in
+                - ``90`` degrees means the sail is fully out
         """
 
         # 180 means wind pushing you backwards, 90 for the sail means let the sails all the way out
         # these are for close hauled, close reach, beam reach, broad reach and running respectively
-        # the angles were estimated from a sailing position diagram and adam should probably take a look and move things around as he sees fit
 
+        apparent_wind_angle = float(apparent_wind_angle)
         sail_positions: list[float] = self.parameters["sail_lookup_table_sail_positions"]
         wind_angles: list[float] = self.parameters["sail_lookup_table_wind_angles"]
 
-        left = max(filter(lambda pos: pos <= float(apparent_wind_angle), wind_angles))
-        right = min(filter(lambda pos: pos >= float(apparent_wind_angle), wind_angles))
+        left = max(filter(lambda pos: pos <= apparent_wind_angle, wind_angles))
+        right = min(filter(lambda pos: pos >= apparent_wind_angle, wind_angles))
 
         left = wind_angles.index(left)
         right = wind_angles.index(right)
@@ -380,14 +410,13 @@ class SailboatAutopilot:
         sail_angle: float = 0.0
         if left == right:
             for i in range(len(sail_positions)):
-                if float(apparent_wind_angle) == wind_angles[i]:
+                if apparent_wind_angle == wind_angles[i]:
                     sail_angle = sail_positions[i]
 
         else:
             slope = (sail_positions[right] - sail_positions[left]) / (wind_angles[right] - wind_angles[left])
-            sail_angle = slope * (float(apparent_wind_angle) - wind_angles[left]) + sail_positions[left]
-            slope = (sail_positions[right] - sail_positions[left]) / (wind_angles[right] - wind_angles[left])
-            sail_angle = slope * (float(apparent_wind_angle) - wind_angles[left]) + sail_positions[left]
+            
+            sail_angle = slope * (apparent_wind_angle - wind_angles[left]) + sail_positions[left]
 
         return sail_angle
 
@@ -432,6 +461,9 @@ class SailboatAutopilot:
     def run_rc_control(self, joystick_left_y: float, joystick_right_x: float) -> tuple[float, float]:
         """
         Converts joystick inputs from a remote control into desired sail and rudder angles.
+
+        Note
+        ----
         Formulas used: https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio
 
         Parameters

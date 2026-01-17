@@ -3,6 +3,8 @@ from pathlib import Path
 
 
 class SailboatAutopilotMode(Enum):
+    """An enum containing the different modes that the sailboat autopilot can be in."""
+
     DISABLED = 0
     FULL_RC = 1
     HOLD_BEST_SAIL = 2
@@ -12,6 +14,8 @@ class SailboatAutopilotMode(Enum):
 
 
 class SailboatStates(Enum):
+    """An enum containing the different states that the sailboat autopilot can be in."""
+
     NORMAL = 0
     CW_TACKING = 1
     CCW_TACKING = 2
@@ -20,6 +24,15 @@ class SailboatStates(Enum):
 
 
 class SailboatManeuvers(Enum):
+    """
+    An enum containing the different sailing maneuvers that the sailboat autopilot can perform.
+
+    Note
+    ----
+    For more information about what tacking and jibing are, please read the following:
+    https://captainsword.com/tacking-and-jibing
+    """
+
     AUTOPILOT_DISABLED = 0
     STANDARD = 1
     TACK = 2
@@ -27,6 +40,8 @@ class SailboatManeuvers(Enum):
 
 
 class MotorboatAutopilotMode(Enum):
+    """An enum containing the different modes that the motorboat autopilot can be in."""
+
     DISABLED = 0
     FULL_RC = 1
     HOLD_HEADING = 2
@@ -34,6 +49,8 @@ class MotorboatAutopilotMode(Enum):
 
 
 class MotorboatControls(Enum):
+    """An enum containing the different motorboat control types."""
+
     RPM = 0
     DUTY_CYCLE = 1
     CURRENT = 2

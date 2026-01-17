@@ -1,5 +1,6 @@
 """
-Package containing packages and classes responsible for managing communication with telemetry server, autopilot logic, and boat sensors.
+Package containing packages and classes responsible for managing communication with the telemetry server,
+autopilot logic, and boat sensors.
 
 This package also houses the configuration files for the autopilot nodes.
 
@@ -11,10 +12,10 @@ Contains:
 """
 
 __all__ = [
-    "autopilot_library",
     "MotorboatAutopilotNode",
     "SailboatAutopilotNode",
     "TelemetryNode",
+    "autopilot_library",
 ]
 
 from . import autopilot_library

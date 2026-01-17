@@ -4,7 +4,6 @@ import base64
 import json
 import os
 import time
-from typing import Any
 from urllib.parse import urljoin
 
 import cv2
@@ -43,7 +42,8 @@ class TelemetryNode(Node):
     def __init__(self) -> None:
         super().__init__("telemetry")
 
-        # If these values aren't changing then the ros node or telemetry server thats supposed to be sending these values may not be working correctly
+        # If these values aren't changing then the ros node or telemetry server
+        # thats supposed to be sending these values may not be working correctly
         self.autopilot_mode: str = "N/A"
         self.full_autonomy_maneuver: str = "N/A"
 
@@ -109,7 +109,7 @@ class TelemetryNode(Node):
 
         parameters_path = CONFIG_DIRECTORY / "sailboat_default_parameters.json"
         with open(parameters_path, "r", encoding="utf-8") as parameters_file:
-            self.autopilot_parameters: dict[str, dict[str, Any]] = json.load(parameters_file)
+            self.autopilot_parameters: dict[str, dict[str, float | int | str | bool]] = json.load(parameters_file)
 
         self.autopilot_parameters_publisher = self.create_publisher(String, "/autopilot_parameters", 10)
         self.sensors_parameters_publisher = self.create_publisher(String, "/sensors_parameters", 10)
@@ -165,19 +165,55 @@ class TelemetryNode(Node):
 
 
     def position_callback(self, position: NavSatFix) -> None:
+        """
+        Callback function for the position topic. Updates the boat's current position.
+
+        Parameters
+        ----------
+        position
+            The current position of the boat.
+        """
+
         self.position = position
 
 
     def velocity_callback(self, velocity_vector: Twist) -> None:
+        """
+        Callback function for the velocity topic. Updates the boat's current velocity vector and speed.
+
+        Parameters
+        ----------
+        velocity_vector
+            The current velocity vector of the boat.
+        """
+
         self.velocity_vector = np.array([velocity_vector.linear.x, velocity_vector.linear.y], dtype=np.float64)
         self.speed = np.linalg.norm(self.velocity_vector)
 
 
     def heading_callback(self, heading: Float32) -> None:
+        """
+        Callback function for the heading topic. Updates the boat's current heading.
+        
+        Parameters
+        ----------
+        heading
+            The current heading of the boat.
+        """
+
         self.heading = heading.data
 
 
     def apparent_wind_vector_callback(self, apparent_wind_vector: Vector3) -> None:
+        """
+        Callback function for the apparent wind vector topic. Updates the boat's current apparent wind vector, speed, and angle.
+
+        Parameters
+        ----------
+        apparent_wind_vector
+            The current apparent wind vector of the boat.
+        """
+
         self.apparent_wind_vector = np.array([apparent_wind_vector.x, apparent_wind_vector.y], dtype=np.float64)
         self.apparent_wind_speed, self.apparent_wind_angle = cartesian_vector_to_polar(
             apparent_wind_vector.x, apparent_wind_vector.y
@@ -186,10 +222,28 @@ class TelemetryNode(Node):
 
 
     def desired_heading_callback(self, desired_heading: Float32) -> None:
+        """
+        Callback function for the desired heading topic. Updates the boat's desired heading.
+        
+        Parameters
+        ----------
+        desired_heading
+            The desired heading of the boat.
+        """
+
         self.desired_heading = desired_heading.data
 
 
     def vesc_telemetry_data_callback(self, vesc_telemetry_data: VESCTelemetryData) -> None:
+        """
+        Callback function for the VESC telemetry data topic. Updates the boat's current VESC telemetry data.
+        
+        Parameters
+        ----------
+        vesc_telemetry_data
+            The current VESC telemetry data of the boat.
+        """
+
         self.vesc_telemetry_data_rpm = vesc_telemetry_data.rpm
         self.vesc_telemetry_data_duty_cycle = vesc_telemetry_data.duty_cycle
         self.vesc_telemetry_data_amp_hours = vesc_telemetry_data.amp_hours
@@ -204,33 +258,87 @@ class TelemetryNode(Node):
 
 
     def current_waypoint_index_callback(self, current_waypoint_index: Int32) -> None:
+        """
+        Callback function for the current waypoint index topic. Updates the boat's current waypoint index.
+
+        Parameters
+        ----------
+        current_waypoint_index
+            The current waypoint index of the boat.
+        """
+
         self.current_waypoint_index = current_waypoint_index.data
 
 
     def full_autonomy_maneuver_callback(self, full_autonomy_maneuver: String) -> None:
+        """
+        Callback function for the full autonomy maneuver topic. Updates the boat's current full autonomy maneuver.
+        
+        Parameters
+        ----------
+        full_autonomy_maneuver
+            The current full autonomy maneuver of the boat.
+        """
+
         self.full_autonomy_maneuver = full_autonomy_maneuver.data
 
 
     def autopilot_mode_callback(self, autopilot_mode: String) -> None:
+        """
+        Callback function for the autopilot mode topic. Updates the boat's current autopilot mode.
+
+        Parameters
+        ----------
+        autopilot_mode
+            The current autopilot mode of the boat.
+        """
+
         self.autopilot_mode = autopilot_mode.data
 
 
     def desired_sail_angle_callback(self, desired_sail_angle: Float32) -> None:
+        """
+        Callback function for the desired sail angle topic. Updates the boat's desired sail angle.
+        
+        Parameters
+        ----------
+        desired_sail_angle
+            The desired sail angle of the boat.
+        """
+
         self.desired_sail_angle = desired_sail_angle.data
 
 
     def desired_rudder_angle_callback(self, desired_rudder_angle: Float32) -> None:
+        """
+        Callback function for the desired rudder angle topic. Updates the boat's desired rudder angle.
+        
+        Parameters
+        ----------
+        desired_rudder_angle
+            The desired rudder angle of the boat.
+        """
+
         self.desired_rudder_angle = desired_rudder_angle.data
 
 
     def should_terminate_callback(self, msg: Bool) -> None:
+        """
+        Callback function for the should terminate topic. Shuts down the ROS node if the message data is ``True``.
+
+        Parameters
+        ----------
+        msg
+            The message indicating whether to terminate the node.
+        """
+
         if msg.data:
             rclpy.shutdown()
 
 
 
 
-    def get_raw_response_from_telemetry_server(self, route: str, session: requests.Session) -> Any:
+    def get_raw_response_from_telemetry_server(self, route: str, session: requests.Session) -> int | dict | list:
         """
         This is essentially just a helper function to send a GET request to a specific telemetry server route
         and automatically retry if it cannot connect to that route.

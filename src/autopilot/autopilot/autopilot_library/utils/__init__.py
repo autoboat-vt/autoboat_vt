@@ -9,10 +9,10 @@ Contains:
 """
 
 __all__ = [
-    "constants",
-    "utils_function_library",
     "DiscretePID",
     "Position",
+    "constants",
+    "utils_function_library",
 ]
 
 from . import constants, utils_function_library

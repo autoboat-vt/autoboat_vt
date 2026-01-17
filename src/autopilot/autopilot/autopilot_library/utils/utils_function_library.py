@@ -1,4 +1,3 @@
-import geopy
 import geopy.distance
 import numpy as np
 import numpy.typing as npt
@@ -81,11 +80,13 @@ def get_distance_between_angles(angle1: float, angle2: float) -> float:
     Takes two angles in degrees and computes the shortest angular distance between them.
 
     Note:
+    -----
+    Adapted from this stack overflow post:
     https://stackoverflow.com/questions/1878907/how-can-i-find-the-smallest-difference-between-two-angles-around-a-point
 
     For example:
-    >>> get_distance_between_angles(30, 50)
-    20
+        >>> get_distance_between_angles(30, 50)
+        20
 
     Parameters
     ----------
@@ -107,7 +108,8 @@ def get_bearing(current_position: Position, destination_position: Position) -> f
     """
     Gets the bearing towards a specific destination point, from our current location.
 
-    The bearing is just the angle between two points on earth (AKA which direction to travel in to get to the destination position from the current position).
+    The bearing is just the angle between two points on earth
+    (AKA which direction to travel in to get to the destination position from the current position).
 
     Parameters
     ----------
@@ -119,7 +121,7 @@ def get_bearing(current_position: Position, destination_position: Position) -> f
     Returns
     -------
     float
-        The bearing as an angle between 0 to 360, counter clockwise, measured from east.
+        The bearing as an angle between ``0`` to ``360``, counter clockwise, measured from east.
         This value tells you which direction you need to travel in to get to your destination.
     """
 
@@ -135,7 +137,7 @@ def get_bearing(current_position: Position, destination_position: Position) -> f
 
 def get_distance_between_positions(position1: Position, position2: Position) -> float:
     """
-    Gets the distance between two `Position` objects in meters.
+    Gets the distance between two ``Position`` objects in meters.
 
     Parameters
     ----------
@@ -155,7 +157,7 @@ def get_distance_between_positions(position1: Position, position2: Position) -> 
 
 def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float) -> bool:
     """
-    TODO Better documentation
+    TODO Better documentation.
 
     Parameters
     ----------
@@ -169,7 +171,7 @@ def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float
     Returns
     -------
     bool
-        If "angle" is between `boundary1` and `boundary2`, then return `True` and if not, return `False`.
+        If "angle" is between ``boundary1`` and ``boundary2``, then return ``True`` and if not, return ``False``.
     """
 
     angle_rad, b1_rad, b2_rad = np.deg2rad([angle, boundary1, boundary2])
@@ -198,19 +200,19 @@ def does_line_violate_no_sail_zone(
     no_sail_zone_size: float,
 ) -> bool:
     """
-    TODO: NOT FULLY TESTED
-
     This function takes wind angle as measured counter-clockwise from true east.
+
+    TODO: NOT FULLY TESTED.
 
     Parameters
     ----------
     current_position
         A tuple that represents the current position in cartesian coordinates.
-        For example: `[x_coordinate, y_coordinate]` is the form that you should use.
+        For example: ``[x_coordinate, y_coordinate]`` is the form that you should use.
 
     destination_position
         A tuple that represents the position you want to directly travel to in cartesian coordinates.
-        For example: `[x_coordinate, y_coordinate]` is the form that you should use.
+        For example: ``[x_coordinate, y_coordinate]`` is the form that you should use.
 
     global_true_wind_angle
         The global true wind angle measured counter-clockwise from true east as an angle in degrees.
@@ -241,28 +243,29 @@ def does_line_violate_no_sail_zone(
 
 
 def does_line_segment_intersect_circle(
-    line_segment_start_position: list[float],
-    line_segment_end_position: list[float],
-    circle_position: list[float],
+    line_segment_start_position: tuple[float, float],
+    line_segment_end_position: tuple[float, float],
+    circle_position: tuple[float, float],
     circle_radius: float,
 ) -> bool:
     """
+    Checks if a line segment intersects a circle.
+
     TODO: NOT FULLY TESTED
 
+    Note
+    ----
     Adapted from top answer of this stack overflow post:
     https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm.
-
-    Sorry if the variables don't have very creative names and if its not well documented, but if you
-    would like to understand how this algorithm works, I encourage you to read the page linked above.
 
     Parameters
     ----------
     line_segment_start_position
-        The starting point of the line segment as an array of the form `[x_coordinate, y_coordinate]`.
+        The starting point of the line segment as a tuple of the form ``[x_coordinate, y_coordinate]``.
     line_segment_end_position
-        The end point of the line segment as an array of the form `[x_coordinate, y_coordinate]`.
+        The end point of the line segment as a tuple of the form ``[x_coordinate, y_coordinate]``.
     circle_position
-        The position of the circle as an array of the form `[x_coordinate, y_coordinate]`.
+        The position of the circle as a tuple of the form ``[x_coordinate, y_coordinate]``.
     circle_radius
         The radius of the circle.
 
@@ -270,10 +273,12 @@ def does_line_segment_intersect_circle(
     -------
     bool
         Whether or not the line segment intersects the circle.
-    """
 
-    if len(line_segment_start_position) != 2 or len(line_segment_end_position) != 2 or len(circle_position) != 2:
-        raise ValueError("All input positions must be of length 2 (i.e. x and y coordinates only).")
+    Raises
+    ------
+    ValueError
+        If the circle radius is not positive.
+    """
 
     if circle_radius <= 0:
         raise ValueError("Circle radius must be positive.")

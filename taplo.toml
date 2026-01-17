@@ -1,0 +1,59 @@
+[formatting]
+
+# Align entries vertically within the same table.
+# Entries separated by headers, comments, or blank lines are not aligned.
+align_entries = true
+
+# Align consecutive comments that appear after entries or array items.
+align_comments = true
+
+# Add trailing commas to multiline arrays.
+array_trailing_comma = true
+
+# Automatically expand arrays to multiple lines when they exceed column_width.
+array_auto_expand = true
+
+# Automatically collapse arrays into a single line if they fit.
+array_auto_collapse = true
+
+# Remove inner padding spaces for single-line arrays.
+compact_arrays = true
+
+# Remove inner padding spaces for inline tables.
+compact_inline_tables = false
+
+# Expand values such as arrays inside inline tables.
+inline_table_expand = true
+
+# Remove whitespace around the "=" in entries.
+compact_entries = false
+
+# Target maximum column width before arrays are expanded.
+column_width = 80
+
+# Indent subtables when they appear in order.
+indent_tables = false
+
+# Indent entries under tables.
+indent_entries = false
+
+# Indentation string to use (spaces or tabs).
+indent_string = "    "
+
+# Ensure the file ends with a trailing newline.
+trailing_newline = true
+
+# Alphabetically reorder keys not separated by blank lines.
+reorder_keys = false
+
+# Alphabetically reorder array values not separated by blank lines.
+reorder_arrays = false
+
+# Alphabetically reorder inline table keys.
+reorder_inline_tables = false
+
+# Maximum number of consecutive blank lines allowed.
+allowed_blank_lines = 2
+
+# Use CRLF line endings instead of LF.
+crlf = false

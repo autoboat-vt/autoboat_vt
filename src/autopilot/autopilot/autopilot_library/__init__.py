@@ -15,8 +15,8 @@ __all__ = [
     "MotorboatAutopilot",
     "Position",
     "SailboatAutopilot",
-    "utils_function_library",
     "constants",
+    "utils_function_library",
 ]
 
 from .motorboat_autopilot import MotorboatAutopilot

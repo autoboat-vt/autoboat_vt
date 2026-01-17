@@ -10,9 +10,11 @@ class Position:
     """
     A position that describes a point on the earth which is stored internally as its longitude and latitude.
 
-    Whenever a function such as `get_local_coordinates` is called, this class has to convert to the proper position measurement system such as NED or UTM.
+    Whenever a function such as ``get_local_coordinates`` is called, this class has to convert to the proper
+    position measurement system such as NED or UTM.
 
-    This class mainly just calls on python libraries such as `navpy`, `utm`, and `pygeodesy` to convert to other position measurement systems.
+    This class mainly just calls on python libraries such as ``navpy``, ``utm``, and ``pygeodesy`` to convert to
+    other position measurement systems.
     """
 
     def __init__(self, longitude: float, latitude: float) -> None:
@@ -76,9 +78,14 @@ class Position:
             The UTM zone number.
         hemisphere
             "N" for northern hemisphere, "S" for southern hemisphere.
+
+        Raises
+        ------
+        Exception
+            If an invalid hemisphere is provided.
         """
 
-        if hemisphere not in ["N", "S"]:
+        if hemisphere not in {"N", "S"}:
             raise Exception("Incorrect Arguments Passed for set_utm")
 
         is_northern = hemisphere == "N"
@@ -136,7 +143,8 @@ class Position:
         Returns
         -------
         array
-            Array where the first element is the local x coordinate (north) and the second element is the local y coordinate (east).
+            Array where the first element is the local x coordinate (north)
+            and the second element is the local y coordinate (east).
         """
 
         reference_latitude: float = reference_longitude_latitude[1]
