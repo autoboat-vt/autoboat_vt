@@ -9,9 +9,9 @@ from types import SimpleNamespace
 from urllib.parse import urljoin
 
 import requests
+import requests.adapters
 from qtpy.QtCore import QPoint, QRect, QSize, Qt
 from qtpy.QtGui import QColor, QPalette
-import requests.adapters
 from strenum import StrEnum
 
 from utils import misc
@@ -110,13 +110,13 @@ START_TIME: float = time.time()
 
 # server ports
 ASSET_SERVER_PORT = 8000
-CDN_SERVER_PORT = 8080
+CDN_SERVER_PORT = 8081
 GO_SERVER_PORT = 3001
 
 JS_LIBRARIES: tuple[str, ...] = (
-    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css", 
-    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", 
-    "https://cdn.jsdelivr.net/gh/bbecquet/Leaflet.RotatedMarker@master/leaflet.rotatedMarker.js"
+    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
+    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
+    "https://cdn.jsdelivr.net/gh/bbecquet/Leaflet.RotatedMarker@master/leaflet.rotatedMarker.js",
 )
 
 # url for local waypoints server

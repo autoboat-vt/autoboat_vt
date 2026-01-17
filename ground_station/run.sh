@@ -46,7 +46,7 @@ check_port() {
 
 GO_PORT=3001
 ASSET_SERVER_PORT=8000
-CDN_SERVER_PORT=8080
+CDN_SERVER_PORT=8081
 
 echo "Checking Go server port $GO_PORT..."
 check_port "$GO_PORT"

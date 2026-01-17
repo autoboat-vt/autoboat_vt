@@ -1,11 +1,10 @@
 import http.server
-import socketserver
 import mimetypes
+import socketserver
 import sys
 import threading
 
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
-
 from utils import constants, misc
 from widgets import (
     AutopilotParamEditor,
@@ -43,7 +42,7 @@ class MainWindow(QMainWindow):
 
         def handler(*args: tuple, **kwargs: dict) -> http.server.SimpleHTTPRequestHandler:
             return http.server.SimpleHTTPRequestHandler(*args, directory=constants.CDN_DIR.as_posix(), **kwargs)
-        
+
         for link in constants.JS_LIBRARIES:
             misc.cache_cdn_file(link, constants.CDN_DIR)
 
