@@ -109,7 +109,7 @@ START_TIME = time.time()
 
 # server ports
 ASSET_SERVER_PORT = 8000
-CDN_SERVER_PORT = 8080
+CDN_SERVER_PORT = 8081
 GO_SERVER_PORT = 3001
 
 JS_LIBRARIES: tuple[str, ...] = (
