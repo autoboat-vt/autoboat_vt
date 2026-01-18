@@ -3,15 +3,12 @@ from __future__ import annotations
 import random
 import time
 from collections import deque
+from collections.abc import Callable
 from datetime import datetime, timezone
 from enum import auto
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from urllib.parse import urljoin
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-from requests.exceptions import RequestException
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QComboBox,
@@ -26,8 +23,8 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from requests.exceptions import RequestException
 from strenum import StrEnum
-
 from utils import constants, misc
 from utils.thread_classes import InstanceManagerThreadRouter
 
@@ -40,16 +37,16 @@ class InstanceInfo:
     ----------
     data
         A dictionary containing instance information with the following keys:
-        - `instance_id`: The unique identifier for the instance.
-        - `instance_identifier`: A human-readable name for the instance.
-        - `user`: The user associated with the instance.
-        - `created_at`: The timestamp when the instance was created (ISO format).
-        - `updated_at`: The timestamp when the instance was last updated (ISO format).
+        - ``instance_id``: The unique identifier for the instance.
+        - ``instance_identifier``: A human-readable name for the instance.
+        - ``user``: The user associated with the instance.
+        - ``created_at``: The timestamp when the instance was created (ISO format).
+        - ``updated_at``: The timestamp when the instance was last updated (ISO format).
 
     Raises
     ------
     ValueError
-        If the `data` dictionary does not contain the required fields or if they are of incorrect types.
+        If the ``data`` dictionary does not contain the required fields or if they are of incorrect types.
     """
 
     def __init__(self, data: dict[str, Any]) -> None:
@@ -110,7 +107,7 @@ class InstanceHandler(QWidget):
 
     Inherits
     --------
-    `QWidget`
+    ``QWidget``
     """
 
     class SortBy(StrEnum):
@@ -136,7 +133,7 @@ class InstanceHandler(QWidget):
 
         Inherits
         --------
-        `StrEnum`
+        ``StrEnum``
         """
 
         TIME_SINCE_UPDATED = auto()
@@ -244,7 +241,7 @@ class InstanceHandler(QWidget):
         request_result
             A tuple containing:
             - a list of instance information dictionaries,
-            - a `TelemetryStatus` enum value indicating the status of the request.
+            - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
         instances, telemetry_status = request_result
@@ -268,7 +265,7 @@ class InstanceHandler(QWidget):
                     print(f"[Info] Reconnected to telemetry server. New instance id is {constants.TELEMETRY_SERVER_INSTANCE_ID}.")
                 else:
                     print(
-                        "[Info] Cannot find any instances on server when attempting to reconnect. Creating an instance to connect to."
+                        "[Info] Cannot find any instances on server when attempting to reconnect. Creating an instance to connect to."  # noqa: E501
                     )
                     constants.TELEMETRY_SERVER_INSTANCE_ID = constants.REQ_SESSION.get(
                         constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"],
@@ -302,7 +299,7 @@ class InstanceHandler(QWidget):
                     constants.TELEMETRY_SERVER_INSTANCE_ID = random.choice(not_deprecated_ids)
                     constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
                     print(
-                        f"The instance you were connected to, #{instance_id}, has been removed. You have been connected to instance #{constants.TELEMETRY_SERVER_INSTANCE_ID} instead. Please select a different instance if needed."
+                        f"The instance you were connected to, #{instance_id}, has been removed. You have been connected to instance #{constants.TELEMETRY_SERVER_INSTANCE_ID} instead. Please select a different instance if needed."  # noqa: E501
                     )
 
                 else:
@@ -313,7 +310,7 @@ class InstanceHandler(QWidget):
                         constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
                         constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
                         print(
-                            f"The instance you were connected to, #{instance_id}, has been removed. A new instance has been created with ID #{new_instance_id} and you have been connected to it."
+                            f"The instance you were connected to, #{instance_id}, has been removed. A new instance has been created with ID #{new_instance_id} and you have been connected to it."  # noqa: E501
                         )
 
                     except RequestException as e:
@@ -492,28 +489,23 @@ class InstanceWidget(QFrame):
     ----------
     instance_info
         A dictionary containing information about the instance. It should include (at least):
-        - `instance_id`: The unique identifier for the instance.
-        - `instance_identifier`: A human-readable name for the instance.
-        - `user`: The user associated with the instance.
-        - `created_at`: The timestamp when the instance was created (ISO format).
-        - `updated_at`: The timestamp when the instance was last updated (ISO format).
+        - ``instance_id``: The unique identifier for the instance.
+        - ``instance_identifier``: A human-readable name for the instance.
+        - ``user``: The user associated with the instance.
+        - ``created_at``: The timestamp when the instance was created (ISO format).
+        - ``updated_at``: The timestamp when the instance was last updated (ISO format).
 
     Attributes
     ----------
-    style_sheet: `str`
+    style_sheet: ``str``
         The default style sheet for the widget.
 
-    activated_style_sheet: `str`
+    activated_style_sheet: ``str``
         The style sheet for the widget when it is the active instance.
-
-    Raises
-    ------
-    ValueError
-        If the `instance_info` dictionary does not contain the required fields or if they are of incorrect types.
 
     Inherits
     --------
-    `QFrame`
+    ``QFrame``
     """
 
     style_sheet = """
@@ -627,7 +619,7 @@ class InstanceWidget(QFrame):
 
         new_name = self.instance_name_edit.text().strip()
 
-        if new_name not in ("", self.instance_identifier):
+        if new_name not in {"", self.instance_identifier}:
             try:
                 constants.REQ_SESSION.post(
                     urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["set_instance_name"], f"{self.instance_id}/{new_name}")
@@ -676,7 +668,7 @@ class InstanceWidget(QFrame):
                 )
 
                 print(
-                    f"[Info] Instance #{self.instance_id} deleted and new instance created with ID #{constants.TELEMETRY_SERVER_INSTANCE_ID}."
+                    f"[Info] Instance #{self.instance_id} deleted and new instance created with ID #{constants.TELEMETRY_SERVER_INSTANCE_ID}."  # noqa: E501
                 )
 
             except RequestException as e:

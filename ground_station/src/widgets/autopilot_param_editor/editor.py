@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
-from requests.exceptions import RequestException
 from jsonc_parser.parser import JsoncParser
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
@@ -22,11 +21,11 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from yaml import safe_load
-
+from requests.exceptions import RequestException
 from syntax_highlighters.json import JsonHighlighter
 from utils import constants, misc
 from widgets.popup_edit import TextEditWindow
+from yaml import safe_load
 
 
 class AutopilotParamEditor(QWidget):
@@ -35,7 +34,7 @@ class AutopilotParamEditor(QWidget):
 
     Inherits
     --------
-    `QWidget`
+    ``QWidget``
     """
 
     def __init__(self) -> None:
@@ -203,7 +202,7 @@ class AutopilotParamEditor(QWidget):
             return
 
         try:
-            with open(file_path, "w") as file:
+            with open(file_path, mode="w", encoding="utf-8") as file:
                 json.dump(self.config, file, indent=4)
                 print(f"[Info] Saved parameters to {file_path}.")
         except Exception as e:
@@ -267,7 +266,7 @@ class AutopilotParamEditor(QWidget):
         ----------
         visible_count
             The number of parameters currently visible after filtering.
-            If `None`, it will be calculated from the number of current widgets.
+            If ``None``, it will be calculated from the number of current widgets.
 
         search_text
             The text used for filtering parameters. If empty, it indicates that all parameters are shown.
@@ -292,14 +291,14 @@ class AutopilotParamWidget(QFrame):
     ----------
     config
         A dictionary containing the parameter configuration. It should include:
-        - `name`: The name of the parameter (str).
-        - `type`: The type of the parameter (str, one of "bool", "int", "float", "str", "list", "dict", "tuple", "set").
-        - `default`: The default value for the parameter, which should match the specified type.
-        - `description`: A description of the parameter (str).
+        - ``name``: The name of the parameter (str).
+        - ``type``: The type of the parameter (str, one of "bool", "int", "float", "str", "list", "dict", "tuple", "set").
+        - ``default``: The default value for the parameter, which should match the specified type.
+        - ``description``: A description of the parameter (str).
 
     Inherits
     --------
-    `QFrame`
+    ``QFrame``
     """
 
     def __init__(self, config: dict) -> None:
@@ -329,7 +328,7 @@ class AutopilotParamWidget(QFrame):
 
         except (KeyError, AssertionError) as exception:
             raise ValueError(
-                "[Error] Invalid configuration for `AutopilotParamWidget`. See `src/widgets/autopilot_param_editor/editor_config.jsonc`."
+                "[Error] Invalid configuration for `AutopilotParamWidget`. See `src/widgets/autopilot_param_editor/editor_config.jsonc`."  # noqa: E501
             ) from exception
 
         # endregion validate parameter config
@@ -357,7 +356,7 @@ class AutopilotParamWidget(QFrame):
         self.description_label.setWordWrap(True)
         self.description_label.setStyleSheet("color: #D3D3D3; font-size: 12pt;")
 
-        if self.type in (list, dict, tuple, set):
+        if self.type in {list, dict, tuple, set}:
             self.modify_element = QPushButton("Edit")
             self.modify_element.setIcon(constants.ICONS.pencil)
             self.modify_element.clicked.connect(self.edit_sequence_data)
@@ -508,14 +507,21 @@ class AutopilotParamWidget(QFrame):
         self.pull_button.setEnabled(True)
 
     def update_value_from_lineedit(self) -> None:
-        """Update value from `QLineEdit` input."""
+        """
+        Update value from ``QLineEdit`` input.
+        
+        Raises
+        ------
+        TypeError
+            If the edited data is not of the expected type.
+        """
 
         try:
             edited_data = safe_load(self.modify_element.text())
 
             if self.type is bool:
                 if isinstance(edited_data, (int, float)):
-                    if edited_data in (0, 1):
+                    if edited_data in {0, 1}:
                         edited_data = bool(edited_data)
 
                 elif isinstance(edited_data, bool):
@@ -527,17 +533,12 @@ class AutopilotParamWidget(QFrame):
             if not isinstance(edited_data, self.type):
                 raise TypeError(f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}.")
 
-            with open(
-                Path(constants._autopilot_param_editor_dir / "params_temp.json"),
-            ) as file:
+            with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="r", encoding="utf-8") as file:
                 temp_params = json.load(file)
 
             temp_params[self.name] = {"type": self.type.__name__, "value": edited_data}
 
-            with open(
-                Path(constants._autopilot_param_editor_dir / "params_temp.json"),
-                "w",
-            ) as file:
+            with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="w", encoding="utf-8") as file:
                 json.dump(temp_params, file, indent=4)
 
         except TypeError:
@@ -571,12 +572,17 @@ class AutopilotParamWidget(QFrame):
 
     def edit_sequence_data_callback(self, text: str) -> None:
         """
-        Callback function for the `edit_sequence_data` function.
+        Callback function for the ``edit_sequence_data`` function.
 
         Parameters
         ----------
         text
             The text entered by the user in the text editor.
+
+        Raises
+        ------
+        TypeError
+            If the edited data is not of the expected type.
         """
 
         try:

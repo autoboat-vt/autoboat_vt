@@ -50,15 +50,12 @@ pynput
 
 
 # Groundstation
-QtAwesome
-QtPy
-PyQt5
-PyQtWebEngine
+QtAwesome==1.4.0
+QtPy==2.4.3
+PyQt5==5.15.11
+PyQtWebEngine==5.15.7
 pyqtgraph
 jsonc-parser
 PyYAML
 pytz
 StrEnum
-
-
-ruff-autoboat

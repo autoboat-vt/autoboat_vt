@@ -13,17 +13,17 @@ Functions:
 
 import os
 from collections.abc import Callable
+from pathlib import Path
 from types import SimpleNamespace
 from typing import TypeVar
-from pathlib import Path
-from requests import RequestException
-
-from utils import constants
 
 import qtawesome as qta
 from qtpy.QtCore import QTimer
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QCheckBox, QInputDialog, QMessageBox, QPushButton
+from requests import RequestException
+
+from utils import constants
 
 T = TypeVar("T")
 
@@ -37,19 +37,15 @@ def get_icons() -> SimpleNamespace:
     SimpleNamespace
         A namespace object containing the loaded icons.
         Each icon can be accessed as an attribute of the namespace.
-
-        >>> icons.upload == icons["upload"]
+    
+    Example
+    -------
+    >>> icons.upload == icons["upload"]
         True
 
     Notes
     -----
-    The icons cannot be loaded until a `QApplication` instance is created.
-
-    Raises
-    -------
-    TypeError
-        If an icon fails to load or is not a QIcon.
-        This indicates that the icon name is not valid or the icon could not be found.
+    The icons cannot be loaded until a ``QApplication`` instance is created.
     """
 
     icons: dict[str, QIcon] = {
@@ -91,7 +87,7 @@ def pushbutton_maker(
     is_clickable: bool = True,
 ) -> QPushButton:
     """
-    Create a `QPushButton` with the specified features.
+    Create a ``QPushButton`` with the specified features.
 
     Parameters
     ----------
@@ -108,12 +104,17 @@ def pushbutton_maker(
     min_height
         The minimum height of the button. If not specified, not used.
     is_clickable
-        Whether the button should be clickable. Defaults to `True`.
+        Whether the button should be clickable. Defaults to ``True``.
 
     Returns
     -------
     QPushButton
         The created button.
+
+    Raises
+    ------
+    RuntimeError
+        If the button could not be created.
     """
 
     try:
@@ -148,7 +149,7 @@ def show_message_box(
     """
     Show a message box with the specified title, message, and optional icon and buttons.
     Returns the button that was clicked by the user. If the user closes the message box
-    without clicking a button, it returns `QMessageBox.StandardButton.NoButton`.
+    without clicking a button, it returns ``QMessageBox.StandardButton.NoButton``.
 
     Parameters
     ----------
@@ -159,17 +160,17 @@ def show_message_box(
     icon
         An optional icon to display in the message box.
     buttons
-        A list of standard buttons to show. Defaults to `[QMessageBox.Ok]`. <br>
-        Example: `[QMessageBox.Yes, QMessageBox.No]`
+        A list of standard buttons to show. Defaults to ``[QMessageBox.Ok]``. <br>
+        Example: ``[QMessageBox.Yes, QMessageBox.No]``
     remember_choice_option
-        If `True`, adds a "Remember my choice" checkbox to the message box.
+        If ``True``, adds a "Remember my choice" checkbox to the message box.
 
     Returns
     -------
     QMessageBox.StandardButton
         The button that was clicked by the user.
     bool
-        If `remember_choice_option` is `True`, returns whether the user checked the "Remember my choice" checkbox.
+        If ``remember_choice_option`` is ``True``, returns whether the user checked the "Remember my choice" checkbox.
     """
 
     if buttons is None:
@@ -224,13 +225,13 @@ def show_input_dialog(
     default_value
         The default value to show in the input field.
     input_type
-        The type to convert the input to. Defaults to `str`. <br>
-        Example: `int`, `float`, etc.
+        The type to convert the input to. Defaults to ``str``. <br>
+        Example: ``int``, ``float``, etc.
 
     Returns
     -------
     T | None
-        The user input converted to the specified type, or `None` if the dialog was cancelled.
+        The user input converted to the specified type, or ``None`` if the dialog was cancelled.
     """
 
     if input_type is int:
@@ -267,7 +268,7 @@ def create_timer(interval_ms: int, single_shot: bool = False) -> QTimer:
     interval_ms
         The interval in milliseconds for the timer.
     single_shot
-        Whether the timer should be single-shot. Defaults to `False`.
+        Whether the timer should be single-shot. Defaults to ``False``.
 
     Returns
     -------
@@ -301,6 +302,7 @@ def copy_qtimer(original: QTimer) -> QTimer:
     new_timer.setSingleShot(original.isSingleShot())
     return new_timer
 
+
 def cache_cdn_file(url: str, save_dir: str) -> None:
     """
     Download and cache a CDN file locally.
@@ -311,17 +313,21 @@ def cache_cdn_file(url: str, save_dir: str) -> None:
         The URL of the CDN file to download.
     save_dir
         The directory to save the cached file.
+
+    Raises
+    ------
+    RuntimeError
+        If the file could not be downloaded and is not already cached.
     """
 
-    file_name = url.split("/")[-1]
+    file_name = url.rsplit("/", maxsplit=1)[-1]
     save_path = Path(save_dir) / file_name
 
     try:
         response = constants.REQ_SESSION.get(url)
         response.raise_for_status()
 
-        with open(save_path, "wb") as file:
-            file.write(response.content)
+        Path(save_path).write_bytes(response.content)
         
         print(f"[Info] Cached CDN file '{file_name}' to '{save_path}'.")
     

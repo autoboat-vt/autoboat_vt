@@ -2,17 +2,16 @@ import json
 
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import QGridLayout, QHBoxLayout, QPushButton, QWidget
-
 from utils import constants, misc, thread_classes
 
 
 class CameraWidget(QWidget):
     """
-    A widget to display a camera feed using `QWebEngineView`.
+    A widget to display a camera feed using ``QWebEngineView``.
 
     Inherits
     -------
-    `QWidget`
+    ``QWidget``
     """
 
     def __init__(self) -> None:
@@ -24,7 +23,7 @@ class CameraWidget(QWidget):
         self.pause_button = QPushButton("Pause")
         self.pause_button.clicked.connect(self.pause_timer)
         self.is_paused = True
-        self.paused_icon_base64 = open(constants.ASSETS_DIR / "paused-icon-base64.txt").read()
+        self.paused_icon_base64 = open(constants.ASSETS_DIR / "paused-icon-base64.txt", mode="r", encoding="utf-8").read()
         self.pause_button.setDisabled(not self.is_paused)
 
         self.run_button = QPushButton("Run")

@@ -7,8 +7,9 @@ respect-gitignore = true
 convention = "numpy"
 
 [lint.pylint]
-max-returns = 10
-max-locals = 30
+max-positional-args = 8
+max-returns         = 10
+max-locals          = 30
 
 [lint]
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
@@ -24,8 +25,11 @@ ignore = [
     "CPY001",
     "D212",
     "D404",
+    "DOC501",
+    "DOC502",
     "S101",
     "S113",
+    "S311",
     "SIM115",
     "SLF001",
     "INP001",
@@ -66,6 +70,7 @@ ignore = [
     "TD003",
     "TC001",
     "TC002",
+    "TC003",
     "TRY002",
     "TRY003",
     "TRY301",

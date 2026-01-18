@@ -6,10 +6,9 @@ from urllib.parse import urljoin
 import numpy as np
 import numpy.typing as npt
 import pyqtgraph as pg
-from requests.exceptions import RequestException
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QCheckBox, QDialog, QGridLayout, QWidget
-
+from requests.exceptions import RequestException
 from utils import constants, misc
 from utils.thread_classes import BoatStatusThreadRouter
 
@@ -20,7 +19,7 @@ class GraphViewer(QWidget):
 
     Inherits
     -------
-    `QWidget`
+    ``QWidget``
     """
 
     boat_data_signal = Signal(tuple)
@@ -66,7 +65,7 @@ class GraphViewer(QWidget):
         request_result
             A tuple containing:
                 - a dictionary of boat status,
-                - a `TelemetryStatus` enum value indicating the status of the request.
+                - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
         if not constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
@@ -208,7 +207,7 @@ class GraphSelectionDialog(QDialog):
 
     Inherits
     -------
-    `QDialog`
+    ``QDialog``
     """
 
     def __init__(self, available_keys: list[str], selected_keys: list[str]) -> None:

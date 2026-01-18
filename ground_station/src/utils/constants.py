@@ -23,13 +23,13 @@ class TelemetryStatus(StrEnum):
 
     Attributes
     ----------
-    - `SUCCESS`: Indicates that telemetry data was fetched successfully.
-    - `FAILURE`: Indicates that telemetry data fetching failed.
-    - `WRONG_FORMAT`: Indicates that the fetched telemetry data was in an incorrect format.
+    - ``SUCCESS``: Indicates that telemetry data was fetched successfully.
+    - ``FAILURE``: Indicates that telemetry data fetching failed.
+    - ``WRONG_FORMAT``: Indicates that the fetched telemetry data was in an incorrect format.
 
     Inherits
     --------
-    `StrEnum`
+    ``StrEnum``
     """
 
     SUCCESS = auto()
@@ -191,11 +191,11 @@ try:
 
     MAP_DIR = Path(SRC_DIR / "widgets" / "map_widget")
     HTML_MAP_PATH = Path(MAP_DIR / "map.html")
-    HTML_MAP = open(HTML_MAP_PATH).read()
+    HTML_MAP = open(HTML_MAP_PATH, encoding="utf-8").read()
 
     CAMERA_DIR = Path(SRC_DIR / "widgets" / "camera_widget")
     HTML_CAMERA_PATH = Path(CAMERA_DIR / "camera.html")
-    HTML_CAMERA = open(HTML_CAMERA_PATH).read()
+    HTML_CAMERA = open(HTML_CAMERA_PATH, encoding="utf-8").read()
 
     if __name__ == "__main__":
         if "params_default.jsonc" not in os.listdir(DATA_DIR / "autopilot_params"):
@@ -211,11 +211,11 @@ try:
                 Path(_autopilot_param_editor_dir / "params_temp.json"),
             )
 
-            with open(Path(_autopilot_param_editor_dir / "params_temp.json"), "r") as f:
+            with open(Path(_autopilot_param_editor_dir / "params_temp.json"), mode="r", encoding="utf-8") as f:
                 lines = f.readlines()
 
             # remove comments and empty lines
-            with open(Path(_autopilot_param_editor_dir / "params_temp.json"), "w") as f:
+            with open(Path(_autopilot_param_editor_dir / "params_temp.json"), mode="w", encoding="utf-8") as f:
                 for line in lines:
                     if not line.strip().startswith("//"):
                         f.write(line)

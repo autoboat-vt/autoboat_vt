@@ -1,4 +1,3 @@
-# region imports
 import json
 import os
 import time
@@ -7,7 +6,6 @@ from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urljoin
 
-from requests.exceptions import RequestException
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import (
@@ -24,12 +22,11 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
+from requests.exceptions import RequestException
 from syntax_highlighters import JsonHighlighter
 from utils import constants, misc, thread_classes
-from widgets.popup_edit import TextEditWindow
 
-# endregion imports
+from widgets.popup_edit import TextEditWindow
 
 
 class GroundStationWidget(QWidget):
@@ -38,7 +35,7 @@ class GroundStationWidget(QWidget):
 
     Inherits
     -------
-    `QWidget`
+    ``QWidget``
     """
 
     def __init__(self, boat_status_source: Signal) -> None:
@@ -304,7 +301,7 @@ class GroundStationWidget(QWidget):
         Parameters
         ----------
         test
-            If `True`, use the test waypoint endpoint. Defaults to `False`.
+            If ``True``, use the test waypoint endpoint. Defaults to ``False``.
         """
 
         if not test:
@@ -377,15 +374,15 @@ class GroundStationWidget(QWidget):
 
     def save_boat_data(self) -> None:
         """
-        Saves latest entry in the `self.boat_data` array to a file.
+        Saves latest entry in the ``self.boat_data`` array to a file.
 
-        Files are stored in the `boat_data` directory and are named `boat_data_<timestamp>.json`
-        where `<timestamp>` is nanoseconds since unix epoch.
+        Files are stored in the ``boat_data`` directory and are named ``boat_data_<timestamp>.json``
+        where ``<timestamp>`` is nanoseconds since unix epoch.
         """
 
         try:
             file_path = Path(constants.BOAT_DATA_DIR / f"boat_data_{time.time_ns()}.json")
-            with open(file_path, "w") as f:
+            with open(file_path, mode="w", encoding="utf-8") as f:
                 json.dump(self.boat_data, f, indent=4)
 
         except Exception as e:
@@ -397,8 +394,8 @@ class GroundStationWidget(QWidget):
         """
         Opens a text edit window to edit the telemetry data limits.
 
-        `self.edit_boat_data_limits_callback` is called when the user closes or clicks the save button in the text edit window.
-        `self.edit_boat_data_limits_callback` recieves the text from the text edit window when the user clicks the save button,
+        ``self.edit_boat_data_limits_callback`` is called when the user closes or clicks the save button in the text edit window.
+        ``self.edit_boat_data_limits_callback`` recieves the text from the text edit window when the user clicks the save button,
         otherwise it recieves the text without any changes.
         """
 
@@ -414,10 +411,10 @@ class GroundStationWidget(QWidget):
 
     def edit_boat_data_limits_callback(self, text: str) -> None:
         """
-        Callback function for the `edit_boat_data_limits` function.
+        Callback function for the ``edit_boat_data_limits`` function.
 
         This function is called when the user closes the text edit window.
-        It retrieves the edited text and saves it to the `self.telemetry_data_limits` variable and closes the window.
+        It retrieves the edited text and saves it to the ``self.telemetry_data_limits`` variable and closes the window.
 
         Parameters
         ----------
@@ -433,10 +430,10 @@ class GroundStationWidget(QWidget):
 
     def load_boat_data_limits(self) -> None:
         """
-        Load upper and lower bounds for some of the telemetry data, if no file selected use `default.json`.
+        Load upper and lower bounds for some of the telemetry data, if no file selected use ``default.json``.
 
-        Files are stored in the `boat_data_bounds` directory and are named `boat_data_bounds_<timestamp>.json`
-        where `<timestamp>` is nanoseconds since unix epoch.
+        Files are stored in the ``boat_data_bounds`` directory and are named ``boat_data_bounds_<timestamp>.json``
+        where ``<timestamp>`` is nanoseconds since unix epoch.
         """
 
         try:
@@ -448,7 +445,7 @@ class GroundStationWidget(QWidget):
             )
             if chosen_file == ("", ""):
                 chosen_file = [Path(constants.BOAT_DATA_LIMITS_DIR / "default.json")]
-            with open(chosen_file[0], "r") as f:
+            with open(chosen_file[0], mode="r", encoding="utf-8") as f:
                 self.telemetry_data_limits = json.load(f)
 
         except Exception as e:
@@ -460,15 +457,15 @@ class GroundStationWidget(QWidget):
         """
         Save upper and lower bounds for some of the telemetry data.
 
-        Files are stored in the `boat_data_bounds` directory and are named `boat_data_bounds_<timestamp>.json`
-        where `<timestamp>` is nanoseconds since unix epoch.
+        Files are stored in the ``boat_data_bounds`` directory and are named ``boat_data_bounds_<timestamp>.json``
+        where ``<timestamp>`` is nanoseconds since unix epoch.
         """
 
         try:
             file_path = Path(
                 constants.BOAT_DATA_LIMITS_DIR / f"boat_data_bounds_{time.time_ns()}.json",
             )
-            with open(file_path, "w") as f:
+            with open(file_path, mode="w", encoding="utf-8") as f:
                 json.dump(self.telemetry_data_limits, f, indent=4)
 
         except Exception as e:
@@ -480,8 +477,8 @@ class GroundStationWidget(QWidget):
         """
         Opens a text edit window to edit the buoy data.
 
-        `self.edit_buoy_data_callback` is called when the user closes or clicks the save button in the text edit window.
-        `self.edit_buoy_data_callback` recieves the text from the text edit window when the user clicks the save button,
+        ``self.edit_buoy_data_callback`` is called when the user closes or clicks the save button in the text edit window.
+        ``self.edit_buoy_data_callback`` recieves the text from the text edit window when the user clicks the save button,
         otherwise it recieves the text without any changes.
         """
 
@@ -497,10 +494,10 @@ class GroundStationWidget(QWidget):
 
     def edit_buoy_data_callback(self, text: str) -> None:
         """
-        Callback function for the `edit_buoy_data` function.
+        Callback function for the ``edit_buoy_data`` function.
 
         This function is called when the user closes the text edit window.
-        It retrieves the edited text and saves it to the `self.buoys` variable and closes the window.
+        It retrieves the edited text and saves it to the ``self.buoys`` variable and closes the window.
 
         Parameters
         ----------
@@ -543,15 +540,15 @@ class GroundStationWidget(QWidget):
 
     def save_buoy_data(self) -> None:
         """
-        Saves latest entry in the `self.buoys` array to a file.
+        Saves latest entry in the ``self.buoys`` array to a file.
 
-        Files are stored in the `buoy_data` directory and are named `buoy_data_<timestamp>.json`
-        where `<timestamp>` is nanoseconds since unix epoch.
+        Files are stored in the ``buoy_data`` directory and are named ``buoy_data_<timestamp>.json``
+        where ``<timestamp>`` is nanoseconds since unix epoch.
         """
 
         try:
             file_path = Path(constants.BUOY_DATA_DIR / f"buoy_data_{time.time_ns()}.json")
-            with open(file_path, "w") as f:
+            with open(file_path, mode="w", encoding="utf-8") as f:
                 json.dump(self.buoys, f, indent=4)
 
         except Exception as e:
@@ -561,10 +558,10 @@ class GroundStationWidget(QWidget):
 
     def load_buoy_data(self) -> None:
         """
-        Load buoy data from the `buoy_data` directory, if none selected use `default.json`.
+        Load buoy data from the ``buoy_data`` directory, if none selected use ``default.json``.
 
-        Files are stored in the `buoy_data` directory and are named `buoy_data_<timestamp>.json`
-        where `<timestamp>` is nanoseconds since unix epoch.
+        Files are stored in the ``buoy_data`` directory and are named ``buoy_data_<timestamp>.json``
+        where ``<timestamp>`` is nanoseconds since unix epoch.
         """
 
         try:
@@ -582,7 +579,7 @@ class GroundStationWidget(QWidget):
                 if chosen_file == ("", ""):
                     chosen_file = [Path(constants.BUOY_DATA_DIR / "default.json")]
 
-                with open(chosen_file[0], "r") as f:
+                with open(chosen_file[0], mode="r", encoding="utf-8") as f:
                     self.buoys = json.load(f)
 
                 self.update_buoy_table()
@@ -683,7 +680,7 @@ class GroundStationWidget(QWidget):
         request_result
             A tuple containing:
             - a list of waypoints fetched from the local server.
-            - a `TelemetryStatus` enum value indicating the status of the request.
+            - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
         waypoints, _ = request_result
@@ -737,7 +734,7 @@ class GroundStationWidget(QWidget):
         request_result
             A tuple containing:
             - a list of waypoints fetched from the telemetry server.
-            - a `TelemetryStatus` enum value indicating the status of the request.
+            - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
         waypoints, _ = request_result
@@ -749,7 +746,7 @@ class GroundStationWidget(QWidget):
 
             response, temp_pull_waypoints_reminder = misc.show_message_box(
                 "Local Waypoints Mismatch",
-                "The local waypoints are different from the telemetry server waypoints. Do you want to update the local waypoints?",
+                "The local waypoints are different from the telemetry server waypoints. Do you want to update the local waypoints?",  # noqa: E501
                 constants.ICONS.warning,
                 [
                     QMessageBox.StandardButton.Yes,
@@ -790,10 +787,9 @@ class GroundStationWidget(QWidget):
         Parameters
         ----------
         telemetry_status
-            <ul>
-            <li> <code>SUCCESS</code> indicates that the telemetry server is reachable and waypoints were fetched successfully.</li>
-            <li> <code>FAILURE</code> indicates that the telemetry server is not reachable and waypoints could not be fetched.</li>
-            </ul>
+            A ``TelemetryStatus`` enum value indicating the status of the request. Possible values are:
+            - ``SUCCESS`` indicates that the telemetry server is reachable and waypoints were fetched successfully.
+            - ``FAILURE`` indicates that the telemetry server is not reachable and waypoints could not be fetched.
         """
 
         if telemetry_status == constants.TelemetryStatus.FAILURE and not self.remember_telemetry_server_url_status:
@@ -849,7 +845,7 @@ class GroundStationWidget(QWidget):
         request_result
             A tuple containing:
             - a dictionary with the latest boat telemetry data.
-            - a `TelemetryStatus` enum value indicating the status of the request.
+            - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
         def fix_formatting(data_item: float | None) -> str:
@@ -862,7 +858,7 @@ class GroundStationWidget(QWidget):
             </ol>
 
             Examples
-            -------
+            --------
             >>> fix_formatting(-69.420)
             '-69.42000'
             >>> fix_formatting(None)
@@ -915,7 +911,7 @@ class GroundStationWidget(QWidget):
             f"State: {self.boat_data.get('state', 'N/A')}\n"
             f"Connection Status: {connection_status.name}\n"
             f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
-            f"Velocity Vector: [{self.boat_data.get('velocity_vector', [-69.420, -69.420])[0]:.5f}, {self.boat_data.get('velocity_vector', [-69.420, -69.420])[1]:.5f}]\n"
+            f"Velocity Vector: [{self.boat_data.get('velocity_vector', [-69.420, -69.420])[0]:.5f}, {self.boat_data.get('velocity_vector', [-69.420, -69.420])[1]:.5f}]\n"  # noqa: E501
             f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
             f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
             f"Bearing: {fix_formatting(self.boat_data.get('bearing'))}°\n"
@@ -926,7 +922,7 @@ class GroundStationWidget(QWidget):
             f"Apparent Wind Angle: {fix_formatting(self.boat_data.get('apparent_wind_angle'))}°\n"
             f"Sail Angle: {fix_formatting(self.boat_data.get('sail_angle'))}°\n"
             f"Rudder Angle: {fix_formatting(self.boat_data.get('rudder_angle'))}°\n"
-            f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"
+            f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
         )
 
         self.left_text_section.setText(telemetry_text)
@@ -946,7 +942,7 @@ class GroundStationWidget(QWidget):
         Returns
         -------
         float or Literal[0]
-            The converted float value, or `0` if conversion fails.
+            The converted float value, or ``0`` if conversion fails.
         """
 
         try:
