@@ -36,9 +36,9 @@ class SailboatAutopilot:
 
         self.rudder_pid_controller = DiscretePID(
             sample_period=(1 / parameters["autopilot_refresh_rate"]),
-            Kp=parameters["heading_p_gain"],
-            Ki=parameters["heading_i_gain"],
-            Kd=parameters["heading_d_gain"],
+            k_p=parameters["heading_p_gain"],
+            k_i=parameters["heading_i_gain"],
+            k_d=parameters["heading_d_gain"],
             n=parameters["heading_n_gain"],
         )
 
@@ -57,9 +57,9 @@ class SailboatAutopilot:
 
         self.rudder_pid_controller = DiscretePID(
             sample_period=(1 / self.parameters["autopilot_refresh_rate"]),
-            Kp=self.parameters["heading_p_gain"],
-            Ki=self.parameters["heading_i_gain"],
-            Kd=self.parameters["heading_d_gain"],
+            k_p=self.parameters["heading_p_gain"],
+            k_i=self.parameters["heading_i_gain"],
+            k_d=self.parameters["heading_d_gain"],
             n=self.parameters["heading_n_gain"],
         )
 
@@ -440,9 +440,9 @@ class SailboatAutopilot:
         """
 
         self.rudder_pid_controller.set_gains(
-            Kp=self.parameters["heading_p_gain"],
-            Ki=self.parameters["heading_i_gain"],
-            Kd=self.parameters["heading_d_gain"],
+            k_p=self.parameters["heading_p_gain"],
+            k_i=self.parameters["heading_i_gain"],
+            k_d=self.parameters["heading_d_gain"],
             n=self.parameters["heading_n_gain"],
             sample_period=self.parameters["autopilot_refresh_rate"],
         )
