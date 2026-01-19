@@ -424,11 +424,10 @@ class AutopilotParamWidget(QFrame):
             return
 
         if isinstance(existing_data, dict):
-            if existing_data.get(self.name, None) is not None:
-                existing_data[self.name] = self.value
-            else:
+            if existing_data.get(self.name, None) is None:
                 print(f"[Warning] {self.name} not found in existing parameters. Adding it.")
-                existing_data[self.name] = self.value
+            
+            existing_data[self.name] = self.value
 
             try:
                 constants.REQ_SESSION.post(
@@ -472,6 +471,14 @@ class AutopilotParamWidget(QFrame):
                     self.value_display.setText(str(self.value))
                 print(f"[Info] Pulled {self.name} with value {self.value}.")
 
+                with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="r", encoding="utf-8") as file:
+                    temp_params = json.load(file)
+
+                temp_params[self.name] = {"current": self.value, "description": self.description}
+
+                with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="w", encoding="utf-8") as file:
+                    json.dump(temp_params, file, indent=4)
+
             else:
                 print(f"[Warning] {self.name} not found in pulled data.")
 
@@ -493,6 +500,14 @@ class AutopilotParamWidget(QFrame):
             self.value_display.setText(str(self.value))
             print(f"[Info] {self.name} reset to default value: {self.value}.")
 
+        with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="r", encoding="utf-8") as file:
+            temp_params = json.load(file)
+        
+        temp_params[self.name] = {"current": self.value, "description": self.description}
+
+        with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="w", encoding="utf-8") as file:
+            json.dump(temp_params, file, indent=4)
+
         self.reset_button.setEnabled(False)
         self.send_button.setEnabled(True)
         self.pull_button.setEnabled(True)
@@ -509,8 +524,6 @@ class AutopilotParamWidget(QFrame):
 
         try:
             edited_data = safe_load(self.modify_element.text())
-            print(edited_data)
-
             if self.type is bool:
                 if isinstance(edited_data, (int, float)):
                     if edited_data in {0, 1}:
@@ -528,7 +541,7 @@ class AutopilotParamWidget(QFrame):
             with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="r", encoding="utf-8") as file:
                 temp_params = json.load(file)
 
-            temp_params[self.name] = edited_data
+            temp_params[self.name] = {"current": edited_data, "default": self.default_val, "description": self.description}
 
             with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="w", encoding="utf-8") as file:
                 json.dump(temp_params, file, indent=4)

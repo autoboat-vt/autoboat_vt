@@ -226,14 +226,13 @@ try:
                 Path(_autopilot_param_editor_dir / "params_temp.json"),
             )
 
-            with open(Path(_autopilot_param_editor_dir / "params_temp.json"), mode="r", encoding="utf-8") as f:
-                lines = f.readlines()
-
-            # remove comments and empty lines
-            with open(Path(_autopilot_param_editor_dir / "params_temp.json"), mode="w", encoding="utf-8") as f:
-                for line in lines:
-                    if not line.strip().startswith("//"):
-                        f.write(line)
+        # replace all "default" keys with "current" in params_temp.json
+        with open(Path(_autopilot_param_editor_dir / "params_temp.json"), "rt", encoding="utf-8") as f:
+            temp_params = f.read()
+            temp_params = temp_params.replace('"default"', '"current"')
+        
+        with open(Path(_autopilot_param_editor_dir / "params_temp.json"), "wt", encoding="utf-8") as f:
+            f.write(temp_params)
 
         if "boat_data" not in os.listdir(DATA_DIR):
             os.makedirs(DATA_DIR / "boat_data")
