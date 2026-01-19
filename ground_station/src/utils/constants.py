@@ -1,5 +1,6 @@
 """Module containing constants for the ground station application."""
 
+import inspect
 import os
 import shutil
 import time
@@ -123,7 +124,7 @@ JS_LIBRARIES: tuple[str, ...] = (
 WAYPOINTS_SERVER_URL: str = f"http://localhost:{GO_SERVER_PORT}/waypoints"
 
 # base url for telemetry server (the CIA is inside of my brain...)
-TELEMETRY_SERVER_URL: str = "https://vt-autoboat-telemetry.uk"
+TELEMETRY_SERVER_URL: str = "https://vt-autoboat-telemetry.uk:8443"
 
 TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE: int = -1  # -1 means no instance selected
 TELEMETRY_SERVER_INSTANCE_ID: int = TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE
@@ -155,8 +156,12 @@ _autopilot_parameters_endpoints: dict[str, str] = {
     "get_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get/"),
     "get_new_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_new/"),
     "get_default_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_default/"),
+    "get_hash": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_hash/"),
+    "get_all_hashes": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_all_hashes"),
+    "get_hash_exists": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_hash_exists/"),
     "set_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set/"),
     "set_default_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set_default/"),
+    "set_default_from_hash": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set_default_from_hash/"),
     "test_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/test/"),
 }
 
@@ -197,17 +202,27 @@ try:
     HTML_CAMERA_PATH = Path(CAMERA_DIR / "camera.html")
     HTML_CAMERA = open(HTML_CAMERA_PATH, encoding="utf-8").read()
 
-    if __name__ == "__main__":
-        if "params_default.jsonc" not in os.listdir(DATA_DIR / "autopilot_params"):
+    _autopilot_param_editor_dir = Path(SRC_DIR / "widgets" / "autopilot_param_editor")
+
+    active_flag = False
+    stack = inspect.stack()
+    for frame_info in stack:
+        filename = frame_info.filename
+        # if being run from src/main.py
+        if filename != __file__ and filename.endswith("src/main.py"):
+            active_flag = True
+            break
+
+    if active_flag:
+        if "params_default.json" not in os.listdir(DATA_DIR / "autopilot_params"):
             raise Exception("Default autopilot parameters file not found, please redownload the directory from GitHub.")
 
         if "autopilot_params" not in os.listdir(DATA_DIR):
             os.makedirs(DATA_DIR / "autopilot_params")
 
-        _autopilot_param_editor_dir = Path(SRC_DIR / "widgets" / "autopilot_param_editor")
         if "params_temp.json" not in os.listdir(_autopilot_param_editor_dir):
             shutil.copyfile(
-                Path(DATA_DIR / "autopilot_params" / "params_default.jsonc"),
+                Path(DATA_DIR / "autopilot_params" / "params_default.json"),
                 Path(_autopilot_param_editor_dir / "params_temp.json"),
             )
 

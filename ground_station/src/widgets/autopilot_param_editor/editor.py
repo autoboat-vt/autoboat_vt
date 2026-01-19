@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
-from jsonc_parser.parser import JsoncParser
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QFileDialog,
@@ -91,12 +90,16 @@ class AutopilotParamEditor(QWidget):
         # endregion actions button group
 
         try:
-            self.config = JsoncParser.parse_file(constants.AUTO_PILOT_PARAMS_DIR / "params_default.jsonc")
-            print(
-                f"[Info] Loaded {len(self.config)} parameters from `{constants.AUTO_PILOT_PARAMS_DIR / 'params_default.jsonc'}`."
-            )
-        except Exception:
-            print("[Error] Please ensure the file exists in the `app_data/autopilot_params` directory.")
+            self.config = constants.REQ_SESSION.get(
+                urljoin(
+                    constants.TELEMETRY_SERVER_ENDPOINTS["get_default_autopilot_parameters"],
+                    str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                )
+            ).json()
+
+        except RequestException as e:
+            print(f"[Error] Failed to fetch default autopilot parameters: {e}")
+            self.config = {}
 
         self.params_container = QWidget()
         self.params_layout = QVBoxLayout()
@@ -143,6 +146,7 @@ class AutopilotParamEditor(QWidget):
                 json=existing_data,
             )
             print("[Info] All parameters sent successfully.")
+
         except RequestException as e:
             print(f"[Error] Failed to send all parameters: {e}")
 
@@ -170,6 +174,7 @@ class AutopilotParamEditor(QWidget):
                         print(f"[Warning] {widget.name} not found in pulled data.")
 
             print("[Info] All parameters pulled successfully.")
+
         except RequestException as e:
             print(f"[Error] Failed to pull all parameters: {e}")
 
@@ -186,8 +191,7 @@ class AutopilotParamEditor(QWidget):
             return
 
         try:
-            data = JsoncParser.parse_file(Path(file_path))
-            self.config = data
+            self.config = json.load(Path(file_path).open(mode="r", encoding="utf-8"))
             self.add_parameters()
             self.update_status_label()
             print(f"[Info] Loaded parameters from {file_path}.")
@@ -292,8 +296,7 @@ class AutopilotParamWidget(QFrame):
     config
         A dictionary containing the parameter configuration. It should include:
         - ``name``: The name of the parameter (str).
-        - ``type``: The type of the parameter (str, one of "bool", "int", "float", "str", "list", "dict", "tuple", "set").
-        - ``default``: The default value for the parameter, which should match the specified type.
+        - ``default``: The default value for the parameter.
         - ``description``: A description of the parameter (str).
 
     Inherits
@@ -304,31 +307,19 @@ class AutopilotParamWidget(QFrame):
     def __init__(self, config: dict) -> None:
         super().__init__()
 
-        type_map = {
-            "bool": bool,
-            "int": int,
-            "float": float,
-            "str": str,
-            "list": list,
-            "dict": dict,
-            "tuple": tuple,
-            "set": set,
-        }
-
         # region validate parameter config
         try:
             self.name: str = config["name"]
-            self.type: type = type_map[config["type"]]
             self.default_val = config["default"]
+            self.type: type = type(self.default_val)
             self.description: str = config["description"]
 
             assert isinstance(self.name, str), "Parameter name must be a string."
-            assert isinstance(self.default_val, self.type), f"Default value must be of type {self.type.__name__}."
             assert isinstance(self.description, str), "Description must be a string."
 
         except (KeyError, AssertionError) as exception:
             raise ValueError(
-                "[Error] Invalid configuration for `AutopilotParamWidget`. See `src/widgets/autopilot_param_editor/editor_config.jsonc`."  # noqa: E501
+                "[Error] Invalid configuration for `AutopilotParamWidget`. See `src/widgets/autopilot_param_editor/editor_config.json`."  # noqa: E501
             ) from exception
 
         # endregion validate parameter config
@@ -518,6 +509,7 @@ class AutopilotParamWidget(QFrame):
 
         try:
             edited_data = safe_load(self.modify_element.text())
+            print(edited_data)
 
             if self.type is bool:
                 if isinstance(edited_data, (int, float)):
@@ -536,7 +528,7 @@ class AutopilotParamWidget(QFrame):
             with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="r", encoding="utf-8") as file:
                 temp_params = json.load(file)
 
-            temp_params[self.name] = {"type": self.type.__name__, "value": edited_data}
+            temp_params[self.name] = edited_data
 
             with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="w", encoding="utf-8") as file:
                 json.dump(temp_params, file, indent=4)

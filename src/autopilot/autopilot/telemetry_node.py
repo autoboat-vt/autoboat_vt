@@ -1,9 +1,11 @@
 #!usr/bin/python3
 
 import base64
+import hashlib
 import json
 import os
 import time
+from typing import Any
 from urllib.parse import urljoin
 
 import cv2
@@ -86,6 +88,14 @@ class TelemetryNode(Node):
         self.autopilot_parameters_session = requests.Session()
         self.waypoints_session = requests.Session()
 
+        parameters_path = CONFIG_DIRECTORY / "sailboat_default_parameters.json"
+        with open(parameters_path, "r", encoding="utf-8") as parameters_file:
+            self.autopilot_parameters: dict[str, dict[str, Any]] = json.load(parameters_file)
+
+        config_hash = hashlib.sha256(
+            json.dumps(self.autopilot_parameters, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+
         while True:
             new_id = self.get_raw_response_from_telemetry_server("instance_manager/create", session=self.boat_status_session)
             if isinstance(new_id, int):
@@ -95,10 +105,22 @@ class TelemetryNode(Node):
                 if not user_name:
                     user_name = "Unknown User"
 
-                url = urljoin(TELEMETRY_SERVER_URL, f"instance_manager/set_user/{self.instance_id}/{user_name}")
-                self.boat_status_session.post(url)
+                url = f"instance_manager/set_user/{self.instance_id}"
+                self.send_raw_data_to_telemetry_server(url, user_name, self.boat_status_session)
 
-                self.logger.info(f"Created new telemetry server instance with ID {self.instance_id}")
+                does_hash_exist = self.get_raw_response_from_telemetry_server(
+                    f"autopilot_parameters/get_hash_exists/{config_hash}", session=self.autopilot_parameters_session
+                )
+                self.logger.info(f"Config hash exists on server: {does_hash_exist}")
+                if not does_hash_exist:
+                    url = f"autopilot_parameters/set_default/{self.instance_id}"
+                    self.send_raw_data_to_telemetry_server(url, self.autopilot_parameters, self.autopilot_parameters_session)
+
+                else:
+                    url = f"autopilot_parameters/set_default_from_hash/{self.instance_id}/{config_hash}"
+                    self.send_raw_data_to_telemetry_server(url, "", self.autopilot_parameters_session)
+
+                self.logger.info(f"Created new telemetry server instance with ID {self.instance_id}.")
                 break
 
         self.create_timer(0.01, self.update_boat_status)  # 10 ms
@@ -106,10 +128,6 @@ class TelemetryNode(Node):
         self.create_timer(0.5, self.update_autopilot_parameters_from_telemetry)  # 500 ms
 
         self.cv_bridge = CvBridge()
-
-        parameters_path = CONFIG_DIRECTORY / "sailboat_default_parameters.json"
-        with open(parameters_path, "r", encoding="utf-8") as parameters_file:
-            self.autopilot_parameters: dict[str, dict[str, float | int | str | bool]] = json.load(parameters_file)
 
         self.autopilot_parameters_publisher = self.create_publisher(String, "/autopilot_parameters", 10)
         self.sensors_parameters_publisher = self.create_publisher(String, "/sensors_parameters", 10)
@@ -338,7 +356,7 @@ class TelemetryNode(Node):
 
 
 
-    def get_raw_response_from_telemetry_server(self, route: str, session: requests.Session) -> int | dict | list:
+    def get_raw_response_from_telemetry_server(self, route: str, session: requests.Session) -> int | dict | list | bool:
         """
         This is essentially just a helper function to send a GET request to a specific telemetry server route
         and automatically retry if it cannot connect to that route.
@@ -363,6 +381,37 @@ class TelemetryNode(Node):
             self.logger.error(f"Could not connect to telemetry server route {route}, retrying...")
             time.sleep(0.5)
             return self.get_raw_response_from_telemetry_server(route, session)
+
+
+
+
+    def send_raw_data_to_telemetry_server(self, route: str, data: float | str | list | dict, session: requests.Session) -> None:
+        """
+        This is essentially just a helper function to send a POST request to a specific telemetry server route
+        and automatically retry if it cannot connect to that route.
+
+        Parameters
+        ----------
+        route
+            The specific route on the telemetry server to send the POST request to.
+        data
+            The data to send in the POST request.
+        session
+            The requests session to use for the POST request.
+        """
+
+        try:
+            url = urljoin(TELEMETRY_SERVER_URL, route)
+            if isinstance(data, (float, str)):
+                session.post(urljoin(url, data), timeout=10)
+            
+            else:
+                session.post(url=url, json=data, timeout=10)
+
+        except Exception:
+            self.logger.error(f"Could not connect to telemetry server route {route}, retrying...")
+            time.sleep(0.5)
+            self.send_raw_data_to_telemetry_server(route, data, session)
 
 
 
