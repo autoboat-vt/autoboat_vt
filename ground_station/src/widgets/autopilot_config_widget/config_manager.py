@@ -387,6 +387,22 @@ class ConfigWidget(QFrame):
             }
     """
 
+    download_description_button_style_sheet = """
+            QPushButton {
+                background-color: #f44336;
+                border: none;
+                color: white;
+                padding: 5px 10px;
+                text-align: center;
+                font-size: 10pt;
+                margin: 2px 1px;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #da190b;
+            }
+    """
+
     def __init__(self, config_info: ConfigInfo) -> None:
         super().__init__()
 
@@ -411,7 +427,7 @@ class ConfigWidget(QFrame):
         # endregion setup widget style
 
         # region buttons
-        self.button_layout = QVBoxLayout()
+        self.button_layout = QGridLayout()
 
         self.download_button = misc.pushbutton_maker(
             "Download Config",
@@ -427,8 +443,16 @@ class ConfigWidget(QFrame):
             style_sheet=ConfigWidget.update_description_button_style_sheet,
         )
 
-        self.button_layout.addWidget(self.download_button)
-        self.button_layout.addWidget(self.update_description_button)
+        self.download_description_button = misc.pushbutton_maker(
+            "Download Description",
+            constants.ICONS.download,
+            self.on_download_description_clicked,
+            style_sheet=ConfigWidget.download_description_button_style_sheet,
+        )
+
+        self.button_layout.addWidget(self.download_button, 0, 0, 1, 2)
+        self.button_layout.addWidget(self.update_description_button, 1, 0)
+        self.button_layout.addWidget(self.download_description_button, 1, 1)
         # endregion buttons
 
         self.main_layout.addLayout(self.form_layout)
@@ -476,15 +500,40 @@ class ConfigWidget(QFrame):
         """Handle the update description button click event."""
 
         new_description = self.hash_description_edit.text()
-        print(f"[Info] Updating description for hash {self.hash_value} to: {new_description}")
-
         try:
             constants.REQ_SESSION.post(
                 urljoin(
                     constants.TELEMETRY_SERVER_URL,
-                    f"{constants.TELEMETRY_SERVER_ENDPOINTS['update_hash_description']}/{self.hash_value}/{new_description}"
+                    f"{constants.TELEMETRY_SERVER_ENDPOINTS['set_hash_description'] + self.hash_value}/{new_description}",
                 ),
             )
+            print(f"[Info] Updated description for hash {self.hash_value} to: {new_description}")
         
         except RequestException as e:
             print(f"[Error] Failed to update description: {e}")
+
+    def on_download_description_clicked(self) -> None:
+        """Handle the download description button click event."""
+
+        try:
+            response = constants.REQ_SESSION.get(
+                urljoin(
+                    constants.TELEMETRY_SERVER_URL,
+                    f"{constants.TELEMETRY_SERVER_ENDPOINTS['get_hash_description'] + self.hash_value}",
+                ),
+            )
+
+            if not response.status_code == 200:
+                raise RequestException(f"Server returned status code {response.status_code}")
+            
+            if not isinstance(response.text, str):
+                raise TypeError
+            
+            self.hash_description_edit.setText(response.text)
+            print(f"[Info] Downloaded description for hash {self.hash_value}: {response.text}")
+
+        except TypeError as e:
+            print(f"[Warning] Invalid description format received from server: {e}")
+        
+        except RequestException as e:
+            print(f"[Warning] Failed to download description: {e}")
