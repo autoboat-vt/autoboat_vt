@@ -132,7 +132,7 @@ PYTHON_PID=$!
 cleanup() {
     kill "$GO_PID" "$PYTHON_PID" 2>/dev/null || true
     wait "$GO_PID" "$PYTHON_PID" 2>/dev/null || true
-    temp_file="src/widgets/autopilot_param_editor/params_temp.json"
+    temp_file="src/widgets/autopilot_config_widget/params_temp.json"
     [[ -f $temp_file ]] && rm "$temp_file"
 }
 

@@ -49,16 +49,54 @@ class InstanceInfo:
         If the ``data`` dictionary does not contain the required fields or if they are of incorrect types.
     """
 
+    __slots__ = (
+        "_instance_id",
+        "_instance_identifier",
+        "_user",
+        "_created_at",
+        "_updated_at",
+    )
+
     def __init__(self, data: dict[str, Any]) -> None:
         try:
-            self.instance_id = int(data["instance_id"])
-            self.instance_identifier = str(data["instance_identifier"])
-            self.user = str(data["user"])
-            self.created_at = self.utc_to_local(datetime.fromisoformat(data["created_at"]))
-            self.updated_at = self.utc_to_local(datetime.fromisoformat(data["updated_at"]))
+            self._instance_id = int(data["instance_id"])
+            self._instance_identifier = str(data["instance_identifier"])
+            self._user = str(data["user"])
+            self._created_at = self._utc_to_local(datetime.fromisoformat(data["created_at"]))
+            self._updated_at = self._utc_to_local(datetime.fromisoformat(data["updated_at"]))
 
         except (KeyError, TypeError, ValueError) as e:
             raise ValueError("Invalid instance_info data!") from e
+        
+    @property
+    def instance_id(self) -> int:
+        """The unique identifier for the instance."""
+
+        return self._instance_id
+    
+    @property
+    def instance_identifier(self) -> str:
+        """A human-readable name for the instance."""
+
+        return self._instance_identifier
+    
+    @property
+    def user(self) -> str:
+        """The user associated with the instance."""
+
+        return self._user
+    
+    @property
+    def created_at(self) -> datetime:
+        """The timestamp when the instance was created (local timezone)."""
+
+        return self._created_at
+    
+    @property
+    def updated_at(self) -> datetime:
+        """The timestamp when the instance was last updated (local timezone)."""
+
+        return self._updated_at
 
     def as_dict(self) -> dict[str, Any]:
         """
@@ -71,20 +109,21 @@ class InstanceInfo:
         """
 
         return {
-            "instance_id": self.instance_id,
-            "instance_identifier": self.instance_identifier,
-            "user": self.user,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
+            "instance_id": self._instance_id,
+            "instance_identifier": self._instance_identifier,
+            "user": self._user,
+            "created_at": self._created_at,
+            "updated_at": self._updated_at,
         }
 
-    def utc_to_local(self, utc_dt: datetime) -> datetime:
+    @staticmethod
+    def _utc_to_local(utc_dt: datetime) -> datetime:
         """
         Convert a UTC datetime to local timezone.
 
         Parameters
         ----------
-        utc_dt : datetime
+        utc_dt
             The UTC datetime to convert.
 
         Returns
@@ -114,7 +153,7 @@ class InstanceHandler(QWidget):
         """
         Enum representing the options for sorting instances.
 
-        Attributes
+        Options
         ----------
         TIME_SINCE_UPDATED
             Sort by time since last update.
@@ -151,9 +190,16 @@ class InstanceHandler(QWidget):
         self.widgets_by_id: dict[int, InstanceWidget] = {}
 
         self.sort_by: InstanceHandler.SortBy = InstanceHandler.SortBy.TIME_SINCE_UPDATED
-        self.on_sort_by_changed(self.sort_by)
+        self.on_sort_by_changed(self.sort_by.name)
 
+        # this widget must always be either disconnected or in sync with the telemetry server
+        # the user should not be allowed to connect to an instance that no longer exists on the server
+        # therefore, we keep a history of the connection status to detect reconnections
+        # this is not needed for other widgets that fetch data from the telemetry server
+        # because they can simply show an error message if the server is unreachable
+        # and they do not need to change any state based on connection status
         self.connection_history: deque[constants.TelemetryStatus] = deque(maxlen=2)
+
         self.current_search_text: str = ""
 
         self.main_layout = QGridLayout()
@@ -181,8 +227,8 @@ class InstanceHandler(QWidget):
         self.sort_label = QLabel("Sort by:")
         self.sort_by_dropdown = QComboBox()
         self.sort_label.setBuddy(self.sort_by_dropdown)
-        self.sort_by_dropdown.addItems([option.value for option in InstanceHandler.SortBy])
-        self.sort_by_dropdown.setCurrentText(self.sort_by.value)
+        self.sort_by_dropdown.addItems([option.name for option in InstanceHandler.SortBy])
+        self.sort_by_dropdown.setCurrentText(self.sort_by.name)
         self.sort_by_dropdown.currentTextChanged.connect(self.on_sort_by_changed)
 
         sort_layout.addWidget(self.sort_label)
@@ -258,7 +304,7 @@ class InstanceHandler(QWidget):
 
                 if (
                     isinstance(available_ids, list)
-                    and available_ids
+                    and len(available_ids) > 0
                     and all(isinstance(instance_id, int) for instance_id in available_ids)
                 ):
                     constants.TELEMETRY_SERVER_INSTANCE_ID = random.choice(available_ids)
@@ -335,13 +381,14 @@ class InstanceHandler(QWidget):
 
             else:
                 try:
-                    self.widgets_by_id[instance_info.instance_id] = InstanceWidget(instance)
+                    self.widgets_by_id[instance_info.instance_id] = InstanceWidget(instance_info)
 
                 except ValueError as e:
                     print(f"[Warning] Skipping invalid instance data: {e}")
 
         for widget in sorted(self.widgets_by_id.values(), key=self.sort_key):
             self.instances_layout.addWidget(widget)
+
             if widget.instance_id == constants.TELEMETRY_SERVER_INSTANCE_ID:
                 widget.setStyleSheet(InstanceWidget.activated_style_sheet)
             else:
@@ -361,9 +408,11 @@ class InstanceHandler(QWidget):
         try:
             new_instance_id: int = constants.REQ_SESSION.get(constants.TELEMETRY_SERVER_ENDPOINTS["create_instance"]).json()
 
-            instance_info: dict[str, Any] = constants.REQ_SESSION.get(
-                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_instance_info"], str(new_instance_id))
-            ).json()
+            instance_info = InstanceInfo(
+                    constants.REQ_SESSION.get(
+                    urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_instance_info"], str(new_instance_id))
+                ).json()
+            )
 
             new_widget = InstanceWidget(instance_info)
             self.instances_layout.addWidget(new_widget)
@@ -415,7 +464,7 @@ class InstanceHandler(QWidget):
 
         self.update_status_label()
 
-    def on_sort_by_changed(self, sort_method: InstanceHandler.SortBy) -> None:
+    def on_sort_by_changed(self, sort_method: str) -> None:
         """
         Handle the sort by dropdown change event.
 
@@ -452,10 +501,11 @@ class InstanceHandler(QWidget):
 
             elif self.sort_by == InstanceHandler.SortBy.NO_SORT:
                 self.sort_key: Callable[[InstanceWidget], int] = lambda _: 0
+            
+            print(f"[Info] Instances sorted by {sort_method}.")
 
         except ValueError:
-            print(f"[Warning] Unknown sort method selected: {sort_method}. Defaulting to INSTANCE_ID.")
-            self.sort_by = InstanceHandler.SortBy.INSTANCE_ID
+            print(f"[Error] Unknown sort method selected: {sort_method}. Current sort method remains unchanged.")
 
     def update_status_label(self) -> None:
         """Update the status label with current connection status and instance count."""
@@ -488,12 +538,7 @@ class InstanceWidget(QFrame):
     Parameters
     ----------
     instance_info
-        A dictionary containing information about the instance. It should include (at least):
-        - ``instance_id``: The unique identifier for the instance.
-        - ``instance_identifier``: A human-readable name for the instance.
-        - ``user``: The user associated with the instance.
-        - ``created_at``: The timestamp when the instance was created (ISO format).
-        - ``updated_at``: The timestamp when the instance was last updated (ISO format).
+        An ``InstanceInfo`` object containing the instance's information.
 
     Attributes
     ----------
@@ -554,16 +599,14 @@ class InstanceWidget(QFrame):
             }
         """
 
-    def __init__(self, instance_info: dict[str, Any]) -> None:
+    def __init__(self, instance_info: InstanceInfo) -> None:
         super().__init__()
 
-        self.instance_info = InstanceInfo(instance_info)
-
-        self.instance_id = self.instance_info.instance_id
-        self.instance_identifier = self.instance_info.instance_identifier
-        self.user = self.instance_info.user
-        self.created_at = self.instance_info.created_at
-        self.updated_at = self.instance_info.updated_at
+        self.instance_id = instance_info.instance_id
+        self.instance_identifier = instance_info.instance_identifier
+        self.user = instance_info.user
+        self.created_at = instance_info.created_at
+        self.updated_at = instance_info.updated_at
 
         self.main_layout = QHBoxLayout()
         self.main_layout.setContentsMargins(10, 10, 10, 10)

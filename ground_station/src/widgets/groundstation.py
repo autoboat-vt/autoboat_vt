@@ -33,6 +33,11 @@ class GroundStationWidget(QWidget):
     """
     Main widget for the ground station application.
 
+    Parameters
+    ----------
+    boat_status_source
+        A ``Signal`` that provides boat status updates.
+
     Inherits
     -------
     ``QWidget``

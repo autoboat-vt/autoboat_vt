@@ -88,9 +88,9 @@ class AutopilotThreadRouter:
             else:
                 self.response.emit((data, constants.TelemetryStatus.SUCCESS))
 
-    class DefaultsFetcherThread(QThread):
+    class AvailableHashesFetcherThread(QThread):
         """
-        Thread to fetch default autopilot parameters from the telemetry server.
+        Thread to fetch available autopilot parameter configuration hashes from the telemetry server.
 
         Inherits
         -------
@@ -99,8 +99,8 @@ class AutopilotThreadRouter:
         Attributes
         ----------
         response
-            Signal to send default autopilot parameters to the main thread. Emits a tuple containing:
-                - a dictionary of default autopilot parameters,
+            Signal to send available hashes to the main thread. Emits a tuple containing:
+                - a list of available hashes,
                 - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
@@ -110,29 +110,29 @@ class AutopilotThreadRouter:
             super().__init__()
 
         def run(self) -> None:
-            """Run the thread to fetch default autopilot parameters from the telemetry server."""
+            """Run the thread to fetch available default autopilot parameter hashes."""
 
-            self.get_defaults()
+            self.get_available_hashes()
 
-        def get_defaults(self) -> None:
-            """Fetch default autopilot parameters from the telemetry server and emit them."""
+        def get_available_hashes(self) -> None:
+            """Fetch available default autopilot parameter hashes and emit them."""
 
             try:
                 data = constants.REQ_SESSION.get(
-                    urljoin(
-                        constants.TELEMETRY_SERVER_ENDPOINTS["get_default_autopilot_parameters"],
-                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
-                    )
+                    constants.TELEMETRY_SERVER_ENDPOINTS["get_all_hashes"]
                 ).json()
 
-                if not isinstance(data, dict):
+                if not isinstance(data, list):
+                    raise TypeError
+
+                if not all(isinstance(hash_str, str) for hash_str in data):
                     raise TypeError
 
             except RequestException:
-                self.response.emit(({}, constants.TelemetryStatus.FAILURE))
+                self.response.emit(([], constants.TelemetryStatus.FAILURE))
 
             except TypeError:
-                self.response.emit(({}, constants.TelemetryStatus.WRONG_FORMAT))
+                self.response.emit(([], constants.TelemetryStatus.WRONG_FORMAT))
 
             else:
                 self.response.emit((data, constants.TelemetryStatus.SUCCESS))

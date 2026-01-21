@@ -7,7 +7,8 @@ import threading
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 from utils import constants, misc
 from widgets import (
-    AutopilotParamEditor,
+    AutopilotConfigEditor,
+    AutopilotConfigManager,
     CameraWidget,
     ConsoleOutputWidget,
     GraphViewer,
@@ -19,8 +20,7 @@ from widgets import (
 class MainWindow(QMainWindow):
     """Main window for the ground station application."""
 
-    @staticmethod
-    def start_asset_server() -> None:
+    def start_asset_server(self) -> None:
         """Start a quiet HTTP server for static assets."""
 
         mimetypes.add_type("image/png", ".png")
@@ -29,12 +29,11 @@ class MainWindow(QMainWindow):
         def handler(*args: tuple, **kwargs: dict) -> http.server.SimpleHTTPRequestHandler:
             return http.server.SimpleHTTPRequestHandler(*args, directory=constants.ASSETS_DIR.as_posix(), **kwargs)
 
-        with socketserver.TCPServer(("", constants.ASSET_SERVER_PORT), handler) as httpd:
-            print(f"[Info] Serving HTTP assets on port {constants.ASSET_SERVER_PORT}...")
-            httpd.serve_forever()
+        self.asset_server = socketserver.TCPServer(("", constants.ASSET_SERVER_PORT), handler)
+        print(f"[Info] Serving HTTP assets on port {constants.ASSET_SERVER_PORT}...")
+        self.asset_server.serve_forever()
 
-    @staticmethod
-    def start_cdn_server() -> None:
+    def start_cdn_server(self) -> None:
         """Start a quiet HTTP server for CDN assets."""
 
         mimetypes.add_type("text/javascript", ".js")
@@ -46,9 +45,9 @@ class MainWindow(QMainWindow):
         for link in constants.JS_LIBRARIES:
             misc.cache_cdn_file(link, constants.CDN_DIR)
 
-        with socketserver.TCPServer(("", constants.CDN_SERVER_PORT), handler) as httpd:
-            print(f"[Info] Serving CDN assets on port {constants.CDN_SERVER_PORT}...")
-            httpd.serve_forever()
+        self.cdn_server = socketserver.TCPServer(("", constants.CDN_SERVER_PORT), handler)
+        print(f"[Info] Serving CDN assets on port {constants.CDN_SERVER_PORT}...")
+        self.cdn_server.serve_forever()
 
     def __init__(self) -> None:
         super().__init__()
@@ -74,34 +73,54 @@ class MainWindow(QMainWindow):
                 self.check_timer.start()
 
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"[Error] Failed to initialize main window: {e}")
+
+    def closeEvent(self, event: object) -> None:
+        """Handle the window close event."""
+
+        print("[Info] Shutting down servers...")
+        
+        if hasattr(self, "asset_server"):
+            self.asset_server.shutdown()
+        
+        if hasattr(self, "cdn_server"):
+            self.cdn_server.shutdown()
+        
+        print("[Info] Servers shut down.")
+        event.accept()
+
 
     def check_instance_connection(self) -> None:
+        """Check if an instance connection has been established."""
+
         if constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
             self.check_timer.stop()
             self.load_main_tabs()
 
     def load_main_tabs(self) -> None:
+        """Load the main application tabs after an instance connection is detected."""
+
         try:
             self.main_widget.addTab(self.instance_handler, "Instance Handler")
             graph_viewer = GraphViewer()
             self.main_widget.addTab(GroundStationWidget(graph_viewer.boat_data_signal), "Ground Station")
             self.main_widget.addTab(graph_viewer, "Graph Viewer")
-            self.main_widget.addTab(AutopilotParamEditor(), "Autopilot Parameters")
+            self.main_widget.addTab(AutopilotConfigEditor(), "Autopilot Parameters")
+            self.main_widget.addTab(AutopilotConfigManager(), "Config Manager")
             self.main_widget.addTab(CameraWidget(), "Camera Feed")
             self.main_widget.setCurrentIndex(2)
             print("[Info] Main application tabs loaded.")
 
         except Exception as e:
-            print(f"Error loading main tabs: {e}")
+            print(f"[Error] Failed to load main tabs: {e}")
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     constants.ICONS = misc.get_icons()
     window = MainWindow()
-    threading.Thread(target=MainWindow.start_asset_server, daemon=True).start()
-    threading.Thread(target=MainWindow.start_cdn_server, daemon=True).start()
+    threading.Thread(target=window.start_asset_server, daemon=True).start()
+    threading.Thread(target=window.start_cdn_server, daemon=True).start()
     app.setStyleSheet(constants.STYLE_SHEET)
     app.setPalette(constants.PALLETTE)
     app.setStyle("Fusion")

@@ -126,6 +126,7 @@ WAYPOINTS_SERVER_URL: str = f"http://localhost:{GO_SERVER_PORT}/waypoints"
 # base url for telemetry server (the CIA is inside of my brain...)
 TELEMETRY_SERVER_URL: str = "https://vt-autoboat-telemetry.uk:8443"
 
+AUTOPILOT_PARAM_HASH: str = ""
 TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE: int = -1  # -1 means no instance selected
 TELEMETRY_SERVER_INSTANCE_ID: int = TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE
 HAS_TELEMETRY_SERVER_INSTANCE_CHANGED: bool = False
@@ -156,12 +157,14 @@ _autopilot_parameters_endpoints: dict[str, str] = {
     "get_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get/"),
     "get_new_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_new/"),
     "get_default_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_default/"),
-    "get_hash": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_hash/"),
+    "get_config_from_hash": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_config/"),
+    "get_hash_description": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_hash_description/"),
     "get_all_hashes": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_all_hashes"),
     "get_hash_exists": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_hash_exists/"),
     "set_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set/"),
     "set_default_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set_default/"),
     "set_default_from_hash": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set_default_from_hash/"),
+    "set_hash_description": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set_hash_description/"),
     "test_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/test/"),
 }
 
@@ -202,7 +205,7 @@ try:
     HTML_CAMERA_PATH = Path(CAMERA_DIR / "camera.html")
     HTML_CAMERA = open(HTML_CAMERA_PATH, encoding="utf-8").read()
 
-    _autopilot_param_editor_dir = Path(SRC_DIR / "widgets" / "autopilot_param_editor")
+    _autopilot_param_editor_dir = Path(SRC_DIR / "widgets" / "autopilot_config_widget")
 
     active_flag = False
     stack = inspect.stack()
@@ -248,7 +251,7 @@ try:
 
     ASSETS_DIR = Path(DATA_DIR / "assets")
     CDN_DIR = Path(DATA_DIR / "js_libraries_cache")
-    AUTO_PILOT_PARAMS_DIR = Path(DATA_DIR / "autopilot_params")
+    AUTOPILOT_PARAMS_DIR = Path(DATA_DIR / "autopilot_params")
     BOAT_DATA_DIR = Path(DATA_DIR / "boat_data")
     BOAT_DATA_LIMITS_DIR = Path(DATA_DIR / "boat_data_bounds")
     BUOY_DATA_DIR = Path(DATA_DIR / "buoy_data")

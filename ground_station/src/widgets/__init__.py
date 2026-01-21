@@ -7,12 +7,14 @@ Contains:
 - GraphViewer: Widget for viewing telemetry data.
 - InstanceHandler: Manages instances of the application, displaying their information and allowing interaction.
 - CameraWidget: Widget for displaying a camera feed.
-- AutopilotParamEditor: Widget for editing autopilot parameters.
+- AutopilotConfigEditor: Widget for editing autopilot parameters.
+- AutopilotConfigManager: Widget for managing autopilot configuration files.
 - TextEditWindow: Popup window for editing text.
 """
 
 __all__ = [
-    "AutopilotParamEditor",
+    "AutopilotConfigEditor",
+    "AutopilotConfigManager",
     "CameraWidget",
     "ConsoleOutputWidget",
     "GraphViewer",
@@ -21,7 +23,8 @@ __all__ = [
     "TextEditWindow",
 ]
 
-from .autopilot_param_editor.editor import AutopilotParamEditor
+from .autopilot_config_widget.config_editor import AutopilotConfigEditor
+from .autopilot_config_widget.config_manager import AutopilotConfigManager
 from .camera_widget.camera import CameraWidget
 from .console_output import ConsoleOutputWidget
 from .graph_viewer import GraphViewer

@@ -27,7 +27,6 @@ from utils import constants
 
 T = TypeVar("T")
 
-
 def get_icons() -> SimpleNamespace:
     """
     Load and return a set of icons for the application.

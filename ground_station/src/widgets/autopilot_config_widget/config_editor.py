@@ -1,11 +1,15 @@
 import json
+from ast import literal_eval
 from copy import deepcopy
+from enum import auto
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
+    QCheckBox,
+    QComboBox,
     QFileDialog,
     QFrame,
     QGridLayout,
@@ -21,13 +25,14 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 from requests.exceptions import RequestException
+from strenum import StrEnum
 from syntax_highlighters.json import JsonHighlighter
 from utils import constants, misc
 from widgets.popup_edit import TextEditWindow
 from yaml import safe_load
 
 
-class AutopilotParamEditor(QWidget):
+class AutopilotConfigEditor(QWidget):
     """
     A widget for interacting with and editing autopilot parameters.
 
@@ -36,16 +41,38 @@ class AutopilotParamEditor(QWidget):
     ``QWidget``
     """
 
+    class SourceEnum(StrEnum):
+        """
+        Enum for autopilot configuration sources.
+
+        Attributes
+        ----------
+        TELEMETRY_ENDPOINT
+            Source is the telemetry endpoint.
+        LOCAL_FILESYSTEM
+            Source is the local filesystem.
+
+        Inherits
+        --------
+        ``StrEnum``
+        """
+
+        TELEMETRY_ENDPOINT = auto()
+        LOCAL_FILESYSTEM = auto()
+
     def __init__(self) -> None:
         super().__init__()
 
         self.main_layout = QGridLayout()
         self.setLayout(self.main_layout)
 
-        self.config: dict[str, dict[str, Any]] = {}
         self.widgets: list[AutopilotParamWidget] = []
+        self.config: dict[str, dict[str, Any]] = {}
 
-        # region actions button group
+        # used to control where the user wants to load/save configs from/to
+        self.config_source: AutopilotConfigEditor.SourceEnum = AutopilotConfigEditor.SourceEnum.TELEMETRY_ENDPOINT
+
+        # region send/pull all buttons
         self.button_group_box = QGroupBox()
         self.button_layout = QHBoxLayout()
         self.button_group_box.setLayout(self.button_layout)
@@ -66,10 +93,24 @@ class AutopilotParamEditor(QWidget):
             min_height=30,
             is_clickable=True,
         )
-        self.load_from_file_button = misc.pushbutton_maker(
-            "Load from File",
+        self.button_layout.addWidget(self.send_all_button)
+        self.button_layout.addWidget(self.pull_all_button)
+        # endregion send/pull all buttons
+
+        # region load/save buttons
+        self.sync_sources_toggle = QCheckBox("Sync Sources?")
+
+        self.source_selector_label = QLabel("Source:")
+        self.source_selector = QComboBox()
+        self.source_selector_label.setBuddy(self.source_selector)
+        self.source_selector.addItems([source.name for source in AutopilotConfigEditor.SourceEnum])
+        self.source_selector.setCurrentText(self.config_source.name)
+        self.source_selector.currentTextChanged.connect(self.on_config_source_changed)
+
+        self.load_parameters_button = misc.pushbutton_maker(
+            "Change Config",
             constants.ICONS.hard_drive,
-            self.load_parameters_from_file,
+            self.load_parameters,
             max_width=200,
             min_height=30,
             is_clickable=True,
@@ -82,12 +123,6 @@ class AutopilotParamEditor(QWidget):
             min_height=30,
             is_clickable=True,
         )
-
-        self.button_layout.addWidget(self.send_all_button)
-        self.button_layout.addWidget(self.pull_all_button)
-        self.button_layout.addWidget(self.load_from_file_button)
-        self.button_layout.addWidget(self.save_to_file_button)
-        # endregion actions button group
 
         try:
             self.config = constants.REQ_SESSION.get(
@@ -132,6 +167,7 @@ class AutopilotParamEditor(QWidget):
         """Send all parameters to the telemetry endpoint."""
 
         print("[Info] Sending all parameters...")
+
         existing_data = {}
         for widget in self.widgets:
             if isinstance(widget, AutopilotParamWidget):
@@ -154,6 +190,7 @@ class AutopilotParamEditor(QWidget):
         """Pull all parameters from the telemetry endpoint."""
 
         print("[Info] Pulling all parameters...")
+
         try:
             data = constants.REQ_SESSION.get(
                 urljoin(
@@ -162,41 +199,51 @@ class AutopilotParamEditor(QWidget):
                 )
             ).json()
 
+            if not isinstance(data, dict):
+                raise TypeError
+            
+            if not all(isinstance(key, str) for key in data):
+                raise TypeError
+
             for widget in self.widgets:
-                if isinstance(widget, AutopilotParamWidget):
-                    if widget.name in data:
-                        widget.value = data[widget.name]
-                        if isinstance(widget.modify_element, QLineEdit):
-                            widget.modify_element.setText(str(widget.value))
-                        elif widget.value_display:
-                            widget.value_display.setText(str(widget.value))
-                    else:
-                        print(f"[Warning] {widget.name} not found in pulled data.")
+                if widget.name in data:
+                    widget.value = data[widget.name]
+                    if isinstance(widget.modify_element, QLineEdit):
+                        widget.modify_element.setText(str(widget.value))
+                    elif widget.value_display:
+                        widget.value_display.setText(str(widget.value))
+                else:
+                    print(f"[Warning] {widget.name} not found in pulled data.")
 
             print("[Info] All parameters pulled successfully.")
 
         except RequestException as e:
             print(f"[Error] Failed to pull all parameters: {e}")
 
-    def load_parameters_from_file(self) -> None:
-        """Load parameters from a file."""
+        except TypeError:
+            print(f"[Error] Unexpected data format from telemetry server: {data}. Expected a dictionary of parameters.")
 
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Load Parameters from File",
-            "",
-            "JSONC Files (*.jsonc);;JSON Files (*.json);;All Files (*)",
-        )
-        if not file_path:
-            return
+    def load_parameters(self) -> None:
+        """Load parameters from the telemetry endpoint or a local file."""
 
-        try:
-            self.config = json.load(Path(file_path).open(mode="r", encoding="utf-8"))
-            self.add_parameters()
-            self.update_status_label()
-            print(f"[Info] Loaded parameters from {file_path}.")
-        except Exception as e:
-            print(f"[Error] Unable to read from file: {e}")
+        if self.config_source == AutopilotConfigEditor.SourceEnum.LOCAL_FILESYSTEM:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Load Parameters from File",
+                "",
+                "JSON Files (*.json);;All Files (*)",
+            )
+            if not file_path:
+                return
+
+            try:
+                self.config = json.load(Path(file_path).open(mode="r", encoding="utf-8"))
+                self.add_parameters()
+                self.update_status_label()
+                print(f"[Info] Loaded parameters from {file_path}.")
+
+            except Exception as e:
+                print(f"[Error] Unable to read from file: {e}")
 
     def save_parameters_to_file(self) -> None:
         """Save parameters to a file."""
@@ -209,25 +256,26 @@ class AutopilotParamEditor(QWidget):
             with open(file_path, mode="w", encoding="utf-8") as file:
                 json.dump(self.config, file, indent=4)
                 print(f"[Info] Saved parameters to {file_path}.")
+
         except Exception as e:
             print(f"[Error] Unable to save parameters to file: {e}")
 
     def add_parameters(self) -> None:
         """Add all parameters to the layout."""
 
-        # Clear existing widgets
         for widget in self.widgets:
             widget.deleteLater()
-        self.widgets = []
+
+        self.widgets: list[AutopilotParamWidget] = []
 
         for key in self.config:
-            # Create config with name
             param_config = self.config[key].copy()
             param_config["name"] = key
             try:
                 param_widget = AutopilotParamWidget(param_config)
                 self.params_layout.addWidget(param_widget)
                 self.widgets.append(param_widget)
+            
             except Exception as e:
                 print(f"Error creating widget for parameter '{key}': {e}")
 
@@ -251,11 +299,12 @@ class AutopilotParamEditor(QWidget):
         visible_count = 0
 
         for widget in self.widgets:
-            name_match = search_text in widget.name.lower()
-            desc_match = search_text in widget.description.lower()
+            name_match: bool = search_text in widget.name.lower()
+            desc_match: bool = search_text in widget.description.lower()
 
             if search_text and not (name_match or desc_match):
                 widget.hide()
+            
             else:
                 widget.show()
                 visible_count += 1
@@ -281,10 +330,29 @@ class AutopilotParamEditor(QWidget):
 
         if not search_text:
             self.status_label.setText(f"Showing all {visible_count} parameters")
+        
         elif visible_count == 0:
             self.status_label.setText(f"No parameters match '{search_text}'")
+        
         else:
             self.status_label.setText(f"Showing {visible_count} parameters matching '{search_text}'")
+
+    def on_config_source_changed(self, new_source: str) -> None:
+        """
+        Handle changes to the configuration source.
+
+        Parameters
+        ----------
+        new_source
+            The new configuration source selected.
+        """
+
+        try:
+            self.config_source = AutopilotConfigEditor.SourceEnum(new_source)
+            print(f"[Info] Configuration source changed to: {new_source}")
+
+        except ValueError:
+            print(f"[Error] Invalid configuration source: {new_source}. Current source remains unchanged.")
 
 
 class AutopilotParamWidget(QFrame):
@@ -310,22 +378,19 @@ class AutopilotParamWidget(QFrame):
         # region validate parameter config
         try:
             self.name: str = config["name"]
-            self.default_val = config["default"]
+            self.default_val: Any = config["default"]
             self.type: type = type(self.default_val)
             self.description: str = config["description"]
 
             assert isinstance(self.name, str), "Parameter name must be a string."
             assert isinstance(self.description, str), "Description must be a string."
 
-        except (KeyError, AssertionError) as exception:
-            raise ValueError(
-                "[Error] Invalid configuration for `AutopilotParamWidget`. See `src/widgets/autopilot_param_editor/editor_config.json`."  # noqa: E501
-            ) from exception
-
+        except (KeyError, AssertionError) as e:
+            raise ValueError("[Error] Invalid configuration for `AutopilotParamWidget`.") from e
         # endregion validate parameter config
 
         # region define layouts
-        self.value = deepcopy(self.default_val)
+        self.current_value = deepcopy(self.default_val)
 
         self.main_layout = QHBoxLayout(self)
         self.main_layout.setContentsMargins(10, 10, 10, 10)
@@ -347,15 +412,15 @@ class AutopilotParamWidget(QFrame):
         self.description_label.setWordWrap(True)
         self.description_label.setStyleSheet("color: #D3D3D3; font-size: 12pt;")
 
-        if self.type in {list, dict, tuple, set}:
+        if self.type in {list, tuple, set, dict}:
             self.modify_element = QPushButton("Edit")
             self.modify_element.setIcon(constants.ICONS.pencil)
-            self.modify_element.clicked.connect(self.edit_sequence_data)
-            self.value_display = QLabel(str(self.value))
+            self.modify_element.clicked.connect(self.edit_grouped_data)
+            self.value_display = QLabel(str(self.current_value))
             self.value_display.setWordWrap(True)
             self.value_display.setStyleSheet("font-family: monospace;")
         else:
-            self.modify_element = QLineEdit(str(self.value))
+            self.modify_element = QLineEdit(str(self.current_value))
             self.modify_element.setMinimumWidth(200)
             self.modify_element.editingFinished.connect(self.update_value_from_lineedit)
 
@@ -410,7 +475,7 @@ class AutopilotParamWidget(QFrame):
     def send_value(self) -> None:
         """Send the current value of the parameter to the telemetry endpoint."""
 
-        print(f"[Info] Sending value for {self.name}: {self.value}")
+        print(f"[Info] Sending value for {self.name}: {self.current_value}")
         try:
             existing_data = constants.REQ_SESSION.get(
                 urljoin(
@@ -427,7 +492,7 @@ class AutopilotParamWidget(QFrame):
             if existing_data.get(self.name, None) is None:
                 print(f"[Warning] {self.name} not found in existing parameters. Adding it.")
             
-            existing_data[self.name] = self.value
+            existing_data[self.name] = self.current_value
 
             try:
                 constants.REQ_SESSION.post(
@@ -437,10 +502,10 @@ class AutopilotParamWidget(QFrame):
                     ),
                     json=existing_data,
                 )
-                print(f"[Info] Successfully sent {self.name} with value {self.value}.")
+                print(f"[Info] Successfully sent {self.name} with value {self.current_value}.")
 
             except RequestException as e:
-                print(f"[Error] Failed to send {self.name} with value {self.value}: {e}")
+                print(f"[Error] Failed to send {self.name} with value {self.current_value}: {e}")
                 return
 
         else:
@@ -463,18 +528,18 @@ class AutopilotParamWidget(QFrame):
             ).json()
 
             if self.name in data:
-                self.value = data[self.name]
+                self.current_value = data[self.name]
                 if isinstance(self.modify_element, QLineEdit):
-                    self.modify_element.setText(str(self.value))
+                    self.modify_element.setText(str(self.current_value))
 
                 elif self.value_display:
-                    self.value_display.setText(str(self.value))
-                print(f"[Info] Pulled {self.name} with value {self.value}.")
+                    self.value_display.setText(str(self.current_value))
+                print(f"[Info] Pulled {self.name} with value {self.current_value}.")
 
                 with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="r", encoding="utf-8") as file:
                     temp_params = json.load(file)
 
-                temp_params[self.name] = {"current": self.value, "description": self.description}
+                temp_params[self.name] = {"current": self.current_value, "description": self.description}
 
                 with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="w", encoding="utf-8") as file:
                     json.dump(temp_params, file, indent=4)
@@ -492,18 +557,18 @@ class AutopilotParamWidget(QFrame):
     def reset_value(self) -> None:
         """Reset the value of the parameter to its default value."""
 
-        self.value = deepcopy(self.default_val)
+        self.current_value = deepcopy(self.default_val)
         if isinstance(self.modify_element, QLineEdit):
-            self.modify_element.setText(str(self.value))
+            self.modify_element.setText(str(self.current_value))
 
         elif self.value_display:
-            self.value_display.setText(str(self.value))
-            print(f"[Info] {self.name} reset to default value: {self.value}.")
+            self.value_display.setText(str(self.current_value))
+            print(f"[Info] {self.name} reset to default value: {self.current_value}.")
 
         with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="r", encoding="utf-8") as file:
             temp_params = json.load(file)
         
-        temp_params[self.name] = {"current": self.value, "description": self.description}
+        temp_params[self.name] = {"current": self.current_value, "description": self.description}
 
         with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="w", encoding="utf-8") as file:
             json.dump(temp_params, file, indent=4)
@@ -523,20 +588,22 @@ class AutopilotParamWidget(QFrame):
         """
 
         try:
-            edited_data = safe_load(self.modify_element.text())
-            if self.type is bool:
-                if isinstance(edited_data, (int, float)):
-                    if edited_data in {0, 1}:
-                        edited_data = bool(edited_data)
-
-                elif isinstance(edited_data, bool):
-                    edited_data = bool(edited_data)
-
-            if self.type is float and isinstance(edited_data, int):
-                edited_data = float(edited_data)
+            edited_data = literal_eval(self.modify_element.text())
 
             if not isinstance(edited_data, self.type):
-                raise TypeError(f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}.")
+                if self.type is bool and (
+                    isinstance(edited_data, (int, str)) and edited_data in {0, 1, "true", "false"}
+                ):
+                    edited_data = bool(edited_data)
+
+                elif self.type is float and isinstance(edited_data, int):
+                    edited_data = float(edited_data)
+
+                elif self.type is int and isinstance(edited_data, float) and edited_data.is_integer():
+                    edited_data = int(edited_data)
+
+                elif not isinstance(edited_data, self.type):
+                    raise TypeError(f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}.")
 
             with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="r", encoding="utf-8") as file:
                 temp_params = json.load(file)
@@ -548,36 +615,36 @@ class AutopilotParamWidget(QFrame):
 
         except TypeError:
             print(f"[Error] Invalid value for {self.name}. Resetting to previous value.")
-            self.modify_element.setText(str(self.value))
+            self.modify_element.setText(str(self.current_value))
             return
 
         except Exception as e:
             print(f"[Error] Failed to update value for {self.name}: {e}")
             return
 
-        self.value = edited_data
-        self.modify_element.setText(str(self.value))
+        self.current_value = edited_data
+        self.modify_element.setText(str(self.current_value))
 
         self.send_button.setEnabled(True)
         self.pull_button.setEnabled(True)
         self.reset_button.setEnabled(True)
 
-    def edit_sequence_data(self) -> None:
+    def edit_grouped_data(self) -> None:
         """Open a text editor for editing a sequence of values."""
 
         try:
-            initial_text = json.dumps(self.value, indent=2)
+            initial_text = json.dumps(self.current_value, indent=2)
             self.text_edit_window = TextEditWindow(highlighter=JsonHighlighter, initial_text=initial_text)
             self.text_edit_window.setWindowTitle(f"Edit {self.name}")
-            self.text_edit_window.user_text_emitter.connect(self.edit_sequence_data_callback)
+            self.text_edit_window.user_text_emitter.connect(self.edit_grouped_data_callback)
             self.text_edit_window.show()
 
         except Exception as e:
             print(f"[Error] Failed to open text edit window for {self.name}: {e}")
 
-    def edit_sequence_data_callback(self, text: str) -> None:
+    def edit_grouped_data_callback(self, text: str) -> None:
         """
-        Callback function for the ``edit_sequence_data`` function.
+        Callback function for the ``edit_grouped_data`` function.
 
         Parameters
         ----------
@@ -593,7 +660,7 @@ class AutopilotParamWidget(QFrame):
         try:
             edited_data = safe_load(text)
 
-            if edited_data == self.value:
+            if edited_data == self.current_value:
                 return
 
             if not isinstance(edited_data, self.type):
@@ -601,12 +668,12 @@ class AutopilotParamWidget(QFrame):
 
         except TypeError:
             print(f"[Error] Invalid value for {self.name}. Resetting to previous value.")
-            self.value_display.setText(str(self.value))
+            self.value_display.setText(str(self.current_value))
             return
 
-        self.value = edited_data
-        self.value_display.setText(str(self.value))
-        print(f"[Info] {self.name} updated to {self.value}.")
+        self.current_value = edited_data
+        self.value_display.setText(str(self.current_value))
+        print(f"[Info] {self.name} updated to {self.current_value}.")
 
         self.send_button.setEnabled(True)
         self.pull_button.setEnabled(True)
