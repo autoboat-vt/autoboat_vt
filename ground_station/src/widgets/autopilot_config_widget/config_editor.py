@@ -14,6 +14,7 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -137,6 +138,43 @@ class AutopilotConfigEditor(QWidget):
         self.add_parameters()
         self.update_status_label()
 
+    def _check_default_parameters(self) -> bool:
+        """
+        Check if the default parameters are set on the telemetry server.
+
+        Returns
+        -------
+        bool
+            ``True`` if default parameters are set, ``False`` otherwise.
+        """
+
+        try:
+            default_params = constants.REQ_SESSION.get(
+                urljoin(
+                    constants.TELEMETRY_SERVER_ENDPOINTS["get_default_autopilot_parameters"],
+                    str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                )
+            ).json()
+
+            if not isinstance(default_params, dict):
+                raise TypeError
+
+            if default_params == {}:
+                print("[Info] Default parameters are not set on the telemetry server.")
+                return False
+
+            else:
+                print("[Info] Default parameters are set on the telemetry server.")
+                return True
+
+        except RequestException as e:
+            print(f"[Error] Failed to check default autopilot parameters: {e}")
+            return False
+
+        except TypeError:
+            print(f"[Error] Unexpected data format from telemetry server: {default_params}. Expected a dictionary of parameters.")
+            return False
+
     def send_all_parameters(self) -> None:
         """Send all parameters to the telemetry endpoint."""
 
@@ -145,17 +183,37 @@ class AutopilotConfigEditor(QWidget):
         existing_data = {}
         for widget in self.widgets:
             if isinstance(widget, AutopilotParamWidget):
-                existing_data[widget.name] = widget.value
+                existing_data[widget.name] = widget.current_value
 
         try:
-            constants.REQ_SESSION.post(
+            if self._check_default_parameters() is False:
+                print("[Info] Setting current parameters as default on telemetry server.")
+                response = constants.REQ_SESSION.post(
+                    urljoin(
+                        constants.TELEMETRY_SERVER_ENDPOINTS["set_default_autopilot_parameters"],
+                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                    ),
+                    json=self.config
+                )
+
+                if response.status_code == 200:
+                    print("[Info] Current parameters set as default successfully.")
+                else:
+                    print(f"[Warning] Failed to set defaults; status {response.status_code}: {response.text}")
+        
+            print("[Info] Sending all parameters to telemetry server.")
+            response = constants.REQ_SESSION.post(
                 urljoin(
                     constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
                     str(constants.TELEMETRY_SERVER_INSTANCE_ID),
                 ),
                 json=existing_data,
             )
-            print("[Info] All parameters sent successfully.")
+
+            if response.status_code == 200:
+                print("[Info] All parameters sent successfully.")
+            else:
+                print(f"[Warning] Failed to send parameters; status {response.status_code}: {response.text}")
 
         except RequestException as e:
             print(f"[Error] Failed to send all parameters: {e}")
@@ -163,9 +221,15 @@ class AutopilotConfigEditor(QWidget):
     def pull_all_parameters(self) -> None:
         """Pull all parameters from the telemetry endpoint."""
 
+        rememeber_choice = False
+        response: QMessageBox.StandardButton = QMessageBox.No
         print("[Info] Pulling all parameters...")
 
         try:
+            if self._check_default_parameters() is False:
+                print("[Warning] Default parameters are not set on the telemetry server. Aborting pull operation.")
+                return
+
             data = constants.REQ_SESSION.get(
                 urljoin(
                     constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
@@ -181,13 +245,50 @@ class AutopilotConfigEditor(QWidget):
 
             for widget in self.widgets:
                 if widget.name in data:
-                    widget.value = data[widget.name]
+                    widget.current_value = data[widget.name]
                     if isinstance(widget.modify_element, QLineEdit):
-                        widget.modify_element.setText(str(widget.value))
+                        widget.modify_element.setText(str(widget.current_value))
+                    
                     elif widget.value_display:
-                        widget.value_display.setText(str(widget.value))
+                        widget.value_display.setText(str(widget.current_value))
+                
                 else:
                     print(f"[Warning] {widget.name} not found in pulled data.")
+
+                    msg = f"The parameter '{widget.name}' was not found in the pulled data. Do you want to replace the existing config with the pulled data?" # noqa: E501
+                    
+                    # give user option to use pulled data to overwrite existing data
+                    if not rememeber_choice and response == QMessageBox.No:
+                        response, rememeber_choice = misc.show_message_box(
+                            title="Parameter Not Found",
+                            message=msg,
+                            icon=constants.ICONS.warning,
+                            buttons=[QMessageBox.Yes, QMessageBox.No],
+                            remember_choice_option=True
+                        )
+
+                        if response == QMessageBox.Yes:
+                            print("[Info] Replacing existing config with pulled data.")
+
+                            try:
+                                default_params = constants.REQ_SESSION.get(
+                                    urljoin(
+                                        constants.TELEMETRY_SERVER_ENDPOINTS["get_default_autopilot_parameters"],
+                                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                                    )
+                                ).json()
+
+                                if not isinstance(default_params, dict):
+                                    raise TypeError
+                            
+                            except RequestException as e:
+                                print(f"[Error] Failed to fetch default autopilot parameters: {e}")
+                                return
+
+                            self.config = default_params
+                            self.add_parameters()
+                            self.update_status_label()
+                            break
 
             print("[Info] All parameters pulled successfully.")
 
@@ -216,7 +317,6 @@ class AutopilotConfigEditor(QWidget):
             if not isinstance(file_config, dict):
                 raise TypeError("Configuration file must contain a dictionary of parameters.")
             
-
             self.config = file_config
             self.currently_loaded_local_config_hash = Path(file_path).stem
 
@@ -256,7 +356,7 @@ class AutopilotConfigEditor(QWidget):
         self.widgets: list[AutopilotParamWidget] = []
 
         for key in self.config:
-            param_config = self.config[key].copy()
+            param_config = deepcopy(self.config[key])
             param_config["name"] = key
             try:
                 param_widget = AutopilotParamWidget(param_config)
