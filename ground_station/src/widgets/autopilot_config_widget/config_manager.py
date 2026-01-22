@@ -464,8 +464,8 @@ class ConfigWidget(QFrame):
 
         self.hash_description_edit = QLineEdit(self.hash_description)
 
-        self.form_layout.addRow("Hash Value:", self.hash_value_label)
         self.form_layout.addRow("Description:", self.hash_description_edit)
+        self.form_layout.addRow("Hash Value:", self.hash_value_label)
         # endregion setup widget style
 
         # region buttons
