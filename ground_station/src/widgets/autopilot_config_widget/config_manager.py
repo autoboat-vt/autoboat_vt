@@ -20,8 +20,9 @@ from qtpy.QtWidgets import (
 )
 from requests import RequestException
 from strenum import StrEnum
-from utils import constants, misc
-from utils.thread_classes import AutopilotThreadRouter
+from syntax_highlighters import JsonHighlighter
+from utils import constants, misc, thread_classes
+from widgets.popup_edit import TextEditWindow
 
 
 class ConfigInfo:
@@ -168,7 +169,7 @@ class AutopilotConfigManager(QWidget):
 
         self.on_sort_by_changed(self.sort_by.name)
 
-        self.hash_checker = AutopilotThreadRouter.AvailableHashesFetcherThread()
+        self.hash_checker = thread_classes.AutopilotThreadRouter.AvailableHashesFetcherThread()
         self.hash_checker.response.connect(self.on_hashes_fetched)
         self.timer.timeout.connect(self.hash_fetcher_starter)
 
@@ -227,10 +228,51 @@ class AutopilotConfigManager(QWidget):
         """
         Handle the create new configuration button click event.
 
-        TODO: Implement creating a new configuration
+        Opens a popup window to enter new configuration data.
         """
-        
-        pass
+
+        self.text_edit_window = TextEditWindow(highlighter=JsonHighlighter)
+        self.text_edit_window.setWindowTitle("Create New Autopilot Configuration")
+        self.text_edit_window.user_text_emitter.connect(self.create_new_config_callback)
+        self.text_edit_window.show()
+
+    def create_new_config_callback(self, config_data: str) -> None:
+        """
+        Callback function to handle the new configuration data entered by the user.
+
+        Parameters
+        ----------
+        config_data
+            The JSON string representing the new configuration data.
+        """
+
+        try:
+            if not config_data.strip():
+                print("[Warning] No configuration data provided.")
+                return
+            
+            config_dict = json.loads(config_data)
+
+            response = constants.REQ_SESSION.post(
+                urljoin(
+                    constants.TELEMETRY_SERVER_URL,
+                    constants.TELEMETRY_SERVER_ENDPOINTS["create_config"],
+                ),
+                json=config_dict,
+            )
+
+            if response.status_code == 200:
+                print(f"[Info] New configuration with hash {response.text} created successfully!")
+                self.hash_fetcher_starter()
+            
+            else:
+                raise RequestException(f"Server returned status code {response.status_code}")
+
+        except json.JSONDecodeError as e:
+            print(f"[Error] Invalid JSON data: {e}")
+
+        except RequestException as e:
+            print(f"[Error] Failed to upload configuration: {e}")
     
     def on_sort_by_changed(self, sort_method: str) -> None:
         """

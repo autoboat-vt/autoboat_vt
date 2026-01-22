@@ -6,7 +6,8 @@ from qtpy.QtGui import (
     QPainter,
     QSyntaxHighlighter,
 )
-from qtpy.QtWidgets import QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QMessageBox, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
+from utils import constants, misc
 
 
 class TextEditWindow(QWidget):
@@ -62,13 +63,10 @@ class TextEditWindow(QWidget):
         self.highlighter = None
         self._setup_editor()
 
-        if highlighter is not None:
-            if issubclass(highlighter, QSyntaxHighlighter):
-                self.highlighter = highlighter(self.editor.document())
-            else:
-                raise TypeError("Highlighter must be a subclass of QSyntaxHighlighter")
+        if issubclass(highlighter, QSyntaxHighlighter):
+            self.highlighter = highlighter(self.editor.document())
 
-        self.save_button = QPushButton("Save (not to file)")
+        self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save)
 
         self.layout.addWidget(self.editor)
@@ -91,7 +89,7 @@ class TextEditWindow(QWidget):
         def __init__(self, editor: QPlainTextEdit) -> None:
             super().__init__(editor)
             self.editor = editor
-            self.text_edit_window = None  # Will be set by parent
+            self.text_edit_window = None
 
         def sizeHint(self) -> QSize:
             """
@@ -105,7 +103,8 @@ class TextEditWindow(QWidget):
 
             if self.text_edit_window:
                 return QSize(self.text_edit_window.line_number_area_width(), 0)
-            return QSize(50, 0)  # Default fallback
+            
+            return QSize(50, 0)
 
         def paintEvent(self, event: QEvent) -> None:
             """
@@ -263,6 +262,20 @@ class TextEditWindow(QWidget):
         """Save current text."""
 
         self.current_text = self.editor.toPlainText()
+
+        response = misc.show_message_box(
+            title="Save Text",
+            message="Do you want to save the current text and close the window?",
+            icon=constants.ICONS.question,
+            buttons=[QMessageBox.Yes, QMessageBox.No]
+        )
+
+        if response == QMessageBox.Yes:
+            self.user_text_emitter.emit(self.current_text)
+            self.close()
+
+        else:
+            self.user_text_emitter.emit(self.current_text)
 
     def closeEvent(self, event: QEvent) -> None:
         """
