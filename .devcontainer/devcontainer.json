@@ -41,6 +41,7 @@
         "CONTAINER_OWNER_USER_NAME": "${localEnv:USER}",
         "TZ": "${localEnv:TZ:America/New_York}"
     },
+
     "runArgs": [
         "--net=host",
         "--platform=linux/amd64",
@@ -49,8 +50,8 @@
         "--env-file=.devcontainer/devcontainer_environment_variables",
         "-v",
         "/var/run/docker.sock:/var/run/docker.sock",
-        "${localEnv:DOCKER_GPU_RUN_ARGS:--env}",
-        "${localEnv:DOCKER_RUNTIME_RUN_ARGS:IGNORE_THIS=hi}",
+        // "${localEnv:DOCKER_GPU_RUN_ARGS:--env}",
+        // "${localEnv:DOCKER_RUNTIME_RUN_ARGS:IGNORE_THIS=hi}",
         "--name=autoboat_dev_container",
         "--privileged"
         // "--device=/dev/ttyACM0",

@@ -369,7 +369,7 @@ class TelemetryNode(Node):
         except Exception as e:
             self.logger.info(f"Could not connect to telemetry server route {route}, retrying... \nError: {e}")
             time.sleep(0.5)
-            return self.get_raw_response_from_telemetry_server(route)
+            return self.get_raw_response_from_telemetry_server(route, session)
 
     def update_boat_status(self) -> None:
         """
@@ -443,7 +443,7 @@ class TelemetryNode(Node):
         except Exception as e:
             self.logger.info(f"Could not connect to telemetry server to send boat status update. \nError: {e}")
             
-        self.logger.info(f"{time.time() - start_time}")
+
 
     def update_waypoints_from_telemetry(self) -> None:
         """
@@ -451,8 +451,9 @@ class TelemetryNode(Node):
         and then publishes the waypoints over ROS so that the autopilot can see them.
         """
 
-        new_waypoints_list = self.get_raw_response_from_telemetry_server(urljoin(TELEMETRY_SERVER_URL, f"waypoints/get_new/{self.instance_id}"), session=self.waypoints_session)
-        self.logger.info(f"{new_waypoints_list}")
+        new_waypoints_list = self.get_raw_response_from_telemetry_server(
+            urljoin(TELEMETRY_SERVER_URL, f"waypoints/get_new/{self.instance_id}"), session=self.waypoints_session
+        )
 
         if new_waypoints_list == {}:
             self.logger.info("No new waypoints received from telemetry server.")
