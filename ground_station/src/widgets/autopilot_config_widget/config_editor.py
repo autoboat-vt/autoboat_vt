@@ -41,6 +41,7 @@ class AutopilotConfigEditor(QWidget):
         super().__init__()
 
         self.timer = misc.copy_qtimer(constants.ONE_SECOND_TIMER)
+        self.currently_loaded_local_config_hash: str = ""
 
         self.main_layout = QGridLayout()
         self.setLayout(self.main_layout)
@@ -128,13 +129,13 @@ class AutopilotConfigEditor(QWidget):
         self.main_layout.addWidget(self.scroll, 2, 0)
         self.main_layout.addWidget(self.button_group_box, 3, 0)
 
-        self.add_parameters()
-        self.update_status_label()
-
         self.hash_fetcher = thread_classes.AutopilotThreadRouter.ActiveHashFetcherThread()
         self.hash_fetcher.response.connect(self.update_hash)
         self.timer.timeout.connect(self.hash_fetcher_starter)
         self.timer.start()
+
+        self.add_parameters()
+        self.update_status_label()
 
     def send_all_parameters(self) -> None:
         """Send all parameters to the telemetry endpoint."""
@@ -214,8 +215,11 @@ class AutopilotConfigEditor(QWidget):
 
             if not isinstance(file_config, dict):
                 raise TypeError("Configuration file must contain a dictionary of parameters.")
+            
 
             self.config = file_config
+            self.currently_loaded_local_config_hash = Path(file_path).stem
+
             self.add_parameters()
             self.update_status_label()
             print(f"[Info] Loaded parameters from {file_path}.")
@@ -313,15 +317,17 @@ class AutopilotConfigEditor(QWidget):
 
         if not search_text:
             self.status_label.setText(
-                f"Showing all {visible_count} parameters | Showing config: {constants.AUTOPILOT_PARAM_HASH}"
+                f"Showing all {visible_count} parameters | Showing config: {self.currently_loaded_local_config_hash}"
             )
         
         elif visible_count == 0:
-            self.status_label.setText(f"No parameters match '{search_text}' | Showing config: {constants.AUTOPILOT_PARAM_HASH}")
+            self.status_label.setText(
+                f"No parameters match '{search_text}' | Showing config: {self.currently_loaded_local_config_hash}"
+            )
         
         else:
             self.status_label.setText(
-                f"Showing {visible_count} parameters matching '{search_text}' | Showing config: {constants.AUTOPILOT_PARAM_HASH}"
+                f"Showing {visible_count} parameters matching '{search_text}' | Showing config: {self.currently_loaded_local_config_hash}" # noqa: E501
             )
 
     def hash_fetcher_starter(self) -> None:
@@ -579,8 +585,24 @@ class AutopilotParamWidget(QFrame):
         """
 
         try:
-            edited_data = literal_eval(self.modify_element.text())
+            text = self.modify_element.text()
+            
+            # region string handling
+            if self.type is str:
+                try:
+                    edited_data = literal_eval(text)
 
+                except (ValueError, SyntaxError):
+                    edited_data = text
+            
+            else:
+                try:
+                    edited_data = literal_eval(text)
+
+                except (ValueError, SyntaxError) as e:
+                    raise TypeError(f"Invalid literal for type {self.type.__name__}: {text}") from e
+            # endregion string handling
+            
             if not isinstance(edited_data, self.type):
                 if self.type is bool and (
                     isinstance(edited_data, (int, str)) and edited_data in {0, 1, "true", "false"}
