@@ -346,7 +346,7 @@ class TelemetryNode(Node):
             return
         rclpy.shutdown()
 
-    def get_raw_response_from_telemetry_server(self, route: str, session: requests.Session = None) -> Any:
+    def get_raw_response_from_telemetry_server(self, route: str, session: requests.Session) -> Any:
         """
         This is essentially just a helper function to send a GET request to a specific telemetry server route and automatically retry if it cannot connect to that route.
 
