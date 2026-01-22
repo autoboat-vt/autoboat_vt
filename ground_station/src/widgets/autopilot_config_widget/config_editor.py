@@ -1,15 +1,12 @@
 import json
 from ast import literal_eval
 from copy import deepcopy
-from enum import auto
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
-    QCheckBox,
-    QComboBox,
     QFileDialog,
     QFrame,
     QGridLayout,
@@ -25,9 +22,8 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 from requests.exceptions import RequestException
-from strenum import StrEnum
 from syntax_highlighters.json import JsonHighlighter
-from utils import constants, misc
+from utils import constants, misc, thread_classes
 from widgets.popup_edit import TextEditWindow
 from yaml import safe_load
 
@@ -41,27 +37,10 @@ class AutopilotConfigEditor(QWidget):
     ``QWidget``
     """
 
-    class SourceEnum(StrEnum):
-        """
-        Enum for autopilot configuration sources.
-
-        Attributes
-        ----------
-        TELEMETRY_ENDPOINT
-            Source is the telemetry endpoint.
-        LOCAL_FILESYSTEM
-            Source is the local filesystem.
-
-        Inherits
-        --------
-        ``StrEnum``
-        """
-
-        TELEMETRY_ENDPOINT = auto()
-        LOCAL_FILESYSTEM = auto()
-
     def __init__(self) -> None:
         super().__init__()
+
+        self.timer = misc.copy_qtimer(constants.ONE_SECOND_TIMER)
 
         self.main_layout = QGridLayout()
         self.setLayout(self.main_layout)
@@ -69,10 +48,7 @@ class AutopilotConfigEditor(QWidget):
         self.widgets: list[AutopilotParamWidget] = []
         self.config: dict[str, dict[str, Any]] = {}
 
-        # used to control where the user wants to load/save configs from/to
-        self.config_source: AutopilotConfigEditor.SourceEnum = AutopilotConfigEditor.SourceEnum.TELEMETRY_ENDPOINT
-
-        # region send/pull all buttons
+        # region actions button group
         self.button_group_box = QGroupBox()
         self.button_layout = QHBoxLayout()
         self.button_group_box.setLayout(self.button_layout)
@@ -93,24 +69,10 @@ class AutopilotConfigEditor(QWidget):
             min_height=30,
             is_clickable=True,
         )
-        self.button_layout.addWidget(self.send_all_button)
-        self.button_layout.addWidget(self.pull_all_button)
-        # endregion send/pull all buttons
-
-        # region load/save buttons
-        self.sync_sources_toggle = QCheckBox("Sync Sources?")
-
-        self.source_selector_label = QLabel("Source:")
-        self.source_selector = QComboBox()
-        self.source_selector_label.setBuddy(self.source_selector)
-        self.source_selector.addItems([source.name for source in AutopilotConfigEditor.SourceEnum])
-        self.source_selector.setCurrentText(self.config_source.name)
-        self.source_selector.currentTextChanged.connect(self.on_config_source_changed)
-
-        self.load_parameters_button = misc.pushbutton_maker(
-            "Change Config",
+        self.load_from_file_button = misc.pushbutton_maker(
+            "Load from File",
             constants.ICONS.hard_drive,
-            self.load_parameters,
+            self.load_parameters_from_file,
             max_width=200,
             min_height=30,
             is_clickable=True,
@@ -124,6 +86,12 @@ class AutopilotConfigEditor(QWidget):
             is_clickable=True,
         )
 
+        self.button_layout.addWidget(self.send_all_button)
+        self.button_layout.addWidget(self.pull_all_button)
+        self.button_layout.addWidget(self.load_from_file_button)
+        self.button_layout.addWidget(self.save_to_file_button)
+        # endregion actions button group
+        
         try:
             self.config = constants.REQ_SESSION.get(
                 urljoin(
@@ -162,6 +130,11 @@ class AutopilotConfigEditor(QWidget):
 
         self.add_parameters()
         self.update_status_label()
+
+        self.hash_fetcher = thread_classes.AutopilotThreadRouter.ActiveHashFetcherThread()
+        self.hash_fetcher.response.connect(self.update_hash)
+        self.timer.timeout.connect(self.hash_fetcher_starter)
+        self.timer.start()
 
     def send_all_parameters(self) -> None:
         """Send all parameters to the telemetry endpoint."""
@@ -223,32 +196,42 @@ class AutopilotConfigEditor(QWidget):
         except TypeError:
             print(f"[Error] Unexpected data format from telemetry server: {data}. Expected a dictionary of parameters.")
 
-    def load_parameters(self) -> None:
-        """Load parameters from the telemetry endpoint or a local file."""
+    def load_parameters_from_file(self) -> None:
+        """Load parameters from a file."""
 
-        if self.config_source == AutopilotConfigEditor.SourceEnum.LOCAL_FILESYSTEM:
-            file_path, _ = QFileDialog.getOpenFileName(
-                self,
-                "Load Parameters from File",
-                "",
-                "JSON Files (*.json);;All Files (*)",
-            )
-            if not file_path:
-                return
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            caption="Load Parameters from File",
+            directory=constants.AUTOPILOT_PARAMS_DIR.as_posix(),
+            filter="JSON Files (*.json);;All Files (*)",
+        )
+        if not file_path:
+            return
 
-            try:
-                self.config = json.load(Path(file_path).open(mode="r", encoding="utf-8"))
-                self.add_parameters()
-                self.update_status_label()
-                print(f"[Info] Loaded parameters from {file_path}.")
+        try:
+            with open(file_path, mode="r", encoding="utf-8") as file:
+                file_config = json.load(file)
 
-            except Exception as e:
-                print(f"[Error] Unable to read from file: {e}")
+            if not isinstance(file_config, dict):
+                raise TypeError("Configuration file must contain a dictionary of parameters.")
+
+            self.config = file_config
+            self.add_parameters()
+            self.update_status_label()
+            print(f"[Info] Loaded parameters from {file_path}.")
+
+        except Exception as e:
+            print(f"[Error] Unable to load parameters from file: {e}")
 
     def save_parameters_to_file(self) -> None:
         """Save parameters to a file."""
 
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save Parameters to File", "", "JSON Files (*.json);;All Files (*)")
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            caption="Load Parameters from File",
+            directory=constants.AUTOPILOT_PARAMS_DIR.as_posix(),
+            filter="JSON Files (*.json);;All Files (*)"
+        )
         if not file_path:
             return
 
@@ -329,31 +312,38 @@ class AutopilotConfigEditor(QWidget):
             visible_count = len(self.widgets)
 
         if not search_text:
-            self.status_label.setText(f"Showing all {visible_count} parameters")
+            self.status_label.setText(
+                f"Showing all {visible_count} parameters | Showing config: {constants.AUTOPILOT_PARAM_HASH}"
+            )
         
         elif visible_count == 0:
-            self.status_label.setText(f"No parameters match '{search_text}'")
+            self.status_label.setText(f"No parameters match '{search_text}' | Showing config: {constants.AUTOPILOT_PARAM_HASH}")
         
         else:
-            self.status_label.setText(f"Showing {visible_count} parameters matching '{search_text}'")
+            self.status_label.setText(
+                f"Showing {visible_count} parameters matching '{search_text}' | Showing config: {constants.AUTOPILOT_PARAM_HASH}"
+            )
 
-    def on_config_source_changed(self, new_source: str) -> None:
+    def hash_fetcher_starter(self) -> None:
+        """Start the hash fetcher thread."""
+        
+        if not self.hash_fetcher.isRunning():
+            self.hash_fetcher.start()
+
+    def update_hash(self, request_result: tuple[str, constants.TelemetryStatus]) -> None:
         """
-        Handle changes to the configuration source.
+        Update the autopilot parameter hash based on the thread response.
 
         Parameters
         ----------
-        new_source
-            The new configuration source selected.
+        request_result
+            A tuple containing the hash string and the telemetry status.
         """
 
-        try:
-            self.config_source = AutopilotConfigEditor.SourceEnum(new_source)
-            print(f"[Info] Configuration source changed to: {new_source}")
+        hash_string, status = request_result
 
-        except ValueError:
-            print(f"[Error] Invalid configuration source: {new_source}. Current source remains unchanged.")
-
+        if status == constants.TelemetryStatus.SUCCESS:
+            constants.AUTOPILOT_PARAM_HASH = hash_string
 
 class AutopilotParamWidget(QFrame):
     """
@@ -419,6 +409,7 @@ class AutopilotParamWidget(QFrame):
             self.value_display = QLabel(str(self.current_value))
             self.value_display.setWordWrap(True)
             self.value_display.setStyleSheet("font-family: monospace;")
+
         else:
             self.modify_element = QLineEdit(str(self.current_value))
             self.modify_element.setMinimumWidth(200)

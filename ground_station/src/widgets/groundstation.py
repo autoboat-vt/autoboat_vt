@@ -904,6 +904,7 @@ class GroundStationWidget(QWidget):
             lat, lon = self.fake_position
 
         if constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
+            constants.AUTOPILOT_PARAM_HASH = ""
             self.clear_waypoints()
             constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = False
 

@@ -115,7 +115,9 @@ class TelemetryNode(Node):
                 if not does_hash_exist:
                     url = f"autopilot_parameters/set_default/{self.instance_id}"
                     self.send_raw_data_to_telemetry_server(url, self.autopilot_parameters, self.autopilot_parameters_session)
-
+                
+                # if hash exists on server, just set the default from that hash
+                # to avoid sending over all the parameters again
                 else:
                     url = f"autopilot_parameters/set_default_from_hash/{self.instance_id}/{config_hash}"
                     self.send_raw_data_to_telemetry_server(url, "", self.autopilot_parameters_session)

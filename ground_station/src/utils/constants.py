@@ -157,6 +157,7 @@ _autopilot_parameters_endpoints: dict[str, str] = {
     "get_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get/"),
     "get_new_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_new/"),
     "get_default_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_default/"),
+    "get_current_hash": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_hash/"),
     "get_config_from_hash": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_config/"),
     "get_hash_description": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_hash_description/"),
     "get_all_hashes": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_all_hashes"),

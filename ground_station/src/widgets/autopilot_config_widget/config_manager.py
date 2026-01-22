@@ -335,10 +335,10 @@ class ConfigWidget(QFrame):
             QFrame {
                 background-color: #2E2E2E;
                 border: 1px solid #444444;
-                border-radius: 5px;
+                border-radius: 0px;
             }
             QLabel {
-                color: #FFFFFF;
+                color: white;
                 font-size: 12pt;
             }
     """
@@ -346,8 +346,8 @@ class ConfigWidget(QFrame):
     activated_style_sheet = """
             QFrame {
                 background-color: #3E3E3E;
-                border: 2px solid #1E90FF;
-                border-radius: 5px;
+                border: 2px solid #D3D3D3;
+                border-radius: 0px;
             }
             QLabel {
                 color: #FFFFFF;
@@ -362,7 +362,7 @@ class ConfigWidget(QFrame):
                 color: white;
                 padding: 5px 10px;
                 text-align: center;
-                font-size: 10pt;
+                font-size: 12pt;
                 margin: 2px 1px;
                 border-radius: 5px;
             }
@@ -378,7 +378,7 @@ class ConfigWidget(QFrame):
                 color: white;
                 padding: 5px 10px;
                 text-align: center;
-                font-size: 10pt;
+                font-size: 12pt;
                 margin: 2px 1px;
                 border-radius: 5px;
             }
@@ -394,7 +394,7 @@ class ConfigWidget(QFrame):
                 color: white;
                 padding: 5px 10px;
                 text-align: center;
-                font-size: 10pt;
+                font-size: 12pt;
                 margin: 2px 1px;
                 border-radius: 5px;
             }
@@ -488,7 +488,7 @@ class ConfigWidget(QFrame):
             with open(config_path, "w") as config_file:
                 json.dump(data, config_file, indent=4)
             
-            print("[Info] Configuration downloaded successfully!.")
+            print("[Info] Configuration downloaded successfully!")
             
         except RequestException as e:
             print(f"[Error] Failed to download configuration: {e}")

@@ -345,7 +345,7 @@ class InstanceHandler(QWidget):
                     constants.TELEMETRY_SERVER_INSTANCE_ID = random.choice(not_deprecated_ids)
                     constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
                     print(
-                        f"The instance you were connected to, #{instance_id}, has been removed. You have been connected to instance #{constants.TELEMETRY_SERVER_INSTANCE_ID} instead. Please select a different instance if needed."  # noqa: E501
+                        f"[Warning] The instance you were connected to, #{instance_id}, has been removed. You have been connected to instance #{constants.TELEMETRY_SERVER_INSTANCE_ID} instead. Please select a different instance if needed."  # noqa: E501
                     )
 
                 else:
@@ -356,7 +356,7 @@ class InstanceHandler(QWidget):
                         constants.TELEMETRY_SERVER_INSTANCE_ID = new_instance_id
                         constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = True
                         print(
-                            f"The instance you were connected to, #{instance_id}, has been removed. A new instance has been created with ID #{new_instance_id} and you have been connected to it."  # noqa: E501
+                            f"[Warning] The instance you were connected to, #{instance_id}, has been removed. A new instance has been created with ID #{new_instance_id} and you have been connected to it."  # noqa: E501
                         )
 
                     except RequestException as e:
@@ -575,14 +575,14 @@ class InstanceWidget(QFrame):
 
     connect_button_stylesheet = """
             QPushButton {
-            background-color: #4CAF50;  /* green */
-            color: white;
-            font-weight: bold;
-            padding: 6px 12px;
-            border-radius: 5px;
+                background-color: #4CAF50;  /* green */
+                color: white;
+                font-weight: bold;
+                padding: 6px 12px;
+                border-radius: 5px;
             }
             QPushButton:hover {
-            background-color: #45A049;
+                background-color: #45A049;
             }
         """
 

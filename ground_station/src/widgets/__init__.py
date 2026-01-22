@@ -9,12 +9,14 @@ Contains:
 - CameraWidget: Widget for displaying a camera feed.
 - AutopilotConfigEditor: Widget for editing autopilot parameters.
 - AutopilotConfigManager: Widget for managing autopilot configuration files.
+- AutopilotConfigWidget: Tabbed widget combining the config editor and manager.
 - TextEditWindow: Popup window for editing text.
 """
 
 __all__ = [
     "AutopilotConfigEditor",
     "AutopilotConfigManager",
+    "AutopilotConfigWidget",
     "CameraWidget",
     "ConsoleOutputWidget",
     "GraphViewer",
@@ -25,6 +27,7 @@ __all__ = [
 
 from .autopilot_config_widget.config_editor import AutopilotConfigEditor
 from .autopilot_config_widget.config_manager import AutopilotConfigManager
+from .autopilot_config_widget.config_widget import AutopilotConfigWidget
 from .camera_widget.camera import CameraWidget
 from .console_output import ConsoleOutputWidget
 from .graph_viewer import GraphViewer

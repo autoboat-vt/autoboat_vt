@@ -7,8 +7,7 @@ import threading
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 from utils import constants, misc
 from widgets import (
-    AutopilotConfigEditor,
-    AutopilotConfigManager,
+    AutopilotConfigWidget,
     CameraWidget,
     ConsoleOutputWidget,
     GraphViewer,
@@ -105,8 +104,7 @@ class MainWindow(QMainWindow):
             graph_viewer = GraphViewer()
             self.main_widget.addTab(GroundStationWidget(graph_viewer.boat_data_signal), "Ground Station")
             self.main_widget.addTab(graph_viewer, "Graph Viewer")
-            self.main_widget.addTab(AutopilotConfigEditor(), "Autopilot Parameters")
-            self.main_widget.addTab(AutopilotConfigManager(), "Config Manager")
+            self.main_widget.addTab(AutopilotConfigWidget(), "Autopilot Configuration")
             self.main_widget.addTab(CameraWidget(), "Camera Feed")
             self.main_widget.setCurrentIndex(2)
             print("[Info] Main application tabs loaded.")

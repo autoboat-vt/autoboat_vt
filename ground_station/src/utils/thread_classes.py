@@ -35,13 +35,13 @@ class AutopilotThreadRouter:
 
     Subclasses
     ----------
-    - ``ParamFetcherThread`` -> Fetches autopilot parameters.
-    - ``DefaultsFetcherThread`` -> Fetches default autopilot parameters.
+    - ``ActiveHashFetcherThread`` -> Fetches the currently active autopilot parameter configuration hash.
+    - ``AvailableHashesFetcherThread`` -> Fetches available autopilot parameter configuration hashes.
     """
 
-    class ParamFetcherThread(QThread):
+    class ActiveHashFetcherThread(QThread):
         """
-        Thread to fetch autopilot parameters from the telemetry server.
+        Thread to fetch the currently active autopilot parameter configuration hash from the telemetry server.
 
         Inherits
         -------
@@ -50,8 +50,8 @@ class AutopilotThreadRouter:
         Attributes
         ----------
         response
-            Signal to send autopilot parameters to the main thread. Emits a tuple containing:
-                - a dictionary of autopilot parameters,
+            Signal to send the active hash to the main thread. Emits a tuple containing:
+                - a string representing the active hash,
                 - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
@@ -61,29 +61,29 @@ class AutopilotThreadRouter:
             super().__init__()
 
         def run(self) -> None:
-            """Run the thread to fetch autopilot parameters from the telemetry server."""
+            """Run the thread to fetch currently active autopilot parameter configuration hash from the telemetry server."""
 
             self.get_params()
 
         def get_params(self) -> None:
-            """Fetch autopilot parameters from the telemetry server and emit them."""
+            """Fetch currently active autopilot parameter configuration hash and emit it."""
 
             try:
                 data = constants.REQ_SESSION.get(
                     urljoin(
-                        constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
+                        constants.TELEMETRY_SERVER_ENDPOINTS["get_current_hash"],
                         str(constants.TELEMETRY_SERVER_INSTANCE_ID),
                     )
-                ).json()
+                ).text
 
-                if not isinstance(data, dict):
+                if not isinstance(data, str):
                     raise TypeError
 
             except RequestException:
-                self.response.emit(({}, constants.TelemetryStatus.FAILURE))
+                self.response.emit(("", constants.TelemetryStatus.FAILURE))
 
             except TypeError:
-                self.response.emit(({}, constants.TelemetryStatus.WRONG_FORMAT))
+                self.response.emit(("", constants.TelemetryStatus.WRONG_FORMAT))
 
             else:
                 self.response.emit((data, constants.TelemetryStatus.SUCCESS))
