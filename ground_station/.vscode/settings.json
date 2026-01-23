@@ -1,7 +1,0 @@
-{
-    "[python]": { "editor.defaultFormatter": "charliermarsh.ruff" },
-    "ruff.configurationPreference": "filesystemFirst",
-    "ruff.organizeImports": false,
-    "ruff.importStrategy": "useBundled",
-    "editor.formatOnSave": true
-}

@@ -21,7 +21,6 @@
                 "ms-python.python",
                 "ms-python.vscode-pylance",
                 "magicstack.magicpython",
-                "charliermarsh.ruff",
                 "rodolphebarbanneau.python-docstring-highlighter",
                 "njpwerner.autodocstring",
                 "IBM.output-colorizer",
@@ -42,6 +41,7 @@
         "CONTAINER_OWNER_USER_NAME": "${localEnv:USER}",
         "TZ": "${localEnv:TZ:America/New_York}"
     },
+
     "runArgs": [
         "--net=host",
         "--platform=linux/amd64",
@@ -50,9 +50,12 @@
         "--env-file=.devcontainer/devcontainer_environment_variables",
         "-v",
         "/var/run/docker.sock:/var/run/docker.sock",
-        "${localEnv:DOCKER_GPU_RUN_ARGS:--env}",
-        "${localEnv:DOCKER_RUNTIME_RUN_ARGS:IGNORE_THIS=hi}",
-        "--name", "autoboat_dev_container"
+        // "${localEnv:DOCKER_GPU_RUN_ARGS:--env}",
+        // "${localEnv:DOCKER_RUNTIME_RUN_ARGS:IGNORE_THIS=hi}",
+        "--name=autoboat_dev_container",
+        "--privileged"
+        // "--device=/dev/ttyACM0",
+        // "--device-cgroup-rule=c 166:* rmw"
     ],
     "mounts": [
         "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"

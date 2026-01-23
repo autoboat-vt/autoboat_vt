@@ -1,30 +1,32 @@
-from utils import constants, misc
-from syntax_highlighters.json import JsonHighlighter
-from widgets.popup_edit import TextEditWindow
-from copy import deepcopy
-from yaml import safe_load
-import requests
-from urllib.parse import urljoin
 import json
+from copy import deepcopy
+from pathlib import Path
 from typing import Any
-from pathlib import PurePath
+from urllib.parse import urljoin
+
+from requests.exceptions import RequestException
 from jsonc_parser.parser import JsoncParser
+from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
-    QWidget,
-    QHBoxLayout,
-    QVBoxLayout,
+    QFileDialog,
+    QFrame,
     QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
-    QSpacerItem,
-    QSizePolicy,
-    QScrollArea,
     QPushButton,
-    QFrame,
-    QGroupBox,
-    QFileDialog,
+    QScrollArea,
+    QSizePolicy,
+    QSpacerItem,
+    QVBoxLayout,
+    QWidget,
 )
-from qtpy.QtCore import Qt
+from yaml import safe_load
+
+from syntax_highlighters.json import JsonHighlighter
+from utils import constants, misc
+from widgets.popup_edit import TextEditWindow
 
 
 class AutopilotParamEditor(QWidget):
@@ -140,10 +142,9 @@ class AutopilotParamEditor(QWidget):
                     str(constants.TELEMETRY_SERVER_INSTANCE_ID),
                 ),
                 json=existing_data,
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
             )
             print("[Info] All parameters sent successfully.")
-        except requests.exceptions.RequestException as e:
+        except RequestException as e:
             print(f"[Error] Failed to send all parameters: {e}")
 
     def pull_all_parameters(self) -> None:
@@ -155,8 +156,7 @@ class AutopilotParamEditor(QWidget):
                 urljoin(
                     constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
                     str(constants.TELEMETRY_SERVER_INSTANCE_ID),
-                ),
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                )
             ).json()
 
             for widget in self.widgets:
@@ -171,7 +171,7 @@ class AutopilotParamEditor(QWidget):
                         print(f"[Warning] {widget.name} not found in pulled data.")
 
             print("[Info] All parameters pulled successfully.")
-        except requests.exceptions.RequestException as e:
+        except RequestException as e:
             print(f"[Error] Failed to pull all parameters: {e}")
 
     def load_parameters_from_file(self) -> None:
@@ -187,7 +187,7 @@ class AutopilotParamEditor(QWidget):
             return
 
         try:
-            data = JsoncParser.parse_file(PurePath(file_path))
+            data = JsoncParser.parse_file(Path(file_path))
             self.config = data
             self.add_parameters()
             self.update_status_label()
@@ -329,10 +329,10 @@ class AutopilotParamWidget(QFrame):
             assert isinstance(self.default_val, self.type), f"Default value must be of type {self.type.__name__}."
             assert isinstance(self.description, str), "Description must be a string."
 
-        except (KeyError, AssertionError):
+        except (KeyError, AssertionError) as exception:
             raise ValueError(
                 "[Error] Invalid configuration for `AutopilotParamWidget`. See `src/widgets/autopilot_param_editor/editor_config.jsonc`."
-            )
+            ) from exception
 
         # endregion validate parameter config
 
@@ -428,11 +428,10 @@ class AutopilotParamWidget(QFrame):
                 urljoin(
                     constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
                     str(constants.TELEMETRY_SERVER_INSTANCE_ID),
-                ),
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                )
             ).json()
 
-        except requests.exceptions.RequestException as e:
+        except RequestException as e:
             print(f"[Error] Failed to fetch existing autopilot parameters. Cannot send {self.name}: {e}")
             return
 
@@ -450,11 +449,10 @@ class AutopilotParamWidget(QFrame):
                         str(constants.TELEMETRY_SERVER_INSTANCE_ID),
                     ),
                     json=existing_data,
-                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
                 print(f"[Info] Successfully sent {self.name} with value {self.value}.")
 
-            except requests.exceptions.RequestException as e:
+            except RequestException as e:
                 print(f"[Error] Failed to send {self.name} with value {self.value}: {e}")
                 return
 
@@ -476,8 +474,7 @@ class AutopilotParamWidget(QFrame):
                 urljoin(
                     constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
                     str(constants.TELEMETRY_SERVER_INSTANCE_ID),
-                ),
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                )
             ).json()
 
             if self.name in data:
@@ -492,7 +489,7 @@ class AutopilotParamWidget(QFrame):
             else:
                 print(f"[Warning] {self.name} not found in pulled data.")
 
-        except requests.exceptions.RequestException as e:
+        except RequestException as e:
             print(f"[Error] Failed to pull value for {self.name}: {e}")
 
         self.reset_button.setEnabled(True)
@@ -537,14 +534,14 @@ class AutopilotParamWidget(QFrame):
                 )
 
             with open(
-                PurePath(constants._autopilot_param_editor_dir / "params_temp.json"),
+                Path(constants._autopilot_param_editor_dir / "params_temp.json"),
             ) as file:
                 temp_params = json.load(file)
 
             temp_params[self.name] = {"type": self.type.__name__, "value": edited_data}
 
             with open(
-                PurePath(constants._autopilot_param_editor_dir / "params_temp.json"),
+                Path(constants._autopilot_param_editor_dir / "params_temp.json"),
                 "w",
             ) as file:
                 json.dump(temp_params, file, indent=4)

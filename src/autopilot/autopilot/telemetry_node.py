@@ -85,7 +85,12 @@ class TelemetryNode(Node):
             new_id = self.get_raw_response_from_telemetry_server("instance_manager/create", session=self.boat_status_session)
             if isinstance(new_id, int):
                 self.instance_id = new_id
-                self.boat_status_session.post(urljoin(TELEMETRY_SERVER_URL, f"instance_manager/set_user/{self.instance_id}/{os.environ['USER']}"))
+                
+                user_name = os.environ.get('USER')
+                if not user_name:
+                    user_name = "Unknown User"
+                    
+                self.boat_status_session.post(urljoin(TELEMETRY_SERVER_URL, f"instance_manager/set_user/{self.instance_id}/{user_name}"))
                 self.logger.info(f"Created new telemetry server instance with ID {self.instance_id}")
                 break
 
@@ -341,7 +346,7 @@ class TelemetryNode(Node):
             return
         rclpy.shutdown()
 
-    def get_raw_response_from_telemetry_server(self, route: str, session: requests.Session = None) -> Any:
+    def get_raw_response_from_telemetry_server(self, route: str, session: requests.Session) -> Any:
         """
         This is essentially just a helper function to send a GET request to a specific telemetry server route and automatically retry if it cannot connect to that route.
 
@@ -364,7 +369,7 @@ class TelemetryNode(Node):
         except Exception as e:
             self.logger.info(f"Could not connect to telemetry server route {route}, retrying... \nError: {e}")
             time.sleep(0.5)
-            return self.get_raw_response_from_telemetry_server(route)
+            return self.get_raw_response_from_telemetry_server(route, session)
 
     def update_boat_status(self) -> None:
         """
@@ -438,7 +443,7 @@ class TelemetryNode(Node):
         except Exception as e:
             self.logger.info(f"Could not connect to telemetry server to send boat status update. \nError: {e}")
             
-        self.logger.info(f"{time.time() - start_time}")
+
 
     def update_waypoints_from_telemetry(self) -> None:
         """
@@ -446,8 +451,9 @@ class TelemetryNode(Node):
         and then publishes the waypoints over ROS so that the autopilot can see them.
         """
 
-        new_waypoints_list = self.get_raw_response_from_telemetry_server(urljoin(TELEMETRY_SERVER_URL, f"waypoints/get_new/{self.instance_id}"), session=self.waypoints_session)
-        self.logger.info(f"{new_waypoints_list}")
+        new_waypoints_list = self.get_raw_response_from_telemetry_server(
+            urljoin(TELEMETRY_SERVER_URL, f"waypoints/get_new/{self.instance_id}"), session=self.waypoints_session
+        )
 
         if new_waypoints_list == {}:
             self.logger.info("No new waypoints received from telemetry server.")

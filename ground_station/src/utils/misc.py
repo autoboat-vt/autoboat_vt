@@ -1,14 +1,29 @@
 """
 Module containing miscellaneous utility functions and classes for the ground station application.
+
+Functions:
+- get_icons: Load and return a set of icons for the application.
+- pushbutton_maker: Create a QPushButton with specified features.
+- show_message_box: Show a message box with specified title, message, icon, and buttons
+- show_input_dialog: Show an input dialog to get user input.
+- create_timer: Create a QTimer with specified interval and single-shot status.
+- copy_qtimer: Create a copy of a QTimer with the same interval and single-shot status.
+- cache_cdn_file: Download and cache a file to serve in a local CDN server.
 """
 
-import qtawesome as qta
-from qtpy.QtWidgets import QPushButton, QMessageBox, QInputDialog, QCheckBox
-from qtpy.QtCore import QTimer
-from qtpy.QtGui import QIcon
+import os
+from collections.abc import Callable
 from types import SimpleNamespace
 from typing import TypeVar
-from collections.abc import Callable
+from pathlib import Path
+from requests import RequestException
+
+from utils import constants
+
+import qtawesome as qta
+from qtpy.QtCore import QTimer
+from qtpy.QtGui import QIcon
+from qtpy.QtWidgets import QCheckBox, QInputDialog, QMessageBox, QPushButton
 
 T = TypeVar("T")
 
@@ -45,6 +60,8 @@ def get_icons() -> SimpleNamespace:
         "delete": qta.icon("mdi.trash-can", color="white"),
         "add": qta.icon("mdi.plus", color="white"),
         "save": qta.icon("mdi.content-save", color="white"),
+        "pause": qta.icon("mdi.pause-circle", color="white"),
+        "play": qta.icon("mdi.play-circle", color="white"),
         "cog": qta.icon("mdi.cog", color="white"),
         "pencil": qta.icon("ei.pencil", color="white"),
         "refresh": qta.icon("mdi.refresh", color="white"),
@@ -142,7 +159,7 @@ def show_message_box(
     icon
         An optional icon to display in the message box.
     buttons
-        A list of standard buttons to show. Defaults to `[QMessageBox.Ok]`. \\
+        A list of standard buttons to show. Defaults to `[QMessageBox.Ok]`. <br>
         Example: `[QMessageBox.Yes, QMessageBox.No]`
     remember_choice_option
         If `True`, adds a "Remember my choice" checkbox to the message box.
@@ -204,7 +221,7 @@ def show_input_dialog(
     default_value
         The default value to show in the input field.
     input_type
-        The type to convert the input to. Defaults to `str`. \\
+        The type to convert the input to. Defaults to `str`. <br>
         Example: `int`, `float`, etc.
 
     Returns
@@ -280,3 +297,34 @@ def copy_qtimer(original: QTimer) -> QTimer:
     new_timer.setInterval(original.interval())
     new_timer.setSingleShot(original.isSingleShot())
     return new_timer
+
+def cache_cdn_file(url: str, save_dir: str) -> None:
+    """
+    Download and cache a CDN file locally.
+
+    Parameters
+    ----------
+    url
+        The URL of the CDN file to download.
+    save_dir
+        The directory to save the cached file.
+    """
+
+    file_name = url.split("/")[-1]
+    save_path = Path(save_dir) / file_name
+
+    try:
+        response = constants.REQ_SESSION.get(url)
+        response.raise_for_status()
+
+        with open(save_path, "wb") as file:
+            file.write(response.content)
+        
+        print(f"[Info] Cached CDN file '{file_name}' to '{save_path}'.")
+    
+    except RequestException as e:
+        if file_name in os.listdir(save_dir):
+            print(f"[Warning] Failed to download '{file_name}' from CDN, using cached version. Error: {e}")
+
+        else:
+            raise RuntimeError(f"Failed to download and cache CDN file '{file_name}': {e}") from e
