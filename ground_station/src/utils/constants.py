@@ -226,19 +226,23 @@ try:
         if "autopilot_params" not in os.listdir(DATA_DIR):
             os.makedirs(DATA_DIR / "autopilot_params")
 
-        if "params_temp.json" not in os.listdir(_autopilot_param_editor_dir):
-            shutil.copyfile(
-                Path(DATA_DIR / "autopilot_params" / "params_default.json"),
-                Path(_autopilot_param_editor_dir / "params_temp.json"),
-            )
+        elif "params_temp.json" not in os.listdir(_autopilot_param_editor_dir):
+                if "params_default.json" in os.listdir(DATA_DIR / "autopilot_params"):
+                    shutil.copyfile(
+                        Path(DATA_DIR / "autopilot_params" / "params_default.json"),
+                        Path(_autopilot_param_editor_dir / "params_temp.json"),
+                    )
 
-        # replace all "default" keys with "current" in params_temp.json
-        with open(Path(_autopilot_param_editor_dir / "params_temp.json"), "rt", encoding="utf-8") as f:
-            temp_params = f.read()
-            temp_params = temp_params.replace('"default"', '"current"')
-        
-        with open(Path(_autopilot_param_editor_dir / "params_temp.json"), "wt", encoding="utf-8") as f:
-            f.write(temp_params)
+                    # replace all "default" keys with "current" in params_temp.json
+                    with open(Path(_autopilot_param_editor_dir / "params_temp.json"), "rt", encoding="utf-8") as f:
+                        temp_params = f.read()
+                        temp_params = temp_params.replace('"default"', '"current"')
+                    
+                    with open(Path(_autopilot_param_editor_dir / "params_temp.json"), "wt", encoding="utf-8") as f:
+                        f.write(temp_params)
+                    
+                else:
+                    raise Exception("Default autopilot parameters file not found, please redownload the directory from GitHub.")
 
         if "boat_data" not in os.listdir(DATA_DIR):
             os.makedirs(DATA_DIR / "boat_data")
