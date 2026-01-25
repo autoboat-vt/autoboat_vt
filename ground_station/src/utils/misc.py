@@ -147,8 +147,8 @@ def show_message_box(
 ) -> QMessageBox.StandardButton | tuple[QMessageBox.StandardButton, bool]:
     """
     Show a message box with the specified title, message, and optional icon and buttons.
-    Returns the button that was clicked by the user. If the user closes the message box
-    without clicking a button, it returns ``QMessageBox.StandardButton.NoButton``.
+    
+    If the user closes the message box without clicking a button, it returns ``QMessageBox.StandardButton.NoButton``.
 
     Parameters
     ----------

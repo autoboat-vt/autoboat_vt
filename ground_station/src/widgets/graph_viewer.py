@@ -78,7 +78,11 @@ class GraphViewer(QWidget):
 
             try:
                 self.available_keys = {
-                    key for key in boat_data if isinstance(boat_data[key], (int, float)) and key != "current_waypoint_index"
+                    key for key in boat_data if
+                    (
+                        isinstance(boat_data[key], constants.NumberType)
+                        and key != "current_waypoint_index"
+                    )
                 }
                 filtered_values = {key: float(boat_data.get(key, np.nan)) for key in self.important_keys}
 

@@ -71,6 +71,8 @@ class AutopilotConfigEditor(QWidget):
             min_height=30,
             is_clickable=True,
         )
+
+        self.show_load_warning: bool = True
         self.load_from_file_button = misc.pushbutton_maker(
             "Load from File",
             constants.ICONS.hard_drive,
@@ -300,6 +302,22 @@ class AutopilotConfigEditor(QWidget):
 
     def load_parameters_from_file(self) -> None:
         """Load parameters from a file."""
+
+        if self.show_load_warning:
+            response, self.show_load_warning = misc.show_message_box(
+                title="Load Parameters from File",
+                message="Loading parameters from a file will overwrite the current configuration. Do you want to continue?",
+                icon=constants.ICONS.warning,
+                buttons=[QMessageBox.Yes, QMessageBox.No],
+                remember_choice_option=True
+            )
+
+            if response == QMessageBox.No:
+                print("[Info] Load parameters from file operation cancelled by user.")
+                return
+        
+        else:
+            print("[Info] Loading parameters from file without warning as per user preference.")
 
         file_path, _ = QFileDialog.getOpenFileName(
             self,

@@ -167,11 +167,12 @@ class AutopilotConfigManager(QWidget):
         # put auto refresh toggle on the buttom center of the main layout
         self.main_layout.addWidget(self.auto_refresh_toggle, 6, 0, alignment=Qt.AlignCenter)
 
-        self.on_sort_by_changed(self.sort_by.name)
-
         self.hash_checker = thread_classes.AutopilotThreadRouter.AvailableHashesFetcherThread()
         self.hash_checker.response.connect(self.on_hashes_fetched)
         self.timer.timeout.connect(self.hash_fetcher_starter)
+
+        self.hash_fetcher_starter()
+        self.on_sort_by_changed(self.sort_by.name)
 
     def on_hashes_fetched(self, request_result: tuple[list[str], constants.TelemetryStatus]) -> None:
         """
@@ -266,7 +267,7 @@ class AutopilotConfigManager(QWidget):
                 self.hash_fetcher_starter()
             
             else:
-                raise RequestException(f"Server returned status code {response.status_code}")
+                raise RequestException(f"Server returned status code {response.status_code} with message: {response.text}")
 
         except json.JSONDecodeError as e:
             print(f"[Error] Invalid JSON data: {e}")

@@ -7,6 +7,7 @@ import time
 from enum import auto
 from pathlib import Path
 from types import SimpleNamespace
+from typing import TypeAlias
 from urllib.parse import urljoin
 
 import requests
@@ -37,6 +38,7 @@ class TelemetryStatus(StrEnum):
     FAILURE = auto()
     WRONG_FORMAT = auto()
 
+NumberType: TypeAlias = int | float
 
 # see `main.py` for where this is set
 ICONS: SimpleNamespace
