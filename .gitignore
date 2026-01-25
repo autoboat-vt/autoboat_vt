@@ -29,11 +29,11 @@ ground_station/app_data/
 
 !ground_station/app_data/assets/**
 !ground_station/app_data/js_libraries_cache/.gitkeep
+!ground_station/app_data/boat_data/.gitkeep
 !ground_station/app_data/boat_data_bounds/default.json
 !ground_station/app_data/buoy_data/default.json
 !ground_station/app_data/buoy_data/alternate_default.json
 !ground_station/app_data/autopilot_params/params_default.json
-
 
 # src/object_detection
 src/object_detection/object_detection/runs/**
