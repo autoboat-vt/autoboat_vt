@@ -213,8 +213,9 @@ try:
     stack = inspect.stack()
     for frame_info in stack:
         filename = frame_info.filename
-        # if being run from src/main.py
-        if filename != __file__ and filename.endswith("src/main.py"):
+
+        # if being run from constants.py
+        if filename == Path(SRC_DIR / "utils" / "constants.py").as_posix():
             active_flag = True
             break
 
