@@ -1,4 +1,8 @@
-#!/usr/bin/env -S bash -euo pipefail
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+cd "$SCRIPT_DIR"
 
 query_port() {
     local port=$1
@@ -13,18 +17,18 @@ check_port() {
     local port=$1
     if ! query_port "$port"; then
         echo "Port $port is in use by the following process(es):"
-        for pid in $(lsof -iTCP:"$port" -sTCP:LISTEN -t); do
+        pids=$(lsof -iTCP:"$port" -sTCP:LISTEN -t)
+        for pid in $pids; do
             user=$(ps -o user= -p "$pid")
-            cmd=$(ps -o comm= -p "$pid")
+            args=$(ps -o args= -p "$pid")
             start=$(ps -o lstart= -p "$pid")
-            echo "PID: $pid | User: $user | Command: $cmd | Started: $start"
+            echo "PID: $pid | User: $user | Command: $args | Started: $start"
         done
-
-        read -p "Do you want to kill these process(es)? [y/N] " answer
+        read -r -p "Do you want to kill these process(es)? [y/N] " answer
         case "$answer" in
         [Yy]*)
-            lsof -iTCP:"$port" -sTCP:LISTEN -t | xargs kill -9 >/dev/null 2>&1 || true
-            # wait until port is actually free
+            # gentle kill, then escalate
+            lsof -iTCP:"$port" -sTCP:LISTEN -t | xargs kill -TERM >/dev/null 2>&1 || true
             for i in {1..10}; do
                 if query_port "$port"; then
                     break
@@ -32,7 +36,17 @@ check_port() {
                 sleep 0.5
             done
             if ! query_port "$port"; then
-                echo "Port $port still in use after kill. Exiting."
+                echo "Escalating to kill -KILL for remaining processes on port $port..."
+                lsof -iTCP:"$port" -sTCP:LISTEN -t | xargs kill -KILL >/dev/null 2>&1 || true
+                for i in {1..10}; do
+                    if query_port "$port"; then
+                        break
+                    fi
+                    sleep 0.5
+                done
+            fi
+            if ! query_port "$port"; then
+                echo "Port $port still in use after kills. Exiting."
                 exit 1
             fi
             ;;
@@ -84,7 +98,11 @@ local_go=$(command -v go)
 local_python=$(command -v python3)
 
 should_rebuild=false
-src_hash=$(sha256sum "$go_src" | awk '{print $1}')
+if command -v sha256sum >/dev/null; then
+    src_hash=$(sha256sum "$go_src" | awk '{print $1}')
+else
+    src_hash=$(shasum -a 256 "$go_src" | awk '{print $1}')
+fi
 
 if [[ -f "bin/$bin_name" && -f last_build_time.txt ]]; then
     build_os_type=$(sed -n '1p' last_build_time.txt)
@@ -92,19 +110,23 @@ if [[ -f "bin/$bin_name" && -f last_build_time.txt ]]; then
     last_build_time=$(sed -n '3p' last_build_time.txt)
     last_src_hash=$(sed -n '4p' last_build_time.txt || echo "")
 
-    now=$(date +%s)
-
-    if [[ "$build_os_type" != "$os_type" || "$build_arch_type" != "$arch_type" ]]; then
-        echo "Binary built for $build_os_type/$build_arch_type; rebuilding..."
-        should_rebuild=true
-    elif ((now - last_build_time > 3600)); then
-        echo "Binary is over 1 hour old. Rebuilding..."
-        should_rebuild=true
-    elif [[ "$last_src_hash" != "$src_hash" ]]; then
-        echo "Source has changed. Rebuilding..."
+    if ! [[ "$last_build_time" =~ ^[0-9]+$ ]]; then
+        echo "Invalid build timestamp. Rebuilding..."
         should_rebuild=true
     else
-        echo "Binary is up-to-date. Skipping rebuild."
+        now=$(date +%s)
+        if [[ "$build_os_type" != "$os_type" || "$build_arch_type" != "$arch_type" ]]; then
+            echo "Binary built for $build_os_type/$build_arch_type; rebuilding..."
+            should_rebuild=true
+        elif ((now - last_build_time > 3600)); then
+            echo "Binary is over 1 hour old. Rebuilding..."
+            should_rebuild=true
+        elif [[ "$last_src_hash" != "$src_hash" ]]; then
+            echo "Source has changed. Rebuilding..."
+            should_rebuild=true
+        else
+            echo "Binary is up to date. Skipping rebuild."
+        fi
     fi
 else
     echo "Binary missing or metadata missing. Rebuilding..."
@@ -129,14 +151,26 @@ GO_PID=$!
 $local_python "$python_src" &
 PYTHON_PID=$!
 
+# shellcheck disable=SC2329
 cleanup() {
-    kill "$GO_PID" "$PYTHON_PID" 2>/dev/null || true
-    wait "$GO_PID" "$PYTHON_PID" 2>/dev/null || true
+    [[ -n "${GO_PID:-}" ]] && kill "$GO_PID" 2>/dev/null || true
+    [[ -n "${PYTHON_PID:-}" ]] && kill "$PYTHON_PID" 2>/dev/null || true
+    [[ -n "${GO_PID:-}" ]] && wait "$GO_PID" 2>/dev/null || true
+    [[ -n "${PYTHON_PID:-}" ]] && wait "$PYTHON_PID" 2>/dev/null || true
     temp_file="src/widgets/autopilot_config_widget/params_temp.json"
     [[ -f $temp_file ]] && rm "$temp_file"
 }
 
-trap cleanup EXIT TERM INT
-wait -n
+trap 'cleanup' EXIT TERM INT
+if wait -n 2>/dev/null; then
+    :
+else
+    # Fallback for macOS's older Bash (no wait -n)
+    while true; do
+        kill -0 "$GO_PID" 2>/dev/null || break
+        kill -0 "$PYTHON_PID" 2>/dev/null || break
+        sleep 0.5
+    done
+fi
 
 exit 0
