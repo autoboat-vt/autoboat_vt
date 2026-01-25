@@ -23,7 +23,7 @@ pkg
 ground_station/bin
 ground_station/go.sum
 ground_station/last_build_time.txt
-ground_station/src/widgets/autopilot_param_editor/params_temp.json
+ground_station/src/widgets/autopilot_config_widget/params_temp.json
 
 ground_station/app_data/
 
