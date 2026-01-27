@@ -128,7 +128,9 @@ WAYPOINTS_SERVER_URL: str = f"http://localhost:{GO_SERVER_PORT}/waypoints"
 # base url for telemetry server (the CIA is inside of my brain...)
 TELEMETRY_SERVER_URL: str = "https://vt-autoboat-telemetry.uk:8443"
 
-AUTOPILOT_PARAM_HASH: str = ""
+LOCAL_AUTOPILOT_PARAM_HASH: str = ""
+REMOTE_AUTOPILOT_PARAM_HASH: str = ""
+
 TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE: int = -1  # -1 means no instance selected
 TELEMETRY_SERVER_INSTANCE_ID: int = TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE
 HAS_TELEMETRY_SERVER_INSTANCE_CHANGED: bool = False
@@ -169,6 +171,7 @@ _autopilot_parameters_endpoints: dict[str, str] = {
     "set_default_from_hash": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set_default_from_hash/"),
     "set_hash_description": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set_hash_description/"),
     "create_config": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/create_config"),
+    "delete_config": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/delete_config/"),
     "test_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/test/"),
 }
 

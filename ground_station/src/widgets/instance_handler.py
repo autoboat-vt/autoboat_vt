@@ -65,7 +65,7 @@ class InstanceInfo:
             self._created_at = self._utc_to_local(datetime.fromisoformat(data["created_at"]))
             self._updated_at = self._utc_to_local(datetime.fromisoformat(data["updated_at"]))
 
-        except (KeyError, TypeError, ValueError) as e:
+        except Exception as e:
             raise ValueError("Invalid instance_info data!") from e
         
     @property
@@ -326,7 +326,7 @@ class InstanceHandler(QWidget):
         # region update and create new instance widgets
         # note that new_ids is not necessarily a superset of existing_ids
         existing_ids = set(self.widgets_by_id.keys())
-        new_ids: set[int] = {instance["instance_id"] for instance in instances if isinstance(instance.get("instance_id"), int)}
+        new_ids: set[int] = {instance["instance_id"] for instance in instances}
 
         # how this works:
         # a = {1, 2, 3, 4, 5}

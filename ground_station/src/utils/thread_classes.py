@@ -125,7 +125,7 @@ class AutopilotThreadRouter:
                 if not isinstance(data, list):
                     raise TypeError
 
-                if not all(isinstance(hash_str, str) for hash_str in data):
+                if not all(isinstance(hash_info, dict) for hash_info in data):
                     raise TypeError
 
             except RequestException:

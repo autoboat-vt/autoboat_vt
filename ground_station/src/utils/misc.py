@@ -192,17 +192,21 @@ def show_message_box(
         msg_box.setCheckBox(remember_checkbox)
         clicked = msg_box.exec()
         clicked_button = QMessageBox.StandardButton(clicked)
+
         if clicked_button == QMessageBox.NoButton:
-            print(f"[Warning] User closed the dialog without selecting a button. Using {buttons[0]}.")
-            clicked_button = buttons[0]
+            clicked_button = buttons[-1]
+            print(f"[Warning] User closed the dialog without selecting a button. Using {clicked_button}.")
+
         return clicked_button, remember_checkbox.isChecked()
 
     else:
         clicked = msg_box.exec()
         clicked_button = QMessageBox.StandardButton(clicked)
+        
         if clicked_button == QMessageBox.NoButton:
-            print(f"[Warning] User closed the dialog without selecting a button. Using {buttons[0]}.")
-            clicked_button = buttons[0]
+            clicked_button = buttons[-1]
+            print(f"[Warning] User closed the dialog without selecting a button. Using {clicked_button}.")
+        
         return clicked_button
 
 
