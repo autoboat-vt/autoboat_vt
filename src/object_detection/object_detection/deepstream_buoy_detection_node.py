@@ -43,7 +43,10 @@ if (IS_DEV_CONTAINER):
 else:
     PATH_TO_SRC_DIR = "/home/sailbot/autoboat_vt/src"
 
-PATH_TO_YOLO_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo11.txt"
+# YOLO_VER = 11
+YOLO_VER = 26
+
+PATH_TO_YOLO_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo{YOLO_VER}.txt"
 INFERENCE = True
 if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":
     INFERENCE = False
@@ -59,7 +62,8 @@ class BuoyDetectionNode(Node):
     Credit:<br>
     marcoslucianops (https://github.com/marcoslucianops/DeepStream-Yolo)<br>
     DeepStream SDK Documentation (https://docs.nvidia.com/metropolis/deepstream/7.1/text/DS_Overview.html)<br>
-    DeepStream Python Examples (https://github.com/NVIDIA-AI-IOT/deepstream_python_apps)
+    DeepStream Python Examples (https://github.com/NVIDIA-AI-IOT/deepstream_python_apps)<br>
+    Ultralytics https://www.ultralytics.com/
     """
     def __init__(self):
         super().__init__("buoy_detection")
@@ -363,7 +367,7 @@ class BuoyDetectionNode(Node):
         
         # Read threshold
         attributes_lines = self.config_file_split[5].split('\n')
-        self.threshold = float(attributes_lines[2].split('=')[-1])
+        self.threshold = float(attributes_lines[1].split('=')[-1])
 
     def position_callback(self, msg):
         self.current_position["latitude"] = msg.latitude
@@ -426,7 +430,7 @@ class BuoyDetectionNode(Node):
         if new_threshold != self.threshold:
             if new_threshold >= 0.0 and new_threshold <= 1.0:
                 attributes_lines = self.config_file_split[4].split('\n')
-                attributes_lines[2] = f"pre-cluster-threshold={new_threshold}"
+                attributes_lines[1] = f"pre-cluster-threshold={new_threshold}"
                 self.config_file_split[4] = "\n".join(attributes_lines)
                 self.threshold = new_threshold
                 self.update_config_file()

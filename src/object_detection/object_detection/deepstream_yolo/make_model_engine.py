@@ -14,6 +14,10 @@ gi.require_version('Gst', '1.0')
 from gi.repository import GLib, Gst
 import re
 
+if len(sys.argv) < 2:
+    print("Usage: python make_model_engine.py <yolo_version>")
+    sys.exit(1)
+
 if (re.search("/home/ws", os.getcwd()) is not None):
     IS_DEV_CONTAINER = True
 else:
@@ -25,7 +29,7 @@ if (IS_DEV_CONTAINER):
 else:
     PATH_TO_SRC_DIR = "/home/sailbot/autoboat_vt/src"
 
-PATH_TO_YOLO_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo11.txt"
+PATH_TO_YOLO_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo{sys.argv[1]}.txt"
 
 # Configuration
 COMPUTE_HW = 1

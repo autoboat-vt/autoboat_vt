@@ -1,14 +1,14 @@
 import sys
 
-if len(sys.argv) < 2:
-    print("Usage: python test.py <name_of_model>")
+if len(sys.argv) < 3:
+    print("Usage: python modify_config_file.py <name_of_model> <yolo_version>")
     sys.exit(1)
 
 # if not sys.argv[1].endswith('.pt.onnx'):
 #     print("Error: ONNX file must end with .pt.onnx")
 #     sys.exit(1)
 
-CONFIG_FILE = 'config_infer_primary_yolo11.txt'
+CONFIG_FILE = f'config_infer_primary_yolo{sys.argv[2]}.txt'
 model_name = sys.argv[1]
 
 with open(CONFIG_FILE, 'r') as file:

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ "$#" -lt 1 ]; then
-    echo -e "Usage: $0 <name_of_model_without_file_extension>"
+    echo -e "Usage: $0 <name_of_yolo11_model_without_file_extension>"
     exit 1
 fi
 
@@ -48,6 +48,6 @@ fi
 mv "pt_files/${ONNX_FILE}" ./onnx_files/
 mv "labels.txt" ./label_files/"${MODEL_NAME}_labels.txt"
 
-python3 modify_config_file.py $MODEL_NAME || exit 1
+python3 modify_config_file.py $MODEL_NAME 11 || exit 1
 
-python3 make_model_engine.py || exit 1
+python3 make_model_engine.py 11 || exit 1
