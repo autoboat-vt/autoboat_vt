@@ -2,7 +2,6 @@
 
 import inspect
 import os
-import shutil
 import time
 from enum import auto
 from pathlib import Path
@@ -113,7 +112,6 @@ START_TIME: float = time.time()
 
 # server ports
 ASSET_SERVER_PORT = 8000
-CDN_SERVER_PORT = 8081
 GO_SERVER_PORT = 3001
 
 JS_LIBRARIES: tuple[str, ...] = (
@@ -202,67 +200,50 @@ try:
     TOP_LEVEL_DIR = Path(os.getcwd())
 
     SRC_DIR = Path(TOP_LEVEL_DIR / "src")
+    UTILS_DIR = Path(SRC_DIR / "utils")
+    WIDGETS_DIR = Path(SRC_DIR / "widgets")
+
     DATA_DIR = Path(TOP_LEVEL_DIR / "app_data")
 
-    MAP_DIR = Path(SRC_DIR / "widgets" / "map_widget")
-    HTML_MAP_PATH = Path(MAP_DIR / "map.html")
-    HTML_MAP = open(HTML_MAP_PATH, encoding="utf-8").read()
+    MAP_WIDGET_DIR = Path(WIDGETS_DIR / "map_widget")
+    HTML_MAP_PATH = Path(MAP_WIDGET_DIR / "map.html")
 
-    CAMERA_DIR = Path(SRC_DIR / "widgets" / "camera_widget")
-    HTML_CAMERA_PATH = Path(CAMERA_DIR / "camera.html")
-    HTML_CAMERA = open(HTML_CAMERA_PATH, encoding="utf-8").read()
+    CAMERA_WIDGET_DIR = Path(WIDGETS_DIR / "camera_widget")
+    HTML_CAMERA_PATH = Path(CAMERA_WIDGET_DIR / "camera.html")
 
-    _autopilot_param_editor_dir = Path(SRC_DIR / "widgets" / "autopilot_config_widget")
+    _autopilot_param_editor_dir = Path(WIDGETS_DIR / "autopilot_config_widget")
 
-    active_flag = False
     stack = inspect.stack()
-    for frame_info in stack:
-        filename = frame_info.filename
-
-        # if being run from constants.py
-        if filename == Path(SRC_DIR / "utils" / "constants.py").as_posix():
-            active_flag = True
-            break
+    active_flag: bool = stack[0].filename == Path(UTILS_DIR / "constants.py").as_posix()
 
     if active_flag:
-        if "params_default.json" not in os.listdir(DATA_DIR / "autopilot_params"):
-            raise Exception("Default autopilot parameters file not found, please redownload the directory from GitHub.")
-
+        if "assets" not in os.listdir(DATA_DIR):
+            raise Exception("Assets directory not found, please redownload the directory from GitHub.")
+        
         if "autopilot_params" not in os.listdir(DATA_DIR):
+            print("[Info] Creating autopilot parameters directory...")
             os.makedirs(DATA_DIR / "autopilot_params")
+        
+        if "params_default.json" not in os.listdir(DATA_DIR / "autopilot_params"):
+            print("[Warning] Missing default autopilot parameters file!")
 
-        elif "params_temp.json" not in os.listdir(_autopilot_param_editor_dir):
-                if "params_default.json" in os.listdir(DATA_DIR / "autopilot_params"):
-                    shutil.copyfile(
-                        Path(DATA_DIR / "autopilot_params" / "params_default.json"),
-                        Path(_autopilot_param_editor_dir / "params_temp.json"),
-                    )
-
-                    # replace all "default" keys with "current" in params_temp.json
-                    with open(Path(_autopilot_param_editor_dir / "params_temp.json"), "rt", encoding="utf-8") as f:
-                        temp_params = f.read()
-                        temp_params = temp_params.replace('"default"', '"current"')
-                    
-                    with open(Path(_autopilot_param_editor_dir / "params_temp.json"), "wt", encoding="utf-8") as f:
-                        f.write(temp_params)
-                    
-                else:
-                    raise Exception("Default autopilot parameters file not found, please redownload the directory from GitHub.")
+        if "params_temp.json" not in os.listdir(_autopilot_param_editor_dir):
+            print("[Info] Creating temporary autopilot parameters file...")
+            _autopilot_param_editor_dir.touch("params_temp.json")
 
         if "boat_data" not in os.listdir(DATA_DIR):
+            print("[Info] Creating boat data directory...")
             os.makedirs(DATA_DIR / "boat_data")
 
         if "boat_data_bounds" not in os.listdir(DATA_DIR):
+            print("[Info] Creating boat data bounds directory...")
             os.makedirs(DATA_DIR / "boat_data_bounds")
 
         if "buoy_data" not in os.listdir(DATA_DIR):
+            print("[Info] Creating buoy data directory...")
             os.makedirs(DATA_DIR / "buoy_data")
 
-        if "assets" not in os.listdir(DATA_DIR):
-            raise Exception("Assets directory not found, please redownload the directory from GitHub.")
-
     ASSETS_DIR = Path(DATA_DIR / "assets")
-    CDN_DIR = Path(DATA_DIR / "js_libraries_cache")
     AUTOPILOT_PARAMS_DIR = Path(DATA_DIR / "autopilot_params")
     BOAT_DATA_DIR = Path(DATA_DIR / "boat_data")
     BOAT_DATA_LIMITS_DIR = Path(DATA_DIR / "boat_data_bounds")

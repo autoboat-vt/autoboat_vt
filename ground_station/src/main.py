@@ -24,29 +24,18 @@ class MainWindow(QMainWindow):
 
         mimetypes.add_type("image/png", ".png")
         mimetypes.add_type("text/plain", ".txt")
-
-        def handler(*args: tuple, **kwargs: dict) -> http.server.SimpleHTTPRequestHandler:
-            return http.server.SimpleHTTPRequestHandler(*args, directory=constants.ASSETS_DIR.as_posix(), **kwargs)
-
-        self.asset_server = socketserver.TCPServer(("", constants.ASSET_SERVER_PORT), handler)
-        print(f"[Info] Serving HTTP assets on port {constants.ASSET_SERVER_PORT}...")
-        self.asset_server.serve_forever()
-
-    def start_cdn_server(self) -> None:
-        """Start a quiet HTTP server for CDN assets."""
-
         mimetypes.add_type("text/javascript", ".js")
         mimetypes.add_type("text/css", ".css")
 
         def handler(*args: tuple, **kwargs: dict) -> http.server.SimpleHTTPRequestHandler:
-            return http.server.SimpleHTTPRequestHandler(*args, directory=constants.CDN_DIR.as_posix(), **kwargs)
-
+            return http.server.SimpleHTTPRequestHandler(*args, directory=constants.ASSETS_DIR.as_posix(), **kwargs)
+        
         for link in constants.JS_LIBRARIES:
-            misc.cache_cdn_file(link, constants.CDN_DIR)
+            misc.cache_cdn_file(link, constants.ASSETS_DIR)
 
-        self.cdn_server = socketserver.TCPServer(("", constants.CDN_SERVER_PORT), handler)
-        print(f"[Info] Serving CDN assets on port {constants.CDN_SERVER_PORT}...")
-        self.cdn_server.serve_forever()
+        self.asset_server = socketserver.TCPServer(("", constants.ASSET_SERVER_PORT), handler)
+        print(f"[Info] Serving HTTP assets on port {constants.ASSET_SERVER_PORT}...")
+        self.asset_server.serve_forever()
 
     def __init__(self) -> None:
         super().__init__()
@@ -118,7 +107,6 @@ if __name__ == "__main__":
     constants.ICONS = misc.get_icons()
     window = MainWindow()
     threading.Thread(target=window.start_asset_server, daemon=True).start()
-    threading.Thread(target=window.start_cdn_server, daemon=True).start()
     app.setStyleSheet(constants.STYLE_SHEET)
     app.setPalette(constants.PALLETTE)
     app.setStyle("Fusion")

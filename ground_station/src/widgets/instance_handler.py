@@ -68,6 +68,15 @@ class InstanceInfo:
         except Exception as e:
             raise ValueError("Invalid instance_info data!") from e
         
+    def __str__(self) -> str:
+        """Return a string representation of the ``InstanceInfo`` object."""
+
+        return (
+            f"InstanceInfo(instance_id={self._instance_id}, "
+            f"instance_identifier={self._instance_identifier}, user={self._user}, "
+            f"created_at={self._created_at}, updated_at={self._updated_at})"
+        )
+        
     @property
     def instance_id(self) -> int:
         """The unique identifier for the instance."""

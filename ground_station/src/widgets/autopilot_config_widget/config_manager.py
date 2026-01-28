@@ -57,6 +57,11 @@ class ConfigInfo:
         except Exception as e:
             raise ValueError("Invalid hash info!") from e
     
+    def __str__(self) -> str:
+        """Return a string representation of the ``ConfigInfo`` object."""
+
+        return f"ConfigInfo(hash_value={self._hash_value}, description={self._description}, created_at={self._created_at})"
+    
     @property
     def hash_value(self) -> str:
         """Get the hash value of the parameter configuration."""
@@ -306,7 +311,7 @@ class AutopilotConfigManager(QWidget):
         hash_string, status = request_result
 
         if status == constants.TelemetryStatus.SUCCESS:
-            constants.REMOTE_AUTOPILOT_PARAM_HASH = hash_string.strip()
+            constants.REMOTE_AUTOPILOT_PARAM_HASH = hash_string.strip().replace('"', '')
 
     def create_new_config(self) -> None:
         """
@@ -421,7 +426,11 @@ class AutopilotConfigManager(QWidget):
             visible_count = len(self.widgets_by_hash)
 
         total_count = len(self.widgets_by_hash)
-        self.status_label.setText(f"Showing {visible_count} of {total_count} configurations | Remote Hash: {constants.REMOTE_AUTOPILOT_PARAM_HASH}") # noqa: E501
+        status_text = (
+            f"Showing {visible_count} of {total_count} configurations | "
+            f"Remote Hash: {constants.REMOTE_AUTOPILOT_PARAM_HASH}"
+        )
+        self.status_label.setText(status_text)
 
     def hash_fetcher_starter(self) -> None:
         """Refresh the list of available configuration hashes from the telemetry server."""
@@ -567,8 +576,8 @@ class ConfigWidget(QFrame):
         try:
             data = constants.REQ_SESSION.get(
                     urljoin(
-                        constants.TELEMETRY_SERVER_URL,
-                        f"{constants.TELEMETRY_SERVER_ENDPOINTS['get_config_from_hash'] + self.hash_value}"
+                        constants.TELEMETRY_SERVER_ENDPOINTS['get_config_from_hash'],
+                        self.hash_value
                 )
             ).json()
 
@@ -596,8 +605,8 @@ class ConfigWidget(QFrame):
         try:
             response = constants.REQ_SESSION.delete(
                 urljoin(
-                    constants.TELEMETRY_SERVER_URL,
-                    f"{constants.TELEMETRY_SERVER_ENDPOINTS['delete_config'] + self.hash_value}"
+                    constants.TELEMETRY_SERVER_ENDPOINTS['delete_config'],
+                    self.hash_value
                 )
             )
 
@@ -617,14 +626,10 @@ class ConfigWidget(QFrame):
 
         if new_description not in {"", self.hash_description}:
             try:
-                url_part_1 = urljoin(
-                    constants.TELEMETRY_SERVER_URL,
+                url = urljoin(
                     constants.TELEMETRY_SERVER_ENDPOINTS["set_hash_description"],
+                    f"{self.hash_value}/{new_description}"
                 )
-                
-                url_part_2 = urljoin(self.hash_value + "/", new_description)
-                
-                url = urljoin(url_part_1, url_part_2)
                 response = constants.REQ_SESSION.post(url)
 
                 if response.status_code == 200:

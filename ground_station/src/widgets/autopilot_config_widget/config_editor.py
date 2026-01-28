@@ -143,7 +143,7 @@ class AutopilotConfigEditor(QWidget):
                 existing_data[widget.name] = widget.current_value
 
         try:
-            if constants.REMOTE_AUTOPILOT_PARAM_HASH == '""':
+            if constants.REMOTE_AUTOPILOT_PARAM_HASH == '':
                 print("[Info] Setting current parameters as default on telemetry server.")
                 response = constants.REQ_SESSION.post(
                     urljoin(
@@ -160,6 +160,7 @@ class AutopilotConfigEditor(QWidget):
                     print(f"[Warning] Failed to set defaults; status {response.status_code}: {response.text}")
 
             elif constants.REMOTE_AUTOPILOT_PARAM_HASH != constants.LOCAL_AUTOPILOT_PARAM_HASH:
+                print(constants.LOCAL_AUTOPILOT_PARAM_HASH, constants.REMOTE_AUTOPILOT_PARAM_HASH)
                 print("[Info] Creating new config on telemetry server.")
                 response = constants.REQ_SESSION.post(
                     constants.TELEMETRY_SERVER_ENDPOINTS["create_config"],
