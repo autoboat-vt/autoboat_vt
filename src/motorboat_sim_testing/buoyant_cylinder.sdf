@@ -9,7 +9,7 @@ Without ros2:
 
   1. Move the rudder:
 
-    gz topic -t /rudder -m gz.msgs.Double -p 'data: .61'
+    gz topic -t /rudder -m gz.msgs.Double -p 'data: .4'
     
   1a. View rudder position:
 
@@ -17,7 +17,7 @@ Without ros2:
 
   2. Propel the vehicle:
 
-    gz topic -t motorboat/propeller_topic -m gz.msgs.Double -p 'data: 2'
+    gz topic -t motorboat/propeller_topic -m gz.msgs.Double -p 'data: 500'
 
 
 With ros2:
@@ -28,12 +28,23 @@ With ros2:
 
   1. Move the rudder:
 
-    ros2 topic pub /rudder std_msgs/msg/Float64 'data: .61'
+    ros2 topic pub /rudder std_msgs/msg/Float64 'data: .4'
   
   
   2. Propel the vehicle:
 
-    ros2 topic pub motorboat/propeller_topic std_msgs/msg/Float64 'data: 5'
+ros2 topic pub /propeller_sim_rpm std_msgs/msg/Float64 'data: 500'
+
+
+With ROS2 autopilot node:
+0. Start the simulation (in ../launch/):
+    ros2 launch simtest.launch.py
+
+1. Move the rudder: 
+ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
+2. Propel the vehicle:
+ ros2 topic pub /propeller_sim_rpm std_msgs/msg/Float64 'data: 5'
+
 
 -->
 
@@ -346,200 +357,185 @@ With ros2:
       </plugin>
 
       <link name='left_front_link'>
-        <pose>.15 .15 0 0 0 0</pose>
+        <pose>0.48895 0.1397 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 0 0 0 0</pose>
-          <mass>6.9</mass>
+          <mass>39.52</mass>
           <inertia>
-            <ixx>0.065</ixx>
+            <ixx>0.497982875</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.065</iyy>
+            <iyy>1.03633556173</iyy>
             <iyz>0</iyz>
-            <izz>0.104</izz>
+            <izz>1.03633556173</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>0.9779 0.2794 0.3556</size>
             </box>
           </geometry>
         </collision>
 
         <visual name='visual'>
-          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>0.9779 0.2794 0.3556</size>
             </box>
           </geometry>
         </visual>
       </link>
 
       <link name='right_front_link'>
-        <pose>.15 -.15 0 0 0 0</pose>
+        <pose>0.48895 -0.1397 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 0 0 0 0</pose>
-          <mass>6.9</mass>
+          <mass>39.52</mass>
           <inertia>
-            <ixx>0.065</ixx>
+            <ixx>0.497982875</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.065</iyy>
+            <iyy>1.03633556173</iyy>
             <iyz>0</iyz>
-            <izz>0.104</izz>
+            <izz>1.03633556173</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>0.9779 0.2794 0.3556</size>
             </box>
           </geometry>
         </collision>
 
         <visual name='visual'>
-          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>0.9779 0.2794 0.3556</size>
             </box>
           </geometry>
         </visual>
       </link>
 
       <link name='right_back_link'>
-        <pose>-.15 -.15 0 0 0 0</pose>
+        <pose>-0.48895 -0.1397 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 0 0 0 0</pose>
-          <mass>6.9</mass>
+          <mass>39.52</mass>
           <inertia>
-            <ixx>0.065</ixx>
+            <ixx>0.497982875</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.065</iyy>
+            <iyy>1.03633556173</iyy>
             <iyz>0</iyz>
-            <izz>0.104</izz>
+            <izz>1.03633556173</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>0.9779 0.2794 0.3556</size>
             </box>
           </geometry>
         </collision>
 
         <visual name='visual'>
-          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>0.9779 0.2794 0.3556</size>
             </box>
           </geometry>
         </visual>
       </link>
 
       <link name='left_back_link'>
-        <pose>-.15 .15 0 0 0 0</pose>
+        <pose>-0.48895 0.1397 0 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 0 0 0 0</pose>
-          <mass>6.9</mass>
+          <mass>39.52</mass>
           <inertia>
-            <ixx>0.065</ixx>
+            <ixx>0.497982875</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.065</iyy>
+            <iyy>1.03633556173</iyy>
             <iyz>0</iyz>
-            <izz>0.104</izz>
+            <izz>1.03633556173</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>0.9779 0.2794 0.3556</size>
             </box>
           </geometry>
         </collision>
 
         <visual name='visual'>
-          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>.3 .3 .15</size>
+              <size>0.9779 0.2794 0.3556</size>
             </box>
           </geometry>
         </visual>
       </link>
 
       <joint name="left_front_joint" type="fixed">
-        <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
         <child>left_front_link</child>
       </joint>
 
       <joint name="right_front_joint" type="fixed">
-        <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
         <child>right_front_link</child>
       </joint>
 
       <joint name="right_back_joint" type="fixed">
-        <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
         <child>right_back_link</child>
       </joint>
 
       <joint name="left_back_joint" type="fixed">
-        <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
         <child>left_back_link</child>
       </joint>
 
       <link name='propeller_link'>
-        <pose>-.25 0 -.1 0 0 0</pose>
+        <pose>-.75 0 -.222 0 0 0</pose>
         <inertial>
-          <pose>0 0 0 0 0 0</pose>
-          <mass>0.2</mass>
+          <mass>2.3</mass>
           <inertia>
-            <ixx>0.00005</ixx>
+            <ixx>0.001218375</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.00005</iyy>
+            <iyy>0.001218375</iyy>
             <iyz>0</iyz>
-            <izz>0.00005</izz>
+            <izz>0.001218375</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>0.05 0.05 0.05</size>
+              <size>0.0855 0.0855 0.0855</size>
             </box>
           </geometry>
         </collision>
 
         <visual name='visual'>
-          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>0.05 0.05 0.05</size>
+              <size>0.0855 0.0855 0.0855</size>
             </box>
           </geometry>
         </visual>
       </link>
 
       <joint name="propeller_joint" type="revolute">
-        <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
         <child>propeller_link</child>
         <axis>
@@ -554,48 +550,45 @@ With ros2:
       </joint>
 
       <link name='rudder_link'>
-        <pose>-.35 0 -.11 0 0 0</pose>
+        <pose>-.9 0 -0.2682 0 0 0</pose>
 
         <inertial>
-          <pose>0 0 0 0 0 0</pose>
-          <mass>0.5</mass>
+          <mass>2.3</mass>
           <inertia>
-            <ixx>0.00174</ixx>
-            <ixy>0.0000000000076</ixy>
-            <ixz>0.0000000000076</ixz>
-            <iyy>0.00174</iyy>
-            <iyz>0.0000000000076</iyz>
-            <izz>0.00036</izz>
+            <ixx>0.00282940576</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.00401459983</iyy>
+            <iyz>0</iyz>
+            <izz>0.00139589893</izz>
           </inertia>
         </inertial>
 
         <collision name='collision'>
           <geometry>
             <box>
-              <size>0.1 0.02 .2</size>
+              <size>0.124445 0.035556 0.1808</size>
             </box>
           </geometry>
         </collision>
 
         <visual name='visual'>
-          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>0.1 0.02 .2</size>
+              <size>0.124445 0.035556 0.1808</size>
             </box>
           </geometry>
         </visual>
       </link>
 
       <joint name="rudder_joint" type="revolute">
-        <pose>0 0 0 0 0 0</pose>
         <parent>base_link</parent>
         <child>rudder_link</child>
         <axis>
           <xyz>0 0 1</xyz>
           <limit>
-            <lower>-1e+12</lower>
-            <upper>1e+12</upper>
+            <lower>-.61</lower>
+            <upper>.61</upper>
           </limit>
           <dynamics>
             <damping>1</damping>
@@ -632,25 +625,19 @@ With ros2:
         <topic>propeller_topic</topic>
         <joint_name>propeller_joint</joint_name>
         <fluid_density>1025</fluid_density>
-        <propeller_diameter>0.05</propeller_diameter>
+        <propeller_diameter>0.0855</propeller_diameter>
       </plugin>
 
       <!-- Drag on the rudder to make it function -->
-      <plugin
-        filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-        <air_density>1025</air_density>
-        <cla>.11</cla>
-        <cla_stall>0</cla_stall>
-        <cda>.02</cda>
-        <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
-        <a0>0</a0>
-        <area>.1</area>
-        <upward>0 1 0</upward>
+      <plugin filename="libRudderDynamics.so"
+      name="rudder_dynamics::RudderDynamics">
+        <link0>rudder_link</link0>
+        <clmax>6</clmax>
+        <cdmax>6</cdmax>
+        <area>.0225</area>
+        <fluid_density>1025</fluid_density>
         <forward>1 0 0</forward>
-        <link_name>rudder_link</link_name>
-        <cp>0 0 0</cp>
+        <upward>0 1 0</upward>
       </plugin>
 
       <!-- Drag on the hull parts -->
@@ -658,13 +645,13 @@ With ros2:
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>.1</cla>
+        <cla>6.3</cla>
         <cla_stall>0</cla_stall>
-        <cda>0.003</cda>
+        <cda>1.14</cda>
         <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
+        <alpha_stall>5</alpha_stall>
         <a0>0</a0>
-        <area>0.135</area>
+        <area>0.01</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>left_front_link</link_name>
@@ -675,13 +662,13 @@ With ros2:
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>.1</cla>
+        <cla>6.3</cla>
         <cla_stall>0</cla_stall>
-        <cda>0.003</cda>
+        <cda>1.14</cda>
         <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
+        <alpha_stall>5</alpha_stall>
         <a0>0</a0>
-        <area>0.135</area>
+        <area>0.01</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>right_front_link</link_name>
@@ -692,13 +679,13 @@ With ros2:
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>.1</cla>
+        <cla>6.3</cla>
         <cla_stall>0</cla_stall>
-        <cda>0.003</cda>
+        <cda>1.14</cda>
         <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
+        <alpha_stall>5</alpha_stall>
         <a0>0</a0>
-        <area>0.135</area>
+        <area>0.01</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>right_back_link</link_name>
@@ -709,13 +696,13 @@ With ros2:
         filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
         <air_density>1025</air_density>
-        <cla>.1</cla>
+        <cla>6.3</cla>
         <cla_stall>0</cla_stall>
-        <cda>0.003</cda>
+        <cda>1.14</cda>
         <cda_stall>0</cda_stall>
-        <alpha_stall>90</alpha_stall>
+        <alpha_stall>5</alpha_stall>
         <a0>0</a0>
-        <area>0.135</area>
+        <area>0.01</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>left_back_link</link_name>
@@ -727,69 +714,69 @@ With ros2:
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>left_front_link</link_name>
-        <xUabsU>-6</xUabsU>
-        <xU>-6</xU>
-        <yVabsV>-6</yVabsV>
-        <yV>-6</yV>
-        <zWabsW>-6</zWabsW>
-        <zW>-6</zW>
-        <kPabsP>-0.5</kPabsP>
-        <kP>-0.5</kP>
-        <mQabsQ>-5</mQabsQ>
-        <mQ>-5</mQ>
-        <nRabsR>-0.6</nRabsR>
-        <nR>-0.6</nR>
+        <xUabsU>-120</xUabsU>
+        <xU>-120</xU>
+        <yVabsV>-120</yVabsV>
+        <yV>-120</yV>
+        <zWabsW>-120</zWabsW>
+        <zW>-120</zW>
+        <kPabsP>-12</kPabsP>
+        <kP>-12</kP>
+        <mQabsQ>-50</mQabsQ>
+        <mQ>-50</mQ>
+        <nRabsR>-12</nRabsR>
+        <nR>-12</nR>
       </plugin>
       <plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>right_front_link</link_name>
-        <xUabsU>-6</xUabsU>
-        <xU>-6</xU>
-        <yVabsV>-6</yVabsV>
-        <yV>-6</yV>
-        <zWabsW>-6</zWabsW>
-        <zW>-6</zW>
-        <kPabsP>-0.5</kPabsP>
-        <kP>-0.5</kP>
-        <mQabsQ>-5</mQabsQ>
-        <mQ>-5</mQ>
-        <nRabsR>-0.6</nRabsR>
-        <nR>-0.6</nR>
+        <xUabsU>-120</xUabsU>
+        <xU>-120</xU>
+        <yVabsV>-120</yVabsV>
+        <yV>-120</yV>
+        <zWabsW>-120</zWabsW>
+        <zW>-120</zW>
+        <kPabsP>-12</kPabsP>
+        <kP>-12</kP>
+        <mQabsQ>-50</mQabsQ>
+        <mQ>-50</mQ>
+        <nRabsR>-12</nRabsR>
+        <nR>-12</nR>
       </plugin>
       <plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>right_back_link</link_name>
-        <xUabsU>-6</xUabsU>
-        <xU>-6</xU>
-        <yVabsV>-6</yVabsV>
-        <yV>-6</yV>
-        <zWabsW>-6</zWabsW>
-        <zW>-6</zW>
-        <kPabsP>-0.5</kPabsP>
-        <kP>-0.5</kP>
-        <mQabsQ>-5</mQabsQ>
-        <mQ>-5</mQ>
-        <nRabsR>-0.6</nRabsR>
-        <nR>-0.6</nR>
+        <xUabsU>-120</xUabsU>
+        <xU>-120</xU>
+        <yVabsV>-120</yVabsV>
+        <yV>-120</yV>
+        <zWabsW>-120</zWabsW>
+        <zW>-120</zW>
+        <kPabsP>-12</kPabsP>
+        <kP>-12</kP>
+        <mQabsQ>-50</mQabsQ>
+        <mQ>-50</mQ>
+        <nRabsR>-12</nRabsR>
+        <nR>-12</nR>
       </plugin>
       <plugin
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>left_back_link</link_name>
-        <xUabsU>-6</xUabsU>
-        <xU>-6</xU>
-        <yVabsV>-6</yVabsV>
-        <yV>-6</yV>
-        <zWabsW>-6</zWabsW>
-        <zW>-6</zW>
-        <kPabsP>-0.5</kPabsP>
-        <kP>-0.5</kP>
-        <mQabsQ>-5</mQabsQ>
-        <mQ>-5</mQ>
-        <nRabsR>-0.6</nRabsR>
-        <nR>-0.6</nR>
+        <xUabsU>-120</xUabsU>
+        <xU>-120</xU>
+        <yVabsV>-120</yVabsV>
+        <yV>-120</yV>
+        <zWabsW>-120</zWabsW>
+        <zW>-120</zW>
+        <kPabsP>-12</kPabsP>
+        <kP>-12</kP>
+        <mQabsQ>-50</mQabsQ>
+        <mQ>-50</mQ>
+        <nRabsR>-12</nRabsR>
+        <nR>-12</nR>
       </plugin>
 
     </model>

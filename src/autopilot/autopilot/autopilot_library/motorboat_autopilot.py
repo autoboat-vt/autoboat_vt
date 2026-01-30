@@ -55,6 +55,7 @@ class MotorboatAutopilot:
         Reinitializes the MotorboatAutopilot with the same parameters and the same logger. This essentially resets things like waypoints. 
         """ 
         self.__init__(self.autopilot_parameters, logger=self.logger)
+        self.__init__(self.autopilot_parameters, logger=self.logger)
 
         pass
     

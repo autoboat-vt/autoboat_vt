@@ -44,7 +44,7 @@ namespace rudder_dynamics
 
   private:
     /// \brief The model entity
-    gz::sim::Model model_{{gz::sim::kNullEntity}};
+    gz::sim::Model model_{gz::sim::kNullEntity};
 
     /// \brief The model name (for logging)
     std::string modelName_;

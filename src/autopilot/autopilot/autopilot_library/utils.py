@@ -1,6 +1,7 @@
 import numpy as np
 from enum import Enum
 
+
 import geopy
 import geopy.distance
 import pyproj
@@ -161,6 +162,10 @@ def get_distance_between_positions(position1: Position, position2: Position):
 
     
 
+    
+
+             
+
 
 def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float) -> bool:
     """
@@ -186,6 +191,9 @@ def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float
         get_angle_between_vectors(boundary1_vector, angle_vector) + get_angle_between_vectors(angle_vector, boundary2_vector), 
         get_angle_between_vectors(boundary1_vector, boundary2_vector)
     )
+
+
+
 
     
     
