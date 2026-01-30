@@ -22,6 +22,7 @@ MOTOR_POLE_PAIRS = 7
 VESC_VID = 0x0483
 VESC_PID = 0x5740
 
+
 # VESC_SERIAL_NUMBER = "AB7IMXEU"
 
 def getPort(vid, pid) -> str:
@@ -37,12 +38,11 @@ def getPort(vid, pid) -> str:
 class VESCPublisher(Node):
 
     def __init__(self):
-        super().__init__('pyvesc_publisher')
-        self.ser = getPort( VESC_VID, VESC_PID)
+        super().__init__('vesc_publisher')
+        self.serial_port = getPort( VESC_VID, VESC_PID)
         
-        # self.ser = getPorts(0x0403, 0x6001, VESC_SERIAL_NUMBER)
         try:
-            self.motor = VESC(serial_port= self.ser)
+            self.motor = VESC(serial_port= self.serial_port)
         except Exception as e:
             self.get_logger().error(f"failed to connect to the motor: {e}")
             self.destroy_node()
@@ -73,9 +73,10 @@ class VESCPublisher(Node):
             if(msg.control_type_for_vesc == "rpm"):
                 self.motorVal = msg.desired_vesc_rpm * MOTOR_POLE_PAIRS
                 self.motor.set_rpm(int(self.motorVal))
+                
             elif(msg.control_type_for_vesc == "duty_cycle"):
                 self.motorVal = msg.desired_vesc_duty_cycle
-                self.motor.set_duty_cycle(int(self.motorVal))
+                self.motor.set_duty_cycle(self.motorVal)
             else:
                 self.motorVal = msg.desired_vesc_current
                 self.motor.set_current(int(self.motorVal))
@@ -109,8 +110,8 @@ class VESCPublisher(Node):
 
     def timer_callback(self):
         
-        if (time.time() - self.last_command_time >= 3):
-            self.motor.set_rpm(0)
+        # if (time.time() - self.last_command_time >= 3):
+        #     self.motor.set_rpm(0)
         
         #get data and store in dictionary
         measurements = self.motor.get_measurements()

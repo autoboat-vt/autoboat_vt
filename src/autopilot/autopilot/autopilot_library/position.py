@@ -20,7 +20,7 @@ class Position:
     def get_longitude_latitude(self):
         return np.array([self.longitude, self.latitude])
     
-    def get_latitude_longitude(self):
+    def get_latitude_longitude(self) -> np.ndarray[float]:
         return np.array([self.latitude, self.longitude])
     
     def set_longitude_latitude(self, longitude, latitude):

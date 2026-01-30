@@ -4,29 +4,43 @@
 build
 install
 log
-src/object_detection/object_detection/datasets
 output
-src/object_detection/object_detection/weights/**.pt
-src/object_detection
-src/object_detection/object_detection/
-src/object_detection/
-src/object_detection/object_detection/weights/**.pt
+
+# object detection
 **.pt
 src/microros/dependencies/**
+.devcontainer/devcontainer_environment_variables
+**.engine
+**.onnx
+**.o
+**.so
+src/object_detection/object_detection/deepstream_yolo/ultralytics/
+src/object_detection/object_detection/deepstream_yolo/labels.txt
+src/object_detection/object_detection/frame_results/
 
 # groundstation
+pkg
 ground_station/bin
 ground_station/go.sum
 ground_station/last_build_time.txt
-ground_station/sailbot_groundstation.yml
 ground_station/src/widgets/autopilot_param_editor/params_temp.json
 
 ground_station/app_data/
 
 !ground_station/app_data/assets/**
+!ground_station/app_data/js_libraries_cache/
 !ground_station/app_data/boat_data_bounds/
 !ground_station/app_data/boat_data_bounds/default.json
 !ground_station/app_data/buoy_data/
 !ground_station/app_data/buoy_data/default.json
 !ground_station/app_data/autopilot_params/
 !ground_station/app_data/autopilot_params/params_default.jsonc
+
+
+# src/object_detection
+src/object_detection/object_detection/runs/**
+src/object_detection/object_detection/test_results/**
+src/object_detection/object_detection/weights/**
+src/object_detection/object_detection/dataset/**
+src/object_detection/object_detection/dataset/**
+src/object_detection/object_detection/hard_images/**

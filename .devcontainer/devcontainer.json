@@ -1,6 +1,8 @@
 {
-    "name": "VT AutoBoat Development Container",
+    "name": "VT AutoBoat Development Container v1.2.0",
     "image": "vtautoboat/autoboat_docker_dev_image",
+    "initializeCommand": "bash .devcontainer/initializeCommand.sh",
+    "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
     "privileged": true,
     "remoteUser": "",
     "containerUser": "",
@@ -9,40 +11,51 @@
     "customizations": {
         "vscode": {
             "extensions": [
-                "ms-azuretools.vscode-docker",
-                "ms-python.python",
-                "ms-python.vscode-pylance",
-                "magicstack.magicpython",
+                "ms-azuretools.vscode-containers",
+                "ms-iot.vscode-ros",
+                "smilerobotics.urdf",
+                "golang.go",
                 "ms-vscode.cpptools",
                 "twxs.cmake",
                 "ms-vscode.cmake-tools",
-                "ms-iot.vscode-ros",
-                "smilerobotics.urdf",
-                "yzhang.markdown-all-in-one",
-                "charliermarsh.ruff",
-                "njpwerner.autodocstring",
-                "tamasfe.even-better-toml",
-                "davidanson.vscode-markdownlint",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "magicstack.magicpython",
                 "rodolphebarbanneau.python-docstring-highlighter",
+                "njpwerner.autodocstring",
+                "IBM.output-colorizer",
+                "ms-vscode.hexeditor",
+                "pflannery.vscode-versionlens",
+                "yzhang.markdown-all-in-one",
+                "davidanson.vscode-markdownlint",
+                "tamasfe.even-better-toml",
                 "redhat.vscode-xml",
-                "redhat.vscode-yaml"
+                "redhat.vscode-yaml",
+                "mkxml.vscode-filesize"
             ]
         }
     },
     "containerEnv": {
-        "DISPLAY": "unix:0",
         "ROS_AUTOMATIC_DISCOVERY_RANGE": "LOCALHOST",
         "ROS_DOMAIN_ID": "42",
-        "CONTAINER_OWNER_USER_NAME": "${localEnv:USER}"
+        "CONTAINER_OWNER_USER_NAME": "${localEnv:USER}",
+        "TZ": "${localEnv:TZ:America/New_York}"
     },
+
     "runArgs": [
         "--net=host",
+        "--platform=linux/amd64",
         "-v",
         "/dev:/dev",
-        "-e",
-        "DISPLAY=${env:DISPLAY}",
+        "--env-file=.devcontainer/devcontainer_environment_variables",
         "-v",
-        "/var/run/docker.sock:/var/run/docker.sock"
+        "/var/run/docker.sock:/var/run/docker.sock",
+        // "${localEnv:DOCKER_GPU_RUN_ARGS:--env}",
+        // "${localEnv:DOCKER_RUNTIME_RUN_ARGS:IGNORE_THIS=hi}",
+        "--name=autoboat_dev_container",
+        "--privileged"
+        // "--device=/dev/ttyACM0",
+        // "--device-cgroup-rule=c 166:* rmw"
     ],
     "mounts": [
         "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"

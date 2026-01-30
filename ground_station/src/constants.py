@@ -26,10 +26,9 @@ Constants:
 """
 
 import os
+import sys
 import shutil
 import requests
-from requests.adapters import HTTPAdapter
-from urllib.parse import urljoin
 from pathlib import PurePath
 from qtpy.QtCore import Qt, QRect, QTimer
 from qtpy.QtGui import QColor, QIcon, QPalette
@@ -73,10 +72,7 @@ def __get_icons() -> SimpleNamespace:
     icons: dict[str, QIcon] = {
         "upload": qta.icon("mdi.upload", color="white"),
         "download": qta.icon("mdi.download", color="white"),
-        "connect": qta.icon("mdi.connection", color="white"),
-        "disconnect": qta.icon("fa6s.plug-circle-xmark", color="white"),
         "delete": qta.icon("mdi.trash-can", color="white"),
-        "add": qta.icon("mdi.plus", color="white"),
         "save": qta.icon("mdi.content-save", color="white"),
         "cog": qta.icon("mdi.cog", color="white"),
         "pencil": qta.icon("ei.pencil", color="white"),
@@ -101,7 +97,6 @@ def pushbutton_maker(
     button_text: str,
     icon: QIcon,
     function: Callable,
-    style_sheet: str | None = None,
     max_width: int | None = None,
     min_height: int | None = None,
     is_clickable: bool = True,
@@ -117,8 +112,6 @@ def pushbutton_maker(
         The icon to display on the button.
     function
         The function to connect to the button's clicked signal.
-    style_sheet
-        An optional style sheet to apply to the button. If not specified, the default style is used.
     max_width
         The maximum width of the button. If not specified, not used.
     min_height
@@ -132,25 +125,14 @@ def pushbutton_maker(
         The created button.
     """
 
-    try:
-        button = QPushButton(button_text)
-        button.setIcon(icon)
-        button.clicked.connect(function)
-
-        if style_sheet is not None:
-            button.setStyleSheet(style_sheet)
-
-        if max_width is not None:
-            button.setMaximumWidth(max_width)
-
-        if min_height is not None:
-            button.setMinimumHeight(min_height)
-
-        button.setDisabled(not is_clickable)
-
-    except Exception as e:
-        raise RuntimeError(f"Failed to create button '{button_text}': {e}") from e
-
+    button = QPushButton(button_text)
+    button.setIcon(icon)
+    if max_width is not None:
+        button.setMaximumWidth(max_width)
+    if min_height is not None:
+        button.setMinimumHeight(min_height)
+    button.clicked.connect(function)
+    button.setDisabled(not is_clickable)
     return button
 
 
@@ -240,40 +222,10 @@ def show_input_dialog(
     """
 
     text, ok = QInputDialog.getText(None, title, label, text=default_value)
-
     if ok:
-        try:
-            converted_value: T = input_type(text)
-
-        except ValueError:
-            print(f"[Error] Failed to convert {text} to {input_type}. Returning None.")
-            return None
-
-        return converted_value
-
+        return input_type(text)
     else:
         return None
-
-
-def copy_qtimer(original: QTimer) -> QTimer:
-    """
-    Create a copy of a QTimer with the same interval and single-shot status but without copying connections.
-
-    Parameters
-    ----------
-    original
-        The original QTimer to copy.
-
-    Returns
-    -------
-    QTimer
-        A new QTimer instance with the same interval and single-shot status as the original.
-    """
-
-    new_timer = QTimer()
-    new_timer.setInterval(original.interval())
-    new_timer.setSingleShot(original.isSingleShot())
-    return new_timer
 
 
 # endregion functions
@@ -341,17 +293,8 @@ STYLE_SHEET = """
 WINDOW_BOX = QRect(100, 100, 800, 600)
 
 # timers
-THIRTY_SECOND_TIMER = QTimer()
-THIRTY_SECOND_TIMER.setInterval(30_000)
-
 TEN_SECOND_TIMER = QTimer()
 TEN_SECOND_TIMER.setInterval(10_000)
-
-FIVE_SECOND_TIMER = QTimer()
-FIVE_SECOND_TIMER.setInterval(5_000)
-
-ONE_SECOND_TIMER = QTimer()
-ONE_SECOND_TIMER.setInterval(1_000)
 
 HALF_SECOND_TIMER = QTimer()
 HALF_SECOND_TIMER.setInterval(500)
@@ -367,58 +310,23 @@ ONE_MS_TIMER.setInterval(1)
 WAYPOINTS_SERVER_URL = "http://localhost:3001/waypoints"
 
 # base url for telemetry server (the CIA is inside of my brain...)
-TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk:8443"
+TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk/"
 
-TELEMETRY_SERVER_INSTANCE_ID: int = -1  # -1 means no instance selected
-HAS_TELEMETRY_SERVER_INSTANCE_CHANGED: bool = False
-
-# endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint` + `/`
-_instance_manager_endpoints = {
-    "create_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/create"),
-    "delete_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/delete/"),
-    "delete_all_instances": urljoin(TELEMETRY_SERVER_URL, "instance_manager/delete_all"),
-    "set_instance_name": urljoin(TELEMETRY_SERVER_URL, "instance_manager/set_name/"),
-    "get_instance_name_from_id": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_name/"),
-    "get_instance_id_from_name": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_id/"),
-    "get_instance_info": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_instance_info/"),
-    "get_all_instance_info": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_all_instance_info"),
-    "get_all_ids": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_ids"),
+# endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint`
+TELEMETRY_SERVER_ENDPOINTS = {
+    "get_boat_status": TELEMETRY_SERVER_URL + "boat_status/get",
+    "get_new_boat_status": TELEMETRY_SERVER_URL + "boat_status/get_new",
+    "get_waypoints": TELEMETRY_SERVER_URL + "waypoints/get",
+    "set_waypoints": TELEMETRY_SERVER_URL + "waypoints/set",
+    "waypoints_test": TELEMETRY_SERVER_URL + "waypoints/test",
+    "get_autopilot_parameters": TELEMETRY_SERVER_URL + "autopilot_parameters/get",
+    "set_autopilot_parameters": TELEMETRY_SERVER_URL + "autopilot_parameters/set",
+    "get_default_autopilot_parameters": TELEMETRY_SERVER_URL + "autopilot_parameters/get_default",
 }
-
-_boat_status_endpoints = {
-    "get_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/get/"),
-    "get_new_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/get_new/"),
-    "test_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/test/"),
-}
-
-_autopilot_parameters_endpoints = {
-    "get_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get/"),
-    "get_new_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_new/"),
-    "get_default_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_default/"),
-    "set_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set/"),
-    "set_default_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set_default/"),
-    "test_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/test/"),
-}
-
-_waypoints_endpoints = {
-    "get_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/get/"),
-    "get_new_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/get_new/"),
-    "set_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/set/"),
-    "test_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/test/"),
-}
-
-TELEMETRY_SERVER_ENDPOINTS = dict(
-    **_instance_manager_endpoints,
-    **_boat_status_endpoints,
-    **_autopilot_parameters_endpoints,
-    **_waypoints_endpoints,
-)
 
 TELEMETRY_TIMEOUT_SECONDS = 30
-TELEMETRY_RETRY_ATTEMPTS = 3
 
 REQ_SESSION = requests.Session()
-REQ_SESSION.mount(TELEMETRY_SERVER_URL, HTTPAdapter(max_retries=TELEMETRY_RETRY_ATTEMPTS))
 
 try:
     # should be the path to wherever `ground_station` is located
@@ -435,12 +343,11 @@ try:
     HTML_CAMERA_PATH = PurePath(CAMERA_DIR / "camera.html")
     HTML_CAMERA = open(HTML_CAMERA_PATH).read()
 
-    if __name__ == "__main__":
-        if "params_default.jsonc" not in os.listdir(DATA_DIR / "autopilot_params"):
-            raise Exception("Default autopilot parameters file not found, please redownload the directory from GitHub.")
+    if "params_default.jsonc" not in os.listdir(DATA_DIR / "autopilot_params"):
+        raise Exception("Default autopilot parameters file not found, please redownload the directory from GitHub.")
 
-        if "autopilot_params" not in os.listdir(DATA_DIR):
-            os.makedirs(DATA_DIR / "autopilot_params")
+    if "autopilot_params" not in os.listdir(DATA_DIR):
+        os.makedirs(DATA_DIR / "autopilot_params")
 
     _autopilot_param_editor_dir = PurePath(SRC_DIR / "widgets" / "autopilot_param_editor")
 
@@ -462,17 +369,17 @@ try:
             if not line.strip().startswith("//"):
                 f.write(line)
 
-        if "boat_data" not in os.listdir(DATA_DIR):
-            os.makedirs(DATA_DIR / "boat_data")
+    if "boat_data" not in os.listdir(DATA_DIR):
+        os.makedirs(DATA_DIR / "boat_data")
 
-        if "boat_data_bounds" not in os.listdir(DATA_DIR):
-            os.makedirs(DATA_DIR / "boat_data_bounds")
+    if "boat_data_bounds" not in os.listdir(DATA_DIR):
+        os.makedirs(DATA_DIR / "boat_data_bounds")
 
-        if "buoy_data" not in os.listdir(DATA_DIR):
-            os.makedirs(DATA_DIR / "buoy_data")
+    if "buoy_data" not in os.listdir(DATA_DIR):
+        os.makedirs(DATA_DIR / "buoy_data")
 
-        if "assets" not in os.listdir(DATA_DIR):
-            raise Exception("Assets directory not found, please redownload the directory from GitHub.")
+    if "assets" not in os.listdir(DATA_DIR):
+        raise Exception("Assets directory not found, please redownload the directory from GitHub.")
 
     ASSETS_DIR = PurePath(DATA_DIR / "assets")
     AUTO_PILOT_PARAMS_DIR = PurePath(DATA_DIR / "autopilot_params")
@@ -481,4 +388,5 @@ try:
     BUOY_DATA_DIR = PurePath(DATA_DIR / "buoy_data")
 
 except Exception as e:
-    raise RuntimeError(f"Initialization error: {e}") from e
+    print(f"[Error] {e}")
+    sys.exit(1)

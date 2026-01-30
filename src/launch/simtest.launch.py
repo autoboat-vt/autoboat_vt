@@ -57,17 +57,17 @@ def generate_launch_description():
 
             respawn=True,
             respawn_delay=2.0,
-            remappings=[('/rudder','/rudder'),('/motorboat/propeller_topic', '/propeller_sim_rpm'), ('/navsat', '/position')],
+            remappings=[('/motorboat/propeller_topic', '/propeller_sim_rpm'), ('/navsat', '/position')],
             output="log"
         ),
         Node(
             package='ros_gz_bridge',
             executable='parameter_bridge',
             arguments=['/motorboat/propeller_topic@std_msgs/msg/Float64]gz.msgs.Double',
-                       '/rudder@std_msgs/msg/Float32]gz.msgs.Double',
+                       '/rudder@std_msgs/msg/Float64]gz.msgs.Double',
                        '/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
                        '/navsat@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat'],
-            remappings=[('/rudder','/rudder'),('/motorboat/propeller_topic', '/propeller_sim_rpm'), ('/navsat', '/position')],
+            remappings=[('/motorboat/propeller_topic', '/propeller_sim_rpm'), ('/navsat', '/position')],
 
             output='screen'
         ),

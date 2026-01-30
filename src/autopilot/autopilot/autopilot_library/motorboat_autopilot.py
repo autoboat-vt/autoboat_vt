@@ -1,3 +1,4 @@
+
 from .discrete_pid import Discrete_PID
 from .utils import *
 from rclpy.impl.rcutils_logger import RcutilsLogger
@@ -46,7 +47,7 @@ class MotorboatAutopilot:
         self.current_waypoint_index = 0
 
 
-        self.propeller_rpm = 10.0
+        self.propeller_rpm = 0.0
         self.rudder_angle = 0.0
         
     
@@ -54,7 +55,6 @@ class MotorboatAutopilot:
         """
         Reinitializes the MotorboatAutopilot with the same parameters and the same logger. This essentially resets things like waypoints. 
         """ 
-        self.__init__(self.autopilot_parameters, logger=self.logger)
         self.__init__(self.autopilot_parameters, logger=self.logger)
 
         pass
@@ -117,7 +117,7 @@ class MotorboatAutopilot:
         )
         error = get_distance_between_positions(desired_position,current_position)
         rpm = self.rpm_pid_controller(error)
-        rpm = np.clip(rpm, 0.0,1000.0)
+        rpm = np.clip(rpm, 0.0,100000.0)
 
         return rpm
 

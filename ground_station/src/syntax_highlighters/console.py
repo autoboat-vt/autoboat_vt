@@ -1,7 +1,8 @@
 from qtpy.QtCore import QRegularExpression
 from qtpy.QtGui import QFont
-from constants import YELLOW, RED, GREEN, WHITE
+
 from syntax_highlighters.base_highlighter import BaseHighlighter
+from utils.constants import GREEN, RED, WHITE, YELLOW
 
 
 class ConsoleHighlighter(BaseHighlighter):

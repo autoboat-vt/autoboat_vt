@@ -12,7 +12,7 @@ tack_distance: 100 # rough distance to sail before changing tacks based on dynam
 # rudder_d_gain: 0.2
 # rudder_n_gain: 1
 
-heading_p_gain: 0.1
+heading_p_gain: 10
 heading_i_gain: 0
 heading_d_gain: 0
 heading_n_gain: 0

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -33,22 +32,10 @@ func updateWaypointsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(reqBody.Waypoints) != 0 {
+	waypoints = reqBody.Waypoints
 
-		// like for i, j in enumerate(reqBody.Waypoints) in python
-		for index, coords := range reqBody.Waypoints {
-			if len(coords) != 2 {
-				var errorMessage = fmt.Sprintf(`{"message": "Invalid waypoint at index %d: expected 2 coordinates, got %d"}`, index, len(coords))
-				http.Error(w, errorMessage, http.StatusBadRequest)
-				return
-			} else {
-				waypoints = append(waypoints, coords)
-			}
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"message": "Waypoints added successfully"})
-	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 }
 
 // Handler for GET /waypoints

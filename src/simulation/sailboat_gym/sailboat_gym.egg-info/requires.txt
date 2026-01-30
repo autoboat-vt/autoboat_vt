@@ -4,8 +4,7 @@ imageio-ffmpeg
 moviepy
 msgpack_python==0.5.6
 multiexit
-numpy
-opencv-python
+numpy==1.26.4
 pydantic
 pyzmq==25.0.2
 tqdm

@@ -39,6 +39,8 @@ class VESC(object):
         # if int(version.split('.')[0]) < 3:
         #     GetValues.fields = pre_v3_33_fields
 
+        self.alive_msg = [encode(Alive())]
+        
         # store message info for getting values so it doesn't need to calculate it every time
         msg = GetValues()
         self._get_values_msg = encode_request(msg)
@@ -59,7 +61,8 @@ class VESC(object):
         """
         while not self._stop_heartbeat.isSet():
             time.sleep(0.1)
-            self.write(alive_msg)
+            for i in self.alive_msg:
+                self.write(i)
 
     def start_heartbeat(self):
         """
@@ -85,6 +88,12 @@ class VESC(object):
         :return: decoded response from buffer
         """
         self.serial_port.write(data)
+        # if num_read_bytes is not None:
+        #     while self.serial_port.in_waiting <= num_read_bytes:
+        #         time.sleep(0.000001)  # add some delay just to help the CPU
+        #     response, consumed = decode(self.serial_port.read(self.serial_port.in_waiting))
+        #     return response
+        
         if num_read_bytes is not None:
             start_time = time.time()
             while self.serial_port.in_waiting <= num_read_bytes:
@@ -103,13 +112,13 @@ class VESC(object):
 
     def set_current(self, new_current):
         """
-        :param new_current: new current in milli-amps for the motor
+        :param new_current: new current in amps for the motor
         """
         self.write(encode(SetCurrent(new_current)))
 
     def set_duty_cycle(self, new_duty_cycle):
         """
-        :param new_duty_cycle: Value of duty cycle to be set (range [-1e5, 1e5]).
+        :param new_duty_cycle: Value of duty cycle to be set (range [-1, 1]).
         """
         self.write(encode(SetDutyCycle(new_duty_cycle)))
 

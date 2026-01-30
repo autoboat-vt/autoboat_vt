@@ -1,9 +1,9 @@
-import constants
-import thread_classes
 import json
 
 from qtpy.QtWebEngineWidgets import QWebEngineView
-from qtpy.QtWidgets import QWidget, QGridLayout, QHBoxLayout, QPushButton
+from qtpy.QtWidgets import QGridLayout, QHBoxLayout, QPushButton, QWidget
+
+from utils import constants, misc, thread_classes
 
 
 class CameraWidget(QWidget):
@@ -45,9 +45,9 @@ class CameraWidget(QWidget):
         self.setLayout(self.main_layout)
 
         self.image_fetcher = thread_classes.ImageFetcher()
-        self.image_fetcher.image_fetched.connect(self.update_camera_feed)
+        self.image_fetcher.data_fetched.connect(self.update_camera_feed)
 
-        self.timer = constants.copy_qtimer(constants.HALF_SECOND_TIMER)
+        self.timer = misc.copy_qtimer(constants.HALF_SECOND_TIMER)
         self.timer.timeout.connect(self.image_fetcher.get_image)
 
     def unpause_timer(self) -> None:
