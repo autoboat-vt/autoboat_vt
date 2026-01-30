@@ -17,12 +17,12 @@ class Position:
         self.longitude = longitude
         self.latitude = latitude
     
-    def get_longitude_latitude(self) -> np.ndarray[float]:
+    def get_longitude_latitude(self):
         return np.array([self.longitude, self.latitude])
     
-    def get_longitude_latitude(self) -> np.ndarray[float]:
+    def get_latitude_longitude(self):
         return np.array([self.latitude, self.longitude])
-
+    
     def set_longitude_latitude(self, longitude, latitude):
         self.longitude = longitude
         self.latitude = latitude
@@ -30,7 +30,7 @@ class Position:
 
 
 
-    def get_utm(self) -> tuple[float]:
+    def get_utm(self):
         latlong = LatLon(self.latitude, -1 * self.longitude)
         utm_coord = pygeodesy.utm.toUtm8(latlong)
         return utm_coord.easting, utm_coord.northing
@@ -51,7 +51,7 @@ class Position:
     def set_local_coordinates(self, local_x, local_y, reference_longitude, reference_latitude):
         self.latitude, self.longitude, _ = navpy.ned2lla([local_y, local_x, 0], reference_latitude, reference_longitude, 0)
         
-    def get_local_coordinates(self, reference_longitude_latitude: np.ndarray) -> np.ndarray[float]:
+    def get_local_coordinates(self, reference_longitude_latitude: np.ndarray):
         reference_latitude = reference_longitude_latitude[1]
         reference_longitude = reference_longitude_latitude[0]
         local_y, local_x, _ = navpy.lla2ned(self.latitude, self.longitude, 0, reference_latitude, reference_longitude, 0)

@@ -175,7 +175,7 @@ class TelemetryNode(Node):
 
     def default_autopilot_parameters_callback(self, default_autopilot_parameters_string: String):
         self.default_autopilot_parameters = json.loads(default_autopilot_parameters_string.data)
-        self.get_logger().info(f"Default Parameters: {self.default_autopilot_parameters}")
+        # self.get_logger().info(f"Default Parameters: {self.default_autopilot_parameters}")
         self.autopilot_parameters_session.post(
             url=TELEMETRY_SERVER_URL + "/autopilot_parameters/set_default/" + self.instance_id, json=self.default_autopilot_parameters
         )
@@ -301,7 +301,7 @@ class TelemetryNode(Node):
         start_time = time.time()
         # TODO: THIS IS HOW WE DO THE COMPRESSION: requests.post(url=TELEMETRY_SERVER_URL + "/boat_status/set/" + self.instance_id, json={"value": list(boat_status_dictionary.values())})
         self.boat_status_session.post(url=TELEMETRY_SERVER_URL + "/boat_status/set/" + self.instance_id, json=boat_status_dictionary)
-        self.get_logger().info(f"time: {time.time() - start_time}")
+        # self.get_logger().info(f"time: {time.time() - start_time}")
         
     def update_waypoints_from_telemetry(self):
         """
@@ -347,7 +347,7 @@ class TelemetryNode(Node):
             "/autopilot_parameters/get_new/" + self.instance_id, session=self.autopilot_parameters_session
         )
         
-        self.get_logger().info(f"{new_autopilot_parameters_dictionary}")
+        # self.get_logger().info(f"{new_autopilot_parameters_dictionary}")
 
         if new_autopilot_parameters_dictionary == {}:
             return
