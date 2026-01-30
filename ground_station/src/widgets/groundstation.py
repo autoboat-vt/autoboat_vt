@@ -6,7 +6,7 @@ import json
 
 import constants
 import thread_classes
-from syntax_highlighters.json import JsonHighlighter
+from syntax_highlighters import JsonHighlighter
 from widgets.popup_edit import TextEditWindow
 
 from pathlib import PurePath
