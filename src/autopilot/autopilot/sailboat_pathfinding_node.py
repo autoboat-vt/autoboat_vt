@@ -21,30 +21,23 @@ class PathfindingNode(Node):
         self.degconv=10000
         self.origin = [0,0]
         self.destinations=[]
+        self.wayindex=0
 
     def gps_call(self,msg: NavSatFix): # argument in function is a shorthand for calling msg as object of NavSatFix
         # self.get_logger().info("latitude: " + str(msg.latitude) + " longitude: " + str(msg.longitude))
         self.origin = [msg.longitude*self.degconv,msg.latitude*self.degconv]
         
     def waypoint_call(self,msg: WaypointList): # function calling for waypoints once sent
-        self.get_logger().info(str(len(msg.waypoints)))
+        self.wayindex=0
         self.destinations = [[msg.waypoints[i].longitude*self.degconv,msg.waypoints[i].latitude*self.degconv] for i in range(len(msg.waypoints))]
-
-    def checkhit(self, index):
-        dist=math.sqrt((self.destinations[index][0]-self.origin[0])**2+(self.destinations[index][1]-self.origin[1])**2)
-
-        if dist > 5.0:
-            return 1
-        return 0
 
     def runpath(self):
         if self.destinations:
-            for i in range(len(self.destinations)):
-                while self.checkhit(i):
-                    self.get_logger().info("\non " + str(i+1) + " waypoint" + "\nlongitude: " + str(self.destinations[i][0]) + "\nlatitude: " + str(self.destinations[i][1]))
-        
-        self.get_logger().info("done")
-
+            dist=math.sqrt((self.destinations[self.wayindex][0]-self.origin[0])**2+(self.destinations[self.wayindex][1]-self.origin[1])**2)
+            self.get_logger().info("\non waypoint " + str(self.wayindex+1) + "\nlongitude: " + str(self.destinations[self.wayindex][0]) + "\nlatitude: " + str(self.destinations[self.wayindex][1]) + "\ndistance: " + str(dist))
+            if dist < 0.5 and self.wayindex < len(self.destinations)-1:
+                self.wayindex+= 1
+                
 def main():
     rclpy.init()
     node = PathfindingNode()
