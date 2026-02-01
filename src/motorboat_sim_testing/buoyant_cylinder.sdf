@@ -651,7 +651,7 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         <cda_stall>0</cda_stall>
         <alpha_stall>5</alpha_stall>
         <a0>0</a0>
-        <area>0.01</area>
+        <area>0.05</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>left_front_link</link_name>
@@ -668,7 +668,7 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         <cda_stall>0</cda_stall>
         <alpha_stall>5</alpha_stall>
         <a0>0</a0>
-        <area>0.01</area>
+        <area>0.05</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>right_front_link</link_name>
@@ -685,7 +685,7 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         <cda_stall>0</cda_stall>
         <alpha_stall>5</alpha_stall>
         <a0>0</a0>
-        <area>0.01</area>
+        <area>0.05</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>right_back_link</link_name>
@@ -702,7 +702,7 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         <cda_stall>0</cda_stall>
         <alpha_stall>5</alpha_stall>
         <a0>0</a0>
-        <area>0.01</area>
+        <area>0.05</area>
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
         <link_name>left_back_link</link_name>
@@ -714,14 +714,14 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>left_front_link</link_name>
-        <xUabsU>-120</xUabsU>
-        <xU>-120</xU>
+        <xUabsU>-60</xUabsU>
+        <xU>-60</xU>
         <yVabsV>-120</yVabsV>
         <yV>-120</yV>
         <zWabsW>-120</zWabsW>
         <zW>-120</zW>
-        <kPabsP>-12</kPabsP>
-        <kP>-12</kP>
+        <kPabsP>-120</kPabsP>
+        <kP>-120</kP>
         <mQabsQ>-50</mQabsQ>
         <mQ>-50</mQ>
         <nRabsR>-12</nRabsR>
@@ -731,14 +731,14 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>right_front_link</link_name>
-        <xUabsU>-120</xUabsU>
-        <xU>-120</xU>
+        <xUabsU>-60</xUabsU>
+        <xU>-60</xU>
         <yVabsV>-120</yVabsV>
         <yV>-120</yV>
         <zWabsW>-120</zWabsW>
         <zW>-120</zW>
-        <kPabsP>-12</kPabsP>
-        <kP>-12</kP>
+        <kPabsP>-120</kPabsP>
+        <kP>-120</kP>
         <mQabsQ>-50</mQabsQ>
         <mQ>-50</mQ>
         <nRabsR>-12</nRabsR>
@@ -748,14 +748,14 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>right_back_link</link_name>
-        <xUabsU>-120</xUabsU>
-        <xU>-120</xU>
+        <xUabsU>-60</xUabsU>
+        <xU>-60</xU>
         <yVabsV>-120</yVabsV>
         <yV>-120</yV>
         <zWabsW>-120</zWabsW>
         <zW>-120</zW>
-        <kPabsP>-12</kPabsP>
-        <kP>-12</kP>
+        <kPabsP>-120</kPabsP>
+        <kP>-120</kP>
         <mQabsQ>-50</mQabsQ>
         <mQ>-50</mQ>
         <nRabsR>-12</nRabsR>
@@ -765,14 +765,14 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         filename="gz-sim-hydrodynamics-system"
         name="gz::sim::systems::Hydrodynamics">
         <link_name>left_back_link</link_name>
-        <xUabsU>-120</xUabsU>
-        <xU>-120</xU>
+        <xUabsU>-60</xUabsU>
+        <xU>-60</xU>
         <yVabsV>-120</yVabsV>
         <yV>-120</yV>
         <zWabsW>-120</zWabsW>
         <zW>-120</zW>
-        <kPabsP>-12</kPabsP>
-        <kP>-12</kP>
+        <kPabsP>-120</kPabsP>
+        <kP>-120</kP>
         <mQabsQ>-50</mQabsQ>
         <mQ>-50</mQ>
         <nRabsR>-12</nRabsR>
