@@ -8,6 +8,7 @@ import threading
 import time
 import subprocess
 import re
+import random
 
 import rclpy
 from rclpy.node import Node
@@ -32,7 +33,7 @@ else:
     IS_DEV_CONTAINER = False
 
 SHOULD_SAVE_IMAGES = True
-NUM_IMAGES_TO_SAVE = 500
+NUM_IMAGES_TO_SAVE = 10000
 
 # These are constants. Don't change these. Needed for a workaround with DeepStream 7.1 and JetPack 6.2
 COMPUTE_HW = 1
@@ -45,6 +46,8 @@ else:
 
 # YOLO_VER = 11
 YOLO_VER = 26
+if "YOLO_VER" in os.environ and os.environ["YOLO_VER"] in ["11", "26"]:
+    YOLO_VER = int(os.environ["YOLO_VER"])
 
 PATH_TO_YOLO_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo{YOLO_VER}.txt"
 INFERENCE = True
@@ -69,11 +72,18 @@ class BuoyDetectionNode(Node):
         super().__init__("buoy_detection")
         self.CAM_LIST = {
             0: {
-                "name": self._find_camera(),
+                "name": self._find_camera("YUYV"),
                 "framerate": "30/1",
                 "format": "YUY2",
                 "input_width": 1280,
-                "input_height": 800
+                "input_height": 720
+            },
+            1: {
+                "name": self._find_camera("UYVY"),
+                "framerate": "30/1",
+                "format": "UYVY",
+                "input_width": 1280,
+                "input_height": 720
             }
         }
 
@@ -115,13 +125,22 @@ class BuoyDetectionNode(Node):
         self.pipeline = Gst.Pipeline()
 
         streammux = Gst.ElementFactory.make("nvstreammux", "muxer")
-        streammux.set_property('batch-size', 1)
+        streammux.set_property('batch-size', 2)
         
         # v4l2-ctl --list-devices
         # v4l2-ctl --device /dev/video0 --list-formats-ext
         source0 = Gst.ElementFactory.make("v4l2src", "usb-cam-0")
         source0.set_property('device', self.CAM_LIST[0]["name"])
+        source0.set_property('brightness', 0)
         self.get_logger().info(f"Opening camera device: {self.CAM_LIST[0]['name']}")
+
+        """
+        v4l2 camera settings
+        brightness: [-64, 64]
+        hue: [-180, 180]
+        contrast: [0, 100]
+        saturation: [0, 100]
+        """
 
         caps_source0 = Gst.ElementFactory.make('capsfilter', 'source0-caps')
         caps_source0.set_property('caps', Gst.Caps.from_string(f'video/x-raw, width={self.CAM_LIST[0]["input_width"]}, height={self.CAM_LIST[0]["input_height"]}, format={self.CAM_LIST[0]["format"]}, framerate={self.CAM_LIST[0]["framerate"]}'))
@@ -130,10 +149,10 @@ class BuoyDetectionNode(Node):
         # Issue with deepstream7.1 and jetpack6.2 requires compute-hw to be 1 instead of 0.
         # When compute-hw is 1, nvvidconv fails to convert from YUY2 to NV12 directly.
         # So we convert from YUY2 to RGB first, then from RGB to NV12
-        videoconvert = Gst.ElementFactory.make('videoconvert', 'convertor-0')
+        videoconvert0 = Gst.ElementFactory.make('videoconvert', 'convertor-0')
 
-        caps_videoconvert = Gst.ElementFactory.make('capsfilter', 'convertor-caps-0')
-        caps_videoconvert.set_property('caps', Gst.Caps.from_string(f'video/x-raw, format=RGB'))
+        caps_videoconvert0 = Gst.ElementFactory.make('capsfilter', 'convertor-caps-0')
+        caps_videoconvert0.set_property('caps', Gst.Caps.from_string(f'video/x-raw, format=RGB'))
 
         nvvidconvsrc0 = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-src-0')
         nvvidconvsrc0.set_property('nvbuf-memory-type', MEMORY_TYPE)
@@ -142,9 +161,24 @@ class BuoyDetectionNode(Node):
         caps_nvvidconvsrc0 = Gst.ElementFactory.make('capsfilter', 'nvmm-caps-0')
         caps_nvvidconvsrc0.set_property('caps', Gst.Caps.from_string(f'video/x-raw(memory:NVMM), format=NV12, width={self.CAM_LIST[0]["input_width"]}, height={self.CAM_LIST[0]["input_height"]}'))
 
+        source1 = Gst.ElementFactory.make("v4l2src", "usb-cam-1")
+        source1.set_property('device', self.CAM_LIST[1]["name"])
+        self.get_logger().info(f"Opening camera device: {self.CAM_LIST[1]['name']}")
+
+        caps_source1 = Gst.ElementFactory.make('capsfilter', 'source1-caps')
+        caps_source1.set_property('caps', Gst.Caps.from_string(f'video/x-raw, width={self.CAM_LIST[1]["input_width"]}, height={self.CAM_LIST[1]["input_height"]}, format={self.CAM_LIST[1]["format"]}, framerate={self.CAM_LIST[1]["framerate"]}'))
+
+        nvvidconvsrc1 = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-src-1')
+        nvvidconvsrc1.set_property('nvbuf-memory-type', MEMORY_TYPE)
+        nvvidconvsrc1.set_property('compute-hw', COMPUTE_HW)
+
+        caps_nvvidconvsrc1 = Gst.ElementFactory.make('capsfilter', 'nvmm-caps-1')
+        caps_nvvidconvsrc1.set_property('caps', Gst.Caps.from_string(f'video/x-raw(memory:NVMM), format=NV12, width={self.CAM_LIST[1]["input_width"]}, height={self.CAM_LIST[1]["input_height"]}'))
+
         if INFERENCE:
             pgie = Gst.ElementFactory.make('nvinfer', 'pgie')
             pgie.set_property('config-file-path', PATH_TO_YOLO_CONFIG)
+            self.get_logger().info(f"Running Inference with Yolo{YOLO_VER}")
 
             tracker = Gst.ElementFactory.make('nvtracker', 'tracker')
             # docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvtracker.html#nvidia-tao-reidentificationnet
@@ -162,7 +196,9 @@ class BuoyDetectionNode(Node):
         queue_multifilesink_valve = Gst.ElementFactory.make('queue', 'queue-valve')
 
         multifilesink_valve = Gst.ElementFactory.make('valve', 'multifilesink-valve')
-        multifilesink_valve.set_property('drop', not SHOULD_SAVE_IMAGES) 
+        multifilesink_valve.set_property('drop', not SHOULD_SAVE_IMAGES)
+
+        tiler = Gst.ElementFactory.make('nvmultistreamtiler', 'nvtiler')
 
         osd = Gst.ElementFactory.make('nvdsosd', 'nvosd')
 
@@ -185,16 +221,21 @@ class BuoyDetectionNode(Node):
 
         self.pipeline.add(source0)
         self.pipeline.add(caps_source0)
-        self.pipeline.add(videoconvert)
-        self.pipeline.add(caps_videoconvert)
+        self.pipeline.add(videoconvert0)
+        self.pipeline.add(caps_videoconvert0)
         self.pipeline.add(nvvidconvsrc0)
         self.pipeline.add(caps_nvvidconvsrc0)
+        self.pipeline.add(source1)
+        self.pipeline.add(caps_source1)
+        self.pipeline.add(nvvidconvsrc1)
+        self.pipeline.add(caps_nvvidconvsrc1)
         self.pipeline.add(streammux)
         if INFERENCE:
             self.pipeline.add(pgie)
             self.pipeline.add(tracker)
         self.pipeline.add(queue_multifilesink_valve)
         self.pipeline.add(multifilesink_valve)
+        self.pipeline.add(tiler)
         self.pipeline.add(osd)
         self.pipeline.add(nvvidconv_jpeg)
         self.pipeline.add(caps_nvvidconv_jpeg)
@@ -202,14 +243,22 @@ class BuoyDetectionNode(Node):
         self.pipeline.add(multifilesink)
 
         source0.link(caps_source0)
-        caps_source0.link(videoconvert)
-        videoconvert.link(caps_videoconvert)
-        caps_videoconvert.link(nvvidconvsrc0)
+        caps_source0.link(videoconvert0)
+        videoconvert0.link(caps_videoconvert0)
+        caps_videoconvert0.link(nvvidconvsrc0)
         nvvidconvsrc0.link(caps_nvvidconvsrc0)
-        
+
+        source1.link(caps_source1)
+        caps_source1.link(nvvidconvsrc1)
+        nvvidconvsrc1.link(caps_nvvidconvsrc1)
+
         sinkpad0 = streammux.request_pad_simple('sink_0')
         srcpad0 = caps_nvvidconvsrc0.get_static_pad('src')
         srcpad0.link(sinkpad0)
+
+        sinkpad1 = streammux.request_pad_simple('sink_1')
+        srcpad1 = caps_nvvidconvsrc1.get_static_pad('src')
+        srcpad1.link(sinkpad1)
 
         if INFERENCE:
             streammux.link(pgie)
@@ -218,7 +267,8 @@ class BuoyDetectionNode(Node):
         else:
             streammux.link(queue_multifilesink_valve)
         queue_multifilesink_valve.link(multifilesink_valve)
-        multifilesink_valve.link(osd)
+        multifilesink_valve.link(tiler)
+        tiler.link(osd)
         osd.link(nvvidconv_jpeg)
         nvvidconv_jpeg.link(caps_nvvidconv_jpeg)
         caps_nvvidconv_jpeg.link(jpegenc)
@@ -284,7 +334,7 @@ class BuoyDetectionNode(Node):
             
             msg.ntp_timestamp = frame_meta.ntp_timestamp
 
-            if (frame_meta.frame_num % 60 == 0):
+            if (frame_meta.frame_num % 60 == 0 and frame_meta.source_id == 0):
                 current_time = time.time()
                 fps = 60 / (current_time - self.last_time)
                 self.last_time = current_time
@@ -310,6 +360,8 @@ class BuoyDetectionNode(Node):
                 obj_results.class_id = obj_meta.class_id
                 msg.detection_results.append(obj_results)
 
+                # TODO: Move object parsing and publishing to a separate thread.
+
                 try:
                     l_obj = l_obj.next
                 except StopIteration:
@@ -320,33 +372,42 @@ class BuoyDetectionNode(Node):
             except StopIteration:
                 break
         
-        self.object_detection_results_publisher.publish(msg)
+        # self.object_detection_results_publisher.publish(msg)
+        # source1 = self.pipeline.get_by_name('usb-cam-0')
+        # if source1 is not None:
+        #     prop = "hue"
+        #     rand = random.randint(-180, 180)
+        #     source1.set_property(prop, rand)
+        #     self.get_logger().info(f"{source1.get_property(prop)}, {rand}")
+        #     pass
+        # else:
+        #     self.get_logger().error("Could not find usb-cam-1 to randomize hue")
         
         return Gst.PadProbeReturn.OK
+
+    def _iterate_results(self):
+        pass
 
     def _probe(self, pad, info, u_data):
         self.get_logger().info(u_data)
         return Gst.PadProbeReturn.OK
 
-    def _find_camera(self):
+    def _find_camera(self, format):
         """
         This is just a way to figure out which /dev/video* is the camera\n
         The camera outputs on 3 devices.\n
         Each device is a different format, but the order can change or extra cameras can cause the number to increase,\n
-        We want specifically the YUYV (color) format of the RealSense camera\n
-        While this finds the device with YUYV format, it does not guarantee that the correct resolution and framerate are available.
+        While this finds the device with the specified format, it does not guarantee that the correct resolution and framerate are available.
         Returns:
             str: The /dev/video* device path
         """
 
-        camera_devices_output = subprocess.run(['v4l2-ctl', '--list-devices'], capture_output=True, text=True).stdout
-        matches = re.findall(r"/dev/video[0-9]*", camera_devices_output)
-        for match in matches:
-            device_id = match.split("/dev/video")[-1]
-            if (re.search("RealSense", subprocess.run(['cat', f'/sys/class/video4linux/video{device_id}/name'], capture_output=True, text=True).stdout) is not None):
-                if (re.search("YUYV", subprocess.run(['v4l2-ctl', '--device', f'/dev/video{device_id}', '--list-formats-ext'], capture_output=True, text=True).stdout) is not None):
-                    return f"/dev/video{device_id}"
-        self.get_logger().error("Could not find RealSense camera device with YUYV format")
+        camera_devices_output = subprocess.run(['ls', '/sys/class/video4linux/'], capture_output=True, text=True).stdout
+        for device in camera_devices_output.splitlines():
+            if (re.search("RealSense", subprocess.run(['cat', f'/sys/class/video4linux/{device}/name'], capture_output=True, text=True).stdout) is not None):
+                if (re.search(format, subprocess.run(['v4l2-ctl', '--device', f'/dev/{device}', '--list-formats'], capture_output=True, text=True).stdout) is not None):
+                    return f"/dev/{device}"
+        self.get_logger().error(f"Could not find RealSense camera device with {format} format")
         sys.exit(1)
 
     def _read_file(self):

@@ -10,14 +10,14 @@ onnx-file=./onnx_files/yolo26s.pt.onnx
 
 # This is the engine file section
 # Engine files are created by running the deepstream pipeline
-model-engine-file=./engine_files/yolo26s_model_b1_gpu0_fp16.engine
+model-engine-file=./engine_files/yolo26s_model_b2_gpu0_fp16.engine
 
 # This is the label file section
 # Label files are created by running export_yolo26.py
 labelfile-path=./label_files/yolo26s_labels.txt
 
 #int8-calib-file=calib.table
-batch-size=1
+batch-size=2 # This should equal the number of video streams
 network-mode=2 # 0 for fp32, 1 for int8, 2 for fp16
 num-detected-classes=2
 interval=0

@@ -8,6 +8,9 @@ if len(sys.argv) < 3:
 #     print("Error: ONNX file must end with .pt.onnx")
 #     sys.exit(1)
 
+BATCH_SIZE = 2
+FP_VER = 16
+
 CONFIG_FILE = f'config_infer_primary_yolo{sys.argv[2]}.txt'
 model_name = sys.argv[1]
 
@@ -35,12 +38,11 @@ with open(CONFIG_FILE, 'r') as file:
     for i in range(len(engine_lines)):
         if engine_lines[i].startswith('model-engine-file='):
             engine_lines[i] = "#" + engine_lines[i]
-        if engine_lines[i] == f"#model-engine-file=./engine_files/{model_name}_model_b1_gpu0_fp16.engine":
+        if engine_lines[i] == f"#model-engine-file=./engine_files/{model_name}_model_b{BATCH_SIZE}_gpu0_fp{FP_VER}.engine":
             engine_lines[i] = engine_lines[i][1:] # uncomment line so the model can be used
             found_engine_entry = True
     if not found_engine_entry:
-        engine_lines.append(f"model-engine-file=./engine_files/{model_name}_model_b1_gpu0_fp16.engine")
-
+        engine_lines.append(f"model-engine-file=./engine_files/{model_name}_model_b{BATCH_SIZE}_gpu0_fp{FP_VER}.engine")
     found_labels_entry = False
     for i in range(len(labels_lines)):
         if labels_lines[i].startswith('labelfile-path='):

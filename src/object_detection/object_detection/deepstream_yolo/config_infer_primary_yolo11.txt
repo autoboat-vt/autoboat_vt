@@ -6,18 +6,15 @@ model-color-format=0
 
 # This is the onnx file section.
 # Onnx files are created by running export_yolo11.py
-onnx-file=./onnx_files/yolo11s.pt.onnx
 
 # This is the engine file section
 # Engine files are created by running the deepstream pipeline
-model-engine-file=./engine_files/yolo11s_model_b1_gpu0_fp16.engine
 
 # This is the label file section
 # Label files are created by running export_yolo11.py
-labelfile-path=./label_files/yolo11s_labels.txt
 
 #int8-calib-file=calib.table
-batch-size=1
+batch-size=2 # This should equal the number of video streams
 network-mode=2 # 0 for fp32, 1 for int8, 2 for fp16
 num-detected-classes=2
 interval=0

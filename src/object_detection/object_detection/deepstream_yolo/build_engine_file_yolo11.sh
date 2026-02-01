@@ -40,9 +40,9 @@ if [ ! -d "label_files" ]; then
 fi
 
 if [ $IS_DEV_CONTAINER = true ]; then
-    python3 export_yolo11_dev_container.py -w "pt_files/${PT_FILE}" || exit 1
+    python3 export_yolo11_dev_container.py -w "pt_files/${PT_FILE}" --dynamic || exit 1
 else
-    python3 export_yolo11.py -w "pt_files/${PT_FILE}" || exit 1 # This is untested on jetson
+    python3 export_yolo11.py -w "pt_files/${PT_FILE}" --dynamic || exit 1 # This is untested on jetson
 fi
 
 mv "pt_files/${ONNX_FILE}" ./onnx_files/

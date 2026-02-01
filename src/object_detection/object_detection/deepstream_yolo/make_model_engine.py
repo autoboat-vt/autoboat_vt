@@ -38,6 +38,9 @@ INPUT_WIDTH = 640
 INPUT_HEIGHT = 640
 FRAMERATE = "30/1"
 
+BATCH_SIZE = 2
+FP_VER = 16
+
 class EngineGenerator:
     def __init__(self):
         Gst.init(None)
@@ -255,7 +258,7 @@ def main():
     if engine_file:
         target_engine_path = os.path.join(config_dir, engine_file)
         # Default engine filename that DeepStream creates
-        default_engine_file = "model_b1_gpu0_fp16.engine"
+        default_engine_file = f"model_b{BATCH_SIZE}_gpu0_fp{FP_VER}.engine"
         default_engine_path = os.path.join(config_dir, default_engine_file)
         
         if os.path.exists(target_engine_path):
