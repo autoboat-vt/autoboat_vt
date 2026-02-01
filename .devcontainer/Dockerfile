@@ -109,6 +109,17 @@ USER $USERNAME
 COPY required_pip_packages.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
+# -------------------------------
+# Installation for gazebo 
+# -------------------------------
+RUN sudo apt-get update \
+   && sudo apt-get install curl lsb-release gnupg \
+   && sudo curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg \
+   && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] https://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null \
+   && sudo apt-get update \
+   && sudo apt-get install gz-harmonic -y \
+   && sudo apt install ros-humble-ros-gzharmonic -y
+
 CMD ["/bin/bash"]
 # TODO and NOTE:
 # this is the docker file used to build the dev container. 
