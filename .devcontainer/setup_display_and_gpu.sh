@@ -66,7 +66,7 @@ setup_linux() {
 
 	# install X11 tools
 	log_info "Installing X11 utilities..."
-	sudo apt-get update -qq
+	sudo apt-get update -qq || true
 	sudo apt-get install -y x11-utils x11-xserver-utils
 
 	# gpu detection
@@ -128,7 +128,7 @@ setup_linux() {
 			export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"
 			export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"
 
-			sudo apt-get update
+			sudo apt-get update || true
 			sudo apt-get install -y nvidia-container-toolkit
 			log_info "Configuring Docker runtime for NVIDIA..."
 			sudo nvidia-ctk runtime configure --runtime=docker
