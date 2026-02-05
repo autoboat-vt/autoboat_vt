@@ -25,3 +25,10 @@ cd ./build
 cmake ..
 make
 cd ../..
+
+cd ./buoyancy
+mkdir build
+cd ./build
+cmake ..
+make
+cd ../..
