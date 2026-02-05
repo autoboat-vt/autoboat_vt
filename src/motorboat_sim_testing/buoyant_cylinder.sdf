@@ -591,7 +591,7 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
             <upper>.61</upper>
           </limit>
           <dynamics>
-            <damping>1</damping>
+            <damping>10</damping>
           </dynamics>
         </axis>
       </joint>
@@ -628,7 +628,7 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         <propeller_diameter>0.0855</propeller_diameter>
       </plugin>
 
-      <!-- Drag on the rudder to make it function -->
+      <!-- Drag on the rudder to make it function + drag on the hull parts below -->
       <plugin filename="libRudderDynamics.so"
       name="rudder_dynamics::RudderDynamics">
         <link0>rudder_link</link0>
@@ -640,7 +640,6 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         <upward>0 1 0</upward>
       </plugin>
 
-      <!-- Drag on the hull parts -->
        <plugin filename="libRudderDynamics.so"
         name="rudder_dynamics::RudderDynamics">
         <link0>left_front_link</link0>
@@ -723,6 +722,7 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         <cp>0 0 0</cp>
       </plugin>
     -->
+      
       <!-- Hydrodynamics on the hull parts -->
       <plugin
         filename="gz-sim-hydrodynamics-system"

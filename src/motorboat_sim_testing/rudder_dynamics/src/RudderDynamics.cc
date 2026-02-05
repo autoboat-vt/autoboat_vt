@@ -111,7 +111,7 @@ void RudderDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   gz::math::Vector3d ldNormal = forwardI.Cross(upwardI).Normalized();
 
   // Project velocity into lift–drag plane
-  gz::math::Vector3d velInLDPlane = vel;
+  gz::math::Vector3d velInLDPlane = vel - vel.Dot(ldNormal)*ldNormal;
 
   if (velInLDPlane.Length() < 0.01)
     return;
