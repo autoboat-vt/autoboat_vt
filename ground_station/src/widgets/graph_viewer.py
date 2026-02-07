@@ -17,6 +17,12 @@ class GraphViewer(QWidget):
     """
     A widget for monitoring data in real-time using graphs.
 
+    Attributes
+    ----------
+    boat_data_signal
+        A signal that emits the latest boat data as a tuple containing a dictionary
+        of boat status and a ``TelemetryStatus`` enum value.
+
     Inherits
     -------
     ``QWidget``
