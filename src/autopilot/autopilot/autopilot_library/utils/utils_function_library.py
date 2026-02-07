@@ -125,9 +125,9 @@ def get_bearing(current_position: Position, destination_position: Position) -> f
         This value tells you which direction you need to travel in to get to your destination.
     """
 
-    current_longitude, current_latitude = current_position.get_longitude_latitude()
-    destination_longitude, destination_latitude = destination_position.get_longitude_latitude()
-    azimuth_heading, _, _ = pyproj.Geod(ellps="WGS84").inv(
+    current_latitude, current_longitude = current_position.get_latitude_longitude()
+    destination_latitude, destination_longitude = destination_position.get_latitude_longitude()
+    azimuth_heading, _, _ = pyproj.Geod(ellps='WGS84').inv(
         current_longitude, current_latitude, destination_longitude, destination_latitude
     )
 
@@ -152,7 +152,7 @@ def get_distance_between_positions(position1: Position, position2: Position) -> 
         The distance between the two positions in meters.
     """
 
-    return geopy.distance.geodesic(position1.get_longitude_latitude(), position2.get_longitude_latitude()).m
+    return geopy.distance.geodesic(position1.get_latitude_longitude(), position2.get_latitude_longitude()).m
 
 
 def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float) -> bool:
