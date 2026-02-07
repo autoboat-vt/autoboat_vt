@@ -51,7 +51,7 @@ class MainWindow(QMainWindow):
             self.instance_handler = InstanceHandler()
             self.main_widget.addTab(self.console_widget, "Console Output")
 
-            if constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
+            if constants.SM.read("has_telemetry_server_instance_changed"):
                 self.load_main_tabs()
 
             else:
@@ -81,7 +81,7 @@ class MainWindow(QMainWindow):
     def check_instance_connection(self) -> None:
         """Check if an instance connection has been established."""
 
-        if constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
+        if constants.SM.read("has_telemetry_server_instance_changed"):
             self.check_timer.stop()
             self.load_main_tabs()
 

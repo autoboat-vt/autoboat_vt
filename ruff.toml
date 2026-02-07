@@ -20,6 +20,7 @@ select    = ["ALL"]
 unfixable = ["F401"]
 
 ignore = [
+    "ANN401",
     "BLE001",
     "COM812",
     "CPY001",

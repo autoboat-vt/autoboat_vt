@@ -26,7 +26,7 @@ from urllib.parse import urljoin
 from qtpy.QtCore import QThread, Signal
 from requests import RequestException
 
-from utils import constants
+from utils import constants, misc
 
 
 class AutopilotThreadRouter:
@@ -71,8 +71,8 @@ class AutopilotThreadRouter:
             try:
                 data = constants.REQ_SESSION.get(
                     urljoin(
-                        constants.TELEMETRY_SERVER_ENDPOINTS["get_current_hash"],
-                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                        misc.get_route("get_current_hash"),
+                        str(constants.SM.read("telemetry_server_instance_id")),
                     )
                 ).text
 
@@ -119,7 +119,7 @@ class AutopilotThreadRouter:
 
             try:
                 data = constants.REQ_SESSION.get(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["get_all_hashes"]
+                    misc.get_route("get_all_hashes")
                 ).json()
 
                 if not isinstance(data, list):
@@ -179,10 +179,7 @@ class BoatStatusThreadRouter:
             while True:
                 try:
                     data = constants.REQ_SESSION.get(
-                        urljoin(
-                            constants.TELEMETRY_SERVER_ENDPOINTS["get_boat_status"],
-                            str(constants.TELEMETRY_SERVER_INSTANCE_ID),
-                        )
+                        urljoin(misc.get_route("get_boat_status"), str(constants.SM.read("telemetry_server_instance_id")))
                     ).json()
 
                     if not isinstance(data, dict):
@@ -237,7 +234,7 @@ class InstanceManagerThreadRouter:
             """Fetch instances from the telemetry server and emit them."""
 
             try:
-                data = constants.REQ_SESSION.get(constants.TELEMETRY_SERVER_ENDPOINTS["get_all_instance_info"]).json()
+                data = constants.REQ_SESSION.get(misc.get_route("get_all_instance_info")).json()
 
                 if not isinstance(data, list):
                     raise TypeError
@@ -297,8 +294,8 @@ class WaypointThreadRouter:
             try:
                 data = constants.REQ_SESSION.get(
                     urljoin(
-                        constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"],
-                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                        misc.get_route("get_waypoints"),
+                        str(constants.SM.read("telemetry_server_instance_id")),
                     )
                 ).json()
 
@@ -351,7 +348,7 @@ class WaypointThreadRouter:
             """Fetch waypoints from the local server and emit them."""
 
             try:
-                data = constants.REQ_SESSION.get(constants.WAYPOINTS_SERVER_URL).json()
+                data = constants.REQ_SESSION.get(constants.SM.read("waypoints_server_url")).json()
 
                 if not isinstance(data, list):
                     raise TypeError
@@ -409,8 +406,8 @@ class ImageFetcher(QThread):
         try:
             image_data = constants.REQ_SESSION.get(
                 urljoin(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
-                    str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                    misc.get_route("get_current_camera_image"),
+                    str(constants.SM.read("telemetry_server_instance_id")),
                 )
             ).json()
 

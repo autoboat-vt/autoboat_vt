@@ -157,7 +157,7 @@ cleanup() {
     [[ -n "${PYTHON_PID:-}" ]] && kill "$PYTHON_PID" 2>/dev/null || true
     [[ -n "${GO_PID:-}" ]] && wait "$GO_PID" 2>/dev/null || true
     [[ -n "${PYTHON_PID:-}" ]] && wait "$PYTHON_PID" 2>/dev/null || true
-    temp_file="src/widgets/autopilot_config_widget/params_temp.json"
+    temp_file="app_data/app_state.json"
     [[ -f $temp_file ]] && rm "$temp_file"
 }
 

@@ -68,7 +68,7 @@ class GraphViewer(QWidget):
                 - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
-        if not constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
+        if not constants.SM.read("has_telemetry_server_instance_changed"):
             self.boat_data_signal.emit(request_result)
             boat_data, telemetry_status = request_result
 
@@ -86,7 +86,7 @@ class GraphViewer(QWidget):
                 }
                 filtered_values = {key: float(boat_data.get(key, np.nan)) for key in self.important_keys}
 
-                current_time = time.time() - constants.START_TIME
+                current_time = time.time() - constants.SM.read("start_time")
                 self.x_axis.append(current_time)
 
                 for key, val in filtered_values.items():
@@ -152,8 +152,8 @@ class GraphViewer(QWidget):
             try:
                 response = constants.REQ_SESSION.get(
                     urljoin(
-                        constants.TELEMETRY_SERVER_ENDPOINTS["get_boat_status"],
-                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                        misc.get_route("get_boat_status"),
+                        str(constants.SM.read("telemetry_server_instance_id"))
                     )
                 ).json()
 

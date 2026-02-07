@@ -204,14 +204,14 @@ class AutopilotConfigManager(QWidget):
         # put auto refresh toggle on the buttom center of the main layout
         self.main_layout.addWidget(self.auto_refresh_toggle, 6, 0, alignment=Qt.AlignCenter)
 
-        self.hashes_fetcher = thread_classes.AutopilotThreadRouter.AvailableHashesFetcherThread()
         self.active_hash_fetcher = thread_classes.AutopilotThreadRouter.ActiveHashFetcherThread()
+        self.hashes_fetcher = thread_classes.AutopilotThreadRouter.AvailableHashesFetcherThread()
 
-        self.hashes_fetcher.response.connect(self.on_hashes_fetched)
         self.active_hash_fetcher.response.connect(self.on_active_hash_fetched)
+        self.hashes_fetcher.response.connect(self.on_hashes_fetched)
 
-        self.timer.timeout.connect(self.hash_fetcher_starter)
         self.timer.timeout.connect(self.active_hash_fetcher_starter)
+        self.timer.timeout.connect(self.hash_fetcher_starter)
 
         self.on_sort_by_changed(self.sort_by.name)
         self.timer.start()
@@ -283,8 +283,9 @@ class AutopilotConfigManager(QWidget):
             for widget in sorted(self.widgets_by_hash.values(), key=self.sort_key):
                 self.configs_layout.addWidget(widget)
 
-                if widget.hash_value == constants.REMOTE_AUTOPILOT_PARAM_HASH:
+                if widget.hash_value == constants.SM.read("remote_autopilot_param_hash"):
                     widget.setStyleSheet(ConfigWidget.activated_style_sheet)
+                
                 else:
                     widget.setStyleSheet(ConfigWidget.style_sheet)
 
@@ -311,7 +312,7 @@ class AutopilotConfigManager(QWidget):
         hash_string, status = request_result
 
         if status == constants.TelemetryStatus.SUCCESS:
-            constants.REMOTE_AUTOPILOT_PARAM_HASH = hash_string.strip().replace('"', '')
+            constants.SM.write("remote_autopilot_param_hash", hash_string.strip().replace('"', ""))
 
     def create_new_config(self) -> None:
         """
@@ -345,7 +346,7 @@ class AutopilotConfigManager(QWidget):
             config_dict = json.loads(config_data)
 
             response = constants.REQ_SESSION.post(
-                constants.TELEMETRY_SERVER_ENDPOINTS["create_config"],
+                misc.get_route("create_config"),
                 json=config_dict,
             )
             
@@ -428,7 +429,7 @@ class AutopilotConfigManager(QWidget):
         total_count = len(self.widgets_by_hash)
         status_text = (
             f"Showing {visible_count} of {total_count} configurations | "
-            f"Remote Hash: {constants.REMOTE_AUTOPILOT_PARAM_HASH}"
+            f"Remote Hash: {constants.SM.read('remote_autopilot_param_hash')}"
         )
         self.status_label.setText(status_text)
 
@@ -576,7 +577,7 @@ class ConfigWidget(QFrame):
         try:
             data = constants.REQ_SESSION.get(
                     urljoin(
-                        constants.TELEMETRY_SERVER_ENDPOINTS['get_config_from_hash'],
+                        misc.get_route("get_config_from_hash"),
                         self.hash_value
                 )
             ).json()
@@ -605,7 +606,7 @@ class ConfigWidget(QFrame):
         try:
             response = constants.REQ_SESSION.delete(
                 urljoin(
-                    constants.TELEMETRY_SERVER_ENDPOINTS['delete_config'],
+                    misc.get_route("delete_config"),
                     self.hash_value
                 )
             )
@@ -627,7 +628,7 @@ class ConfigWidget(QFrame):
         if new_description not in {"", self.hash_description}:
             try:
                 url = urljoin(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["set_hash_description"],
+                    misc.get_route("set_hash_description"),
                     f"{self.hash_value}/{new_description}"
                 )
                 response = constants.REQ_SESSION.post(url)

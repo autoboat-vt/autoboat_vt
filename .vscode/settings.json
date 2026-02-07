@@ -3,10 +3,10 @@
     "ruff.importStrategy": "useBundled",
     "ruff.showSyntaxErrors": false,
     "ruff.configurationPreference": "filesystemFirst",
-    "evenBetterToml.taplo.configFile.path": "/home/ws/taplo.toml",
+    "ruff.configuration": "${workspaceFolder}/ruff.toml",
+    "evenBetterToml.taplo.configFile.path": "taplo.toml",
     "evenBetterToml.schema.links": true,
     "evenBetterToml.semanticTokens": true,
-    "ruff.configuration": "/home/ws/ruff.toml",
     "cmake.ignoreCMakeListsMissing": true,
     "[python]": {
         "editor.formatOnSave": false

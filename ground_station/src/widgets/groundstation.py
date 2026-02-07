@@ -311,11 +311,9 @@ class GroundStationWidget(QWidget):
 
         if not test:
             try:
+                instance_id = constants.SM.read("telemetry_server_instance_id")
                 constants.REQ_SESSION.post(
-                    urljoin(
-                        constants.TELEMETRY_SERVER_ENDPOINTS["set_waypoints"],
-                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
-                    ),
+                    urljoin(misc.get_route("set_waypoints"), instance_id),
                     json=self.waypoints,
                 )
 
@@ -330,8 +328,8 @@ class GroundStationWidget(QWidget):
             try:
                 constants.REQ_SESSION.post(
                     urljoin(
-                        constants.TELEMETRY_SERVER_ENDPOINTS["waypoints_test"],
-                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                        constants.SM.read("test_waypoints"),
+                        str(constants.SM.read("telemetry_server_instance_id")),
                     ),
                     json=self.waypoints,
                 )
@@ -343,8 +341,9 @@ class GroundStationWidget(QWidget):
         """Pull waypoints from the telemetry server and add them to the map."""
 
         try:
+            instance_id = constants.SM.read("telemetry_server_instance_id")
             remote_waypoints: list[list[float]] = constants.REQ_SESSION.get(
-                urljoin(constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"], str(constants.TELEMETRY_SERVER_INSTANCE_ID))
+                urljoin(misc.get_route("get_waypoints"), instance_id),
             ).json()
 
             if remote_waypoints:
@@ -816,17 +815,21 @@ class GroundStationWidget(QWidget):
                 new_url = misc.show_input_dialog(
                     "Change Telemetry Server URL",
                     "Enter the new telemetry server URL:",
-                    default_value=constants.TELEMETRY_SERVER_URL,
+                    default_value=constants.SM.read("telemetry_server_url"),
                     input_type=str,
                 )
 
                 if new_url:
-                    print(f"[Info] Changed telemetry server URL to {new_url}, was {constants.TELEMETRY_SERVER_URL}.")
-                    constants.TELEMETRY_SERVER_URL = new_url
-                    for endpoint in constants.TELEMETRY_SERVER_ENDPOINTS:
-                        path_tail = "/".join(constants.TELEMETRY_SERVER_ENDPOINTS[endpoint].split("/")[-2:])
-                        new_endpoint_url = constants.TELEMETRY_SERVER_URL + path_tail
-                        constants.TELEMETRY_SERVER_ENDPOINTS[endpoint] = new_endpoint_url
+                    print(f"[Info] Changed telemetry server URL to {new_url}, was {constants.SM.read('telemetry_server_url')}.")
+                    
+                    constants.SM.write("telemetry_server_url", new_url)
+                    tmp_dict = {}
+                    for endpoint, value in constants.SM.read("telemetry_server_endpoints").items():
+                        path_tail = "/".join(value.split("/")[-2:])
+                        new_endpoint_url = constants.SM.read("telemetry_server_url") + path_tail
+                        tmp_dict[endpoint] = new_endpoint_url
+
+                    constants.SM.write("telemetry_server_endpoints", tmp_dict)
 
                 else:
                     print("[Warning] No new telemetry server URL provided, keeping old one.")
@@ -903,10 +906,10 @@ class GroundStationWidget(QWidget):
         except AssertionError:
             lat, lon = self.fake_position
 
-        if constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
-            constants.REMOTE_AUTOPILOT_PARAM_HASH = ""
+        if constants.SM.read("has_telemetry_server_instance_changed"):
+            constants.SM.write("remote_autopilot_param_hash", "")
             self.clear_waypoints()
-            constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = False
+            constants.SM.write("has_telemetry_server_instance_changed", False)
 
         self.browser.page().runJavaScript(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})")
 

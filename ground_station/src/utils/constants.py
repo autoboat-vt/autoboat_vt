@@ -1,12 +1,13 @@
 """Module containing constants for the ground station application."""
 
 import inspect
+import json
 import os
 import time
 from enum import auto
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TypeAlias
+from typing import Any, TypeAlias
 from urllib.parse import urljoin
 
 import requests
@@ -16,6 +17,7 @@ from qtpy.QtGui import QColor, QPalette
 from strenum import StrEnum
 
 from utils import misc
+from utils.state_manager import StateManager
 
 
 class TelemetryStatus(StrEnum):
@@ -38,6 +40,8 @@ class TelemetryStatus(StrEnum):
     WRONG_FORMAT = auto()
 
 NumberType: TypeAlias = int | float
+
+SM = StateManager()
 
 # see `main.py` for where this is set
 ICONS: SimpleNamespace
@@ -108,11 +112,7 @@ TEN_MS_TIMER = misc.create_timer(10)
 
 ONE_MS_TIMER = misc.create_timer(1)
 
-START_TIME: float = time.time()
-
-# server ports
-ASSET_SERVER_PORT = 8000
-GO_SERVER_PORT = 3001
+_start_time: float = time.time()
 
 JS_LIBRARIES: tuple[str, ...] = (
     "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
@@ -120,72 +120,12 @@ JS_LIBRARIES: tuple[str, ...] = (
     "https://cdn.jsdelivr.net/gh/bbecquet/Leaflet.RotatedMarker@master/leaflet.rotatedMarker.js",
 )
 
+# server ports
+ASSET_SERVER_PORT = 8000
+GO_SERVER_PORT = 3001
+
 # url for local waypoints server
-WAYPOINTS_SERVER_URL: str = f"http://localhost:{GO_SERVER_PORT}/waypoints"
-
-# base url for telemetry server (the CIA is inside of my brain...)
-TELEMETRY_SERVER_URL: str = "https://vt-autoboat-telemetry.uk:8443"
-
-LOCAL_AUTOPILOT_PARAM_HASH: str = ""
-REMOTE_AUTOPILOT_PARAM_HASH: str = ""
-
-TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE: int = -1  # -1 means no instance selected
-TELEMETRY_SERVER_INSTANCE_ID: int = TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE
-HAS_TELEMETRY_SERVER_INSTANCE_CHANGED: bool = False
-
-# endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint` + `/`
-_instance_manager_endpoints: dict[str, str] = {
-    "create_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/create"),
-    "delete_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/delete/"),
-    "delete_all_instances": urljoin(TELEMETRY_SERVER_URL, "instance_manager/delete_all"),
-    "clean_instances": urljoin(TELEMETRY_SERVER_URL, "instance_manager/clean_instances"),
-    "set_instance_user": urljoin(TELEMETRY_SERVER_URL, "instance_manager/set_user/"),
-    "set_instance_name": urljoin(TELEMETRY_SERVER_URL, "instance_manager/set_name/"),
-    "get_user_from_id": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_user/"),
-    "get_instance_name_from_id": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_name/"),
-    "get_instance_id_from_name": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_id/"),
-    "get_instance_info": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_instance_info/"),
-    "get_all_instance_info": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_all_instance_info"),
-    "get_all_ids": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_ids"),
-}
-
-_boat_status_endpoints: dict[str, str] = {
-    "get_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/get/"),
-    "get_new_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/get_new/"),
-    "test_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/test/"),
-}
-
-_autopilot_parameters_endpoints: dict[str, str] = {
-    "get_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get/"),
-    "get_new_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_new/"),
-    "get_default_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_default/"),
-    "get_current_hash": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_hash/"),
-    "get_config_from_hash": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_config/"),
-    "get_hash_description": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_hash_description/"),
-    "get_all_hashes": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_all_hashes"),
-    "get_hash_exists": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_hash_exists/"),
-    "set_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set/"),
-    "set_default_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set_default/"),
-    "set_default_from_hash": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set_default_from_hash/"),
-    "set_hash_description": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set_hash_description/"),
-    "create_config": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/create_config"),
-    "delete_config": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/delete_config/"),
-    "test_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/test/"),
-}
-
-_waypoints_endpoints: dict[str, str] = {
-    "get_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/get/"),
-    "get_new_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/get_new/"),
-    "set_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/set/"),
-    "test_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/test/"),
-}
-
-TELEMETRY_SERVER_ENDPOINTS: dict[str, str] = dict(
-    **_instance_manager_endpoints,
-    **_boat_status_endpoints,
-    **_autopilot_parameters_endpoints,
-    **_waypoints_endpoints,
-)
+_waypoints_server_url: str = f"http://localhost:{GO_SERVER_PORT}/waypoints"
 
 TELEMETRY_TIMEOUT_SECONDS = 10
 TELEMETRY_RETRY_ATTEMPTS = 3
@@ -194,6 +134,89 @@ REQ_SESSION = requests.Session()
 ADAPTER = requests.adapters.HTTPAdapter(max_retries=TELEMETRY_RETRY_ATTEMPTS)
 REQ_SESSION.mount("http://", ADAPTER)
 REQ_SESSION.mount("https://", ADAPTER)
+
+# base url for telemetry server (the CIA is inside of my brain...)
+_telemetry_server_url: str = "https://vt-autoboat-telemetry.uk:8443"
+
+_local_autopilot_param_hash: str = ""
+_remote_autopilot_param_hash: str = ""
+_current_autopilot_parameters: dict[str, Any] = {}
+
+TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE: int = -1  # -1 means no instance selected
+_telemetry_server_instance_id: int = TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE
+_has_telemetry_server_instance_changed: bool = False
+
+# endpoints for telemetry server, format is `_telemetry_server_url` + `endpoint` + `/`
+_instance_manager_endpoints: dict[str, str] = {
+    "create_instance": urljoin(_telemetry_server_url, "instance_manager/create"),
+    "delete_instance": urljoin(_telemetry_server_url, "instance_manager/delete/"),
+    "delete_all_instances": urljoin(_telemetry_server_url, "instance_manager/delete_all"),
+    "clean_instances": urljoin(_telemetry_server_url, "instance_manager/clean_instances"),
+    "set_instance_user": urljoin(_telemetry_server_url, "instance_manager/set_user/"),
+    "set_instance_name": urljoin(_telemetry_server_url, "instance_manager/set_name/"),
+    "get_user_from_id": urljoin(_telemetry_server_url, "instance_manager/get_user/"),
+    "get_instance_name_from_id": urljoin(_telemetry_server_url, "instance_manager/get_name/"),
+    "get_instance_id_from_name": urljoin(_telemetry_server_url, "instance_manager/get_id/"),
+    "get_instance_info": urljoin(_telemetry_server_url, "instance_manager/get_instance_info/"),
+    "get_all_instance_info": urljoin(_telemetry_server_url, "instance_manager/get_all_instance_info"),
+    "get_all_ids": urljoin(_telemetry_server_url, "instance_manager/get_ids"),
+}
+
+_boat_status_endpoints: dict[str, str] = {
+    "get_boat_status": urljoin(_telemetry_server_url, "boat_status/get/"),
+    "get_new_boat_status": urljoin(_telemetry_server_url, "boat_status/get_new/"),
+    "test_boat_status": urljoin(_telemetry_server_url, "boat_status/test/"),
+}
+
+_autopilot_parameters_endpoints: dict[str, str] = {
+    "get_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/get/"),
+    "get_new_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/get_new/"),
+    "get_default_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/get_default/"),
+    "get_current_hash": urljoin(_telemetry_server_url, "autopilot_parameters/get_hash/"),
+    "get_config_from_hash": urljoin(_telemetry_server_url, "autopilot_parameters/get_config/"),
+    "get_hash_description": urljoin(_telemetry_server_url, "autopilot_parameters/get_hash_description/"),
+    "get_all_hashes": urljoin(_telemetry_server_url, "autopilot_parameters/get_all_hashes"),
+    "get_hash_exists": urljoin(_telemetry_server_url, "autopilot_parameters/get_hash_exists/"),
+    "set_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/set/"),
+    "set_default_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/set_default/"),
+    "set_default_from_hash": urljoin(_telemetry_server_url, "autopilot_parameters/set_default_from_hash/"),
+    "set_hash_description": urljoin(_telemetry_server_url, "autopilot_parameters/set_hash_description/"),
+    "create_config": urljoin(_telemetry_server_url, "autopilot_parameters/create_config"),
+    "delete_config": urljoin(_telemetry_server_url, "autopilot_parameters/delete_config/"),
+    "test_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/test/"),
+}
+
+_waypoints_endpoints: dict[str, str] = {
+    "get_waypoints": urljoin(_telemetry_server_url, "waypoints/get/"),
+    "get_new_waypoints": urljoin(_telemetry_server_url, "waypoints/get_new/"),
+    "set_waypoints": urljoin(_telemetry_server_url, "waypoints/set/"),
+    "test_waypoints": urljoin(_telemetry_server_url, "waypoints/test/"),
+}
+
+_camera_endpoints: dict[str, str] = {
+    "get_current_camera_image": urljoin(_telemetry_server_url, "camera/get_current_image/"),
+}
+
+_telemetry_server_endpoints: dict[str, str] = dict(
+    **_instance_manager_endpoints,
+    **_boat_status_endpoints,
+    **_autopilot_parameters_endpoints,
+    **_waypoints_endpoints,
+    **_camera_endpoints,
+)
+
+STATE_FILE_CONTENTS: dict[str, Any] = {
+    "start_time": _start_time,
+    "telemetry_server_url": _telemetry_server_url,
+    "waypoints_server_url": _waypoints_server_url,
+    "local_autopilot_param_hash": _local_autopilot_param_hash,
+    "remote_autopilot_param_hash": _remote_autopilot_param_hash,
+    "current_autopilot_parameters": _current_autopilot_parameters,
+    "telemetry_server_instance_id": _telemetry_server_instance_id,
+    "telemetry_server_instance_user": "",
+    "has_telemetry_server_instance_changed": _has_telemetry_server_instance_changed,
+    "telemetry_server_endpoints": _telemetry_server_endpoints,
+}
 
 try:
     # should be the path to wherever `ground_station` is located
@@ -210,15 +233,27 @@ try:
 
     CAMERA_WIDGET_DIR = Path(WIDGETS_DIR / "camera_widget")
     HTML_CAMERA_PATH = Path(CAMERA_WIDGET_DIR / "camera.html")
-
-    _autopilot_param_editor_dir = Path(WIDGETS_DIR / "autopilot_config_widget")
+    
+    APP_STATE_PATH = Path(DATA_DIR / "app_state.json")
 
     stack = inspect.stack()
     active_flag: bool = stack[0].filename == Path(UTILS_DIR / "constants.py").as_posix()
 
+    # will not break if moved outside of if block, but prevents redundant checks
     if active_flag:
         if "assets" not in os.listdir(DATA_DIR):
-            raise Exception("Assets directory not found, please redownload the directory from GitHub.")
+            raise Exception("Assets directory not found, pleacse redownload the directory from GitHub.")
+        
+        if not APP_STATE_PATH.exists():
+            print("[Info] Creating app state file...")
+            APP_STATE_PATH.touch()
+            with open(APP_STATE_PATH, "w") as f:
+                json.dump({}, f, indent=4)
+
+        if json.load(open(file=APP_STATE_PATH, mode="r", encoding="utf-8")) == {}:
+            print("[Info] Initializing app state file...")
+            with open(APP_STATE_PATH, "w", encoding="utf-8") as f:
+                json.dump(STATE_FILE_CONTENTS, f, indent=4)
         
         if "autopilot_params" not in os.listdir(DATA_DIR):
             print("[Info] Creating autopilot parameters directory...")
@@ -226,10 +261,6 @@ try:
         
         if "params_default.json" not in os.listdir(DATA_DIR / "autopilot_params"):
             print("[Warning] Missing default autopilot parameters file!")
-
-        if "params_temp.json" not in os.listdir(_autopilot_param_editor_dir):
-            print("[Info] Creating temporary autopilot parameters file...")
-            _autopilot_param_editor_dir.touch("params_temp.json")
 
         if "boat_data" not in os.listdir(DATA_DIR):
             print("[Info] Creating boat data directory...")

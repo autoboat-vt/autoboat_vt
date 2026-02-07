@@ -11,6 +11,7 @@ class AutopilotConfigWidget(QTabWidget):
         super().__init__()
 
         self.setTabPosition(QTabWidget.South)
+        autopilot_config_manager = AutopilotConfigManager()
         self.addTab(AutopilotConfigEditor(), "Edit Parameters")
-        self.addTab(AutopilotConfigManager(), "Manage Configurations")
+        self.addTab(autopilot_config_manager, "Manage Configurations")
         self.setWindowTitle("Autopilot Configuration")

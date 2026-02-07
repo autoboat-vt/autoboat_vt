@@ -3,6 +3,7 @@ Module containing miscellaneous utility functions for the ground station applica
 
 Functions:
 - get_icons: Load and return a set of icons for the application.
+- get_route: Get the full URL for a given route name.
 - pushbutton_maker: Create a QPushButton with specified features.
 - show_message_box: Show a message box with specified title, message, icon, and buttons
 - show_input_dialog: Show an input dialog to get user input.
@@ -10,6 +11,17 @@ Functions:
 - copy_qtimer: Create a copy of a QTimer with the same interval and single-shot status.
 - cache_cdn_file: Download and cache a file to serve in a local CDN server.
 """
+
+__all__ = [
+    "cache_cdn_file",
+    "copy_qtimer",
+    "create_timer",
+    "get_icons",
+    "get_route",
+    "pushbutton_maker",
+    "show_input_dialog",
+    "show_message_box",
+]
 
 import os
 from collections.abc import Callable
@@ -74,6 +86,33 @@ def get_icons() -> SimpleNamespace:
         )
 
     return SimpleNamespace(**icons)
+
+def get_route(route_name: str) -> str:
+    """
+    Get the full URL for a given route name.
+
+    Parameters
+    ----------
+    route_name
+        The name of the route.
+
+    Returns
+    -------
+    str
+        The full URL for the given route name.
+
+    Raises
+    ------
+    ValueError
+        If the route name is not found in the telemetry server endpoints.
+    """
+
+    endpoints = constants.SM.read("telemetry_server_endpoints")
+
+    if isinstance(endpoints, dict) and endpoints.get(route_name):
+        return endpoints[route_name]
+    
+    raise ValueError(f"Route name '{route_name}' not found in telemetry server endpoints.")
 
 
 def pushbutton_maker(

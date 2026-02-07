@@ -96,10 +96,12 @@ class AutopilotConfigEditor(QWidget):
         try:
             self.config = constants.REQ_SESSION.get(
                 urljoin(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["get_default_autopilot_parameters"],
-                    str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                    misc.get_route("get_default_autopilot_parameters"),
+                    str(constants.SM.read("telemetry_server_instance_id")),
                 )
             ).json()
+            constants.SM.write("current_autopilot_parameters", self.config)
+            constants.SM.write("local_autopilot_param_hash", constants.SM.read("remote_autopilot_param_hash"))
 
         except RequestException as e:
             print(f"[Error] Failed to fetch default autopilot parameters: {e}")
@@ -137,20 +139,17 @@ class AutopilotConfigEditor(QWidget):
 
         print("[Info] Sending all parameters...")
 
-        existing_data = {}
-        for widget in self.widgets:
-            if isinstance(widget, AutopilotParamWidget):
-                existing_data[widget.name] = widget.current_value
-
         try:
-            if constants.REMOTE_AUTOPILOT_PARAM_HASH == '':
+            remote_hash = constants.SM.read("remote_autopilot_param_hash")
+            
+            if remote_hash == "":
                 print("[Info] Setting current parameters as default on telemetry server.")
                 response = constants.REQ_SESSION.post(
                     urljoin(
-                        constants.TELEMETRY_SERVER_ENDPOINTS["set_default_autopilot_parameters"],
-                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                        misc.get_route("set_default_autopilot_parameters"),
+                        str(constants.SM.read("telemetry_server_instance_id")),
                     ),
-                    json=self.config
+                    json=json.dumps(constants.SM.read("current_autopilot_parameters"), indent=None)
                 )
 
                 if response.status_code == 200:
@@ -159,12 +158,11 @@ class AutopilotConfigEditor(QWidget):
                 else:
                     print(f"[Warning] Failed to set defaults; status {response.status_code}: {response.text}")
 
-            elif constants.REMOTE_AUTOPILOT_PARAM_HASH != constants.LOCAL_AUTOPILOT_PARAM_HASH:
-                print(constants.LOCAL_AUTOPILOT_PARAM_HASH, constants.REMOTE_AUTOPILOT_PARAM_HASH)
+            elif remote_hash != constants.SM.read("local_autopilot_param_hash"):
                 print("[Info] Creating new config on telemetry server.")
                 response = constants.REQ_SESSION.post(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["create_config"],
-                    json=existing_data,
+                    misc.get_route("create_config"),
+                    json=json.dumps(constants.SM.read("current_autopilot_parameters"), indent=None),
                 )
 
                 if response.status_code == 200:
@@ -174,12 +172,17 @@ class AutopilotConfigEditor(QWidget):
                     print(f"[Warning] Failed to create new config; status {response.status_code}: {response.text}")
 
             else:
+                existing_data = {}
+                for widget in self.widgets:
+                    if isinstance(widget, AutopilotParamWidget):
+                        existing_data[widget.name] = widget.current_value
+
                 response = constants.REQ_SESSION.post(
                     urljoin(
-                        constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
-                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                        misc.get_route("set_autopilot_parameters"),
+                        str(constants.SM.read("telemetry_server_instance_id")),
                     ),
-                    json=existing_data,
+                    json=json.dumps(existing_data, indent=None)
                 )
 
                 if response.status_code == 200:
@@ -198,14 +201,16 @@ class AutopilotConfigEditor(QWidget):
         print("[Info] Pulling all parameters...")
 
         try:
-            if constants.REMOTE_AUTOPILOT_PARAM_HASH == "":
+            remote_hash = constants.SM.read("remote_autopilot_param_hash")
+
+            if remote_hash == "":
                 print("[Warning] Default parameters are not set on the telemetry server. Aborting pull operation.")
                 return
 
             data = constants.REQ_SESSION.get(
                 urljoin(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
-                    str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                    misc.get_route("get_autopilot_parameters"),
+                    str(constants.SM.read("telemetry_server_instance_id")),
                 )
             ).json()
 
@@ -245,8 +250,8 @@ class AutopilotConfigEditor(QWidget):
                             try:
                                 default_params = constants.REQ_SESSION.get(
                                     urljoin(
-                                        constants.TELEMETRY_SERVER_ENDPOINTS["get_default_autopilot_parameters"],
-                                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                                        misc.get_route("get_default_autopilot_parameters"),
+                                        str(constants.SM.read("telemetry_server_instance_id")),
                                     )
                                 ).json()
 
@@ -307,9 +312,10 @@ class AutopilotConfigEditor(QWidget):
 
             if not isinstance(file_config, dict):
                 raise TypeError("Configuration file must contain a dictionary of parameters.")
-            
+
             self.config = file_config
-            constants.LOCAL_AUTOPILOT_PARAM_HASH = Path(file_path).stem
+            constants.SM.write("local_autopilot_param_hash", Path(file_path).stem)
+            constants.SM.write("current_autopilot_parameters", self.config)
 
             self.add_parameters()
             self.update_status_label()
@@ -406,19 +412,22 @@ class AutopilotConfigEditor(QWidget):
         if visible_count is None:
             visible_count = len(self.widgets)
 
+        local_hash = constants.SM.read("local_autopilot_param_hash")
+        message_part = f"Showing config: {local_hash}" if local_hash else "No config loaded"
+
         if not search_text:
-            self.status_label.setText(
-                f"Showing all {visible_count} parameters | Showing config: {constants.LOCAL_AUTOPILOT_PARAM_HASH}"
-            )
+                self.status_label.setText(
+                    f"Showing all {visible_count} parameters | {message_part}"
+                )
         
         elif visible_count == 0:
             self.status_label.setText(
-                f"No parameters match '{search_text}' | Showing config: {constants.LOCAL_AUTOPILOT_PARAM_HASH}"
+                f"No parameters match '{search_text}' | {message_part}"
             )
         
         else:
             self.status_label.setText(
-                f"Showing {visible_count} parameters matching '{search_text}' | Showing config: {constants.LOCAL_AUTOPILOT_PARAM_HASH}" # noqa: E501
+                f"Showing {visible_count} parameters matching '{search_text}' | {message_part}"
             )
 
 class AutopilotParamWidget(QFrame):
@@ -546,8 +555,8 @@ class AutopilotParamWidget(QFrame):
         try:
             existing_data = constants.REQ_SESSION.get(
                 urljoin(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
-                    str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                    misc.get_route("get_autopilot_parameters"),
+                    str(constants.SM.read("telemetry_server_instance_id")),
                 )
             ).json()
 
@@ -564,10 +573,10 @@ class AutopilotParamWidget(QFrame):
             try:
                 constants.REQ_SESSION.post(
                     urljoin(
-                        constants.TELEMETRY_SERVER_ENDPOINTS["set_autopilot_parameters"],
-                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                        misc.get_route("set_autopilot_parameters"),
+                        str(constants.SM.read("telemetry_server_instance_id")),
                     ),
-                    json=existing_data,
+                    json=json.dumps(existing_data, indent=None)
                 )
                 print(f"[Info] Successfully sent {self.name} with value {self.current_value}.")
 
@@ -589,8 +598,8 @@ class AutopilotParamWidget(QFrame):
         try:
             data = constants.REQ_SESSION.get(
                 urljoin(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["get_autopilot_parameters"],
-                    str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                    misc.get_route("get_autopilot_parameters"),
+                    str(constants.SM.read("telemetry_server_instance_id")),
                 )
             ).json()
 
@@ -603,13 +612,9 @@ class AutopilotParamWidget(QFrame):
                     self.value_display.setText(str(self.current_value))
                 print(f"[Info] Pulled {self.name} with value {self.current_value}.")
 
-                with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="r", encoding="utf-8") as file:
-                    temp_params = json.load(file)
-
+                temp_params = constants.SM.read("current_autopilot_parameters")
                 temp_params[self.name] = {"current": self.current_value, "description": self.description}
-
-                with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="w", encoding="utf-8") as file:
-                    json.dump(temp_params, file, indent=4)
+                constants.SM.write("current_autopilot_parameters", temp_params)
 
             else:
                 print(f"[Warning] {self.name} not found in pulled data.")
@@ -632,13 +637,9 @@ class AutopilotParamWidget(QFrame):
             self.value_display.setText(str(self.current_value))
             print(f"[Info] {self.name} reset to default value: {self.current_value}.")
 
-        with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="r", encoding="utf-8") as file:
-            temp_params = json.load(file)
-        
+        temp_params = constants.SM.read("current_autopilot_parameters")
         temp_params[self.name] = {"current": self.current_value, "description": self.description}
-
-        with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="w", encoding="utf-8") as file:
-            json.dump(temp_params, file, indent=4)
+        constants.SM.write("current_autopilot_parameters", temp_params)
 
         self.reset_button.setEnabled(False)
         self.send_button.setEnabled(True)
@@ -688,13 +689,9 @@ class AutopilotParamWidget(QFrame):
                 elif not isinstance(edited_data, self.type):
                     raise TypeError(f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}.")
 
-            with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="r", encoding="utf-8") as file:
-                temp_params = json.load(file)
-
+            temp_params = constants.SM.read("current_autopilot_parameters")
             temp_params[self.name] = {"current": edited_data, "default": self.default_val, "description": self.description}
-
-            with open(Path(constants._autopilot_param_editor_dir / "params_temp.json"), mode="w", encoding="utf-8") as file:
-                json.dump(temp_params, file, indent=4)
+            constants.SM.write("current_autopilot_parameters", temp_params)
 
         except TypeError:
             print(f"[Error] Invalid value for {self.name}. Resetting to previous value.")
