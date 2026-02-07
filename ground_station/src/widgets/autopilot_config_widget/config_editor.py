@@ -1,3 +1,4 @@
+import hashlib
 import json
 from ast import literal_eval
 from copy import deepcopy
@@ -100,8 +101,10 @@ class AutopilotConfigEditor(QWidget):
                     str(constants.SM.read("telemetry_server_instance_id")),
                 )
             ).json()
+            
             constants.SM.write("current_autopilot_parameters", self.config)
             constants.SM.write("local_autopilot_param_hash", constants.SM.read("remote_autopilot_param_hash"))
+            print("[Info] Fetched default autopilot parameters successfully.")
 
         except RequestException as e:
             print(f"[Error] Failed to fetch default autopilot parameters: {e}")
@@ -152,11 +155,40 @@ class AutopilotConfigEditor(QWidget):
                     json=json.dumps(constants.SM.read("current_autopilot_parameters"), indent=None)
                 )
 
+                status_message = response.text.strip().replace('"', "")
+
                 if response.status_code == 200:
                     print("[Info] Current parameters set as default successfully.")
-                
+
+                elif status_message == "Configuration hash already exists.":
+                    hash_from_config = hashlib.sha256(
+                        json.dumps(
+                            constants.SM.read("current_autopilot_parameters"), sort_keys=True, separators=(",", ":")
+                        ).encode(encoding="utf-8")
+                    ).hexdigest()
+                    
+                    response = constants.REQ_SESSION.post(
+                        urljoin(
+                            misc.get_route("set_default_from_hash"),
+                            str(constants.SM.read("telemetry_server_instance_id")) + "/" + hash_from_config,
+                        )
+                    )
+
+                    if response.status_code == 200:
+                        print(
+                            f"[Info] Default parameters set successfully from existing config with "
+                            f"matching hash {hash_from_config}."
+                        )
+                    
+                    else:
+                        print(
+                            f"[Warning] Failed to set default parameters from existing config with "
+                            f"matching hash {hash_from_config}; status {response.status_code}: "
+                            f"{status_message}"
+                        )
+
                 else:
-                    print(f"[Warning] Failed to set defaults; status {response.status_code}: {response.text}")
+                    print(f"[Warning] Failed to set defaults; status {response.status_code}: {status_message}")
 
             elif remote_hash != constants.SM.read("local_autopilot_param_hash"):
                 print("[Info] Creating new config on telemetry server.")
@@ -165,11 +197,40 @@ class AutopilotConfigEditor(QWidget):
                     json=json.dumps(constants.SM.read("current_autopilot_parameters"), indent=None),
                 )
 
+                status_message = response.text.strip().replace('"', "")
+
                 if response.status_code == 200:
                     print("[Info] New config created successfully.")
 
+                elif status_message == "Configuration hash already exists.":
+                    hash_from_config = hashlib.sha256(
+                        json.dumps(
+                            constants.SM.read("current_autopilot_parameters"), sort_keys=True, separators=(",", ":")
+                        ).encode(encoding="utf-8")
+                    ).hexdigest()
+
+                    response = constants.REQ_SESSION.post(
+                        urljoin(
+                            misc.get_route("set_default_from_hash"),
+                            str(constants.SM.read("telemetry_server_instance_id")) + "/" + hash_from_config,
+                        )
+                    )
+
+                    if response.status_code == 200:
+                        print(
+                            f"[Info] Default parameters set successfully from existing config with "
+                            f"matching hash {hash_from_config}."
+                        )
+
+                    else:
+                        print(
+                            f"[Warning] Failed to set default parameters from existing config with "
+                            f"matching hash {hash_from_config}; status {response.status_code}: "
+                            f"{status_message}"
+                        )
+
                 else:
-                    print(f"[Warning] Failed to create new config; status {response.status_code}: {response.text}")
+                    print(f"[Warning] Failed to create new config; status {response.status_code}: {status_message}")
 
             else:
                 existing_data = {}
@@ -188,7 +249,7 @@ class AutopilotConfigEditor(QWidget):
                 if response.status_code == 200:
                     print("[Info] All parameters sent successfully.")
                 else:
-                    print(f"[Warning] Failed to send parameters; status {response.status_code}: {response.text}")
+                    print(f"[Warning] Failed to send parameters; status {response.status_code}: {response.text.strip()}")
 
         except RequestException as e:
             print(f"[Error] Failed to send all parameters: {e}")
