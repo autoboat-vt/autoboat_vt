@@ -313,7 +313,7 @@ class GroundStationWidget(QWidget):
             try:
                 instance_id = constants.SM.read("telemetry_server_instance_id")
                 constants.REQ_SESSION.post(
-                    urljoin(misc.get_route("set_waypoints"), instance_id),
+                    urljoin(misc.get_route("set_waypoints"), str(instance_id)),
                     json=self.waypoints,
                 )
 
@@ -343,7 +343,7 @@ class GroundStationWidget(QWidget):
         try:
             instance_id = constants.SM.read("telemetry_server_instance_id")
             remote_waypoints: list[list[float]] = constants.REQ_SESSION.get(
-                urljoin(misc.get_route("get_waypoints"), instance_id),
+                urljoin(misc.get_route("get_waypoints"), str(instance_id)),
             ).json()
 
             if remote_waypoints:
