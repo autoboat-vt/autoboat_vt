@@ -8,7 +8,7 @@ import threading
 import time
 import subprocess
 import re
-import random
+from math import tan, pi
 
 import rclpy
 from rclpy.node import Node
@@ -87,6 +87,12 @@ class BuoyDetectionNode(Node):
             }
         }
 
+        self.camera_baseline = 59 # Distance between cameras in mm
+        camera_HFOV = 90 # Horizontal Field of View in degrees (from datasheet)
+        
+        # Focal length of the camera is 1.93 mm or 640 px.
+        self.camera_focal_px = (self.CAM_LIST[0]["input_width"] * 0.5) / tan(camera_HFOV * 0.5 * pi / 180) # 640 px
+
         # ROS2 Initialization
         sensor_qos_profile = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST, depth=1)
         self.object_detection_results_publisher = self.create_publisher(msg_type=ObjectDetectionResultsList, topic="/object_detection_results_list", qos_profile=sensor_qos_profile)
@@ -115,11 +121,16 @@ class BuoyDetectionNode(Node):
         self.config_file_split = []
         self.last_time = time.time()
         self.file_lock = threading.Lock()
+        self.current_object_list = ObjectTracker()
+        self.last_published_frame_number = -1
 
         self._init_pipeline()
         self._read_file()
         vs = threading.Thread(target=self.run, daemon=True)
         vs.start()
+
+        if INFERENCE:
+            self.create_timer(timer_period_sec=0.3, callback=self._iterate_results)
 
     def _init_pipeline(self):
         self.pipeline = Gst.Pipeline()
@@ -315,6 +326,8 @@ class BuoyDetectionNode(Node):
 
         msg = ObjectDetectionResultsList()
         msg.detection_results = []
+        object_list = ObjectTracker()
+
         # Retrieve batch metadata from the gst_buffer
         # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
         # C address of gst_buffer as input, which is obtained with hash(gst_buffer)
@@ -334,11 +347,14 @@ class BuoyDetectionNode(Node):
             
             msg.ntp_timestamp = frame_meta.ntp_timestamp
 
-            if (frame_meta.frame_num % 60 == 0 and frame_meta.source_id == 0):
-                current_time = time.time()
-                fps = 60 / (current_time - self.last_time)
-                self.last_time = current_time
-                self.get_logger().info(f"Frame: {frame_meta.frame_num}, avg FPS: {fps:.2f}")
+            if (frame_meta.source_id == 0):
+                object_list.update_frame_number(frame_meta.frame_num)
+                object_list.update_timestamp(frame_meta.ntp_timestamp)
+                if (frame_meta.frame_num % 60 == 0):
+                    current_time = time.time()
+                    fps = 60 / (current_time - self.last_time)
+                    self.last_time = current_time
+                    self.get_logger().info(f"Frame: {frame_meta.frame_num}, avg FPS: {fps:.2f}")
             l_obj = frame_meta.obj_meta_list
 
             # Iterate through each object in frame
@@ -359,6 +375,18 @@ class BuoyDetectionNode(Node):
                 obj_results.object_id = obj_meta.object_id
                 obj_results.class_id = obj_meta.class_id
                 msg.detection_results.append(obj_results)
+                object_list.add_detection(frame_meta.source_id,
+                                          ObjectDetection(
+                                              detector_confidence = obj_meta.confidence,
+                                              tracker_confidence = obj_meta.tracker_confidence,
+                                              x_position = obj_meta.tracker_bbox_info.org_bbox_coords.left + (obj_meta.tracker_bbox_info.org_bbox_coords.width / 2),
+                                              y_position = obj_meta.tracker_bbox_info.org_bbox_coords.top + (obj_meta.tracker_bbox_info.org_bbox_coords.height / 2),
+                                              width = obj_meta.tracker_bbox_info.org_bbox_coords.width,
+                                              height = obj_meta.tracker_bbox_info.org_bbox_coords.height,
+                                              object_id = obj_meta.object_id,
+                                              class_id = obj_meta.class_id,
+                                              object_pair_id = -1
+                ))
 
                 # TODO: Move object parsing and publishing to a separate thread.
 
@@ -373,6 +401,8 @@ class BuoyDetectionNode(Node):
                 break
         
         # self.object_detection_results_publisher.publish(msg)
+        self.current_object_list = object_list
+
         # source1 = self.pipeline.get_by_name('usb-cam-0')
         # if source1 is not None:
         #     prop = "hue"
@@ -386,7 +416,37 @@ class BuoyDetectionNode(Node):
         return Gst.PadProbeReturn.OK
 
     def _iterate_results(self):
-        pass
+        if (self.current_object_list.frame_number == self.last_published_frame_number):
+            return
+        # Pull current data to local variable so it doesn't change mid-function
+        working_position = self.current_position
+        working_heading = self.current_heading
+        working_object_list = self.current_object_list
+        main_cam_list = working_object_list.detection_results[0]
+        left_cam_list = working_object_list.detection_results[1]
+        for main_detection in main_cam_list:
+            for left_detection in left_cam_list:
+                depth = self.camera_focal_px * self.camera_baseline / abs(left_detection.x_position - main_detection.x_position) / 25.4 / 12
+                self.get_logger().info(f"Frame {working_object_list.frame_number:06}: Depth: {depth:.02} ft. Objects: {left_detection.object_id} and {main_detection.object_id}")
+        
+        self._publish_results(working_object_list)
+
+    def _publish_results(self, object_list: ObjectTracker):
+        msg = ObjectDetectionResultsList()
+        msg.detection_results = []
+        for detection in object_list.detection_results[0].values():
+            obj_results = ObjectDetectionResult()
+            obj_results.detector_confidence = detection.detector_confidence
+            obj_results.tracker_confidence = detection.tracker_confidence
+            obj_results.x_position = detection.x_position
+            obj_results.y_position = detection.y_position
+            obj_results.width = detection.width
+            obj_results.height = detection.height
+            obj_results.object_id = detection.object_id
+            obj_results.class_id = detection.class_id
+            msg.detection_results.append(obj_results)
+        self.object_detection_results_publisher.publish(msg)
+        self.last_published_frame_number = object_list.frame_number
 
     def _probe(self, pad, info, u_data):
         self.get_logger().info(u_data)
@@ -511,6 +571,36 @@ class BuoyDetectionNode(Node):
             self.get_logger().info("Reloaded config file in nvinfer")
         else:
             self.get_logger().info("Not reloading config file in nvinfer since INFERENCE is disabled")
+
+    class ObjectTracker:
+        def __init__(self, frame_number=-1, timestamp=0):
+            self.frame_number = frame_number
+            self.timestamp = timestamp
+            self.detection_results = [{}, {}]
+        
+        def add_detection(self, source, detection: ObjectDetection):
+            self.detection_results[source][detection.object_id] = detection
+        
+        def update_frame_number(self, frame_number):
+            self.frame_number = frame_number
+        
+        def update_timestamp(self, timestamp):
+            self.timestamp = timestamp
+        
+        def find_object_pairings(self):
+            pass
+
+    class ObjectDetection:
+        def __init__(self, detector_confidence=0.0, tracker_confidence=0.0, x_position=0.0, y_position=0.0, width=0.0, height=0.0, object_id=-1, class_id=-1, object_pair_id=-1):
+            self.detector_confidence = detector_confidence
+            self.tracker_confidence = tracker_confidence
+            self.x_position = x_position
+            self.y_position = y_position
+            self.width = width
+            self.height = height
+            self.object_id = object_id
+            self.class_id = class_id
+            self.object_pair_id = object_pair_id
 
 def main():
     rclpy.init()
