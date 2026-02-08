@@ -58,6 +58,43 @@ if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":
 if SHOULD_SAVE_IMAGES and not os.path.exists(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results"):
     os.makedirs(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results")
 
+            
+            
+            
+class ObjectDetection:
+    def __init__(self, detector_confidence=0.0, tracker_confidence=0.0, x_position=0.0, y_position=0.0, width=0.0, height=0.0, object_id=-1, class_id=-1, object_pair_id=-1):
+        self.detector_confidence = detector_confidence
+        self.tracker_confidence = tracker_confidence
+        self.x_position = x_position
+        self.y_position = y_position
+        self.width = width
+        self.height = height
+        self.object_id = object_id
+        self.class_id = class_id
+        self.object_pair_id = object_pair_id
+        
+        
+        
+class ObjectTracker:
+    def __init__(self, frame_number=-1, timestamp=0):
+        self.frame_number = frame_number
+        self.timestamp = timestamp
+        self.detection_results = [{}, {}]
+    
+    def add_detection(self, source, detection: ObjectDetection):
+        self.detection_results[source][detection.object_id] = detection
+    
+    def update_frame_number(self, frame_number):
+        self.frame_number = frame_number
+    
+    def update_timestamp(self, timestamp):
+        self.timestamp = timestamp
+    
+    def find_object_pairings(self):
+        pass
+
+
+
 class BuoyDetectionNode(Node):
     """
     Handles the Object Detection using DeepStream and YOLO models.
@@ -572,35 +609,9 @@ class BuoyDetectionNode(Node):
         else:
             self.get_logger().info("Not reloading config file in nvinfer since INFERENCE is disabled")
 
-    class ObjectTracker:
-        def __init__(self, frame_number=-1, timestamp=0):
-            self.frame_number = frame_number
-            self.timestamp = timestamp
-            self.detection_results = [{}, {}]
-        
-        def add_detection(self, source, detection: ObjectDetection):
-            self.detection_results[source][detection.object_id] = detection
-        
-        def update_frame_number(self, frame_number):
-            self.frame_number = frame_number
-        
-        def update_timestamp(self, timestamp):
-            self.timestamp = timestamp
-        
-        def find_object_pairings(self):
-            pass
 
-    class ObjectDetection:
-        def __init__(self, detector_confidence=0.0, tracker_confidence=0.0, x_position=0.0, y_position=0.0, width=0.0, height=0.0, object_id=-1, class_id=-1, object_pair_id=-1):
-            self.detector_confidence = detector_confidence
-            self.tracker_confidence = tracker_confidence
-            self.x_position = x_position
-            self.y_position = y_position
-            self.width = width
-            self.height = height
-            self.object_id = object_id
-            self.class_id = class_id
-            self.object_pair_id = object_pair_id
+
+
 
 def main():
     rclpy.init()
