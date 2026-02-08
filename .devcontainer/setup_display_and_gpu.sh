@@ -38,11 +38,12 @@ setup() {
 	shell_name=$(basename "$SHELL" 2>/dev/null || echo "bash")
 	log_info "Detected shell: $shell_name"
 
-	local profile_file
+	local profile_file;
+	local rc_file;
 	case "$shell_name" in
-	zsh) profile_file="$HOME/.zshrc" ;;
-	bash) profile_file="$HOME/.bashrc" ;;
-	*) profile_file="$HOME/.profile" ;;
+	zsh) profile_file="$HOME/.zprofile"; rc_file="$HOME/.zshrc" ;;
+	bash) profile_file="$HOME/.bash_profile"; rc_file="$HOME/.bashrc"  ;;
+	*) log_error "Unrecognized shell environment: ${shell_name}."; exit 1;;
 	esac
 
 	log_info "Using $profile_file"
@@ -54,6 +55,19 @@ setup() {
 			log_info "Added '$line' to $profile_file"
 		else
 			log_info "'$line' already exists in $profile_file"
+		fi
+	done
+
+
+	log_info "Using $rc_file"
+	touch "$rc_file"
+
+	for line in "${lines[@]}"; do
+		if ! grep -qxF "$line" "$rc_file"; then
+			echo "$line" >>"$rc_file"
+			log_info "Added '$line' to $rc_file"
+		else
+			log_info "'$line' already exists in $rc_file"
 		fi
 	done
 }
