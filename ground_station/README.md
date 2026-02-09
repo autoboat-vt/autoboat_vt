@@ -15,15 +15,15 @@ Ensure that you have the following software installed on your system:
 
 1. Give the start script executable permissions:
 
-```bash
- chmod +x run.sh
-```
+    ```bash
+    chmod +x run.sh
+    ```
 
-1. Run the program
+2. Run the program
 
-```bash
-./run.sh
-```
+    ```bash
+    ./run.sh
+    ```
 
 ### Usage
 
