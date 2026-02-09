@@ -461,8 +461,8 @@ class BuoyDetectionNode(Node):
         working_object_list = self.current_object_list
         main_cam_list = working_object_list.detection_results[0]
         left_cam_list = working_object_list.detection_results[1]
-        for main_detection in main_cam_list:
-            for left_detection in left_cam_list:
+        for main_detection in main_cam_list.values():
+            for left_detection in left_cam_list.values():
                 depth = self.camera_focal_px * self.camera_baseline / abs(left_detection.x_position - main_detection.x_position) / 25.4 / 12
                 self.get_logger().info(f"Frame {working_object_list.frame_number:06}: Depth: {depth:.02} ft. Objects: {left_detection.object_id} and {main_detection.object_id}")
         
