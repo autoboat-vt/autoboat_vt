@@ -28,7 +28,7 @@ typedef struct {
 
 
 
-void AMT22_init(amt22* encoder, int cs_pin, spi_inst_t *spi_port){
+inline void AMT22_init(amt22* encoder, int cs_pin, spi_inst_t *spi_port){
     encoder->spi_port = spi_port;
 
     encoder->PICO_SPI_CSN_PIN = cs_pin;
@@ -44,7 +44,7 @@ void AMT22_init(amt22* encoder, int cs_pin, spi_inst_t *spi_port){
 }
 
 
-int get_turn_count(amt22* encoder){
+inline int get_turn_count(amt22* encoder){
     return encoder->turn_count;
     
 }
@@ -66,7 +66,7 @@ static inline void cs_deselect(amt22* encoder) {
 }
 
 
-void zero_encoder_value(amt22* encoder){
+inline void zero_encoder_value(amt22* encoder){
     sleep_us(40);
     cs_select(encoder);
     sleep_us(3);
@@ -95,7 +95,7 @@ static inline bool get_bit(uint8_t byte, int index){
     return (byte & 1 << (index)) != 0;
 }
 
-bool verify_packet(uint8_t packet_contents[2]){
+inline bool verify_packet(uint8_t packet_contents[2]){
     uint8_t first_byte = packet_contents[0];
     uint8_t second_byte = packet_contents[1];
 
@@ -144,7 +144,7 @@ static inline float parse_angle(uint8_t packet_contents[2]){
     return angle;
 }
 
-float get_motor_angle(amt22* encoder){
+inline float get_motor_angle(amt22* encoder){
     sleep_us(READ_RATE);
 
     uint8_t* packet_array = (uint8_t*) malloc(2*sizeof(uint8_t));

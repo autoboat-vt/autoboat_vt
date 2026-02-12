@@ -1,5 +1,10 @@
 // Include the microros nodes
-#include "main_microros_node.cpp"
+//cd#include "boat.hpp"
+
+#include "common_libraries.h"
+#include "microros.hpp"
+
+
 
 // Change when adding new nodes
 #define NUMBER_OF_NODES 1
@@ -27,16 +32,23 @@ int main()
         gpio_init(LED_PIN);
         gpio_set_dir(LED_PIN, 1);
 
+        gpio_put(LED_PIN, 1);
+
         allocator_core = rcl_get_default_allocator();
 
-        const int timeout_ms = 1000; 
+        const int timeout_ms = 1000;
         const uint8_t attempts = 120;
         rmw_uros_ping_agent(timeout_ms, attempts);
-        
+
         rclc_support_init(&support_core, 0, NULL, &allocator_core);
         rclc_executor_init(&executor_core, &support_core.context, 5, &allocator_core);
 
-        application_init(&allocator_core, &support_core, &executor_core);
+        //application_init(&allocator_core, &support_core, &executor_core);
+
+        //---------------initialize microros--------------------------
+        Microros microros(&allocator_core, &support_core, &executor_core);
+        microros.initialize_theseus_peripherals();
+
 
         while (true) {
             // Ping the agent every few seconds to check connection
