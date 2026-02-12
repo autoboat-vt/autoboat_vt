@@ -3,7 +3,7 @@
 
 #include "pico/stdlib.h"
 
-void initialize_contactor_driver(
+inline void initialize_contactor_driver(
         int contactor_driver_sel0_pin, 
         int contactor_driver_pwm_pin, 
         int contactor_driver_in_a_pin, 
@@ -25,11 +25,11 @@ void initialize_contactor_driver(
     gpio_put(contactor_driver_pwm_pin, 1);
 }
 
-void close_contactor(int contactor_driver_in_a_pin) {
+inline void close_contactor(int contactor_driver_in_a_pin) {
     gpio_put(contactor_driver_in_a_pin, 1);
 }
 
-void open_contactor(int contactor_driver_in_a_pin) {
+inline void open_contactor(int contactor_driver_in_a_pin) {
     gpio_put(contactor_driver_in_a_pin, 0);
 }
 
