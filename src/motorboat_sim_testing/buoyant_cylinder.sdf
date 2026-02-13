@@ -332,8 +332,6 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
     </model>
 
 
-    <!-- User options - Modify these parameters according to your needs -->
-
     <!-- Physics parameters -->
     <physics name="1ms" type="dart">
       <max_step_size>0.02</max_step_size>
@@ -653,75 +651,6 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         <upward>0 0 1</upward>
         <forward>1 0 0</forward>
       </plugin>
-<!--
-      <plugin
-        filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-        <air_density>1025</air_density>
-        <cla>6.3</cla>
-        <cla_stall>0</cla_stall>
-        <cda>1.14</cda>
-        <cda_stall>0</cda_stall>
-        <alpha_stall>5</alpha_stall>
-        <a0>0</a0>
-        <area>0.05</area>
-        <upward>0 0 1</upward>
-        <forward>1 0 0</forward>
-        <link_name>left_front_link</link_name>
-        <cp>0 0 0</cp>
-      </plugin>
-
-      <plugin
-        filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-        <air_density>1025</air_density>
-        <cla>6.3</cla>
-        <cla_stall>0</cla_stall>
-        <cda>1.14</cda>
-        <cda_stall>0</cda_stall>
-        <alpha_stall>5</alpha_stall>
-        <a0>0</a0>
-        <area>0.05</area>
-        <upward>0 0 1</upward>
-        <forward>1 0 0</forward>
-        <link_name>right_front_link</link_name>
-        <cp>0 0 0</cp>
-      </plugin>
-
-      <plugin
-        filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-        <air_density>1025</air_density>
-        <cla>6.3</cla>
-        <cla_stall>0</cla_stall>
-        <cda>1.14</cda>
-        <cda_stall>0</cda_stall>
-        <alpha_stall>5</alpha_stall>
-        <a0>0</a0>
-        <area>0.05</area>
-        <upward>0 0 1</upward>
-        <forward>1 0 0</forward>
-        <link_name>right_back_link</link_name>
-        <cp>0 0 0</cp>
-      </plugin>
-
-      <plugin
-        filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-        <air_density>1025</air_density>
-        <cla>6.3</cla>
-        <cla_stall>0</cla_stall>
-        <cda>1.14</cda>
-        <cda_stall>0</cda_stall>
-        <alpha_stall>5</alpha_stall>
-        <a0>0</a0>
-        <area>0.05</area>
-        <upward>0 0 1</upward>
-        <forward>1 0 0</forward>
-        <link_name>left_back_link</link_name>
-        <cp>0 0 0</cp>
-      </plugin>
-    -->
       
       <!-- Hydrodynamics on the hull parts -->
       <plugin

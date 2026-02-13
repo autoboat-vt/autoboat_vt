@@ -558,6 +558,47 @@ With ros2: TODO: UPDATE
         </visual>
       </link>
 
+      <link name='jib_link'>
+        <pose>.03 0 0.4 0 0 0</pose>
+
+        <inertial>
+          <pose>-0.33033 0 0.45733 0 0 0</pose>
+          <mass>0.25908</mass>
+          <inertia>
+            <ixx>0.07533</ixx>
+            <ixy>-0.00002</ixy>
+            <ixz>0.01521</ixz>
+            <iyy>0.08761</iyy>
+            <iyz>0.00006</iyz>
+            <izz>0.01229</izz>
+          </inertia>
+        </inertial>
+
+        <collision name='collision'>
+          <pose>0 0 0 1.57079632679 0 0</pose>
+          <geometry>
+            <polyline>
+              <point>0 0</point>
+              <point>0 1.3208</point>
+              <point>0.5334 0</point>
+              <height>.001</height>
+            </polyline>
+          </geometry>
+        </collision>
+
+        <visual name='visual'>
+          <pose>0 0 0 1.57079632679 0 0</pose>
+          <geometry>
+            <polyline>
+              <point>0 0</point>
+              <point>0 1.3208</point>
+              <point>0.5334 0</point>
+              <height>.001</height>
+            </polyline>
+          </geometry>
+        </visual>
+      </link>
+
 
       <!-- Arrow link for showing wind -->
        <link name='arrow_link'>
