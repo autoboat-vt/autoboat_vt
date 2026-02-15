@@ -117,7 +117,7 @@ class MotorboatAutopilot:
         )
         error = get_distance_between_positions(desired_position,current_position)
         rpm = self.rpm_pid_controller(error)
-        rpm = np.clip(rpm, 0.0,100000.0)
+        rpm = np.clip(rpm, 0.0,300.0)
 
         return rpm
 
@@ -147,7 +147,6 @@ class MotorboatAutopilot:
         desired_position = self.waypoints[self.current_waypoint_index]
         distance_to_desired_position = get_distance_between_positions(current_position, desired_position)
 
-
         self.logger.info(f"Current Position : {current_position.get_longitude_latitude()}")
         self.logger.info(f"Desired Position : {desired_position.get_longitude_latitude()}")
 
@@ -157,13 +156,26 @@ class MotorboatAutopilot:
 
         self.logger.info(f"Bearing: {desired_heading}")
         if distance_to_desired_position < self.autopilot_parameters['waypoint_accuracy']: 
-            
+            self.rudder_angle = 0.0
+            self.propeller_rpm = 0.0
             if len(self.waypoints) <= self.current_waypoint_index + 1:    # Has Reached The Final Waypoint
                 self.reset()
-                self.propeller_rpm = 0.0
                 return None, None
-            
             self.current_waypoint_index += 1
+            desired_position = self.waypoints[self.current_waypoint_index]
+
+            
         return self.propeller_rpm, self.rudder_angle
+    
+    # def find_closest_waypoint(self, current_position):
+    #     closest_waypoint = self.waypoints[0]
+    #     closest_distance = get_distance_between_positions(closest_waypoint, current_position)
+    #     for waypoint  in self.waypoints:
+    #         if(get_distance_between_positions(waypoint, current_position) <= closest_distance):
+    #             closest_waypoint = waypoint
+
+
+    #     return way
+
 
         

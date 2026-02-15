@@ -3,7 +3,7 @@
 
 import rclpy
 from rclpy.node import Node
-from simulation.utils import cartesian_vector_to_polar
+from simulation.utils import cartesian_vector_to_polar, euler_from_quaternion
 from std_msgs.msg import Float32,Float64
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
@@ -51,7 +51,7 @@ class AutopilotTransformNode(Node):
 
     def update_ros_topics(self):
 
-
+    
         twist = Twist()
         twist.linear = self.odometry.twist.twist.linear
         twist.angular = self.odometry.twist.twist.angular
@@ -74,7 +74,10 @@ class AutopilotTransformNode(Node):
         z = pose.z
         w = pose.w
         
-        yaw = np.arctan2(2*(w*z + x*y) , 1 - 2*(pow(x,2) + pow(y, 2))) * 180 / np.pi % 360
+        roll, pitch, yaw = np.rad2deg(euler_from_quaternion(x,y,z,w))
+        # yaw = np.arctan2(2*(w*z + x*y) , 1 - 2*(pow(x,2) + pow(y, 2))) * 180 / np.pi % 360
+
+
 
         self.heading_publisher.publish(Float32(data=yaw))
 

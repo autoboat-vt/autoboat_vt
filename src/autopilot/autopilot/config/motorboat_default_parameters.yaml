@@ -12,12 +12,12 @@ tack_distance: 100 # rough distance to sail before changing tacks based on dynam
 # rudder_d_gain: 0.2
 # rudder_n_gain: 1
 
-heading_p_gain: 10
+heading_p_gain: 2
 heading_i_gain: 0
-heading_d_gain: 0
+heading_d_gain: 1
 heading_n_gain: 0
 
-rpm_p_gain: 10
+rpm_p_gain: 20
 rpm_i_gain: 0
 rpm_d_gain: 0
 rpm_n_gain: 0
@@ -37,5 +37,5 @@ tack_tolerance: 3   # how close to tacking angle to stop steering around and sta
 min_sail_angle: 0
 max_sail_angle: 90
 
-min_rudder_angle: -35
-max_rudder_angle: 35
+min_rudder_angle: -25
+max_rudder_angle: 25
