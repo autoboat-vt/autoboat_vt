@@ -87,8 +87,8 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
     </plugin>
 
     <plugin
-      filename="libBuoyancy.so"
-      name="buoyancy::Buoyancy">
+      filename="gz-sim-buoyancy-system"
+      name="gz::sim::systems::Buoyancy">
       <graded_buoyancy>
         <default_density>1025</default_density>
         <density_change>
@@ -334,8 +334,8 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
 
     <!-- Physics parameters -->
     <physics name="1ms" type="dart">
-      <max_step_size>0.02</max_step_size>
-      <real_time_factor>1</real_time_factor>
+      <max_step_size>0.01</max_step_size>
+      <real_time_factor>10</real_time_factor>
     </physics>
 
     <!-- Model to load -->
@@ -663,8 +663,8 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         <yV>-120</yV>
         <zWabsW>-120</zWabsW>
         <zW>-120</zW>
-        <kPabsP>-120</kPabsP>
-        <kP>-120</kP>
+        <kPabsP>-12</kPabsP>
+        <kP>-12</kP>
         <mQabsQ>-50</mQabsQ>
         <mQ>-50</mQ>
         <nRabsR>-12</nRabsR>
@@ -680,8 +680,8 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         <yV>-120</yV>
         <zWabsW>-120</zWabsW>
         <zW>-120</zW>
-        <kPabsP>-120</kPabsP>
-        <kP>-120</kP>
+        <kPabsP>-12</kPabsP>
+        <kP>-12</kP>
         <mQabsQ>-50</mQabsQ>
         <mQ>-50</mQ>
         <nRabsR>-12</nRabsR>
@@ -697,8 +697,8 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         <yV>-120</yV>
         <zWabsW>-120</zWabsW>
         <zW>-120</zW>
-        <kPabsP>-120</kPabsP>
-        <kP>-120</kP>
+        <kPabsP>-12</kPabsP>
+        <kP>-12</kP>
         <mQabsQ>-50</mQabsQ>
         <mQ>-50</mQ>
         <nRabsR>-12</nRabsR>
@@ -714,8 +714,8 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         <yV>-120</yV>
         <zWabsW>-120</zWabsW>
         <zW>-120</zW>
-        <kPabsP>-120</kPabsP>
-        <kP>-120</kP>
+        <kPabsP>-12</kPabsP>
+        <kP>-12</kP>
         <mQabsQ>-50</mQabsQ>
         <mQ>-50</mQ>
         <nRabsR>-12</nRabsR>

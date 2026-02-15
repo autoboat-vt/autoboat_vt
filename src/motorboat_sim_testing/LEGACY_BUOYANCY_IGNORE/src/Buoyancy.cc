@@ -183,19 +183,20 @@ void BuoyancyPrivate::GradedFluidDensity(
   for (const auto &[height, currFluidDensity] : this->layers)
   {
     // OLD BAD CODE: math::Planed plane{math::Vector3d{0, 0, 1}, height - _pose.Pos().Z()};
-    // FIX(ashear): Transforms the plane and slices the shape!
+    // FIX(ashear): Transforms the plane and slices the shape
     // World-space plane
-    math::Planed worldPlane{math::Vector3d{0,0,1}, height};
+    // math::Planed worldPlane{math::Vector3d{0,0,1}, height};
 
-    // Transform plane into local frame
-    auto R = _pose.Rot().Inverse();
-    auto p = _pose.Pos();
+    // // Transform plane into local frame
+    // auto R = _pose.Rot().Inverse();
+    // auto p = _pose.Pos();
 
-    math::Vector3d localNormal = R * worldPlane.Normal();
-    double localOffset = height - (localNormal.Dot(R * p));
+    // math::Vector3d localNormal = R * worldPlane.Normal();
+    // double localOffset = height - (localNormal.Dot(R * p));
 
-    // Local-space plane
-    math::Planed localPlane{localNormal, localOffset};
+    // // Local-space plane
+    // math::Planed localPlane{localNormal, localOffset};
+    math::Planed localPlane{math::Vector3d{0, 0, 1}, height - _pose.Pos().Z()};
     auto vol = _shape.VolumeBelow(localPlane);
 
     // Short circuit.

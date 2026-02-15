@@ -10,7 +10,7 @@ echo sudo chmod 777 /var/run/docker.sock >> "/home/autoboat_user/.bashrc"
 echo sudo chmod -R 777 /home/ >> "/home/autoboat_user/.bashrc"
 echo sudo chmod -R 777 /etc/udev/ >> "/home/autoboat_user/.bashrc"
 sudo chmod -R 777 /etc/udev/
-echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/src/motorboat_sim_testing/foil_dynamics/build/:/home/ws/src/motorboat_sim_testing/custom_buoyancy/build/:/home/ws/src/motorboat_sim_testing/sail_limits/build/:/home/ws/src/motorboat_sim_testing/rudder_dynamics/build/:/home/ws/src/motorboat_sim_testing/wind_arrow/build/ >> "/home/autoboat_user/.bashrc"
+echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/src/motorboat_sim_testing/foil_dynamics/build/:/home/ws/src/motorboat_sim_testing/sail_limits/build/:/home/ws/src/motorboat_sim_testing/rudder_dynamics/build/:/home/ws/src/motorboat_sim_testing/wind_arrow/build/ >> "/home/autoboat_user/.bashrc"
 
 
 # Make sure that you can just type python and you don't have to type python3 because people will get confused
