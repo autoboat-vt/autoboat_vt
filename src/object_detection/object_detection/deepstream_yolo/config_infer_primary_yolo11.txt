@@ -14,7 +14,7 @@ model-color-format=0
 # Label files are created by running export_yolo11.py
 
 #int8-calib-file=calib.table
-batch-size=2 # This should equal the number of video streams
+batch-size=1 # This should equal the number of video streams
 network-mode=2 # 0 for fp32, 1 for int8, 2 for fp16
 num-detected-classes=2
 interval=0

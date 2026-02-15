@@ -63,7 +63,7 @@ if SHOULD_SAVE_IMAGES and not os.path.exists(f"{PATH_TO_SRC_DIR}/object_detectio
 class ObjectDetection:
     def __init__(self, frame_number=-1, detector_confidence=0.0, tracker_confidence=0.0,
                  x_position=0.0, y_position=0.0, width=0.0, height=0.0, object_id=-1,
-                 class_id=-1, pose_matrix=None):
+                 class_id=-1, pose_matrix=None, camera_matrix=None, camera_matrix_inv=None):
         self.frame_number = frame_number
         self.detector_confidence = detector_confidence
         self.tracker_confidence = tracker_confidence
@@ -75,29 +75,68 @@ class ObjectDetection:
         self.class_id = class_id
         self.pose_matrix = pose_matrix
 
+        pixel_point = np.array([[x_position], [y_position], [1]])
+        bearing_cam = camera_matrix_inv @ pixel_point
+
+        R = pose_matrix[:3, :3]
+        t = pose_matrix[:3, 3]
+
+        ray_dir = R @ bearing_cam
+        ray_dir = ray_dir / np.linalg.norm(ray_dir)
+        self.triangle_position = (t.reshape(3, 1), ray_dir.reshape(3, 1))
+
 
 class ObjectTrack:
     def __init__(self):
         self.detection_results = []
+        self.last_updated_frame_number = -1
     
     def add_detection(self, detection: ObjectDetection):
         self.detection_results.append(detection)
+        if len(self.detection_results) > 300:
+            self.detection_results.pop(0)
 
 
 class ObjectTriangulator:
-    def __init__(self, camera_matrix):
+    def __init__(self, camera_matrix, frame_size):
         self.K = camera_matrix
         self.K_inv = np.linalg.inv(camera_matrix)
-        self.observations = {
+        self.observations = {}
+        self.frame_size = frame_size
         """
-        obj_id: ObjectTrack
+        {obj_id: ObjectTrack}
         """
-        }
 
-    def add_observation(self, obj_id, detection: ObjectDetection):
+    def add_observation(self, detection: ObjectDetection):
+        obj_id = detection.object_id
+        if (detection.x_position < 0 or detection.y_position < 0 or detection.x_position >= self.frame_size[0] or detection.y_position >= self.frame_size[1] - 1):
+            return
         if obj_id not in self.observations:
             self.observations[obj_id] = ObjectTrack()
         self.observations[obj_id].add_detection(detection)
+    
+    def triangulate(self, obj_id):
+        obs = self.observations[obj_id].detection_results
+        if len(obs) < 2:
+            return None # Need at least 2 observations to triangulate
+
+        first_dir = obs[0].triangle_position[1]
+        last_dir = obs[-1].triangle_position[1]
+        dot_prod = float(np.dot(first_dir.T, last_dir))
+        # if abs(dot_prod) > 0.99: # If the rays are almost parallel, we can't triangulate accurately
+        #     return None
+        
+        A = np.zeros((3, 3))
+        b = np.zeros((3, 1))
+
+        for detection in obs:
+            p, d = detection.triangle_position
+            identity_minus_ddt = np.eye(3) - (d @ d.T)
+            A += identity_minus_ddt
+            b += identity_minus_ddt @ p
+        
+        world_pos = np.linalg.lstsq(A, b, rcond=None)[0]
+        return world_pos.flatten()
 
 
 class BuoyDetectionNode(Node):
@@ -118,7 +157,7 @@ class BuoyDetectionNode(Node):
                 "framerate": "30/1",
                 "format": "YUY2",
                 "input_width": 1280,
-                "input_height": 720
+                "input_height": 800
             }
         }
 
@@ -127,9 +166,12 @@ class BuoyDetectionNode(Node):
         
         # Focal length of the camera is 1.93 mm or 640 px.
         self.camera_focal_px = (self.CAM_LIST[0]["input_width"] * 0.5) / tan(camera_HFOV * 0.5 * pi / 180) # 640 px
-        camera_K = np.array([[self.camera_focal_px, 0, self.CAM_LIST[0]["input_width"] * 0.5],
+        self.camera_K = np.array([[self.camera_focal_px, 0, self.CAM_LIST[0]["input_width"] * 0.5],
                              [0, self.camera_focal_px, self.CAM_LIST[0]["input_height"] * 0.5],
                              [0, 0, 1]])
+        self.camera_K_inv = np.linalg.inv(self.camera_K)
+        self.triangulator = ObjectTriangulator(camera_matrix=self.camera_K, frame_size=(self.CAM_LIST[0]["input_width"], self.CAM_LIST[0]["input_height"]))
+        self.triangulation_lock = threading.Lock()
 
         # ROS2 Initialization
         sensor_qos_profile = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST, depth=1)
@@ -143,23 +185,26 @@ class BuoyDetectionNode(Node):
             "latitude": 0,
             "longitude": 0
         }
+        self.origin_position = {
+            "latitude": 0,
+            "longitude": 0
+        }
         self.current_heading = 0 # default to true east
 
         # TODO: add subscriber for image topics
-        # TODO: add dynamic reconfigure for parameters from telemetry node
-        #   Added model and threshold switching.
         # TODO: add localization
 
         # DeepStream Initialization
         Gst.init(None)
         self.pipeline = None
         self.loop = None
+
+        # Config file parameters
         self.threshold = 0
         self.model = "" # model name without .pt.onnx. Ex. yolo11m.pt.onnx -> yolo11m
         self.config_file_split = []
         self.last_time = time.time()
         self.file_lock = threading.Lock()
-        self.triangulator = ObjectTriangulator(camera_K)
         self.last_published_frame_number = -1
 
         self._init_pipeline()
@@ -174,7 +219,7 @@ class BuoyDetectionNode(Node):
         self.pipeline = Gst.Pipeline()
 
         streammux = Gst.ElementFactory.make("nvstreammux", "muxer")
-        streammux.set_property('batch-size', 2)
+        streammux.set_property('batch-size', 1)
         
         # v4l2-ctl --list-devices
         # v4l2-ctl --device /dev/video0 --list-formats-ext
@@ -245,6 +290,12 @@ class BuoyDetectionNode(Node):
         else:
             caps_nvvidconv_jpeg.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=NV12')) # Jetson needs NV12
 
+        # sink = Gst.ElementFactory.make('nv3dsink', 'sink')
+        sink = Gst.ElementFactory.make('nveglglessink', 'sink')
+        if not sink:
+            self.get_logger().error(f"Unable to create sink element")
+            sys.exit(1)
+
         jpegenc = Gst.ElementFactory.make('nvjpegenc', 'jpegenc')
 
         multifilesink = Gst.ElementFactory.make('multifilesink', 'multifilesink')
@@ -269,6 +320,7 @@ class BuoyDetectionNode(Node):
         self.pipeline.add(caps_nvvidconv_jpeg)
         self.pipeline.add(jpegenc)
         self.pipeline.add(multifilesink)
+        self.pipeline.add(sink)
 
         source0.link(caps_source0)
         caps_source0.link(videoconvert0)
@@ -290,8 +342,9 @@ class BuoyDetectionNode(Node):
         multifilesink_valve.link(osd)
         osd.link(nvvidconv_jpeg)
         nvvidconv_jpeg.link(caps_nvvidconv_jpeg)
-        caps_nvvidconv_jpeg.link(jpegenc)
-        jpegenc.link(multifilesink)
+        caps_nvvidconv_jpeg.link(sink)
+        # caps_nvvidconv_jpeg.link(jpegenc)
+        # jpegenc.link(multifilesink)
 
         self.loop = GLib.MainLoop()
         bus = self.pipeline.get_bus()
@@ -336,7 +389,7 @@ class BuoyDetectionNode(Node):
         msg.detection_results = []
         # object_list = ObjectTracker()
 
-        pose_matrix = [] # TODO
+        pose_matrix = self._get_current_pose(self.current_position["latitude"], self.current_position["longitude"], self.current_heading)
 
         # Retrieve batch metadata from the gst_buffer
         # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
@@ -385,20 +438,21 @@ class BuoyDetectionNode(Node):
                 obj_results.object_id = obj_meta.object_id
                 obj_results.class_id = obj_meta.class_id
                 msg.detection_results.append(obj_results)
-                self.triangulator.add_detection(ObjectDetection(
-                                                    frame_number = frame_meta.frame_num,
-                                                    detector_confidence = obj_meta.confidence,
-                                                    tracker_confidence = obj_meta.tracker_confidence,
-                                                    x_position = obj_meta.tracker_bbox_info.org_bbox_coords.left + (obj_meta.tracker_bbox_info.org_bbox_coords.width / 2),
-                                                    y_position = obj_meta.tracker_bbox_info.org_bbox_coords.top + (obj_meta.tracker_bbox_info.org_bbox_coords.height / 2),
-                                                    width = obj_meta.tracker_bbox_info.org_bbox_coords.width,
-                                                    height = obj_meta.tracker_bbox_info.org_bbox_coords.height,
-                                                    object_id = obj_meta.object_id,
-                                                    class_id = obj_meta.class_id,
-                                                    pose_matrix = pose_matrix
-                ))
-
-                # TODO: Move object parsing and publishing to a separate thread.
+                with self.triangulation_lock:
+                    self.triangulator.add_observation(ObjectDetection(
+                                                        frame_number = frame_meta.frame_num,
+                                                        detector_confidence = obj_meta.confidence,
+                                                        tracker_confidence = obj_meta.tracker_confidence,
+                                                        x_position = obj_meta.tracker_bbox_info.org_bbox_coords.left + (obj_meta.tracker_bbox_info.org_bbox_coords.width / 2),
+                                                        y_position = obj_meta.tracker_bbox_info.org_bbox_coords.top + (obj_meta.tracker_bbox_info.org_bbox_coords.height / 2),
+                                                        width = obj_meta.tracker_bbox_info.org_bbox_coords.width,
+                                                        height = obj_meta.tracker_bbox_info.org_bbox_coords.height,
+                                                        object_id = obj_meta.object_id,
+                                                        class_id = obj_meta.class_id,
+                                                        pose_matrix = pose_matrix,
+                                                        camera_matrix = self.camera_K,
+                                                        camera_matrix_inv = self.camera_K_inv
+                    ))
 
                 try:
                     l_obj = l_obj.next
@@ -425,38 +479,87 @@ class BuoyDetectionNode(Node):
         
         return Gst.PadProbeReturn.OK
 
+    def _get_current_pose(self, lat, long, heading):
+        R_earth = 6378137.0  # Radius of Earth in meters
+    
+        # Delta lat/lon in radians
+        d_lat = np.radians(lat - self.origin_position["latitude"])
+        d_lon = np.radians(long - self.origin_position["longitude"])
+        
+        # Calculate Easting (x) and Northing (y)
+        t_y = d_lat * R_earth
+        t_x = d_lon * R_earth * np.cos(np.radians(self.origin_position["latitude"]))
+        t_z = 0  # Assume sea level
+        
+        # 2. Calculate Rotation (R) from Heading
+        psi = np.radians(90 - heading)
+        cos_p = np.cos(psi)
+        sin_p = np.sin(psi)
+        
+        # Columns are world-space representations of Camera X, Y, and Z
+        R = np.array([
+            [ cos_p,  0,  sin_p],
+            [-sin_p,  0,  cos_p],
+            [     0, -1,      0]
+        ])
+        
+        # 3. Assemble 4x4 Matrix
+        pose = np.eye(4)
+        pose[:3, :3] = R
+        pose[:3, 3] = [t_x, t_y, t_z]
+        
+        return pose
+
     def _iterate_results(self):
         if (self.current_object_list.frame_number == self.last_published_frame_number):
             return
+        with self.triangulation_lock:
+            observations_snapshot = {
+                obj_id: track.detection_results[:] 
+                for obj_id, track in self.triangulator.observations.items()
+            }
         # Pull current data to local variable so it doesn't change mid-function
-        working_position = self.current_position
-        working_heading = self.current_heading
-        working_object_list = self.current_object_list
-        main_cam_list = working_object_list.detection_results[0]
-        left_cam_list = working_object_list.detection_results[1]
-        for main_detection in main_cam_list.values():
-            for left_detection in left_cam_list.values():
-                depth = self.camera_focal_px * self.camera_baseline / abs(left_detection.x_position - main_detection.x_position) / 25.4 / 12
-                self.get_logger().info(f"Frame {working_object_list.frame_number:06}: Depth: {depth:.02} ft. Objects: {left_detection.object_id} and {main_detection.object_id}")
+        # working_position = self.current_position
+        # working_heading = self.current_heading
+        # working_object_list = self.current_object_list
+        # main_cam_list = working_object_list.detection_results[0]
+        # left_cam_list = working_object_list.detection_results[1]
+        # for main_detection in main_cam_list.values():
+        #     for left_detection in left_cam_list.values():
+        #         depth = self.camera_focal_px * self.camera_baseline / abs(left_detection.x_position - main_detection.x_position) / 25.4 / 12
+        #         self.get_logger().info(f"Frame {working_object_list.frame_number:06}: Depth: {depth:.02} ft. Objects: {left_detection.object_id} and {main_detection.object_id}")
         
-        self._publish_results(working_object_list)
+        detections = {}
+        for obj_id, obs_list in observations_snapshot.items():
+            world_pos = self.triangulator.triangulate(obj_id)
+            if world_pos is not None:
+                self.get_logger().info(f"Object {obj_id} triangulated position: {world_pos}")
+                lat = self.origin_position["latitude"] + (world_pos[1] / 6378137.0) * (180 / pi)
+                lon = self.origin_position["longitude"] + (world_pos[0] / (6378137.0 * np.cos(np.radians(self.origin_position["latitude"])))) * (180 / pi)
+                self.get_logger().info(f"Object {obj_id} triangulated GPS position: ({lat}, {lon})")
+                detections[obj_id] = (lat, lon)
+            else:
+                self.get_logger().info(f"Object {obj_id} does not have enough observations to triangulate")
+
+        # self._publish_results(working_object_list)
 
     def _publish_results(self, object_list):
-        msg = ObjectDetectionResultsList()
-        msg.detection_results = []
-        for detection in object_list.detection_results[0].values():
-            obj_results = ObjectDetectionResult()
-            obj_results.detector_confidence = detection.detector_confidence
-            obj_results.tracker_confidence = detection.tracker_confidence
-            obj_results.x_position = detection.x_position
-            obj_results.y_position = detection.y_position
-            obj_results.width = detection.width
-            obj_results.height = detection.height
-            obj_results.object_id = detection.object_id
-            obj_results.class_id = detection.class_id
-            msg.detection_results.append(obj_results)
-        self.object_detection_results_publisher.publish(msg)
-        self.last_published_frame_number = object_list.frame_number
+        # msg = ObjectDetectionResultsList()
+        # msg.detection_results = []
+        # for detection in object_list.detection_results[0].values():
+        #     obj_results = ObjectDetectionResult()
+        #     obj_results.detector_confidence = detection.detector_confidence
+        #     obj_results.tracker_confidence = detection.tracker_confidence
+        #     obj_results.x_position = detection.x_position
+        #     obj_results.y_position = detection.y_position
+        #     obj_results.width = detection.width
+        #     obj_results.height = detection.height
+        #     obj_results.object_id = detection.object_id
+        #     obj_results.class_id = detection.class_id
+        #     msg.detection_results.append(obj_results)
+        # self.object_detection_results_publisher.publish(msg)
+        # self.last_published_frame_number = object_list.frame_number
+        pass
 
     def _probe(self, pad, info, u_data):
         self.get_logger().info(u_data)
@@ -503,6 +606,9 @@ class BuoyDetectionNode(Node):
     def position_callback(self, msg):
         self.current_position["latitude"] = msg.latitude
         self.current_position["longitude"] = msg.longitude
+        if self.origin_position["latitude"] == 0 and self.origin_position["longitude"] == 0:
+            self.origin_position["latitude"] = msg.latitude
+            self.origin_position["longitude"] = msg.longitude
 
     def heading_callback(self, msg):
         self.current_heading = msg.data

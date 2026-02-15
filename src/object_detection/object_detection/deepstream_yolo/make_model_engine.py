@@ -38,7 +38,7 @@ INPUT_WIDTH = 640
 INPUT_HEIGHT = 640
 FRAMERATE = "30/1"
 
-BATCH_SIZE = 2
+BATCH_SIZE = 1
 FP_VER = 16
 
 class EngineGenerator:

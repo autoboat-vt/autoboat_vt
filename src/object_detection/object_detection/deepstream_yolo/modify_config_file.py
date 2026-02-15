@@ -8,7 +8,6 @@ if len(sys.argv) < 3:
 #     print("Error: ONNX file must end with .pt.onnx")
 #     sys.exit(1)
 
-BATCH_SIZE = 2
 FP_VER = 16
 
 CONFIG_FILE = f'config_infer_primary_yolo{sys.argv[2]}.txt'
@@ -20,6 +19,8 @@ with open(CONFIG_FILE, 'r') as file:
     onnx_section = split_content[1]
     engine_section = split_content[2]
     labels_section = split_content[3]
+    other_section = split_content[4]
+    BATCH_SIZE = other_section.split('\n')[1].split('=')[1].split(' ')[0]
     onnx_lines = onnx_section.split('\n')
     engine_lines = engine_section.split('\n')
     labels_lines = labels_section.split('\n')
