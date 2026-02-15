@@ -9,6 +9,7 @@ import time
 import subprocess
 import re
 from math import tan, pi
+import numpy as np
 
 import rclpy
 from rclpy.node import Node
@@ -58,41 +59,45 @@ if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":
 if SHOULD_SAVE_IMAGES and not os.path.exists(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results"):
     os.makedirs(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results")
 
-            
-            
-            
+
 class ObjectDetection:
-    def __init__(self, detector_confidence=0.0, tracker_confidence=0.0, x_position=0.0, y_position=0.0, width=0.0, height=0.0, object_id=-1, class_id=-1, object_pair_id=-1):
+    def __init__(self, frame_number=-1, detector_confidence=0.0, tracker_confidence=0.0,
+                 x_position=0.0, y_position=0.0, width=0.0, height=0.0, object_id=-1,
+                 class_id=-1, pose_matrix=None):
+        self.frame_number = frame_number
         self.detector_confidence = detector_confidence
         self.tracker_confidence = tracker_confidence
-        self.x_position = x_position
-        self.y_position = y_position
+        self.x_position = x_position # center x
+        self.y_position = y_position # center y
         self.width = width
         self.height = height
         self.object_id = object_id
         self.class_id = class_id
-        self.object_pair_id = object_pair_id
-        
-        
-        
-class ObjectTracker:
-    def __init__(self, frame_number=-1, timestamp=0):
-        self.frame_number = frame_number
-        self.timestamp = timestamp
-        self.detection_results = [{}, {}]
-    
-    def add_detection(self, source, detection: ObjectDetection):
-        self.detection_results[source][detection.object_id] = detection
-    
-    def update_frame_number(self, frame_number):
-        self.frame_number = frame_number
-    
-    def update_timestamp(self, timestamp):
-        self.timestamp = timestamp
-    
-    def find_object_pairings(self):
-        pass
+        self.pose_matrix = pose_matrix
 
+
+class ObjectTrack:
+    def __init__(self):
+        self.detection_results = []
+    
+    def add_detection(self, detection: ObjectDetection):
+        self.detection_results.append(detection)
+
+
+class ObjectTriangulator:
+    def __init__(self, camera_matrix):
+        self.K = camera_matrix
+        self.K_inv = np.linalg.inv(camera_matrix)
+        self.observations = {
+        """
+        obj_id: ObjectTrack
+        """
+        }
+
+    def add_observation(self, obj_id, detection: ObjectDetection):
+        if obj_id not in self.observations:
+            self.observations[obj_id] = ObjectTrack()
+        self.observations[obj_id].add_detection(detection)
 
 
 class BuoyDetectionNode(Node):
@@ -114,13 +119,6 @@ class BuoyDetectionNode(Node):
                 "format": "YUY2",
                 "input_width": 1280,
                 "input_height": 720
-            },
-            1: {
-                "name": self._find_camera("UYVY"),
-                "framerate": "30/1",
-                "format": "UYVY",
-                "input_width": 1280,
-                "input_height": 720
             }
         }
 
@@ -129,6 +127,9 @@ class BuoyDetectionNode(Node):
         
         # Focal length of the camera is 1.93 mm or 640 px.
         self.camera_focal_px = (self.CAM_LIST[0]["input_width"] * 0.5) / tan(camera_HFOV * 0.5 * pi / 180) # 640 px
+        camera_K = np.array([[self.camera_focal_px, 0, self.CAM_LIST[0]["input_width"] * 0.5],
+                             [0, self.camera_focal_px, self.CAM_LIST[0]["input_height"] * 0.5],
+                             [0, 0, 1]])
 
         # ROS2 Initialization
         sensor_qos_profile = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST, depth=1)
@@ -158,7 +159,7 @@ class BuoyDetectionNode(Node):
         self.config_file_split = []
         self.last_time = time.time()
         self.file_lock = threading.Lock()
-        self.current_object_list = ObjectTracker()
+        self.triangulator = ObjectTriangulator(camera_K)
         self.last_published_frame_number = -1
 
         self._init_pipeline()
@@ -209,20 +210,6 @@ class BuoyDetectionNode(Node):
         caps_nvvidconvsrc0 = Gst.ElementFactory.make('capsfilter', 'nvmm-caps-0')
         caps_nvvidconvsrc0.set_property('caps', Gst.Caps.from_string(f'video/x-raw(memory:NVMM), format=NV12, width={self.CAM_LIST[0]["input_width"]}, height={self.CAM_LIST[0]["input_height"]}'))
 
-        source1 = Gst.ElementFactory.make("v4l2src", "usb-cam-1")
-        source1.set_property('device', self.CAM_LIST[1]["name"])
-        self.get_logger().info(f"Opening camera device: {self.CAM_LIST[1]['name']}")
-
-        caps_source1 = Gst.ElementFactory.make('capsfilter', 'source1-caps')
-        caps_source1.set_property('caps', Gst.Caps.from_string(f'video/x-raw, width={self.CAM_LIST[1]["input_width"]}, height={self.CAM_LIST[1]["input_height"]}, format={self.CAM_LIST[1]["format"]}, framerate={self.CAM_LIST[1]["framerate"]}'))
-
-        nvvidconvsrc1 = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-src-1')
-        nvvidconvsrc1.set_property('nvbuf-memory-type', MEMORY_TYPE)
-        nvvidconvsrc1.set_property('compute-hw', COMPUTE_HW)
-
-        caps_nvvidconvsrc1 = Gst.ElementFactory.make('capsfilter', 'nvmm-caps-1')
-        caps_nvvidconvsrc1.set_property('caps', Gst.Caps.from_string(f'video/x-raw(memory:NVMM), format=NV12, width={self.CAM_LIST[1]["input_width"]}, height={self.CAM_LIST[1]["input_height"]}'))
-
         if INFERENCE:
             pgie = Gst.ElementFactory.make('nvinfer', 'pgie')
             pgie.set_property('config-file-path', PATH_TO_YOLO_CONFIG)
@@ -245,8 +232,6 @@ class BuoyDetectionNode(Node):
 
         multifilesink_valve = Gst.ElementFactory.make('valve', 'multifilesink-valve')
         multifilesink_valve.set_property('drop', not SHOULD_SAVE_IMAGES)
-
-        tiler = Gst.ElementFactory.make('nvmultistreamtiler', 'nvtiler')
 
         osd = Gst.ElementFactory.make('nvdsosd', 'nvosd')
 
@@ -273,17 +258,12 @@ class BuoyDetectionNode(Node):
         self.pipeline.add(caps_videoconvert0)
         self.pipeline.add(nvvidconvsrc0)
         self.pipeline.add(caps_nvvidconvsrc0)
-        self.pipeline.add(source1)
-        self.pipeline.add(caps_source1)
-        self.pipeline.add(nvvidconvsrc1)
-        self.pipeline.add(caps_nvvidconvsrc1)
         self.pipeline.add(streammux)
         if INFERENCE:
             self.pipeline.add(pgie)
             self.pipeline.add(tracker)
         self.pipeline.add(queue_multifilesink_valve)
         self.pipeline.add(multifilesink_valve)
-        self.pipeline.add(tiler)
         self.pipeline.add(osd)
         self.pipeline.add(nvvidconv_jpeg)
         self.pipeline.add(caps_nvvidconv_jpeg)
@@ -296,17 +276,9 @@ class BuoyDetectionNode(Node):
         caps_videoconvert0.link(nvvidconvsrc0)
         nvvidconvsrc0.link(caps_nvvidconvsrc0)
 
-        source1.link(caps_source1)
-        caps_source1.link(nvvidconvsrc1)
-        nvvidconvsrc1.link(caps_nvvidconvsrc1)
-
         sinkpad0 = streammux.request_pad_simple('sink_0')
         srcpad0 = caps_nvvidconvsrc0.get_static_pad('src')
         srcpad0.link(sinkpad0)
-
-        sinkpad1 = streammux.request_pad_simple('sink_1')
-        srcpad1 = caps_nvvidconvsrc1.get_static_pad('src')
-        srcpad1.link(sinkpad1)
 
         if INFERENCE:
             streammux.link(pgie)
@@ -315,8 +287,7 @@ class BuoyDetectionNode(Node):
         else:
             streammux.link(queue_multifilesink_valve)
         queue_multifilesink_valve.link(multifilesink_valve)
-        multifilesink_valve.link(tiler)
-        tiler.link(osd)
+        multifilesink_valve.link(osd)
         osd.link(nvvidconv_jpeg)
         nvvidconv_jpeg.link(caps_nvvidconv_jpeg)
         caps_nvvidconv_jpeg.link(jpegenc)
@@ -363,7 +334,9 @@ class BuoyDetectionNode(Node):
 
         msg = ObjectDetectionResultsList()
         msg.detection_results = []
-        object_list = ObjectTracker()
+        # object_list = ObjectTracker()
+
+        pose_matrix = [] # TODO
 
         # Retrieve batch metadata from the gst_buffer
         # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
@@ -385,8 +358,8 @@ class BuoyDetectionNode(Node):
             msg.ntp_timestamp = frame_meta.ntp_timestamp
 
             if (frame_meta.source_id == 0):
-                object_list.update_frame_number(frame_meta.frame_num)
-                object_list.update_timestamp(frame_meta.ntp_timestamp)
+                # object_list.update_frame_number(frame_meta.frame_num)
+                # object_list.update_timestamp(frame_meta.ntp_timestamp)
                 if (frame_meta.frame_num % 60 == 0):
                     current_time = time.time()
                     fps = 60 / (current_time - self.last_time)
@@ -412,17 +385,17 @@ class BuoyDetectionNode(Node):
                 obj_results.object_id = obj_meta.object_id
                 obj_results.class_id = obj_meta.class_id
                 msg.detection_results.append(obj_results)
-                object_list.add_detection(frame_meta.source_id,
-                                          ObjectDetection(
-                                              detector_confidence = obj_meta.confidence,
-                                              tracker_confidence = obj_meta.tracker_confidence,
-                                              x_position = obj_meta.tracker_bbox_info.org_bbox_coords.left + (obj_meta.tracker_bbox_info.org_bbox_coords.width / 2),
-                                              y_position = obj_meta.tracker_bbox_info.org_bbox_coords.top + (obj_meta.tracker_bbox_info.org_bbox_coords.height / 2),
-                                              width = obj_meta.tracker_bbox_info.org_bbox_coords.width,
-                                              height = obj_meta.tracker_bbox_info.org_bbox_coords.height,
-                                              object_id = obj_meta.object_id,
-                                              class_id = obj_meta.class_id,
-                                              object_pair_id = -1
+                self.triangulator.add_detection(ObjectDetection(
+                                                    frame_number = frame_meta.frame_num,
+                                                    detector_confidence = obj_meta.confidence,
+                                                    tracker_confidence = obj_meta.tracker_confidence,
+                                                    x_position = obj_meta.tracker_bbox_info.org_bbox_coords.left + (obj_meta.tracker_bbox_info.org_bbox_coords.width / 2),
+                                                    y_position = obj_meta.tracker_bbox_info.org_bbox_coords.top + (obj_meta.tracker_bbox_info.org_bbox_coords.height / 2),
+                                                    width = obj_meta.tracker_bbox_info.org_bbox_coords.width,
+                                                    height = obj_meta.tracker_bbox_info.org_bbox_coords.height,
+                                                    object_id = obj_meta.object_id,
+                                                    class_id = obj_meta.class_id,
+                                                    pose_matrix = pose_matrix
                 ))
 
                 # TODO: Move object parsing and publishing to a separate thread.
@@ -438,7 +411,7 @@ class BuoyDetectionNode(Node):
                 break
         
         # self.object_detection_results_publisher.publish(msg)
-        self.current_object_list = object_list
+        # self.current_object_list = object_list
 
         # source1 = self.pipeline.get_by_name('usb-cam-0')
         # if source1 is not None:
@@ -468,7 +441,7 @@ class BuoyDetectionNode(Node):
         
         self._publish_results(working_object_list)
 
-    def _publish_results(self, object_list: ObjectTracker):
+    def _publish_results(self, object_list):
         msg = ObjectDetectionResultsList()
         msg.detection_results = []
         for detection in object_list.detection_results[0].values():
@@ -608,9 +581,6 @@ class BuoyDetectionNode(Node):
             self.get_logger().info("Reloaded config file in nvinfer")
         else:
             self.get_logger().info("Not reloading config file in nvinfer since INFERENCE is disabled")
-
-
-
 
 
 def main():
