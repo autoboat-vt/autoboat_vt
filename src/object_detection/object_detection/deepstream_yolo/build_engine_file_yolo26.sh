@@ -22,8 +22,12 @@ if [ ! -d "pt_files" ]; then
     mkdir pt_files
 fi
 
+if [ -f "${PT_FILE}" ]; then
+    mv "${PT_FILE}" ./pt_files/
+fi
+
 if [ ! -f "pt_files/${PT_FILE}" ]; then
-    echo -e "File ${PT_FILE} not found in deepstream_yolo/pt_files/!"
+    echo -e "File ${PT_FILE} not found!"
     exit 1
 fi
 
