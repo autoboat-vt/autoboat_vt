@@ -34,7 +34,7 @@ else:
     IS_DEV_CONTAINER = False
 
 SHOULD_SAVE_IMAGES = True
-NUM_IMAGES_TO_SAVE = 10000
+# NUM_IMAGES_TO_SAVE = 10000
 
 # These are constants. Don't change these. Needed for a workaround with DeepStream 7.1 and JetPack 6.2
 COMPUTE_HW = 1
@@ -56,8 +56,8 @@ if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":
     INFERENCE = False
 # MUXER_BATCH_TIMEOUT_USEC = 40_000
 
-if SHOULD_SAVE_IMAGES and not os.path.exists(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results"):
-    os.makedirs(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results")
+# if SHOULD_SAVE_IMAGES and not os.path.exists(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results"):
+#     os.makedirs(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results")
 
 
 class ObjectDetection:
@@ -251,6 +251,7 @@ class BuoyDetectionNode(Node):
         nvvidconvsrc0 = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-src-0')
         nvvidconvsrc0.set_property('nvbuf-memory-type', MEMORY_TYPE)
         nvvidconvsrc0.set_property('compute-hw', COMPUTE_HW)
+        nvvidconvsrc0.set_property('flip-method', 2)
 
         caps_nvvidconvsrc0 = Gst.ElementFactory.make('capsfilter', 'nvmm-caps-0')
         caps_nvvidconvsrc0.set_property('caps', Gst.Caps.from_string(f'video/x-raw(memory:NVMM), format=NV12, width={self.CAM_LIST[0]["input_width"]}, height={self.CAM_LIST[0]["input_height"]}'))
@@ -280,28 +281,27 @@ class BuoyDetectionNode(Node):
 
         osd = Gst.ElementFactory.make('nvdsosd', 'nvosd')
 
-        nvvidconv_jpeg = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-jpeg')
-        nvvidconv_jpeg.set_property('nvbuf-memory-type', MEMORY_TYPE)
-        nvvidconv_jpeg.set_property('compute-hw', COMPUTE_HW)
+        # sink_tee = Gst.ElementFactory.make('tee', 'sink-tee')
+
+        # nvvidconv_jpeg = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-jpeg')
+        # nvvidconv_jpeg.set_property('nvbuf-memory-type', MEMORY_TYPE)
+        # nvvidconv_jpeg.set_property('compute-hw', COMPUTE_HW)
         
-        caps_nvvidconv_jpeg = Gst.ElementFactory.make('capsfilter', 'nvconverter-jpeg-caps')
-        if (IS_DEV_CONTAINER):
-            caps_nvvidconv_jpeg.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=I420')) # Dev container needs I420
-        else:
-            caps_nvvidconv_jpeg.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=NV12')) # Jetson needs NV12
+        # caps_nvvidconv_jpeg = Gst.ElementFactory.make('capsfilter', 'nvconverter-jpeg-caps')
+        # if (IS_DEV_CONTAINER):
+        #     caps_nvvidconv_jpeg.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=I420')) # Dev container needs I420
+        # else:
+        #     caps_nvvidconv_jpeg.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=NV12')) # Jetson needs NV12
 
-        # sink = Gst.ElementFactory.make('nv3dsink', 'sink')
+        # jpegenc = Gst.ElementFactory.make('nvjpegenc', 'jpegenc')
+
+        # multifilesink = Gst.ElementFactory.make('multifilesink', 'multifilesink')
+        # multifilesink.set_property('location', f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results/frame%06d.jpg")
+        # multifilesink.set_property('index', 0)
+        # multifilesink.set_property('max-files', NUM_IMAGES_TO_SAVE)
+
         sink = Gst.ElementFactory.make('nveglglessink', 'sink')
-        if not sink:
-            self.get_logger().error(f"Unable to create sink element")
-            sys.exit(1)
-
-        jpegenc = Gst.ElementFactory.make('nvjpegenc', 'jpegenc')
-
-        multifilesink = Gst.ElementFactory.make('multifilesink', 'multifilesink')
-        multifilesink.set_property('location', f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results/frame%06d.jpg")
-        multifilesink.set_property('index', 0)
-        multifilesink.set_property('max-files', NUM_IMAGES_TO_SAVE)
+        sink.set_property('sync', False)
 
         self.pipeline.add(source0)
         self.pipeline.add(caps_source0)
@@ -316,10 +316,11 @@ class BuoyDetectionNode(Node):
         self.pipeline.add(queue_multifilesink_valve)
         self.pipeline.add(multifilesink_valve)
         self.pipeline.add(osd)
-        self.pipeline.add(nvvidconv_jpeg)
-        self.pipeline.add(caps_nvvidconv_jpeg)
-        self.pipeline.add(jpegenc)
-        self.pipeline.add(multifilesink)
+        # self.pipeline.add(sink_tee)
+        # self.pipeline.add(nvvidconv_jpeg)
+        # self.pipeline.add(caps_nvvidconv_jpeg)
+        # self.pipeline.add(jpegenc)
+        # self.pipeline.add(multifilesink)
         self.pipeline.add(sink)
 
         source0.link(caps_source0)
@@ -340,11 +341,17 @@ class BuoyDetectionNode(Node):
             streammux.link(queue_multifilesink_valve)
         queue_multifilesink_valve.link(multifilesink_valve)
         multifilesink_valve.link(osd)
-        osd.link(nvvidconv_jpeg)
-        nvvidconv_jpeg.link(caps_nvvidconv_jpeg)
-        caps_nvvidconv_jpeg.link(sink)
+        osd.link(sink)
+
+        # osd.link(sink_tee)
+        # sink_tee.link(sink)
+
+        # sink_tee.link(nvvidconv_jpeg)
+        # nvvidconv_jpeg.link(caps_nvvidconv_jpeg)
         # caps_nvvidconv_jpeg.link(jpegenc)
         # jpegenc.link(multifilesink)
+
+        # TODO: Make file saving a toggleable option
 
         self.loop = GLib.MainLoop()
         bus = self.pipeline.get_bus()
