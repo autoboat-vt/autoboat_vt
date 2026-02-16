@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------------------------------------
 
 # ensure that this finishes even if the command fails (the user doesn't have xhost)
-xhost +localhost || true  
+xhost +local: || true
 
 
 # we would like to only pull the development image if we are rebuilding the devcontainer (which is equivalent to creating a new container).
