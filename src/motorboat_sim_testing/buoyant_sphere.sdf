@@ -481,6 +481,10 @@ With ros2: TODO: UPDATE
         <pose>0 0 0 0 0 0</pose>
       </link>
 
+      <link name='jib_rotator_link'>
+        <pose>.5834 0 .4 0 0 0</pose>
+      </link>
+
       <link name='boom_link'>
         <pose>-.5 0 .375 0 0 0</pose>
 
@@ -558,6 +562,47 @@ With ros2: TODO: UPDATE
         </visual>
       </link>
 
+      <link name='jib_link'>
+        <pose>.03 0 0.4 0 0 0</pose>
+
+        <inertial>
+          <pose>-0.33033 0 0.45733 0 0 0</pose>
+          <mass>0.25908</mass>
+          <inertia>
+            <ixx>0.07533</ixx>
+            <ixy>-0.00002</ixy>
+            <ixz>0.01521</ixz>
+            <iyy>0.08761</iyy>
+            <iyz>0.00006</iyz>
+            <izz>0.01229</izz>
+          </inertia>
+        </inertial>
+
+        <collision name='collision'>
+          <pose>0 0 0 1.57079632679 0 0</pose>
+          <geometry>
+            <polyline>
+              <point>0 0</point>
+              <point>0 1.3208</point>
+              <point>0.5334 0</point>
+              <height>.001</height>
+            </polyline>
+          </geometry>
+        </collision>
+
+        <visual name='visual'>
+          <pose>0 0 0 1.57079632679 0 0</pose>
+          <geometry>
+            <polyline>
+              <point>0 0</point>
+              <point>0 1.3208</point>
+              <point>0.5334 0</point>
+              <height>.001</height>
+            </polyline>
+          </geometry>
+        </visual>
+      </link>
+
 
       <!-- Arrow link for showing wind -->
        <link name='arrow_link'>
@@ -613,7 +658,7 @@ With ros2: TODO: UPDATE
       <joint name="sail_rotator_joint" type="revolute">
         <axis>
           <xyz>0 0 1</xyz>
-            <limit>
+          <limit>
             <lower>-1</lower>
             <upper>1</upper>
           </limit>
@@ -626,6 +671,27 @@ With ros2: TODO: UPDATE
         <child>sail_rotator_link</child>
       </joint>
       
+      <joint name="jib_rotator_joint" type="revolute">
+        <axis>
+          <xyz>-0.5534 0 1.3208</xyz>
+          <limit>
+            <lower>-.4</lower>
+            <upper>.4</upper>
+          </limit>
+          <dynamics>
+            <damping>1</damping>
+          </dynamics>
+        </axis>
+
+        <parent>base_link</parent>
+        <child>jib_rotator_link</child>
+      </joint>
+
+      <joint name="jib_joint" type="fixed">
+        <parent>jib_rotator_link</parent>
+        <child>jib_link</child>
+      </joint>
+
       <joint name="mast_joint" type="fixed">
         <parent>base_link</parent>
         <child>mast_link</child>
@@ -770,6 +836,19 @@ With ros2: TODO: UPDATE
         <cdmax>1.5</cdmax>
         <cop>0.33033 0.45733 0</cop>
         <area>.75</area>
+        <fluid_density>1.225</fluid_density>
+        <forward>-1 0 0</forward>
+        <upward>0 -1 0</upward>
+      </plugin>
+
+      <!-- Jib dynamics...? Might need its own plugin idk tbh -->
+      <plugin filename="libFoilDynamics.so"
+      name="foil_dynamics::FoilDynamics">
+        <link_name>jib_link</link_name>
+        <clmax>1</clmax>
+        <cdmax>1.5</cdmax>
+        <cop>0.18447 0.44027 0</cop>
+        <area>.73</area>
         <fluid_density>1.225</fluid_density>
         <forward>-1 0 0</forward>
         <upward>0 -1 0</upward>
