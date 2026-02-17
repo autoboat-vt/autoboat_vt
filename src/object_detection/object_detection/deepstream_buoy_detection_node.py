@@ -63,7 +63,7 @@ if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":
 class ObjectDetection:
     def __init__(self, frame_number=-1, detector_confidence=0.0, tracker_confidence=0.0,
                  x_position=0.0, y_position=0.0, width=0.0, height=0.0, object_id=-1,
-                 class_id=-1, pose_matrix=None, camera_matrix=None, camera_matrix_inv=None):
+                 class_id=-1, obj_label=None, pose_matrix=None, camera_matrix_inv=None):
         self.frame_number = frame_number
         self.detector_confidence = detector_confidence
         self.tracker_confidence = tracker_confidence
@@ -73,6 +73,7 @@ class ObjectDetection:
         self.height = height
         self.object_id = object_id
         self.class_id = class_id
+        self.obj_label = obj_label
         self.pose_matrix = pose_matrix
 
         pixel_point = np.array([[x_position], [y_position], [1]])
@@ -87,9 +88,12 @@ class ObjectDetection:
 
 
 class ObjectTrack:
-    def __init__(self):
+    def __init__(self, object_id=-1, class_id=-1, obj_label=None):
         self.detection_results = []
         self.last_updated_frame_number = -1
+        self.object_id = object_id
+        self.class_id = class_id
+        self.obj_label = obj_label
     
     def add_detection(self, detection: ObjectDetection):
         self.detection_results.append(detection)
@@ -112,19 +116,23 @@ class ObjectTriangulator:
         if (detection.x_position < 0 or detection.y_position < 0 or detection.x_position >= self.frame_size[0] or detection.y_position >= self.frame_size[1] - 1):
             return
         if obj_id not in self.observations:
-            self.observations[obj_id] = ObjectTrack()
+            self.observations[obj_id] = ObjectTrack(object_id=detection.object_id, class_id=detection.class_id, obj_label=detection.obj_label)
         self.observations[obj_id].add_detection(detection)
     
     def triangulate(self, obj_id):
-        obs = self.observations[obj_id].detection_results
+        track = self.observations[obj_id]
+        obs = track.detection_results
         if len(obs) < 2:
             return None # Need at least 2 observations to triangulate
+        
+        if (obs[-1].frame_number == track.last_updated_frame_number):
+            return track.last_world_pos # If we already triangulated this frame, return the last result
 
         first_dir = obs[0].triangle_position[1]
         last_dir = obs[-1].triangle_position[1]
         dot_prod = float(np.dot(first_dir.T, last_dir))
-        # if abs(dot_prod) > 0.99: # If the rays are almost parallel, we can't triangulate accurately
-        #     return None
+        if abs(dot_prod) > 0.99: # If the rays are almost parallel, we can't triangulate accurately
+            return None
         
         A = np.zeros((3, 3))
         b = np.zeros((3, 1))
@@ -135,8 +143,10 @@ class ObjectTriangulator:
             A += identity_minus_ddt
             b += identity_minus_ddt @ p
         
-        world_pos = np.linalg.lstsq(A, b, rcond=None)[0]
-        return world_pos.flatten()
+        world_pos = np.linalg.lstsq(A, b, rcond=None)[0].flatten()
+        track.last_world_pos = world_pos
+        track.last_updated_frame_number = obs[-1].frame_number
+        return world_pos
 
 
 class BuoyDetectionNode(Node):
@@ -213,7 +223,7 @@ class BuoyDetectionNode(Node):
         vs.start()
 
         if INFERENCE:
-            self.create_timer(timer_period_sec=0.3, callback=self._iterate_results)
+            self.timer = self.create_timer(timer_period_sec=1, callback=self._iterate_results)
 
     def _init_pipeline(self):
         self.pipeline = Gst.Pipeline()
@@ -374,6 +384,7 @@ class BuoyDetectionNode(Node):
             err, debug = message.parse_error()
             # sys.stderr.write("Error: %s: %s\n" % (err, debug))
             self.get_logger().error("Error: %s: %s\n" % (err, debug))
+            self.close_pipeline()
         return True
     
     def run(self):
@@ -385,7 +396,18 @@ class BuoyDetectionNode(Node):
             self.get_logger().error(e)
         self.get_logger().info("Closing pipeline\n")
         self.pipeline.set_state(Gst.State.NULL)
+        self.get_logger().info("Closed pipeline\n")
     
+    def close_pipeline(self):
+        self.get_logger().info("Quitting pipeline\n")
+        self.pipeline.set_state(Gst.State.NULL)
+        if hasattr(self, 'timer'):
+            self.timer.cancel()
+        self.loop.quit()
+        # Trigger ROS2 node shutdown to exit the process
+        self.get_logger().info("Shutting down ROS2 node\n")
+        rclpy.shutdown()
+
     def _infer_probe(self, pad, info, u_data):
         gst_buffer = info.get_buffer()
         if not gst_buffer:
@@ -395,8 +417,6 @@ class BuoyDetectionNode(Node):
         msg = ObjectDetectionResultsList()
         msg.detection_results = []
         # object_list = ObjectTracker()
-
-        pose_matrix = self._get_current_pose(self.current_position["latitude"], self.current_position["longitude"], self.current_heading)
 
         # Retrieve batch metadata from the gst_buffer
         # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
@@ -427,6 +447,10 @@ class BuoyDetectionNode(Node):
                     self.get_logger().info(f"Frame: {frame_meta.frame_num}, avg FPS: {fps:.2f}")
             l_obj = frame_meta.obj_meta_list
 
+            if (self.current_position["latitude"] == 0 and self.current_position["longitude"] == 0):
+                return Gst.PadProbeReturn.OK # Don't process frames until we have a valid position
+            pose_matrix = self._get_current_pose(self.current_position["latitude"], self.current_position["longitude"], self.current_heading)
+
             # Iterate through each object in frame
             while l_obj is not None:
                 try:
@@ -456,8 +480,8 @@ class BuoyDetectionNode(Node):
                                                         height = obj_meta.tracker_bbox_info.org_bbox_coords.height,
                                                         object_id = obj_meta.object_id,
                                                         class_id = obj_meta.class_id,
+                                                        obj_label = obj_meta.obj_label,
                                                         pose_matrix = pose_matrix,
-                                                        camera_matrix = self.camera_K,
                                                         camera_matrix_inv = self.camera_K_inv
                     ))
 
@@ -518,11 +542,11 @@ class BuoyDetectionNode(Node):
         return pose
 
     def _iterate_results(self):
-        if (self.current_object_list.frame_number == self.last_published_frame_number):
-            return
+        # if (self.current_object_list.frame_number == self.last_published_frame_number):
+        #     return
         with self.triangulation_lock:
             observations_snapshot = {
-                obj_id: track.detection_results[:] 
+                obj_id: track 
                 for obj_id, track in self.triangulator.observations.items()
             }
         # Pull current data to local variable so it doesn't change mid-function
@@ -537,10 +561,11 @@ class BuoyDetectionNode(Node):
         #         self.get_logger().info(f"Frame {working_object_list.frame_number:06}: Depth: {depth:.02} ft. Objects: {left_detection.object_id} and {main_detection.object_id}")
         
         detections = {}
-        for obj_id, obs_list in observations_snapshot.items():
+        for obj_id, obs_track in observations_snapshot.items():
+            # obs_list = obs_track.detection_results
             world_pos = self.triangulator.triangulate(obj_id)
             if world_pos is not None:
-                self.get_logger().info(f"Object {obj_id} triangulated position: {world_pos}")
+                self.get_logger().info(f"{obs_track.obj_label} {obj_id} triangulated position: {world_pos}")
                 lat = self.origin_position["latitude"] + (world_pos[1] / 6378137.0) * (180 / pi)
                 lon = self.origin_position["longitude"] + (world_pos[0] / (6378137.0 * np.cos(np.radians(self.origin_position["latitude"])))) * (180 / pi)
                 self.get_logger().info(f"Object {obj_id} triangulated GPS position: ({lat}, {lon})")
