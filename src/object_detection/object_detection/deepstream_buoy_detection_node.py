@@ -94,6 +94,7 @@ class ObjectTrack:
         self.object_id = object_id
         self.class_id = class_id
         self.obj_label = obj_label
+        self.last_world_pos = None
     
     def add_detection(self, detection: ObjectDetection):
         self.detection_results.append(detection)
@@ -484,6 +485,11 @@ class BuoyDetectionNode(Node):
                                                         pose_matrix = pose_matrix,
                                                         camera_matrix_inv = self.camera_K_inv
                     ))
+                    track = self.triangulator.observations[obj_meta.object_id]
+                    if track.last_world_pos is not None:
+                        obj_meta.text_params.display_text = f"{obj_meta.obj_label} {obj_meta.object_id}. Pos: {track.last_world_pos}"
+                    else:
+                        obj_meta.text_params.display_text = f"{obj_meta.obj_label} {obj_meta.object_id}. Pos: N/A"
 
                 try:
                     l_obj = l_obj.next
@@ -636,11 +642,22 @@ class BuoyDetectionNode(Node):
         self.threshold = float(attributes_lines[1].split('=')[-1])
 
     def position_callback(self, msg):
+        self.heading = 270
         self.current_position["latitude"] = msg.latitude
         self.current_position["longitude"] = msg.longitude
         if self.origin_position["latitude"] == 0 and self.origin_position["longitude"] == 0:
             self.origin_position["latitude"] = msg.latitude
             self.origin_position["longitude"] = msg.longitude
+        self.get_logger().info(f"Updated position to ({msg.latitude}, {msg.longitude})")
+        time.sleep(5)
+        self.origin_position["latitude"] = 0
+        self.origin_position["longitude"] = 0
+        self.heading = 225
+        self.get_logger().warn(f"Move camera now")
+        time.sleep(5)
+        self.origin_position["latitude"] = msg.latitude
+        self.origin_position["longitude"] = msg.longitude
+        self.get_logger().info(f"Updated origin position to ({msg.latitude}, {msg.longitude})")
 
     def heading_callback(self, msg):
         self.current_heading = msg.data
