@@ -111,7 +111,6 @@ class TelemetryNode(Node):
                 does_hash_exist = self.get_raw_response_from_telemetry_server(
                     f"autopilot_parameters/get_hash_exists/{config_hash}", session=self.autopilot_parameters_session
                 )
-                self.logger.info(f"Config hash exists on server: {does_hash_exist}")
                 if not does_hash_exist:
                     url = f"autopilot_parameters/set_default/{self.instance_id}"
                     self.send_raw_data_to_telemetry_server(url, self.autopilot_parameters, self.autopilot_parameters_session)
@@ -122,7 +121,8 @@ class TelemetryNode(Node):
                     url = f"autopilot_parameters/set_default_from_hash/{self.instance_id}/{config_hash}"
                     self.send_raw_data_to_telemetry_server(url, "", self.autopilot_parameters_session)
 
-                self.logger.info(f"Created new telemetry server instance with ID {self.instance_id}.")
+                self.logger.info(f"Telemetry node instance ID: {self.instance_id}")
+                self.logger.info(f"Using hash: {config_hash}")
                 break
 
         self.create_timer(0.01, self.update_boat_status)  # 10 ms

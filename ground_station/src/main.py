@@ -3,6 +3,7 @@ import mimetypes
 import socketserver
 import sys
 import threading
+from typing import NoReturn
 
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 from utils import constants, misc
@@ -63,7 +64,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"[Error] Failed to initialize main window: {e}")
 
-    def closeEvent(self, event: object) -> None:
+    def closeEvent(self, event: object) -> NoReturn:
         """Handle the window close event."""
 
         print("[Info] Shutting down servers...")
@@ -76,7 +77,6 @@ class MainWindow(QMainWindow):
         
         print("[Info] Servers shut down.")
         event.accept()
-
 
     def check_instance_connection(self) -> None:
         """Check if an instance connection has been established."""
