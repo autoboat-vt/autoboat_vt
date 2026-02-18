@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import time
+from collections.abc import Generator
 from typing import Any
 from urllib.parse import urljoin
 
@@ -22,7 +23,7 @@ from std_msgs.msg import Bool, Float32, Int32, String
 
 from autoboat_msgs.msg import VESCTelemetryData, WaypointList
 
-from .autopilot_library.utils.constants import CONFIG_DIRECTORY, TELEMETRY_SERVER_URL
+from .autopilot_library.utils.constants import BOAT_STATUS_MAPPING, CONFIG_DIRECTORY, TELEMETRY_SERVER_URL, TelemetryStatus
 from .autopilot_library.utils.position import Position
 from .autopilot_library.utils.utils_function_library import (
     cartesian_vector_to_polar,
@@ -96,10 +97,9 @@ class TelemetryNode(Node):
             json.dumps(self.autopilot_parameters, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest()
 
-        while True:
-            new_id = self.get_raw_response_from_telemetry_server("instance_manager/create", session=self.boat_status_session)
-            if isinstance(new_id, int):
-                self.instance_id = new_id
+        for response, status in self.get_raw_response_from_telemetry_server("instance_manager/create", self.boat_status_session):
+            if status == TelemetryStatus.SUCCESS and isinstance(response, int):
+                self.instance_id = response
 
                 user_name = os.environ.get("USER")
                 if not user_name:
@@ -108,9 +108,40 @@ class TelemetryNode(Node):
                 url = f"instance_manager/set_user/{self.instance_id}"
                 self.send_raw_data_to_telemetry_server(url, user_name, self.boat_status_session)
 
-                does_hash_exist = self.get_raw_response_from_telemetry_server(
-                    f"autopilot_parameters/get_hash_exists/{config_hash}", session=self.autopilot_parameters_session
-                )
+                url = f"boat_status/set_mapping/{self.instance_id}"
+                self.send_raw_data_to_telemetry_server(url, BOAT_STATUS_MAPPING, self.boat_status_session)
+
+                boat_status: list[Any] = [
+                    [self.position.latitude, self.position.longitude],
+                    self.autopilot_mode,
+                    self.full_autonomy_maneuver,
+                    self.speed,
+                    (self.velocity_vector[0], self.velocity_vector[1]),
+                    self.desired_heading,
+                    self.heading,
+                    -1, # true wind speed
+                    -1, # true wind angle
+                    self.apparent_wind_speed,
+                    self.apparent_wind_angle,
+                    self.desired_sail_angle,
+                    self.desired_rudder_angle,
+                    self.current_waypoint_index,
+                    -1, # distance to next waypoint
+                ]
+
+                boat_status_dict: dict[str, Any] = dict(zip(BOAT_STATUS_MAPPING, boat_status, strict=False))
+                
+                url = f"boat_status/set/{self.instance_id}"
+                self.send_raw_data_to_telemetry_server(url, boat_status_dict, self.boat_status_session)
+
+                does_hash_exist: bool = False
+                for hash_response, hash_status in self.get_raw_response_from_telemetry_server(
+                    f"autopilot_parameters/get_hash_exists/{config_hash}", self.autopilot_parameters_session
+                ):
+                    if hash_status == TelemetryStatus.SUCCESS:
+                        does_hash_exist = hash_response
+                        break
+
                 if not does_hash_exist:
                     url = f"autopilot_parameters/set_default/{self.instance_id}"
                     self.send_raw_data_to_telemetry_server(url, self.autopilot_parameters, self.autopilot_parameters_session)
@@ -118,8 +149,8 @@ class TelemetryNode(Node):
                 # if hash exists on server, just set the default from that hash
                 # to avoid sending over all the parameters again
                 else:
-                    url = f"autopilot_parameters/set_default_from_hash/{self.instance_id}/{config_hash}"
-                    self.send_raw_data_to_telemetry_server(url, "", self.autopilot_parameters_session)
+                    url = f"autopilot_parameters/set_default_from_hash/{self.instance_id}"
+                    self.send_raw_data_to_telemetry_server(url, config_hash, self.autopilot_parameters_session)
 
                 self.logger.info(f"Telemetry node instance ID: {self.instance_id}")
                 self.logger.info(f"Using hash: {config_hash}")
@@ -358,7 +389,9 @@ class TelemetryNode(Node):
 
 
 
-    def get_raw_response_from_telemetry_server(self, route: str, session: requests.Session) -> int | dict | list | bool:
+    def get_raw_response_from_telemetry_server(
+        self, route: str, session: requests.Session
+    ) -> Generator[tuple[Any, TelemetryStatus], None, None]:
         """
         This is essentially just a helper function to send a GET request to a specific telemetry server route
         and automatically retry if it cannot connect to that route.
@@ -370,19 +403,25 @@ class TelemetryNode(Node):
         session
             The requests session to use for the GET request.
 
-        Returns
-        -------
-        Any
-            The JSON response from the telemetry server.
+        Yields
+        ------
+        tuple[Any, TelemetryStatus]
+            The raw response from the telemetry server and the status of the request.
         """
 
-        try:
-            return session.get(urljoin(TELEMETRY_SERVER_URL, route), timeout=10).json()
+        url = urljoin(TELEMETRY_SERVER_URL, route)
 
-        except Exception:
-            self.logger.error(f"Could not connect to telemetry server route {route}, retrying...")
+        try:
+            response = session.get(url=url, timeout=10)
+            response.raise_for_status()
+            yield response.json(), TelemetryStatus.SUCCESS
+        
+        except Exception as e:
+            self.logger.error(f"Error: {e}")
+            self.logger.warning(f"Could not recieve data with telemetry server route {route}, retrying...")
+            yield None, TelemetryStatus.FAILURE
             time.sleep(0.5)
-            return self.get_raw_response_from_telemetry_server(route, session)
+            yield from self.get_raw_response_from_telemetry_server(route, session)
 
 
 
@@ -402,16 +441,32 @@ class TelemetryNode(Node):
             The requests session to use for the POST request.
         """
 
+        url = urljoin(TELEMETRY_SERVER_URL, route)
+
         try:
-            url = urljoin(TELEMETRY_SERVER_URL, route)
-            if isinstance(data, (float, str)):
-                session.post(urljoin(url, data), timeout=10)
+            if isinstance(data, (float, int)):
+                url += f"/{data}"
+                response = session.post(url=url, timeout=10)
+
+            elif isinstance(data, str):
+                if " " in data:
+                    data = data.replace(" ", "_")
+                
+                url += f"/{data}"
+                response = session.post(url=url, timeout=10)
+
+            elif isinstance(data, list):
+                response = session.post(url=url, json=data, timeout=10)
             
             else:
-                session.post(url=url, json=data, timeout=10)
+                response = session.post(url=url, json=data, timeout=10)
+                # response = session.post(url=url, json=json.dumps(data, separators=(",", ":"), indent=None), timeout=10)
 
-        except Exception:
-            self.logger.error(f"Could not connect to telemetry server route {route}, retrying...")
+            response.raise_for_status()
+
+        except Exception as e:
+            self.logger.error(f"Error: {e}, {response.text}")
+            self.logger.warning(f"Could not send data with telemetry server route {route}, retrying...")
             time.sleep(0.5)
             self.send_raw_data_to_telemetry_server(route, data, session)
 
@@ -424,23 +479,10 @@ class TelemetryNode(Node):
         makes an API call to send that data over to the groundstation so that it can view what is going on.
 
         Note
-        -------
+        ----
         THIS IS BUGGED. YOU NEED TO ACCOUNT FOR THE VELOCITY VECTOR BEING MEASURED GLOBALLY
         RATHER THAN THE APPARENT WIND VECTOR WHICH IS MEASURED LOCALLY.
         """
-
-        true_wind_vector = self.apparent_wind_vector + self.velocity_vector
-        self.true_wind_speed, self.true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
-
-        if self.current_waypoints != []:
-            current_position = Position(self.position.latitude, self.position.longitude)
-            next_waypoint_position = Position(
-                self.current_waypoints[self.current_waypoint_index][0], self.current_waypoints[self.current_waypoint_index][1]
-            )
-            distance_to_next_waypoint = get_distance_between_positions(current_position, next_waypoint_position)
-
-        else:
-            distance_to_next_waypoint = 0.0
 
         # boat_status_dict = {
         #     "position": (self.position.latitude, self.position.longitude),
@@ -469,30 +511,60 @@ class TelemetryNode(Node):
         #     "vesc_telemetry_data_vesc_temperature": self.vesc_telemetry_data_vesc_temperature
         # }
 
-        boat_status_dictionary = {
-            "position": [self.position.latitude, self.position.longitude],
-            "state": self.autopilot_mode,
-            "full_autonomy_maneuver": self.full_autonomy_maneuver,
-            "speed": self.speed,
-            "velocity_vector": (self.velocity_vector[0], self.velocity_vector[1]),
-            "bearing": self.desired_heading,
-            "heading": self.heading,
-            "true_wind_speed": self.true_wind_speed,
-            "true_wind_angle": self.true_wind_angle,
-            "apparent_wind_speed": self.apparent_wind_speed,
-            "apparent_wind_angle": self.apparent_wind_angle,
-            "sail_angle": self.desired_sail_angle,
-            "rudder_angle": self.desired_rudder_angle,
-            "current_waypoint_index": self.current_waypoint_index,
-            "distance_to_next_waypoint": distance_to_next_waypoint,
-        }
+        # boat_status_dictionary = {
+        #     "position": [self.position.latitude, self.position.longitude],
+        #     "state": self.autopilot_mode,
+        #     "full_autonomy_maneuver": self.full_autonomy_maneuver,
+        #     "speed": self.speed,
+        #     "velocity_vector": (self.velocity_vector[0], self.velocity_vector[1]),
+        #     "bearing": self.desired_heading,
+        #     "heading": self.heading,
+        #     "true_wind_speed": self.true_wind_speed,
+        #     "true_wind_angle": self.true_wind_angle,
+        #     "apparent_wind_speed": self.apparent_wind_speed,
+        #     "apparent_wind_angle": self.apparent_wind_angle,
+        #     "sail_angle": self.desired_sail_angle,
+        #     "rudder_angle": self.desired_rudder_angle,
+        #     "current_waypoint_index": self.current_waypoint_index,
+        #     "distance_to_next_waypoint": distance_to_next_waypoint,
+        # }
 
-        try:
-            url = urljoin(TELEMETRY_SERVER_URL, f"boat_status/set/{self.instance_id}")
-            self.boat_status_session.post(url=url, json=boat_status_dictionary)
+        true_wind_vector = self.apparent_wind_vector + self.velocity_vector
+        self.true_wind_speed, self.true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
 
-        except Exception as e:
-            self.logger.error(f"Could not connect to telemetry server to send boat status update. \nError: {e}")
+        if self.current_waypoints != []:
+            current_position = Position(self.position.latitude, self.position.longitude)
+            next_waypoint_position = Position(
+                self.current_waypoints[self.current_waypoint_index][0], self.current_waypoints[self.current_waypoint_index][1]
+            )
+            distance_to_next_waypoint = get_distance_between_positions(current_position, next_waypoint_position)
+
+        else:
+            distance_to_next_waypoint = 0.0
+
+        boat_status: list[Any] = [
+            [self.position.latitude, self.position.longitude],
+            self.autopilot_mode,
+            self.full_autonomy_maneuver,
+            self.speed,
+            (self.velocity_vector[0], self.velocity_vector[1]),
+            self.desired_heading,
+            self.heading,
+            self.true_wind_speed,
+            self.true_wind_angle,
+            self.apparent_wind_speed,
+            self.apparent_wind_angle,
+            self.desired_sail_angle,
+            self.desired_rudder_angle,
+            self.current_waypoint_index,
+            distance_to_next_waypoint,
+        ]
+
+        self.send_raw_data_to_telemetry_server(
+            f"boat_status/set_fast/{self.instance_id}",
+            boat_status,
+            self.boat_status_session,
+        )
 
 
 
@@ -503,23 +575,15 @@ class TelemetryNode(Node):
         """
 
         route = urljoin(TELEMETRY_SERVER_URL, f"waypoints/get_new/{self.instance_id}")
-        new_waypoints = self.get_raw_response_from_telemetry_server(route=route, session=self.waypoints_session)
 
-        if new_waypoints == {}:
-            self.logger.info("No new waypoints received from telemetry server.")
-            return
-
-        self.logger.info(f"Received waypoints: {new_waypoints}")
-
-        if not isinstance(new_waypoints, list):
-            self.logger.error(f"Invalid waypoints format: {new_waypoints}. Expected a list.")
-            return
-
-        self.current_waypoints = new_waypoints
-        waypoints_nav_sat_fix_list = [
-            NavSatFix(latitude=waypoint[0], longitude=waypoint[1]) for waypoint in self.current_waypoints
-        ]
-        self.waypoints_list_publisher.publish(WaypointList(waypoints=waypoints_nav_sat_fix_list))
+        for new_waypoints, status in self.get_raw_response_from_telemetry_server(route, self.waypoints_session):
+            if status == TelemetryStatus.SUCCESS and isinstance(new_waypoints, list):
+                self.current_waypoints = new_waypoints
+                waypoints_nav_sat_fix_list = [
+                    NavSatFix(latitude=waypoint[0], longitude=waypoint[1]) for waypoint in self.current_waypoints
+                ]
+                self.waypoints_list_publisher.publish(WaypointList(waypoints=waypoints_nav_sat_fix_list))
+                break
 
 
 
@@ -531,19 +595,16 @@ class TelemetryNode(Node):
         """
 
         route = urljoin(TELEMETRY_SERVER_URL, f"autopilot_parameters/get_new/{self.instance_id}")
-        new_autopilot_parameters = self.get_raw_response_from_telemetry_server(
-            route=route, session=self.autopilot_parameters_session
-        )
+        for new_autopilot_parameters, status in self.get_raw_response_from_telemetry_server(
+            route, self.autopilot_parameters_session
+        ):
+            if status == TelemetryStatus.SUCCESS and isinstance(new_autopilot_parameters, dict):
+                for new_autopilot_parameter_name, new_autopilot_parameters_value in new_autopilot_parameters.items():
+                    self.autopilot_parameters[new_autopilot_parameter_name] = new_autopilot_parameters_value
 
-        if new_autopilot_parameters == {}:
-            return
-
-        for new_autopilot_parameter_name, new_autopilot_parameters_value in new_autopilot_parameters.items():
-            self.autopilot_parameters[new_autopilot_parameter_name] = new_autopilot_parameters_value
-
-        # update the ROS2 topic so that the autopilot actually knows what the new parameters are
-        serialized_autopilot_parameters_string = String(data=json.dumps(self.autopilot_parameters))
-        self.autopilot_parameters_publisher.publish(serialized_autopilot_parameters_string)
+                # update the ROS2 topic so that the autopilot actually knows what the new parameters are
+                serialized_autopilot_parameters_string = String(data=json.dumps(self.autopilot_parameters))
+                self.autopilot_parameters_publisher.publish(serialized_autopilot_parameters_string)
 
 
 

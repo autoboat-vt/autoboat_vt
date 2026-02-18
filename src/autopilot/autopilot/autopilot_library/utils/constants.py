@@ -55,9 +55,33 @@ class MotorboatControls(Enum):
     DUTY_CYCLE = 1
     CURRENT = 2
 
+class TelemetryStatus(Enum):
+    """Enum representing the status of communication with the telemetry server."""
+
+    SUCCESS = 0
+    FAILURE = 1
+
 
 # don't put '/' at the end of the URL
 TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk:8443"
+
+BOAT_STATUS_MAPPING: list[str] = [
+    "position",
+    "state",
+    "full_autonomy_maneuver",
+    "speed",
+    "velocity_vector",
+    "bearing",
+    "heading",
+    "true_wind_speed",
+    "true_wind_angle",
+    "apparent_wind_speed",
+    "apparent_wind_angle",
+    "sail_angle",
+    "rudder_angle",
+    "current_waypoint_index",
+    "distance_to_next_waypoint"
+]
 
 BASE_DIRECTORY = Path(__file__).resolve().parent.parent.parent
 CONFIG_DIRECTORY = BASE_DIRECTORY / "config"

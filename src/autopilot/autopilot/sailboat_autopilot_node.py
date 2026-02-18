@@ -188,6 +188,25 @@ class SailboatAutopilotNode(Node):
             print("WARNING: INCORRECT COMBINATION OF RC SWITCHES USED")
 
 
+    @staticmethod
+    def _unwrap_parameter_value(value: Any) -> Any:
+        """Extract the usable value from a parameter payload.
+
+        The telemetry server can send either primitive values or objects that
+        contain a value/default pair. Normalize that here so the rest of the
+        node only deals with primitives.
+        """
+
+        if isinstance(value, dict):
+            if "value" in value:
+                return value["value"]
+
+            if "default" in value:
+                return value["default"]
+
+        return value
+
+
     def autopilot_parameters_callback(self, new_parameters: String) -> None:
         """
         Receives a serialized json (as a string) of parameters and sets them as constants.
@@ -203,15 +222,27 @@ class SailboatAutopilotNode(Node):
                 self.get_logger().warn(warn_string)
                 continue
 
-            self.autopilot_parameters[new_parameter_name] = new_parameter_value
+            self.autopilot_parameters[new_parameter_name] = self._unwrap_parameter_value(new_parameter_value)
 
         # HANDLE SPECIAL CASES SINCE THEY DO NOT UPDATE AUTOMATICALLY
         if "autopilot_refresh_rate" in new_parameters_json:
-            self.destroy_timer(self.autopilot_refresh_timer)
+            new_refresh_rate = self._unwrap_parameter_value(self.autopilot_parameters["autopilot_refresh_rate"])
 
-            self.autopilot_refresh_timer = self.create_timer(
-                timer_period_sec=1 / self.autopilot_parameters["autopilot_refresh_rate"], callback=self.update_ros_topics
-            )
+            try:
+                refresh_rate_hz = float(new_refresh_rate)
+                if refresh_rate_hz <= 0:
+                    raise ValueError("autopilot_refresh_rate must be positive")
+
+            except Exception as exc:  # pragma: no cover - defensive logging
+                self.get_logger().error(
+                    f"Invalid autopilot_refresh_rate '{new_refresh_rate}': {exc}. Keeping previous timer."
+                )
+
+            else:
+                self.destroy_timer(self.autopilot_refresh_timer)
+                self.autopilot_refresh_timer = self.create_timer(
+                    timer_period_sec=1 / refresh_rate_hz, callback=self.update_ros_topics
+                )
 
 
 
