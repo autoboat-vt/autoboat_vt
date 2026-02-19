@@ -78,6 +78,7 @@ class ObjectDetection:
 
         pixel_point = np.array([[x_position], [y_position], [1]])
         bearing_cam = camera_matrix_inv @ pixel_point
+        # bearing_cam = bearing_cam / np.linalg.norm(bearing_cam)
 
         R = pose_matrix[:3, :3]
         t = pose_matrix[:3, 3]
@@ -217,6 +218,7 @@ class BuoyDetectionNode(Node):
         self.last_time = time.time()
         self.file_lock = threading.Lock()
         self.last_published_frame_number = -1
+        self.config_file_split, self.model, self.threshold = self._read_file()
 
         self._init_pipeline()
         self._read_file()
@@ -448,8 +450,8 @@ class BuoyDetectionNode(Node):
                     self.get_logger().info(f"Frame: {frame_meta.frame_num}, avg FPS: {fps:.2f}")
             l_obj = frame_meta.obj_meta_list
 
-            if (self.current_position["latitude"] == 0 and self.current_position["longitude"] == 0):
-                return Gst.PadProbeReturn.OK # Don't process frames until we have a valid position
+            # if (self.origin_position["latitude"] == 0 and self.origin_position["longitude"] == 0):
+            #     return Gst.PadProbeReturn.OK # Don't process frames until we have a valid position
             pose_matrix = self._get_current_pose(self.current_position["latitude"], self.current_position["longitude"], self.current_heading)
 
             # Iterate through each object in frame
@@ -471,25 +473,28 @@ class BuoyDetectionNode(Node):
                 obj_results.class_id = obj_meta.class_id
                 msg.detection_results.append(obj_results)
                 with self.triangulation_lock:
-                    self.triangulator.add_observation(ObjectDetection(
-                                                        frame_number = frame_meta.frame_num,
-                                                        detector_confidence = obj_meta.confidence,
-                                                        tracker_confidence = obj_meta.tracker_confidence,
-                                                        x_position = obj_meta.tracker_bbox_info.org_bbox_coords.left + (obj_meta.tracker_bbox_info.org_bbox_coords.width / 2),
-                                                        y_position = obj_meta.tracker_bbox_info.org_bbox_coords.top + (obj_meta.tracker_bbox_info.org_bbox_coords.height / 2),
-                                                        width = obj_meta.tracker_bbox_info.org_bbox_coords.width,
-                                                        height = obj_meta.tracker_bbox_info.org_bbox_coords.height,
-                                                        object_id = obj_meta.object_id,
-                                                        class_id = obj_meta.class_id,
-                                                        obj_label = obj_meta.obj_label,
-                                                        pose_matrix = pose_matrix,
-                                                        camera_matrix_inv = self.camera_K_inv
-                    ))
-                    track = self.triangulator.observations[obj_meta.object_id]
-                    if track.last_world_pos is not None:
-                        obj_meta.text_params.display_text = f"{obj_meta.obj_label} {obj_meta.object_id}. Pos: {track.last_world_pos}"
-                    else:
-                        obj_meta.text_params.display_text = f"{obj_meta.obj_label} {obj_meta.object_id}. Pos: N/A"
+                    if (self.origin_position["latitude"] != 0 and self.origin_position["longitude"] != 0):
+                        self.triangulator.add_observation(ObjectDetection(
+                                                            frame_number = frame_meta.frame_num,
+                                                            detector_confidence = obj_meta.confidence,
+                                                            tracker_confidence = obj_meta.tracker_confidence,
+                                                            x_position = obj_meta.tracker_bbox_info.org_bbox_coords.left + (obj_meta.tracker_bbox_info.org_bbox_coords.width / 2),
+                                                            y_position = obj_meta.tracker_bbox_info.org_bbox_coords.top + (obj_meta.tracker_bbox_info.org_bbox_coords.height / 2),
+                                                            width = obj_meta.tracker_bbox_info.org_bbox_coords.width,
+                                                            height = obj_meta.tracker_bbox_info.org_bbox_coords.height,
+                                                            object_id = obj_meta.object_id,
+                                                            class_id = obj_meta.class_id,
+                                                            obj_label = obj_meta.obj_label,
+                                                            pose_matrix = pose_matrix,
+                                                            camera_matrix_inv = self.camera_K_inv
+                        ))
+                    if obj_meta.object_id in self.triangulator.observations:
+                        track = self.triangulator.observations[obj_meta.object_id]
+                        if track.last_world_pos is not None:
+                            x_world, y_world, z_world = track.last_world_pos
+                            obj_meta.text_params.display_text = f"{obj_meta.obj_label} {obj_meta.object_id}. Pos: [ {x_world:.01f}, {y_world:.01f}, {z_world:.01f} ]"
+                        else:
+                            obj_meta.text_params.display_text = f"{obj_meta.obj_label} {obj_meta.object_id}. Pos: N/A"
 
                 try:
                     l_obj = l_obj.next
@@ -501,18 +506,25 @@ class BuoyDetectionNode(Node):
             except StopIteration:
                 break
         
-        # self.object_detection_results_publisher.publish(msg)
-        # self.current_object_list = object_list
+        display_meta = pyds.nvds_acquire_display_meta_from_pool(batch_meta)
+        display_meta.num_labels = 1
+        py_nvosd_text_params = display_meta.text_params[0]
+        py_nvosd_text_params.display_text = f"Yolo Version: {YOLO_VER}\nCurrent Model: {self.model}\nThreshold: {self.threshold}"
+   
+        # Now set the offsets where the string should appear
+        py_nvosd_text_params.x_offset = 10
+        py_nvosd_text_params.y_offset = 12
 
-        # source1 = self.pipeline.get_by_name('usb-cam-0')
-        # if source1 is not None:
-        #     prop = "hue"
-        #     rand = random.randint(-180, 180)
-        #     source1.set_property(prop, rand)
-        #     self.get_logger().info(f"{source1.get_property(prop)}, {rand}")
-        #     pass
-        # else:
-        #     self.get_logger().error("Could not find usb-cam-1 to randomize hue")
+        # Font , font-color and font-size
+        py_nvosd_text_params.font_params.font_name = "Serif"
+        py_nvosd_text_params.font_params.font_size = 12
+        # set(red, green, blue, alpha); set to White
+        py_nvosd_text_params.font_params.font_color.set(1.0, 1.0, 1.0, 1.0)
+
+        # Text background color
+        py_nvosd_text_params.set_bg_clr = 1
+        # set(red, green, blue, alpha); set to Black
+        py_nvosd_text_params.text_bg_clr.set(0.0, 0.0, 0.0, 0.25)
         
         return Gst.PadProbeReturn.OK
 
@@ -527,18 +539,32 @@ class BuoyDetectionNode(Node):
         t_y = d_lat * R_earth
         t_x = d_lon * R_earth * np.cos(np.radians(self.origin_position["latitude"]))
         t_z = 0  # Assume sea level
+        # if (self.origin_position["latitude"] != 0 and self.origin_position["longitude"] != 0):
+        #     self.get_logger().info(f"Pose translation: {t_x} {t_y}")
         
         # 2. Calculate Rotation (R) from Heading
-        psi = np.radians(90 - heading)
+        psi = np.radians(heading)
         cos_p = np.cos(psi)
         sin_p = np.sin(psi)
+        R_yaw = np.array([
+            [ np.cos(psi), -np.sin(psi), 0],
+            [ np.sin(psi),  np.cos(psi), 0],
+            [ 0,            0,           1]
+        ])
         
         # Columns are world-space representations of Camera X, Y, and Z
-        R = np.array([
-            [ cos_p,  0,  sin_p],
-            [-sin_p,  0,  cos_p],
-            [     0, -1,      0]
+        # R = np.array([
+        #     [ cos_p,  0,  sin_p],
+        #     [-sin_p,  0,  cos_p],
+        #     [     0, -1,      0]
+        # ])
+        R_cam_to_enu = np.array([
+            [0, 0, 1],
+            [-1, 0, 0],
+            [0, -1, 0]
         ])
+
+        R = R_yaw @ R_cam_to_enu
         
         # 3. Assemble 4x4 Matrix
         pose = np.eye(4)
@@ -582,6 +608,7 @@ class BuoyDetectionNode(Node):
         # self._publish_results(working_object_list)
 
     def _publish_results(self, object_list):
+        # TODO: Publish results
         # msg = ObjectDetectionResultsList()
         # msg.detection_results = []
         # for detection in object_list.detection_results[0].values():
@@ -626,38 +653,28 @@ class BuoyDetectionNode(Node):
         self.file_lock.acquire()
         with open(PATH_TO_YOLO_CONFIG, 'r') as file:
             content = file.read()
-            self.config_file_split = content.split('\n\n')
+            config_file_split = content.split('\n\n')
         self.file_lock.release()
 
         # Read model
-        onnx_section = self.config_file_split[1]
+        onnx_section = config_file_split[1]
         onnx_lines = onnx_section.split('\n')
         for line in onnx_lines:
             if line.startswith('onnx-file='):
-                self.model = line.split('=')[-1][:-8] # remove .pt.onnx
+                model = line.split('=')[-1][13:-8] # remove .pt.onnx
                 break
         
         # Read threshold
-        attributes_lines = self.config_file_split[5].split('\n')
-        self.threshold = float(attributes_lines[1].split('=')[-1])
+        attributes_lines = config_file_split[5].split('\n')
+        threshold = float(attributes_lines[1].split('=')[-1])
+        return (config_file_split, model, threshold)
 
     def position_callback(self, msg):
-        self.heading = 270
         self.current_position["latitude"] = msg.latitude
         self.current_position["longitude"] = msg.longitude
         if self.origin_position["latitude"] == 0 and self.origin_position["longitude"] == 0:
             self.origin_position["latitude"] = msg.latitude
             self.origin_position["longitude"] = msg.longitude
-        self.get_logger().info(f"Updated position to ({msg.latitude}, {msg.longitude})")
-        time.sleep(5)
-        self.origin_position["latitude"] = 0
-        self.origin_position["longitude"] = 0
-        self.heading = 225
-        self.get_logger().warn(f"Move camera now")
-        time.sleep(5)
-        self.origin_position["latitude"] = msg.latitude
-        self.origin_position["longitude"] = msg.longitude
-        self.get_logger().info(f"Updated origin position to ({msg.latitude}, {msg.longitude})")
 
     def heading_callback(self, msg):
         self.current_heading = msg.data
@@ -670,6 +687,7 @@ class BuoyDetectionNode(Node):
             onnx_lines = self.config_file_split[1].split('\n')
             engine_lines = self.config_file_split[2].split('\n')
             labels_lines = self.config_file_split[3].split('\n')
+            # TODO: Add support for switching between yolo11 and yolo26
 
             found_model_entry = False
             for i in range(len(onnx_lines)):
