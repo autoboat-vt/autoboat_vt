@@ -6,7 +6,7 @@
 #define INPUT_4_Register 0x0074
 
 GVM::GVM(i2c_inst_t* port, uint8_t address) : I2CDevice(port,address) {
-    registers={INPUT_1_Register,INPUT_2_Register,INPUT_3_Register,INPUT_4_Register};
+
 }
 
 //first battery is cell 0 <-----

@@ -6,6 +6,7 @@
 
 // Specific device libraries
 #include "cmps14_Subclass.h"
+#include "GVM_Subclass.h"
 #include "contactor_driver_library.h"
 #include "amt22_encoder_library.h"
 #include "drv8711_stepper_motor_driver_library.h"

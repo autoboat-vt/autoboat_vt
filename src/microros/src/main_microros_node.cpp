@@ -42,7 +42,7 @@ using namespace std;
 //uint8_t address = 0x60;
 cmps14 compass(I2C_PORT, 0x60);
 
-GVMSensor GVM(I2C_PORT, INSERT_ADRESS_HERE);  //<-----------------------------------------------------------------------
+//GVM glorifiedVoltMeter(I2C_PORT, 0x08);  //<-----------------------------------------------------------------------
 
 
 
@@ -346,10 +346,11 @@ void application_loop() {
     //compass_angle_msg.data = compass.getBearing()/10;
     //compass_angle_msg.data = fmod(compass.getBearing() / 10 + COMPASS_OFFSET + 360,360.0);
     //compass_angle_msg.data = compass.getBearing() / 10.0 + COMPASS_OFFSET
-    compass_angle_msg.data = compass.getBearing() / 10.0;
-    for(int i=0;i<13;i++){
-        cell_voltage_msgs[i].data=GVM.readVoltage(i);
-    }
+    //compass_angle_msg.data = compass.getBearing() / 10.0;
+    
+    //for(int i=0;i<13;i++){
+    //    cell_voltage_msgs[i].data=glorifiedVoltMeter.readVoltage(i);
+    //}
 
     // fmod((-compass.getBearing() / 10.0 + COMPASS_OFFSET + 360), 360.0);
     // current_rudder_angle_msg.data = current_rudder_angle;
@@ -360,12 +361,12 @@ void application_loop() {
     // rcl_publish(&test_publisher, &test_msg, NULL);
     // rcl_publish(&current_rudder_motor_angle_publisher, &current_rudder_motor_angle_msg, NULL);
     // rcl_publish(&current_rudder_angle_publisher, &current_rudder_angle_msg, NULL);
-    rcl_publish(&compass_angle_publisher, &compass_angle_msg, NULL);
-
-    for(int i=0;i<13;i++){
-        rcl_publish(&cell_voltage_publishers, &cell_voltage_msgs[i], NULL);
-        
-    }
+    //rcl_publish(&compass_angle_publisher, &compass_angle_msg, NULL);
+    //
+    //for(int i=0;i<13;i++){
+    //    rcl_publish(&cell_voltage_publishers[i], &cell_voltage_msgs[i], NULL);
+    //    
+    //}
 
 
 
