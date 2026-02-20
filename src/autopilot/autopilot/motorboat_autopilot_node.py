@@ -25,7 +25,8 @@ class MotorboatAutopilotNode(Node):
     The autopilot takes in a bunch of sensor data and waypoints and attempts to traverses through
     the waypoints by continuously publishing to the propeller motor control struct and rudder angle topics.
 
-    The main function that you should pay attention to is ``update_ros_topics``, since this is the function that is called periodically on a timer.
+    The main function that you should pay attention to is ``update_ros_topics``,
+    since this is the function that is called periodically on a timer.
 
     NOTE: All units are in standard SI units and angles are generally measured in degrees unless otherwise specified.
     """
@@ -115,11 +116,13 @@ class MotorboatAutopilotNode(Node):
         Whenever this callback is called, a couple of things happen:
         1. We check whether or not we are trying to zero the rudder and if we have, then we should handle that.
 
-        2. We need to keep track of if we are entering hold heading mode, and if we are, then we need to keep track of the current heading, since that heading is the one we will need to hold.
+        2. We need to keep track of if we are entering hold heading mode, and if we are,
+        then we need to keep track of the current heading, since that heading is the one we will need to hold.
 
-        3. We set the SailboatAutopilotMode based on a specific combination of toggles to determine whether we are in full rc mode,
-        full autopilot mode, or one of the semi autonomous modes. Finally, we need to set the propeller control mode based on the toggles
-        to determine whether we are controlling the propeller based on current output, duty cycle output, or propeller RPM.
+        3. We set the SailboatAutopilotMode based on a specific combination of toggles to determine whether we are in
+        full rc mode, full autopilot mode, or one of the semi autonomous modes.
+        Finally, we need to set the propeller control mode based on the toggles to determine whether we are controlling
+        the propeller based on current output, duty cycle output, or propeller RPM.
 
         Args:
             rc_data_message (RCData): A struct that contains all of the data on what is pressed on the remote control
@@ -209,21 +212,24 @@ class MotorboatAutopilotNode(Node):
                 print("If you would like to make a new autopilot parameter, please edit default_parameters.yaml")
                 continue
 
-            self.parameters[new_parameter_name] = new_parameter_value
+            self.autopilot_parameters[new_parameter_name] = new_parameter_value
 
         # special cases to handle since they do not update automatically
         if "autopilot_refresh_rate" in new_parameters_json:
             self.destroy_timer(self.autopilot_refresh_timer)
             self.autopilot_refresh_timer = self.create_timer(
-                1 / self.parameters["autopilot_refresh_rate"], self.update_ros_topics
+                1 / self.autopilot_parameters["autopilot_refresh_rate"], self.update_ros_topics
             )
 
 
     def waypoints_list_callback(self, waypoint_list: WaypointList) -> None:
         """
-        Callback function that is called whenever there is a new waypoint list message. Converts the list of ROS2 `NavSatFix` objects to a list of `Position` objects, which are a custom datatype that has some useful helper methods.
+        Callback function that is called whenever there is a new waypoint list message.
+        Converts the list of ROS2 `NavSatFix` objects to a list of `Position` objects,
+        which are a custom datatype that has some useful helper methods.
 
-        Does not directly set the waypoints in the motorboat autopilot object, instead it calls the `update_waypoints_list` method of the motorboat autopilot object.
+        Does not directly set the waypoints in the motorboat autopilot object,
+        instead it calls the `update_waypoints_list` method of the motorboat autopilot object.
 
         Parameters
         ----------
@@ -262,7 +268,8 @@ class MotorboatAutopilotNode(Node):
 
     def get_optimal_rudder_angle(self, heading: float, desired_heading: float) -> float:
         """
-        Uses a PID controller to determine the optimal rudder angle to turn the boat from its current heading to the desired heading.
+        Uses a PID controller to determine the optimal rudder angle
+        to turn the boat from its current heading to the desired heading.
 
         Parameters
         ----------
@@ -277,17 +284,17 @@ class MotorboatAutopilotNode(Node):
             The angle we should turn the rudder in order to turn from our current heading to the desired heading.
         """
 
-        min_rudder_angle: float = self.parameters["min_rudder_angle"]
-        max_rudder_angle: float = self.parameters["max_rudder_angle"]
+        min_rudder_angle: float = self.autopilot_parameters["min_rudder_angle"]
+        max_rudder_angle: float = self.autopilot_parameters["max_rudder_angle"]
         error = get_distance_between_angles(desired_heading, heading)
 
         # ensure that the gains are updated properly and if we get a new gain from the telemetry server, it gets properly updated
         self.heading_pid_controller.set_gains(
-            Kp=self.parameters["heading_p_gain"],
-            Ki=self.parameters["heading_i_gain"],
-            Kd=self.parameters["heading_d_gain"],
-            n=self.parameters["heading_n_gain"],
-            sample_period=self.parameters["autopilot_refresh_rate"],
+            Kp=self.autopilot_parameters["heading_p_gain"],
+            Ki=self.autopilot_parameters["heading_i_gain"],
+            Kd=self.autopilot_parameters["heading_d_gain"],
+            n=self.autopilot_parameters["heading_n_gain"],
+            sample_period=self.autopilot_parameters["autopilot_refresh_rate"],
         )
 
         rudder_angle: float = np.clip(self.heading_pid_controller(error), min_rudder_angle, max_rudder_angle)
@@ -298,7 +305,7 @@ class MotorboatAutopilotNode(Node):
 
     def run_rc_control(self, joystick_left_y: float, joystick_right_x: float) -> tuple[float, float]:
         """
-        Formulas used: https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio
+        Formulas used: https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio.
 
         Parameters
         ----------
@@ -318,18 +325,18 @@ class MotorboatAutopilotNode(Node):
             The desired (sail_angle, rudder_angle) that the boat should use to sail.
         """
 
-        min_sail_angle: float = self.parameters["min_sail_angle"]
-        max_sail_angle: float = self.parameters["max_sail_angle"]
+        min_sail_angle: float = self.autopilot_parameters["min_sail_angle"]
+        max_sail_angle: float = self.autopilot_parameters["max_sail_angle"]
         sail_angle = ((joystick_left_y + 100) / 200) * (max_sail_angle - min_sail_angle) + min_sail_angle
 
-        min_rudder_angle: float = self.parameters["min_rudder_angle"]
-        max_rudder_angle: float = self.parameters["max_rudder_angle"]
+        min_rudder_angle: float = self.autopilot_parameters["min_rudder_angle"]
+        max_rudder_angle: float = self.autopilot_parameters["max_rudder_angle"]
         rudder_angle = (((joystick_right_x - -100) * (max_rudder_angle - min_rudder_angle)) / (100 - -100)) + min_rudder_angle
 
         return sail_angle, rudder_angle
 
     def step(self) -> float | None:
-        """TODO Document what this function does maybe?"""
+        """TODO Document what this function does maybe."""
 
         if self.autopilot_mode == MotorboatAutopilotMode.WAYPOINT_MISSION and self.motorboat_autopilot.waypoints != []:
             return 0.0  # this is unimplemented for now
@@ -349,7 +356,7 @@ class MotorboatAutopilotNode(Node):
     def update_ros_topics(self) -> None:
         """
         This is the main function that is called constantely by the timer.
-        Updates the propeller control struct and rudder angle topics based on the output of the autopilot controller
+        Updates the propeller control struct and rudder angle topics based on the output of the autopilot controller.
         """
 
         desired_rudder_angle = self.step()

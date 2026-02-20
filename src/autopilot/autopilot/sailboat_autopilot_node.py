@@ -23,7 +23,8 @@ class SailboatAutopilotNode(Node):
     The autopilot takes in a bunch of sensor data and waypoints and attempts to traverses through
     the waypoints by continuously publishing to the sail angle and rudder angle topics.
 
-    The main function that you should pay attention to is ``update_ros_topics``, since this is the function that is called periodically on a timer.
+    The main function that you should pay attention to is ``update_ros_topics``,
+    since this is the function that is called periodically on a timer.
 
     NOTE: All units are in standard SI units and angles are generally measured in degrees unless otherwise specified.
     """
@@ -117,8 +118,9 @@ class SailboatAutopilotNode(Node):
         This callback is called whenever there is new data about what is being pressed on the remote control.
         Whenever this callback is called, a couple of things happen: first, we check whether or not we are trying to zero
         the rudder or the winch and if we have, then we should handle that. Second, we need to keep track of if we are entering
-        hold heading mode, and if we are, then we need to keep track of the current heading, since that heading is the one we will need to hold.
-        Finally, we set the SailboatAutopilotMode based on a specific combination of toggles to determine whether we are in full rc mode,
+        hold heading mode, and if we are, then we need to keep track of the current heading,
+        since that heading is the one we will need to hold. Finally, we set the SailboatAutopilotMode
+        based on a specific combination of toggles to determine whether we are in full rc mode,
         full autopilot mode, or one of the semi autonomous modes.
 
         Args:
@@ -188,7 +190,7 @@ class SailboatAutopilotNode(Node):
     def autopilot_parameters_callback(self, new_parameters: String) -> None:
         """
         Receives a serialized json (as a string) of parameters and sets them as constants.
-        Any constant can be set as long as they are in the json
+        Any constant can be set as long as they are in the json.
         """
 
         new_parameters_json: dict[str, Any] = json.loads(new_parameters.data)
@@ -262,8 +264,8 @@ class SailboatAutopilotNode(Node):
 
     def step(self) -> tuple[float | None, float | None]:
         """
-        TODO perhaps in the future, make this function state independent
-        (aka using no self.position, self.global_velocity etc and just having them passed in as arguments)
+        TODO perhaps in the future, make this function state independent.
+        (aka using no self.position, self.global_velocity etc and just having them passed in as arguments).
 
         Computes the best sail and rudder angles for the current mode and state
 
@@ -305,7 +307,7 @@ class SailboatAutopilotNode(Node):
     def update_ros_topics(self) -> None:
         """
         This is the main function that is called constantely by the timer.
-        Updates the sail_angle and rudder_angle topics based on the output of stepping in the autopilot controller
+        Updates the sail_angle and rudder_angle topics based on the output of stepping in the autopilot controller.
         """
 
         desired_sail_angle, desired_rudder_angle = self.step()

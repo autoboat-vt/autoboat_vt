@@ -27,6 +27,7 @@ ground_station/app_data/app_state.json
 ground_station/app_data/assets/leaflet.css
 ground_station/app_data/assets/leaflet.js
 ground_station/app_data/assets/leaflet.rotatedMarker.js
+# ground_station/app_data/js_libraries_cache
 
 # src/object_detection
 src/object_detection/object_detection/runs/**
