@@ -192,7 +192,7 @@ With ros2: TODO: UPDATE
         </gz-gui>
         <play_pause>true</play_pause>
         <step>true</step>
-        <start_paused>true</start_paused>
+        <start_paused>false</start_paused>
       </plugin>
       <!-- World statistics -->
       <plugin filename="GridConfig" name="Grid config">

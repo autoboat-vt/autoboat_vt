@@ -261,7 +261,7 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         </gz-gui>
         <play_pause>true</play_pause>
         <step>true</step>
-        <start_paused>true</start_paused>
+        <start_paused>false</start_paused>
       </plugin>
       <!-- World statistics -->
       <plugin filename="WorldStats" name="World stats">

@@ -24,7 +24,7 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(gz_launch_path),
             launch_arguments={
-                'gz_args': "/home/ws/src/motorboat_sim_testing/buoyant_cylinder.sdf",  # Replace with your own world file
+                'gz_args': "-r /home/ws/src/motorboat_sim_testing/buoyant_cylinder.sdf",  # Replace with your own world file
                 'on_exit_shutdown': 'True'
             }.items(),
         ),
