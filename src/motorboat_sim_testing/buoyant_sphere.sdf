@@ -675,8 +675,8 @@ With ros2: TODO: UPDATE
         <axis>
           <xyz>-0.5534 0 1.3208</xyz>
           <limit>
-            <lower>-.4</lower>
-            <upper>.4</upper>
+            <lower>-.6</lower>
+            <upper>.6</upper>
           </limit>
           <dynamics>
             <damping>1</damping>

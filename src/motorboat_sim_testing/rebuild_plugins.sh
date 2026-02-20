@@ -1,34 +1,28 @@
-cd ./foil_dynamics
+cd ./foil_dynamics || exit
 mkdir build
-cd ./build
+cd ./build || exit
 cmake ..
 make
 cd ../..
 
-cd ./rudder_dynamics
+cd ./rudder_dynamics || exit
 mkdir build
-cd ./build
+cd ./build || exit
 cmake ..
 make
 cd ../..
 
-cd ./sail_limits
+cd ./sail_limits || exit
 mkdir build
-cd ./build
+cd ./build || exit
 cmake ..
 make
 cd ../..
 
-cd ./wind_arrow
+cd ./wind_arrow || exit
 mkdir build
-cd ./build
+cd ./build || exit
 cmake ..
 make
 cd ../..
 
-cd ./buoyancy
-mkdir build
-cd ./build
-cmake ..
-make
-cd ../..
