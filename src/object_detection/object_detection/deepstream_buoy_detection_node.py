@@ -21,11 +21,6 @@ from sensor_msgs.msg import NavSatFix, Image
 from autoboat_msgs.msg import ObjectDetectionResultsList, ObjectDetectionResult, TriangulationResultsList, TriangulationResult
 
 os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
-# os.environ['NVDS_ENABLE_COMPONENT_LATENCY_MEASUREMENT'] = '1'
-os.environ['CUDA_VER'] = "12.6"
-# os.environ['OPENCV'] = "1" # These are for int8 calibration, not needed here
-# os.environ['INT8_CALIB_IMG_PATH'] = "calibration.txt"
-# os.environ['INT8_CALIB_BATCH_SIZE'] = "4"
 # os.environ['GST_DEBUG'] = "3"
 
 if (re.search("/home/ws", os.getcwd()) is not None):
@@ -183,8 +178,8 @@ class BuoyDetectionNode(Node):
         # Focal length of the camera is 1.93 mm or 640 px.
         self.camera_focal_px = (self.CAM_LIST[0]["input_width"] * 0.5) / tan(self.camera_HFOV * 0.5 * pi / 180) # 640 px
         self.camera_K = np.array([[self.camera_focal_px, 0, self.CAM_LIST[0]["input_width"] * 0.5],
-                             [0, self.camera_focal_px, self.CAM_LIST[0]["input_height"] * 0.5],
-                             [0, 0, 1]])
+                                  [0, self.camera_focal_px, self.CAM_LIST[0]["input_height"] * 0.5],
+                                  [0, 0, 1]])
         self.camera_K_inv = np.linalg.inv(self.camera_K)
         self.triangulator = ObjectTriangulator(camera_matrix=self.camera_K, frame_size=(self.CAM_LIST[0]["input_width"], self.CAM_LIST[0]["input_height"]))
         self.triangulation_lock = threading.Lock()
@@ -199,9 +194,9 @@ class BuoyDetectionNode(Node):
         self.heading_listener = self.create_subscription(msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=sensor_qos_profile) # heading is counterclockwise of true east
         self.model_listener = self.create_subscription(msg_type=String, topic="/model", callback=self.model_callback, qos_profile=sensor_qos_profile)
         self.threshold_listener = self.create_subscription(msg_type=Float32, topic="/threshold", callback=self.threshold_callback, qos_profile=sensor_qos_profile)
+        self.buffer_window_listener = self.create_subscription(msg_type=Int32, topic="/buffer_window", callback=self.buffer_window_callback, qos_profile=sensor_qos_profile)
         self.iou_threshold_listener = self.create_subscription(msg_type=Float32, topic="/iou_threshold", callback=self.iou_threshold_callback, qos_profile=sensor_qos_profile)
         self.update_frequency_listener = self.create_subscription(msg_type=Float32, topic="/update_frequency", callback=self.update_frequency_callback, qos_profile=sensor_qos_profile)
-        self.buffer_window_listener = self.create_subscription(msg_type=Int32, topic="/buffer_window", callback=self.buffer_window_callback, qos_profile=sensor_qos_profile)
 
         self.current_position = {
             "latitude": 0,
@@ -214,7 +209,6 @@ class BuoyDetectionNode(Node):
         self.current_heading = 0 # default to true east
 
         # TODO: add subscriber for image topics
-        # TODO: add localization
 
         # DeepStream Initialization
         Gst.init(None)
@@ -460,8 +454,6 @@ class BuoyDetectionNode(Node):
                     self.get_logger().info(f"Frame: {frame_meta.frame_num}, avg FPS: {fps:.2f}")
             l_obj = frame_meta.obj_meta_list
 
-            # if (self.origin_position["latitude"] == 0 and self.origin_position["longitude"] == 0):
-            #     return Gst.PadProbeReturn.OK # Don't process frames until we have a valid position
             pose_matrix = self._get_current_pose(self.current_position["latitude"], self.current_position["longitude"], self.current_heading)
 
             # Iterate through each object in frame
@@ -559,8 +551,6 @@ class BuoyDetectionNode(Node):
         
         # 2. Calculate Rotation (R) from Heading
         psi = np.radians(heading)
-        cos_p = np.cos(psi)
-        sin_p = np.sin(psi)
         R_yaw = np.array([
             [ np.cos(psi), -np.sin(psi), 0],
             [ np.sin(psi),  np.cos(psi), 0],
@@ -602,10 +592,8 @@ class BuoyDetectionNode(Node):
             # obs_list = obs_track.detection_results
             world_pos = self.triangulator.triangulate(obj_id)
             if world_pos is not None:
-                self.get_logger().info(f"{obs_track.obj_label} {obj_id} triangulated position: {world_pos}")
                 lat = self.origin_position["latitude"] + (world_pos[1] / 6378137.0) * (180 / pi)
                 lon = self.origin_position["longitude"] + (world_pos[0] / (6378137.0 * np.cos(np.radians(self.origin_position["latitude"])))) * (180 / pi)
-                self.get_logger().info(f"Object {obj_id} triangulated GPS position: ({lat}, {lon})")
                 detections[obj_id] = {
                     "label": obs_track.obj_label,
                     "class_id": obs_track.class_id,
@@ -638,10 +626,8 @@ class BuoyDetectionNode(Node):
                 if dist < self.iou_threshold: # If detections are less than this many meters apart, keep the most recent one
                     if det1["last_updated_frame_number"] > det2["last_updated_frame_number"]:
                         ids_to_delete.append(obj_id_2)
-                        #self.get_logger().info(f"Deleted detection {obj_id_2} because it was too close to {obj_id_1} and older")
                     else:
                         ids_to_delete.append(obj_id_1)
-                        #self.get_logger().info(f"Deleted detection {obj_id_1} because it was too close to {obj_id_2} and older")
 
         for obj_id in ids_to_delete:
             del detections[obj_id]
@@ -657,10 +643,6 @@ class BuoyDetectionNode(Node):
             result.longitude = det["lon"]
             results_list.results.append(result)
         self.triangulation_results_publisher.publish(results_list)
-
-    def _probe(self, pad, info, u_data):
-        self.get_logger().info(u_data)
-        return Gst.PadProbeReturn.OK
 
     def _find_camera(self, format):
         """
@@ -755,7 +737,6 @@ class BuoyDetectionNode(Node):
         onnx_lines = lines_split[1].split('\n')
         engine_lines = lines_split[2].split('\n')
         labels_lines = lines_split[3].split('\n')
-        # TODO: Add support for switching between yolo11 and yolo26
 
         found_model_entry = False
         for i in range(len(onnx_lines)):
