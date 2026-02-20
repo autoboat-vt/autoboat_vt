@@ -1,0 +1,821 @@
+import hashlib
+import json
+from ast import literal_eval
+from copy import deepcopy
+from pathlib import Path
+from typing import Any
+from urllib.parse import urljoin
+
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import (
+    QFileDialog,
+    QFrame,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QSpacerItem,
+    QVBoxLayout,
+    QWidget,
+)
+from requests.exceptions import RequestException
+from syntax_highlighters.json import JsonHighlighter
+from utils import constants, misc
+from widgets.popup_edit import TextEditWindow
+from yaml import safe_load
+
+
+class AutopilotConfigEditor(QWidget):
+    """
+    A widget for interacting with and editing autopilot parameters.
+
+    Inherits
+    --------
+    ``QWidget``
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.main_layout = QGridLayout()
+        self.setLayout(self.main_layout)
+
+        self.widgets: list[AutopilotParamWidget] = []
+        self.config: dict[str, dict[str, Any]] = {}
+
+        # region actions button group
+        self.button_group_box = QGroupBox()
+        self.button_layout = QHBoxLayout()
+        self.button_group_box.setLayout(self.button_layout)
+
+        self.send_all_button = misc.pushbutton_maker(
+            "Send All",
+            constants.ICONS.upload,
+            self.send_all_parameters,
+            max_width=200,
+            min_height=30,
+            is_clickable=True,
+        )
+        self.pull_all_button = misc.pushbutton_maker(
+            "Pull All",
+            constants.ICONS.download,
+            self.pull_all_parameters,
+            max_width=200,
+            min_height=30,
+            is_clickable=True,
+        )
+
+        self.show_load_warning: bool = True
+        self.load_from_file_button = misc.pushbutton_maker(
+            "Load from File",
+            constants.ICONS.hard_drive,
+            self.load_parameters_from_file,
+            max_width=200,
+            min_height=30,
+            is_clickable=True,
+        )
+        self.save_to_file_button = misc.pushbutton_maker(
+            "Save to File",
+            constants.ICONS.save,
+            self.save_parameters_to_file,
+            max_width=200,
+            min_height=30,
+            is_clickable=True,
+        )
+
+        self.button_layout.addWidget(self.send_all_button)
+        self.button_layout.addWidget(self.pull_all_button)
+        self.button_layout.addWidget(self.load_from_file_button)
+        self.button_layout.addWidget(self.save_to_file_button)
+        # endregion actions button group
+        
+        try:
+            self.config = constants.REQ_SESSION.get(
+                urljoin(
+                    misc.get_route("get_default_autopilot_parameters"),
+                    str(constants.SM.read("telemetry_server_instance_id")),
+                )
+            ).json()
+            
+            constants.SM.write("current_autopilot_parameters", self.config)
+            constants.SM.write("local_autopilot_param_hash", constants.SM.read("remote_autopilot_param_hash"))
+            print("[Info] Fetched default autopilot parameters successfully.")
+
+        except RequestException as e:
+            print(f"[Error] Failed to fetch default autopilot parameters: {e}")
+            self.config = {}
+
+        self.params_container = QWidget()
+        self.params_layout = QVBoxLayout()
+        self.params_layout.setAlignment(Qt.AlignTop)
+        self.params_container.setLayout(self.params_layout)
+
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setWidget(self.params_container)
+
+        self.searchbar = QLineEdit()
+        self.searchbar.setClearButtonEnabled(True)
+        self.searchbar.setPlaceholderText("Search parameters...")
+        self.searchbar.textChanged.connect(self.filter_parameters)
+
+        # status label to show search results
+        self.status_label = QLabel()
+        self.status_label.setStyleSheet("color: #D3D3D3; font-size: 12pt;")
+        self.status_label.setAlignment(Qt.AlignCenter)
+
+        self.main_layout.addWidget(self.searchbar, 0, 0)
+        self.main_layout.addWidget(self.status_label, 1, 0)
+        self.main_layout.addWidget(self.scroll, 2, 0)
+        self.main_layout.addWidget(self.button_group_box, 3, 0)
+
+        self.add_parameters()
+        self.update_status_label()
+
+    def send_all_parameters(self) -> None:
+        """Send all parameters to the telemetry endpoint."""
+
+        print("[Info] Sending all parameters...")
+
+        try:
+            remote_hash = constants.SM.read("remote_autopilot_param_hash")
+            
+            if remote_hash == "":
+                print("[Info] Setting current parameters as default on telemetry server.")
+                response = constants.REQ_SESSION.post(
+                    urljoin(
+                        misc.get_route("set_default_autopilot_parameters"),
+                        str(constants.SM.read("telemetry_server_instance_id")),
+                    ),
+                    json=json.dumps(constants.SM.read("current_autopilot_parameters"), indent=None)
+                )
+
+                status_message = response.text.strip().replace('"', "")
+
+                if response.status_code == 200:
+                    print("[Info] Current parameters set as default successfully.")
+
+                elif status_message == "Configuration hash already exists.":
+                    hash_from_config = hashlib.sha256(
+                        json.dumps(
+                            constants.SM.read("current_autopilot_parameters"), sort_keys=True, separators=(",", ":")
+                        ).encode(encoding="utf-8")
+                    ).hexdigest()
+                    
+                    response = constants.REQ_SESSION.post(
+                        urljoin(
+                            misc.get_route("set_default_from_hash"),
+                            str(constants.SM.read("telemetry_server_instance_id")) + "/" + hash_from_config,
+                        )
+                    )
+
+                    if response.status_code == 200:
+                        print(
+                            f"[Info] Default parameters set successfully from existing config with "
+                            f"matching hash {hash_from_config}."
+                        )
+                    
+                    else:
+                        print(
+                            f"[Warning] Failed to set default parameters from existing config with "
+                            f"matching hash {hash_from_config}; status {response.status_code}: "
+                            f"{status_message}"
+                        )
+
+                else:
+                    print(f"[Warning] Failed to set defaults; status {response.status_code}: {status_message}")
+
+            elif remote_hash != constants.SM.read("local_autopilot_param_hash"):
+                print("[Info] Creating new config on telemetry server.")
+                response = constants.REQ_SESSION.post(
+                    misc.get_route("create_config"),
+                    json=json.dumps(constants.SM.read("current_autopilot_parameters"), indent=None),
+                )
+
+                status_message = response.text.strip().replace('"', "")
+
+                if response.status_code == 200:
+                    print("[Info] New config created successfully.")
+
+                elif status_message == "Configuration hash already exists.":
+                    hash_from_config = hashlib.sha256(
+                        json.dumps(
+                            constants.SM.read("current_autopilot_parameters"), sort_keys=True, separators=(",", ":")
+                        ).encode(encoding="utf-8")
+                    ).hexdigest()
+
+                    response = constants.REQ_SESSION.post(
+                        urljoin(
+                            misc.get_route("set_default_from_hash"),
+                            str(constants.SM.read("telemetry_server_instance_id")) + "/" + hash_from_config,
+                        )
+                    )
+
+                    if response.status_code == 200:
+                        print(
+                            f"[Info] Default parameters set successfully from existing config with "
+                            f"matching hash {hash_from_config}."
+                        )
+
+                    else:
+                        print(
+                            f"[Warning] Failed to set default parameters from existing config with "
+                            f"matching hash {hash_from_config}; status {response.status_code}: "
+                            f"{status_message}"
+                        )
+
+                else:
+                    print(f"[Warning] Failed to create new config; status {response.status_code}: {status_message}")
+
+            else:
+                existing_data = {}
+                for widget in self.widgets:
+                    if isinstance(widget, AutopilotParamWidget):
+                        existing_data[widget.name] = widget.current_value
+
+                response = constants.REQ_SESSION.post(
+                    urljoin(
+                        misc.get_route("set_autopilot_parameters"),
+                        str(constants.SM.read("telemetry_server_instance_id")),
+                    ),
+                    json=json.dumps(existing_data, indent=None)
+                )
+
+                if response.status_code == 200:
+                    print("[Info] All parameters sent successfully.")
+                else:
+                    print(f"[Warning] Failed to send parameters; status {response.status_code}: {response.text.strip()}")
+
+        except RequestException as e:
+            print(f"[Error] Failed to send all parameters: {e}")
+
+    def pull_all_parameters(self) -> None:
+        """Pull all parameters from the telemetry endpoint."""
+
+        rememeber_choice = False
+        response: QMessageBox.StandardButton = QMessageBox.No
+        print("[Info] Pulling all parameters...")
+
+        try:
+            remote_hash = constants.SM.read("remote_autopilot_param_hash")
+
+            if remote_hash == "":
+                print("[Warning] Default parameters are not set on the telemetry server. Aborting pull operation.")
+                return
+
+            data = constants.REQ_SESSION.get(
+                urljoin(
+                    misc.get_route("get_autopilot_parameters"),
+                    str(constants.SM.read("telemetry_server_instance_id")),
+                )
+            ).json()
+
+            if not isinstance(data, dict):
+                raise TypeError
+            
+            if not all(isinstance(key, str) for key in data):
+                raise TypeError
+
+            for widget in self.widgets:
+                if widget.name in data:
+                    widget.current_value = data[widget.name]
+                    if isinstance(widget.modify_element, QLineEdit):
+                        widget.modify_element.setText(str(widget.current_value))
+                    
+                    elif widget.value_display:
+                        widget.value_display.setText(str(widget.current_value))
+                
+                else:
+                    print(f"[Warning] {widget.name} not found in pulled data.")
+
+                    msg = f"The parameter '{widget.name}' was not found in the pulled data. Do you want to replace the existing config with the pulled data?" # noqa: E501
+                    
+                    # give user option to use pulled data to overwrite existing data
+                    if not rememeber_choice and response == QMessageBox.No:
+                        response, rememeber_choice = misc.show_message_box(
+                            title="Parameter Not Found",
+                            message=msg,
+                            icon=constants.ICONS.warning,
+                            buttons=[QMessageBox.Yes, QMessageBox.No],
+                            remember_choice_option=True
+                        )
+
+                        if response == QMessageBox.Yes:
+                            print("[Info] Replacing existing config with pulled data.")
+
+                            try:
+                                default_params = constants.REQ_SESSION.get(
+                                    urljoin(
+                                        misc.get_route("get_default_autopilot_parameters"),
+                                        str(constants.SM.read("telemetry_server_instance_id")),
+                                    )
+                                ).json()
+
+                                if not isinstance(default_params, dict):
+                                    raise TypeError
+                            
+                            except RequestException as e:
+                                print(f"[Error] Failed to fetch default autopilot parameters: {e}")
+                                return
+
+                            self.config = default_params
+                            self.add_parameters()
+                            self.update_status_label()
+                            break
+
+            print("[Info] All parameters pulled successfully.")
+
+        except RequestException as e:
+            print(f"[Error] Failed to pull all parameters: {e}")
+
+        except TypeError:
+            print(f"[Error] Unexpected data format from telemetry server: {data}. Expected a dictionary of parameters.")
+
+    def load_parameters_from_file(self) -> None:
+        """Load parameters from a file."""
+
+        if self.show_load_warning:
+            response, remember_choice = misc.show_message_box(
+                title="Load Parameters from File",
+                message="Loading parameters from a file will overwrite the current configuration. Do you want to continue?",
+                icon=constants.ICONS.warning,
+                buttons=[QMessageBox.Yes, QMessageBox.No],
+                remember_choice_option=True
+            )
+
+            if remember_choice:
+                self.show_load_warning = response == QMessageBox.Yes
+
+            if response == QMessageBox.No:
+                print("[Info] Load parameters from file operation cancelled by user.")
+                return
+        
+        else:
+            print("[Info] Loading parameters from file without warning as per user preference.")
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            caption="Load Parameters from File",
+            directory=constants.AUTOPILOT_PARAMS_DIR.as_posix(),
+            filter="JSON Files (*.json);;All Files (*)",
+        )
+        if not file_path:
+            return
+
+        try:
+            with open(file_path, mode="r", encoding="utf-8") as file:
+                file_config = json.load(file)
+
+            if not isinstance(file_config, dict):
+                raise TypeError("Configuration file must contain a dictionary of parameters.")
+
+            self.config = file_config
+            constants.SM.write("local_autopilot_param_hash", Path(file_path).stem)
+            constants.SM.write("current_autopilot_parameters", self.config)
+
+            self.add_parameters()
+            self.update_status_label()
+            print(f"[Info] Loaded parameters from {file_path}.")
+
+        except Exception as e:
+            print(f"[Error] Unable to load parameters from file: {e}")
+
+    def save_parameters_to_file(self) -> None:
+        """Save parameters to a file."""
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            caption="Load Parameters from File",
+            directory=constants.AUTOPILOT_PARAMS_DIR.as_posix(),
+            filter="JSON Files (*.json);;All Files (*)"
+        )
+        if not file_path:
+            return
+
+        try:
+            with open(file_path, mode="w", encoding="utf-8") as file:
+                json.dump(self.config, file, indent=4)
+                print(f"[Info] Saved parameters to {file_path}.")
+
+        except Exception as e:
+            print(f"[Error] Unable to save parameters to file: {e}")
+
+    def add_parameters(self) -> None:
+        """Add all parameters to the layout."""
+
+        for widget in self.widgets:
+            widget.deleteLater()
+
+        self.widgets: list[AutopilotParamWidget] = []
+
+        for key in self.config:
+            param_config = deepcopy(self.config[key])
+            param_config["name"] = key
+            try:
+                param_widget = AutopilotParamWidget(param_config)
+                self.params_layout.addWidget(param_widget)
+                self.widgets.append(param_widget)
+            
+            except Exception as e:
+                print(f"Error creating widget for parameter '{key}': {e}")
+
+        # add spacer to push content to top
+        if hasattr(self, "spacer"):
+            self.params_layout.removeItem(self.spacer)
+        self.spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.params_layout.addItem(self.spacer)
+
+    def filter_parameters(self, search_text: str = "") -> None:
+        """
+        Filter parameters based on search text.
+
+        Parameters
+        ----------
+        search_text
+            The text to filter parameters by. Defaults to an empty string, which shows all parameters.
+        """
+
+        search_text = search_text.lower().strip()
+        visible_count = 0
+
+        for widget in self.widgets:
+            name_match: bool = search_text in widget.name.lower()
+            desc_match: bool = search_text in widget.description.lower()
+
+            if search_text and not (name_match or desc_match):
+                widget.hide()
+            
+            else:
+                widget.show()
+                visible_count += 1
+
+        self.update_status_label(visible_count, search_text)
+
+    def update_status_label(self, visible_count: int | None = None, search_text: str = "") -> None:
+        """
+        Update the status label with search results.
+
+        Parameters
+        ----------
+        visible_count
+            The number of parameters currently visible after filtering.
+            If ``None``, it will be calculated from the number of current widgets.
+
+        search_text
+            The text used for filtering parameters. If empty, it indicates that all parameters are shown.
+        """
+
+        if visible_count is None:
+            visible_count = len(self.widgets)
+
+        local_hash = constants.SM.read("local_autopilot_param_hash")
+        message_part = f"Showing config: {local_hash}" if local_hash else "No config loaded"
+
+        if not search_text:
+                self.status_label.setText(
+                    f"Showing all {visible_count} parameters | {message_part}"
+                )
+        
+        elif visible_count == 0:
+            self.status_label.setText(
+                f"No parameters match '{search_text}' | {message_part}"
+            )
+        
+        else:
+            self.status_label.setText(
+                f"Showing {visible_count} parameters matching '{search_text}' | {message_part}"
+            )
+
+class AutopilotParamWidget(QFrame):
+    """
+    A widget for displaying autopilot parameters and interacting with them.
+
+    Parameters
+    ----------
+    config
+        A dictionary containing the parameter configuration. It should include:
+        - ``name``: The name of the parameter (str).
+        - ``default``: The default value for the parameter.
+        - ``description``: A description of the parameter (str).
+
+    Inherits
+    --------
+    ``QFrame``
+    """
+
+    def __init__(self, config: dict) -> None:
+        super().__init__()
+
+        # region validate parameter config
+        try:
+            self.name: str = config["name"]
+            self.default_val: Any = config["default"]
+            self.type: type = type(self.default_val)
+            self.description: str = config["description"]
+
+            assert isinstance(self.name, str), "Parameter name must be a string."
+            assert isinstance(self.description, str), "Description must be a string."
+
+        except (KeyError, AssertionError) as e:
+            raise ValueError("[Error] Invalid configuration for `AutopilotParamWidget`.") from e
+        # endregion validate parameter config
+
+        # region define layouts
+        self.current_value = deepcopy(self.default_val)
+
+        self.main_layout = QHBoxLayout(self)
+        self.main_layout.setContentsMargins(10, 10, 10, 10)
+        self.setLayout(self.main_layout)
+
+        # for button name and interface to control it
+        self.left_layout = QVBoxLayout()
+        self.left_layout.setContentsMargins(0, 0, 0, 0)
+
+        # for the send and reset buttons
+        self.right_layout = QVBoxLayout()
+        self.right_layout.setAlignment(Qt.AlignTop)
+        # endregion define layouts
+
+        # region left layout
+        self.label = QLabel(f"<b>{self.name}</b>")
+        self.label.setToolTip(self.description)
+        self.description_label = QLabel(self.description)
+        self.description_label.setWordWrap(True)
+        self.description_label.setStyleSheet("color: #D3D3D3; font-size: 12pt;")
+
+        if self.type in {list, tuple, set, dict}:
+            self.modify_element = QPushButton("Edit")
+            self.modify_element.setIcon(constants.ICONS.pencil)
+            self.modify_element.clicked.connect(self.edit_grouped_data)
+            self.value_display = QLabel(str(self.current_value))
+            self.value_display.setWordWrap(True)
+            self.value_display.setStyleSheet("font-family: monospace;")
+
+        else:
+            self.modify_element = QLineEdit(str(self.current_value))
+            self.modify_element.setMinimumWidth(200)
+            self.modify_element.editingFinished.connect(self.update_value_from_lineedit)
+
+            # no separate display for simple types
+            self.value_display = None
+
+        self.left_layout.addWidget(self.label)
+        self.left_layout.addWidget(self.description_label)
+
+        if self.value_display:
+            self.left_layout.addWidget(self.value_display)
+
+        self.left_layout.addWidget(self.modify_element)
+        # endregion left layout
+
+        # region right layout
+        self.send_button = misc.pushbutton_maker(
+            "Send",
+            constants.ICONS.upload,
+            self.send_value,
+            max_width=100,
+            min_height=30,
+            is_clickable=True,
+        )
+        self.pull_button = misc.pushbutton_maker(
+            "Pull",
+            constants.ICONS.download,
+            self.pull_value,
+            max_width=100,
+            min_height=30,
+            is_clickable=True,
+        )
+        self.reset_button = misc.pushbutton_maker(
+            "Reset",
+            constants.ICONS.refresh,
+            self.reset_value,
+            max_width=100,
+            min_height=30,
+            is_clickable=False,
+        )
+        self.right_layout.addWidget(self.send_button)
+        self.right_layout.addWidget(self.pull_button)
+        self.right_layout.addWidget(self.reset_button)
+        # endregion right layout
+
+        self.main_layout.addLayout(self.left_layout, 70)  # 70% width
+        self.main_layout.addLayout(self.right_layout, 30)  # 30% width
+
+        self.setFrameStyle(QFrame.Box | QFrame.Plain)
+        self.setLineWidth(1)
+
+    def send_value(self) -> None:
+        """Send the current value of the parameter to the telemetry endpoint."""
+
+        print(f"[Info] Sending value for {self.name}: {self.current_value}")
+        try:
+            existing_data = constants.REQ_SESSION.get(
+                urljoin(
+                    misc.get_route("get_autopilot_parameters"),
+                    str(constants.SM.read("telemetry_server_instance_id")),
+                )
+            ).json()
+
+        except RequestException as e:
+            print(f"[Error] Failed to fetch existing autopilot parameters. Cannot send {self.name}: {e}")
+            return
+
+        if isinstance(existing_data, dict):
+            if existing_data.get(self.name, None) is None:
+                print(f"[Warning] {self.name} not found in existing parameters. Adding it.")
+            
+            existing_data[self.name] = self.current_value
+
+            try:
+                constants.REQ_SESSION.post(
+                    urljoin(
+                        misc.get_route("set_autopilot_parameters"),
+                        str(constants.SM.read("telemetry_server_instance_id")),
+                    ),
+                    json=json.dumps(existing_data, indent=None)
+                )
+                print(f"[Info] Successfully sent {self.name} with value {self.current_value}.")
+
+            except RequestException as e:
+                print(f"[Error] Failed to send {self.name} with value {self.current_value}: {e}")
+                return
+
+        else:
+            print(f"[Error] Unexpected data format from telemetry server: {existing_data}. Expected a dictionary of parameters.")
+            return
+
+        self.reset_button.setEnabled(True)
+        self.send_button.setEnabled(False)
+        self.pull_button.setEnabled(False)
+
+    def pull_value(self) -> None:
+        """Pull the current value of the parameter from the telemetry endpoint."""
+
+        try:
+            data = constants.REQ_SESSION.get(
+                urljoin(
+                    misc.get_route("get_autopilot_parameters"),
+                    str(constants.SM.read("telemetry_server_instance_id")),
+                )
+            ).json()
+
+            if self.name in data:
+                self.current_value = data[self.name]
+                if isinstance(self.modify_element, QLineEdit):
+                    self.modify_element.setText(str(self.current_value))
+
+                elif self.value_display:
+                    self.value_display.setText(str(self.current_value))
+                print(f"[Info] Pulled {self.name} with value {self.current_value}.")
+
+                temp_params = constants.SM.read("current_autopilot_parameters")
+                temp_params[self.name] = {"current": self.current_value, "description": self.description}
+                constants.SM.write("current_autopilot_parameters", temp_params)
+
+            else:
+                print(f"[Warning] {self.name} not found in pulled data.")
+
+        except RequestException as e:
+            print(f"[Error] Failed to pull value for {self.name}: {e}")
+
+        self.reset_button.setEnabled(True)
+        self.send_button.setEnabled(False)
+        self.pull_button.setEnabled(False)
+
+    def reset_value(self) -> None:
+        """Reset the value of the parameter to its default value."""
+
+        self.current_value = deepcopy(self.default_val)
+        if isinstance(self.modify_element, QLineEdit):
+            self.modify_element.setText(str(self.current_value))
+
+        elif self.value_display:
+            self.value_display.setText(str(self.current_value))
+            print(f"[Info] {self.name} reset to default value: {self.current_value}.")
+
+        temp_params = constants.SM.read("current_autopilot_parameters")
+        temp_params[self.name] = {"current": self.current_value, "description": self.description}
+        constants.SM.write("current_autopilot_parameters", temp_params)
+
+        self.reset_button.setEnabled(False)
+        self.send_button.setEnabled(True)
+        self.pull_button.setEnabled(True)
+
+    def update_value_from_lineedit(self) -> None:
+        """
+        Update value from ``QLineEdit`` input.
+        
+        Raises
+        ------
+        TypeError
+            If the edited data is not of the expected type.
+        """
+
+        try:
+            text = self.modify_element.text()
+            
+            # region string handling
+            if self.type is str:
+                try:
+                    edited_data = literal_eval(text)
+
+                except (ValueError, SyntaxError):
+                    edited_data = text
+            
+            else:
+                try:
+                    edited_data = literal_eval(text)
+
+                except (ValueError, SyntaxError) as e:
+                    raise TypeError(f"Invalid literal for type {self.type.__name__}: {text}") from e
+            # endregion string handling
+            
+            if not isinstance(edited_data, self.type):
+                if self.type is bool and (
+                    isinstance(edited_data, (int, str)) and edited_data in {0, 1, "true", "false"}
+                ):
+                    edited_data = bool(edited_data)
+
+                elif self.type is float and isinstance(edited_data, int):
+                    edited_data = float(edited_data)
+
+                elif self.type is int and isinstance(edited_data, float) and edited_data.is_integer():
+                    edited_data = int(edited_data)
+
+                elif not isinstance(edited_data, self.type):
+                    raise TypeError(f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}.")
+
+            temp_params = constants.SM.read("current_autopilot_parameters")
+            temp_params[self.name] = {"current": edited_data, "default": self.default_val, "description": self.description}
+            constants.SM.write("current_autopilot_parameters", temp_params)
+
+        except TypeError:
+            print(f"[Error] Invalid value for {self.name}. Resetting to previous value.")
+            self.modify_element.setText(str(self.current_value))
+            return
+
+        except Exception as e:
+            print(f"[Error] Failed to update value for {self.name}: {e}")
+            return
+
+        self.current_value = edited_data
+        self.modify_element.setText(str(self.current_value))
+
+        self.send_button.setEnabled(True)
+        self.pull_button.setEnabled(True)
+        self.reset_button.setEnabled(True)
+
+    def edit_grouped_data(self) -> None:
+        """Open a text editor for editing a sequence of values."""
+
+        try:
+            initial_text = json.dumps(self.current_value, indent=2)
+            self.text_edit_window = TextEditWindow(highlighter=JsonHighlighter, initial_text=initial_text)
+            self.text_edit_window.setWindowTitle(f"Edit {self.name}")
+            self.text_edit_window.user_text_emitter.connect(self.edit_grouped_data_callback)
+            self.text_edit_window.show()
+
+        except Exception as e:
+            print(f"[Error] Failed to open text edit window for {self.name}: {e}")
+
+    def edit_grouped_data_callback(self, text: str) -> None:
+        """
+        Callback function for the ``edit_grouped_data`` function.
+
+        Parameters
+        ----------
+        text
+            The text entered by the user in the text editor.
+
+        Raises
+        ------
+        TypeError
+            If the edited data is not of the expected type.
+        """
+
+        try:
+            edited_data = safe_load(text)
+
+            if edited_data == self.current_value:
+                return
+
+            if not isinstance(edited_data, self.type):
+                raise TypeError(f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}.")
+
+        except TypeError:
+            print(f"[Error] Invalid value for {self.name}. Resetting to previous value.")
+            self.value_display.setText(str(self.current_value))
+            return
+
+        self.current_value = edited_data
+        self.value_display.setText(str(self.current_value))
+        print(f"[Info] {self.name} updated to {self.current_value}.")
+
+        self.send_button.setEnabled(True)
+        self.pull_button.setEnabled(True)
+        self.reset_button.setEnabled(True)

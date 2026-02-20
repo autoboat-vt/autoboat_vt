@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# The set -e option instructs bash to immediately exit if any command has a non-zero exit status.
+# The set -u option causes the bash shell to treat unset variables as an error and exit immediately.
+# The set -o pipefail option prevents errors in a pipeline from being masked.
 set -euo pipefail
 
 # -----------------------------------------------------------------------------

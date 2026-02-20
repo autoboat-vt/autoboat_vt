@@ -25,5 +25,7 @@ class AbcRender(metaclass=ABCProfilingMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def render(self, observation: Observation, draw_extra_fct: Callable[[AbcRender, np.ndarray, Observation], None] = None) -> np.ndarray:
+    def render(
+        self, observation: Observation, draw_extra_fct: Callable[[AbcRender, np.ndarray, Observation], None] = None
+    ) -> np.ndarray:
         raise NotImplementedError

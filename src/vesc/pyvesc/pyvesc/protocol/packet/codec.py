@@ -9,6 +9,7 @@ class UnpackerBase(object):
     """
     Helper methods for both stateless and stated unpacking.
     """
+
     @staticmethod
     def _unpack_header(buffer):
         """
@@ -50,13 +51,13 @@ class UnpackerBase(object):
         :param buffer: buffer object.
         :return: Index of next valid start byte. Returns -1 if no valid start bytes are found.
         """
-        if len(buffer) < 2: # too short to find next
+        if len(buffer) < 2:  # too short to find next
             return -1
-        next_short_sb = buffer[1:].find(b'\x02')
-        next_long_sb= buffer[1:].find(b'\x03')
+        next_short_sb = buffer[1:].find(b"\x02")
+        next_long_sb = buffer[1:].find(b"\x03")
         possible_index = []
-        if next_short_sb >= 0: # exclude index zero's as we know the current first packet is corrupt
-            possible_index.append(next_short_sb + 1) # +1 because we want found from second byte
+        if next_short_sb >= 0:  # exclude index zero's as we know the current first packet is corrupt
+            possible_index.append(next_short_sb + 1)  # +1 because we want found from second byte
         if next_long_sb >= 0:
             possible_index.append(next_long_sb + 1)
         if possible_index == []:
@@ -72,10 +73,10 @@ class UnpackerBase(object):
         :return: Number of bytes to consume in the buffer.
         """
         next_index = UnpackerBase._next_possible_packet_index(buffer)
-        if next_index == -1: # no valid start byte was found
-            return len(buffer) # consume entire buffer
+        if next_index == -1:  # no valid start byte was found
+            return len(buffer)  # consume entire buffer
         else:
-            return next_index # consume up to next index
+            return next_index  # consume up to next index
 
     @staticmethod
     def _packet_size(header):
@@ -101,7 +102,7 @@ class UnpackerBase(object):
         :return: byte string of the payload
         """
         footer_index = header.payload_index + header.payload_length
-        return bytes(buffer[header.payload_index:footer_index])
+        return bytes(buffer[header.payload_index : footer_index])
 
     @staticmethod
     def _validate_payload(payload, footer):
@@ -155,10 +156,10 @@ class UnpackerBase(object):
                 header = None
                 return payload, consumed
             except CorruptPacket as corrupt_packet:
-                if errors == 'ignore':
+                if errors == "ignore":
                     # find the next possible start byte in the buffer
                     return Stateless._recovery_recurse(buffer, header, errors, True)
-                elif errors == 'strict':
+                elif errors == "strict":
                     raise corrupt_packet
 
     @staticmethod
@@ -188,6 +189,7 @@ class PackerBase(object):
     """
     Packing is the same for stated and stateless. Therefore its implemented in this base class.
     """
+
     @staticmethod
     def _pack(payload):
         """
@@ -195,7 +197,7 @@ class PackerBase(object):
         :param payload: byte string of payload
         :return: byte string of packed packet
         """
-        if payload == b'':
+        if payload == b"":
             raise InvalidPayload("Empty payload")
         # get header/footer tuples
         header = Header.generate(payload)
@@ -210,8 +212,9 @@ class Stateless(UnpackerBase, PackerBase):
     """
     Statelessly pack and unpack VESC packets.
     """
+
     @staticmethod
-    def unpack(buffer, errors='ignore'):
+    def unpack(buffer, errors="ignore"):
         """
         Attempt to parse a packet from the buffer.
         :param buffer: buffer object
@@ -227,8 +230,10 @@ class Stateless(UnpackerBase, PackerBase):
         """
         return Stateless._pack(payload)
 
+
 def frame(bytestring):
     return Stateless.pack(bytestring)
 
-def unframe(buffer, errors='ignore'):
+
+def unframe(buffer, errors="ignore"):
     return Stateless.unpack(buffer, errors)
