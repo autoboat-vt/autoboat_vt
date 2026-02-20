@@ -63,7 +63,7 @@ class TelemetryStatus(Enum):
 
 
 # don't put '/' at the end of the URL
-TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk:8443"
+TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
 
 BOAT_STATUS_MAPPING: list[str] = [
     "position",

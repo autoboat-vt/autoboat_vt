@@ -136,7 +136,7 @@ REQ_SESSION.mount("http://", ADAPTER)
 REQ_SESSION.mount("https://", ADAPTER)
 
 # base url for telemetry server (the CIA is inside of my brain...)
-_telemetry_server_url: str = "https://vt-autoboat-telemetry.uk:8443"
+_telemetry_server_url: str = "https://vt-autoboat-telemetry.uk"
 
 _local_autopilot_param_hash: str = ""
 _remote_autopilot_param_hash: str = ""
