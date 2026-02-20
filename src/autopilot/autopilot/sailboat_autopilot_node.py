@@ -112,8 +112,6 @@ class SailboatAutopilotNode(Node):
         self.toggle_e: int = 0
         self.toggle_f: int = 0
 
-
-
     def rc_data_callback(self, rc_data_message: RCData) -> None:
         """
         This callback is called whenever there is new data about what is being pressed on the remote control.
@@ -187,26 +185,6 @@ class SailboatAutopilotNode(Node):
         else:
             print("WARNING: INCORRECT COMBINATION OF RC SWITCHES USED")
 
-
-    @staticmethod
-    def _unwrap_parameter_value(value: Any) -> Any:
-        """Extract the usable value from a parameter payload.
-
-        The telemetry server can send either primitive values or objects that
-        contain a value/default pair. Normalize that here so the rest of the
-        node only deals with primitives.
-        """
-
-        if isinstance(value, dict):
-            if "value" in value:
-                return value["value"]
-
-            if "default" in value:
-                return value["default"]
-
-        return value
-
-
     def autopilot_parameters_callback(self, new_parameters: String) -> None:
         """
         Receives a serialized json (as a string) of parameters and sets them as constants.
@@ -222,29 +200,15 @@ class SailboatAutopilotNode(Node):
                 self.get_logger().warn(warn_string)
                 continue
 
-            self.autopilot_parameters[new_parameter_name] = self._unwrap_parameter_value(new_parameter_value)
+            self.autopilot_parameters[new_parameter_name] = new_parameter_value["default"]
 
         # HANDLE SPECIAL CASES SINCE THEY DO NOT UPDATE AUTOMATICALLY
         if "autopilot_refresh_rate" in new_parameters_json:
-            new_refresh_rate = self._unwrap_parameter_value(self.autopilot_parameters["autopilot_refresh_rate"])
+            self.destroy_timer(self.autopilot_refresh_timer)
 
-            try:
-                refresh_rate_hz = float(new_refresh_rate)
-                if refresh_rate_hz <= 0:
-                    raise ValueError("autopilot_refresh_rate must be positive")
-
-            except Exception as exc:  # pragma: no cover - defensive logging
-                self.get_logger().error(
-                    f"Invalid autopilot_refresh_rate '{new_refresh_rate}': {exc}. Keeping previous timer."
-                )
-
-            else:
-                self.destroy_timer(self.autopilot_refresh_timer)
-                self.autopilot_refresh_timer = self.create_timer(
-                    timer_period_sec=1 / refresh_rate_hz, callback=self.update_ros_topics
-                )
-
-
+            self.autopilot_refresh_timer = self.create_timer(
+                timer_period_sec=(1 / self.autopilot_parameters["autopilot_refresh_rate"]), callback=self.update_ros_topics
+            )
 
     def waypoints_list_callback(self, waypoint_list: WaypointList) -> None:
         """
@@ -269,28 +233,22 @@ class SailboatAutopilotNode(Node):
 
         self.sailboat_autopilot.update_waypoints_list(waypoint_positions)
 
-
     def default_autopilot_parameters_acknowledgement_callback(self, default_autopilot_parameters_acknowledgement: Bool) -> None:
         self.has_default_autopilot_parameters_been_received_by_telemetry_node = default_autopilot_parameters_acknowledgement.data
 
-
     def position_callback(self, position: NavSatFix) -> None:
         self.position = Position(longitude=position.longitude, latitude=position.latitude)
-
 
     def velocity_callback(self, global_velocity: Twist) -> None:
         self.global_velocity = np.array([global_velocity.linear.x, global_velocity.linear.y])
         self.speed = np.linalg.norm(self.global_velocity)
 
-
     def heading_callback(self, heading: Float32) -> None:
         self.heading = heading.data
-
 
     def apparent_wind_vector_callback(self, apparent_wind_vector: Vector3) -> None:
         self.apparent_wind_vector = np.array([apparent_wind_vector.x, apparent_wind_vector.y])
         _, self.apparent_wind_angle = cartesian_vector_to_polar(apparent_wind_vector.x, apparent_wind_vector.y)
-
 
     def publish_default_autopilot_parameters_timer_callback(self) -> None:
         """
@@ -301,9 +259,6 @@ class SailboatAutopilotNode(Node):
 
         if not self.has_default_autopilot_parameters_been_received_by_telemetry_node:
             self.default_autopilot_parameters_publisher.publish(String(data=json.dumps(self.autopilot_parameters)))
-
-
-
 
     def step(self) -> tuple[float | None, float | None]:
         """
@@ -346,8 +301,6 @@ class SailboatAutopilotNode(Node):
             sail_angle, rudder_angle = self.sailboat_autopilot.run_rc_control(self.joystick_left_y, self.joystick_right_x)
 
         return sail_angle, rudder_angle
-
-
 
     def update_ros_topics(self) -> None:
         """
@@ -398,8 +351,6 @@ class SailboatAutopilotNode(Node):
         if self.should_zero_winch_encoder:
             self.zero_winch_encoder_publisher.publish(Bool(data=self.should_zero_winch_encoder))
             self.winch_encoder_has_been_zeroed = True
-
-
 
 
 def main() -> None:
