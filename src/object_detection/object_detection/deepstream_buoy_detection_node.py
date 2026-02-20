@@ -16,9 +16,9 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 
 # from realsense2_camera_msgs.msg import RGBD
-from std_msgs.msg import Float32, String
+from std_msgs.msg import Float32, String, Int32
 from sensor_msgs.msg import NavSatFix, Image
-from autoboat_msgs.msg import ObjectDetectionResultsList, ObjectDetectionResult
+from autoboat_msgs.msg import ObjectDetectionResultsList, ObjectDetectionResult, TriangulationResultsList, TriangulationResult
 
 os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
 # os.environ['NVDS_ENABLE_COMPONENT_LATENCY_MEASUREMENT'] = '1'
@@ -50,7 +50,10 @@ YOLO_VER = 26
 if "YOLO_VER" in os.environ and os.environ["YOLO_VER"] in ["11", "26"]:
     YOLO_VER = int(os.environ["YOLO_VER"])
 
-PATH_TO_YOLO_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo{YOLO_VER}.txt"
+YOLO_CONFIG = {
+    11: f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo11.txt",
+    26: f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo26.txt"
+}
 INFERENCE = True
 if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":
     INFERENCE = False
@@ -97,9 +100,9 @@ class ObjectTrack:
         self.obj_label = obj_label
         self.last_world_pos = None
     
-    def add_detection(self, detection: ObjectDetection):
+    def add_detection(self, detection: ObjectDetection, buffer_window):
         self.detection_results.append(detection)
-        if len(self.detection_results) > 300:
+        while len(self.detection_results) > buffer_window:
             self.detection_results.pop(0)
 
 
@@ -109,6 +112,7 @@ class ObjectTriangulator:
         self.K_inv = np.linalg.inv(camera_matrix)
         self.observations = {}
         self.frame_size = frame_size
+        self.buffer_window = 300
         """
         {obj_id: ObjectTrack}
         """
@@ -119,7 +123,7 @@ class ObjectTriangulator:
             return
         if obj_id not in self.observations:
             self.observations[obj_id] = ObjectTrack(object_id=detection.object_id, class_id=detection.class_id, obj_label=detection.obj_label)
-        self.observations[obj_id].add_detection(detection)
+        self.observations[obj_id].add_detection(detection, self.buffer_window)
     
     def triangulate(self, obj_id):
         track = self.observations[obj_id]
@@ -174,24 +178,30 @@ class BuoyDetectionNode(Node):
         }
 
         self.camera_baseline = 59 # Distance between cameras in mm
-        camera_HFOV = 90 # Horizontal Field of View in degrees (from datasheet)
+        self.camera_HFOV = 90 # Horizontal Field of View in degrees (from datasheet)
         
         # Focal length of the camera is 1.93 mm or 640 px.
-        self.camera_focal_px = (self.CAM_LIST[0]["input_width"] * 0.5) / tan(camera_HFOV * 0.5 * pi / 180) # 640 px
+        self.camera_focal_px = (self.CAM_LIST[0]["input_width"] * 0.5) / tan(self.camera_HFOV * 0.5 * pi / 180) # 640 px
         self.camera_K = np.array([[self.camera_focal_px, 0, self.CAM_LIST[0]["input_width"] * 0.5],
                              [0, self.camera_focal_px, self.CAM_LIST[0]["input_height"] * 0.5],
                              [0, 0, 1]])
         self.camera_K_inv = np.linalg.inv(self.camera_K)
         self.triangulator = ObjectTriangulator(camera_matrix=self.camera_K, frame_size=(self.CAM_LIST[0]["input_width"], self.CAM_LIST[0]["input_height"]))
         self.triangulation_lock = threading.Lock()
+        self.iou_threshold = 10.0 # If two detections are less than this distance apart, they are considered the same object and the older one is deleted. This is to prevent duplicate detections from multiple cameras or noisy detections.
+        self.update_frequency = 0.5 # seconds. How often to publish detection results. We can only publish the most recent detection for each object, so we don't need to publish every frame.
 
         # ROS2 Initialization
         sensor_qos_profile = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST, depth=1)
         self.object_detection_results_publisher = self.create_publisher(msg_type=ObjectDetectionResultsList, topic="/object_detection_results_list", qos_profile=sensor_qos_profile)
+        self.triangulation_results_publisher = self.create_publisher(msg_type=TriangulationResultsList, topic="/triangulation_results_list", qos_profile=sensor_qos_profile)
         self.position_listener = self.create_subscription(msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=sensor_qos_profile)
         self.heading_listener = self.create_subscription(msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=sensor_qos_profile) # heading is counterclockwise of true east
         self.model_listener = self.create_subscription(msg_type=String, topic="/model", callback=self.model_callback, qos_profile=sensor_qos_profile)
         self.threshold_listener = self.create_subscription(msg_type=Float32, topic="/threshold", callback=self.threshold_callback, qos_profile=sensor_qos_profile)
+        self.iou_threshold_listener = self.create_subscription(msg_type=Float32, topic="/iou_threshold", callback=self.iou_threshold_callback, qos_profile=sensor_qos_profile)
+        self.update_frequency_listener = self.create_subscription(msg_type=Float32, topic="/update_frequency", callback=self.update_frequency_callback, qos_profile=sensor_qos_profile)
+        self.buffer_window_listener = self.create_subscription(msg_type=Int32, topic="/buffer_window", callback=self.buffer_window_callback, qos_profile=sensor_qos_profile)
 
         self.current_position = {
             "latitude": 0,
@@ -218,15 +228,15 @@ class BuoyDetectionNode(Node):
         self.last_time = time.time()
         self.file_lock = threading.Lock()
         self.last_published_frame_number = -1
-        self.config_file_split, self.model, self.threshold = self._read_file()
+        with self.file_lock:
+            self.config_file_split, self.model, self.threshold = self._read_file()
 
         self._init_pipeline()
-        self._read_file()
         vs = threading.Thread(target=self.run, daemon=True)
         vs.start()
 
         if INFERENCE:
-            self.timer = self.create_timer(timer_period_sec=1, callback=self._iterate_results)
+            self.timer = self.create_timer(timer_period_sec=self.update_frequency, callback=self._iterate_results)
 
     def _init_pipeline(self):
         self.pipeline = Gst.Pipeline()
@@ -271,7 +281,7 @@ class BuoyDetectionNode(Node):
 
         if INFERENCE:
             pgie = Gst.ElementFactory.make('nvinfer', 'pgie')
-            pgie.set_property('config-file-path', PATH_TO_YOLO_CONFIG)
+            pgie.set_property('config-file-path', YOLO_CONFIG[YOLO_VER])
             self.get_logger().info(f"Running Inference with Yolo{YOLO_VER}")
 
             tracker = Gst.ElementFactory.make('nvtracker', 'tracker')
@@ -465,12 +475,15 @@ class BuoyDetectionNode(Node):
                 obj_results = ObjectDetectionResult()
                 obj_results.detector_confidence = obj_meta.confidence
                 obj_results.tracker_confidence = obj_meta.tracker_confidence
-                obj_results.x_position = obj_meta.tracker_bbox_info.org_bbox_coords.left + (obj_meta.tracker_bbox_info.org_bbox_coords.width / 2)
-                obj_results.y_position = obj_meta.tracker_bbox_info.org_bbox_coords.top + (obj_meta.tracker_bbox_info.org_bbox_coords.height / 2)
+                mid_x = obj_meta.tracker_bbox_info.org_bbox_coords.left + (obj_meta.tracker_bbox_info.org_bbox_coords.width / 2)
+                mid_y = obj_meta.tracker_bbox_info.org_bbox_coords.top + (obj_meta.tracker_bbox_info.org_bbox_coords.height / 2)
+                obj_results.x_position = mid_x
+                obj_results.y_position = mid_y
                 obj_results.width = obj_meta.tracker_bbox_info.org_bbox_coords.width
                 obj_results.height = obj_meta.tracker_bbox_info.org_bbox_coords.height
                 obj_results.object_id = obj_meta.object_id
                 obj_results.class_id = obj_meta.class_id
+                obj_results.angle_to_object = np.arctan((mid_x - self.CAM_LIST[0]["input_width"] * 0.5) / self.camera_focal_px) * 180 / pi
                 msg.detection_results.append(obj_results)
                 with self.triangulation_lock:
                     if (self.origin_position["latitude"] != 0 and self.origin_position["longitude"] != 0):
@@ -478,8 +491,8 @@ class BuoyDetectionNode(Node):
                                                             frame_number = frame_meta.frame_num,
                                                             detector_confidence = obj_meta.confidence,
                                                             tracker_confidence = obj_meta.tracker_confidence,
-                                                            x_position = obj_meta.tracker_bbox_info.org_bbox_coords.left + (obj_meta.tracker_bbox_info.org_bbox_coords.width / 2),
-                                                            y_position = obj_meta.tracker_bbox_info.org_bbox_coords.top + (obj_meta.tracker_bbox_info.org_bbox_coords.height / 2),
+                                                            x_position = mid_x,
+                                                            y_position = mid_y,
                                                             width = obj_meta.tracker_bbox_info.org_bbox_coords.width,
                                                             height = obj_meta.tracker_bbox_info.org_bbox_coords.height,
                                                             object_id = obj_meta.object_id,
@@ -511,7 +524,7 @@ class BuoyDetectionNode(Node):
         py_nvosd_text_params = display_meta.text_params[0]
         py_nvosd_text_params.display_text = f"Yolo Version: {YOLO_VER}\nCurrent Model: {self.model}\nThreshold: {self.threshold}"
    
-        # Now set the offsets where the string should appear
+        # Set the offsets where the string should appear
         py_nvosd_text_params.x_offset = 10
         py_nvosd_text_params.y_offset = 12
 
@@ -525,6 +538,8 @@ class BuoyDetectionNode(Node):
         py_nvosd_text_params.set_bg_clr = 1
         # set(red, green, blue, alpha); set to Black
         py_nvosd_text_params.text_bg_clr.set(0.0, 0.0, 0.0, 0.25)
+
+        self.object_detection_results_publisher.publish(msg)
         
         return Gst.PadProbeReturn.OK
 
@@ -581,17 +596,7 @@ class BuoyDetectionNode(Node):
                 obj_id: track 
                 for obj_id, track in self.triangulator.observations.items()
             }
-        # Pull current data to local variable so it doesn't change mid-function
-        # working_position = self.current_position
-        # working_heading = self.current_heading
-        # working_object_list = self.current_object_list
-        # main_cam_list = working_object_list.detection_results[0]
-        # left_cam_list = working_object_list.detection_results[1]
-        # for main_detection in main_cam_list.values():
-        #     for left_detection in left_cam_list.values():
-        #         depth = self.camera_focal_px * self.camera_baseline / abs(left_detection.x_position - main_detection.x_position) / 25.4 / 12
-        #         self.get_logger().info(f"Frame {working_object_list.frame_number:06}: Depth: {depth:.02} ft. Objects: {left_detection.object_id} and {main_detection.object_id}")
-        
+
         detections = {}
         for obj_id, obs_track in observations_snapshot.items():
             # obs_list = obs_track.detection_results
@@ -601,30 +606,57 @@ class BuoyDetectionNode(Node):
                 lat = self.origin_position["latitude"] + (world_pos[1] / 6378137.0) * (180 / pi)
                 lon = self.origin_position["longitude"] + (world_pos[0] / (6378137.0 * np.cos(np.radians(self.origin_position["latitude"])))) * (180 / pi)
                 self.get_logger().info(f"Object {obj_id} triangulated GPS position: ({lat}, {lon})")
-                detections[obj_id] = (lat, lon)
+                detections[obj_id] = {
+                    "label": obs_track.obj_label,
+                    "class_id": obs_track.class_id,
+                    "world_pos": world_pos,
+                    "lat": lat,
+                    "lon": lon,
+                    "last_updated_frame_number": obs_track.last_updated_frame_number
+                }
             else:
                 self.get_logger().info(f"Object {obj_id} does not have enough observations to triangulate")
+        
+        self._filter_results(detections)
+        self._publish_results(detections)
 
-        # self._publish_results(working_object_list)
+    def _filter_results(self, detections):
+        """
+        Define some nms/iou filtering.
+        If 2 objects are very close together, we can assume they are the same object and only publish one of them.
+        If overlapping detections have a recent detection and one with an old detection, we can delete the old detection and keep the new one.
 
-    def _publish_results(self, object_list):
-        # TODO: Publish results
-        # msg = ObjectDetectionResultsList()
-        # msg.detection_results = []
-        # for detection in object_list.detection_results[0].values():
-        #     obj_results = ObjectDetectionResult()
-        #     obj_results.detector_confidence = detection.detector_confidence
-        #     obj_results.tracker_confidence = detection.tracker_confidence
-        #     obj_results.x_position = detection.x_position
-        #     obj_results.y_position = detection.y_position
-        #     obj_results.width = detection.width
-        #     obj_results.height = detection.height
-        #     obj_results.object_id = detection.object_id
-        #     obj_results.class_id = detection.class_id
-        #     msg.detection_results.append(obj_results)
-        # self.object_detection_results_publisher.publish(msg)
-        # self.last_published_frame_number = object_list.frame_number
-        pass
+        If the distance between 2 detections is less than 1 meter, we can assume they are the same object and only publish the most recent one.
+        If an overlapping detection is old enough, just delete the track
+        """
+        ids_to_delete = []
+        for obj_id_1, det1 in detections.items():
+            for obj_id_2, det2 in detections.items():
+                if obj_id_1 >= obj_id_2 or det1["class_id"] != det2["class_id"]: # Don't compare the same pair twice or with different classes
+                    continue
+                dist = np.linalg.norm(det1["world_pos"] - det2["world_pos"])
+                if dist < self.iou_threshold: # If detections are less than this many meters apart, keep the most recent one
+                    if det1["last_updated_frame_number"] > det2["last_updated_frame_number"]:
+                        ids_to_delete.append(obj_id_2)
+                        #self.get_logger().info(f"Deleted detection {obj_id_2} because it was too close to {obj_id_1} and older")
+                    else:
+                        ids_to_delete.append(obj_id_1)
+                        #self.get_logger().info(f"Deleted detection {obj_id_1} because it was too close to {obj_id_2} and older")
+
+        for obj_id in ids_to_delete:
+            del detections[obj_id]
+
+    def _publish_results(self, detections):
+        results_list = TriangulationResultsList()
+        for obj_id, det in detections.items():
+            result = TriangulationResult()
+            result.object_id = obj_id
+            result.label = det["label"]
+            result.class_id = det["class_id"]
+            result.latitude = det["lat"]
+            result.longitude = det["lon"]
+            results_list.results.append(result)
+        self.triangulation_results_publisher.publish(results_list)
 
     def _probe(self, pad, info, u_data):
         self.get_logger().info(u_data)
@@ -648,13 +680,12 @@ class BuoyDetectionNode(Node):
         self.get_logger().error(f"Could not find RealSense camera device with {format} format")
         sys.exit(1)
 
-    def _read_file(self):
+    def _read_file(self, file_name=YOLO_CONFIG[YOLO_VER]):
         # Open file
-        self.file_lock.acquire()
-        with open(PATH_TO_YOLO_CONFIG, 'r') as file:
+        # Don't need the file lock becuase the caller has it.
+        with open(file_name, 'r') as file:
             content = file.read()
             config_file_split = content.split('\n\n')
-        self.file_lock.release()
 
         # Read model
         onnx_section = config_file_split[1]
@@ -680,40 +711,32 @@ class BuoyDetectionNode(Node):
         self.current_heading = msg.data
     
     def model_callback(self, msg):
+        global YOLO_VER
         # TODO: check if config file was modified externally and reload if so
         self.file_lock.acquire() # Don't want multiple threads writing to the file at once
         new_model = msg.data
         if new_model != self.model and INFERENCE:
-            onnx_lines = self.config_file_split[1].split('\n')
-            engine_lines = self.config_file_split[2].split('\n')
-            labels_lines = self.config_file_split[3].split('\n')
-            # TODO: Add support for switching between yolo11 and yolo26
-
-            found_model_entry = False
-            for i in range(len(onnx_lines)):
-                if onnx_lines[i].startswith('onnx-file='):
-                    onnx_lines[i] = "#" + onnx_lines[i]
-                if onnx_lines[i] == f"#onnx-file=./onnx_files/{new_model}.pt.onnx":
-                    onnx_lines[i] = onnx_lines[i][1:] # uncomment line so the model can be used
-                    found_model_entry = True
-            
-            for i in range(len(engine_lines)):
-                if engine_lines[i].startswith('model-engine-file='):
-                    engine_lines[i] = "#" + engine_lines[i]
-                if engine_lines[i] == f"#model-engine-file=./engine_files/{new_model}_model_b1_gpu0_fp16.engine":
-                    engine_lines[i] = engine_lines[i][1:] # uncomment line so the model can be used
-
-            for i in range(len(labels_lines)):
-                if labels_lines[i].startswith('labelfile-path='):
-                    labels_lines[i] = "#" + labels_lines[i]
-                if labels_lines[i] == f"#labelfile-path=./label_files/{new_model}_labels.txt":
-                    labels_lines[i] = labels_lines[i][1:] # uncomment line so the model can be used
+            onnx_lines, engine_lines, labels_lines, found_model_entry = self._modify_config_lines(self.config_file_split, new_model)
             
             # Should we add the new model if not found?
+            self.get_logger().info(f"Model entry found in current config: {found_model_entry}")
             if not found_model_entry:
-                self.get_logger().info(f"Model {new_model}.pt.onnx not found, not updating model")
-                self.file_lock.release()
-                return
+                if YOLO_VER == 11:
+                    split_lines = self._read_file(YOLO_CONFIG[26])[0]
+                else:
+                    split_lines = self._read_file(YOLO_CONFIG[11])[0]
+                onnx_lines, engine_lines, labels_lines, found_model_entry = self._modify_config_lines(split_lines, new_model)
+                if found_model_entry:
+                    YOLO_VER = 26 if YOLO_VER == 11 else 11
+                    attributes_lines = split_lines[5].split('\n')
+                    attributes_lines[1] = f"pre-cluster-threshold={self.threshold}"
+                    split_lines[5] = "\n".join(attributes_lines)
+                    self.config_file_split = split_lines
+                    self.get_logger().info(f"Model entry found in alternate config, switching to Yolo{YOLO_VER}")
+                else:
+                    self.get_logger().info(f"Model {new_model}.pt.onnx not found, not updating model")
+                    self.file_lock.release()
+                    return
             
             onnx_content = "\n".join(onnx_lines)
             engine_content = "\n".join(engine_lines)
@@ -722,18 +745,46 @@ class BuoyDetectionNode(Node):
             self.config_file_split[2] = engine_content
             self.config_file_split[3] = labels_content
             self.model = new_model
-            self.update_config_file()
+            self.update_config_file(YOLO_CONFIG[YOLO_VER])
             self.get_logger().info(f"Updated model to {new_model}")
         else:
             self.get_logger().info(f"Model is already {new_model}, not updating")
         self.file_lock.release()
-    
+
+    def _modify_config_lines(self, lines_split, new_model):
+        onnx_lines = lines_split[1].split('\n')
+        engine_lines = lines_split[2].split('\n')
+        labels_lines = lines_split[3].split('\n')
+        # TODO: Add support for switching between yolo11 and yolo26
+
+        found_model_entry = False
+        for i in range(len(onnx_lines)):
+            if onnx_lines[i].startswith('onnx-file='):
+                onnx_lines[i] = "#" + onnx_lines[i]
+            if onnx_lines[i] == f"#onnx-file=./onnx_files/{new_model}.pt.onnx":
+                onnx_lines[i] = onnx_lines[i][1:] # uncomment line so the model can be used
+                found_model_entry = True
+        
+        for i in range(len(engine_lines)):
+            if engine_lines[i].startswith('model-engine-file='):
+                engine_lines[i] = "#" + engine_lines[i]
+            if engine_lines[i] == f"#model-engine-file=./engine_files/{new_model}_model_b1_gpu0_fp16.engine":
+                engine_lines[i] = engine_lines[i][1:] # uncomment line so the model can be used
+
+        for i in range(len(labels_lines)):
+            if labels_lines[i].startswith('labelfile-path='):
+                labels_lines[i] = "#" + labels_lines[i]
+            if labels_lines[i] == f"#labelfile-path=./label_files/{new_model}_labels.txt":
+                labels_lines[i] = labels_lines[i][1:] # uncomment line so the model can be used
+        
+        return (onnx_lines, engine_lines, labels_lines, found_model_entry)
+
     def threshold_callback(self, msg):
         self.file_lock.acquire() # Don't want multiple threads writing to the file at once
         new_threshold = float(msg.data)
         if new_threshold != self.threshold:
             if new_threshold >= 0.0 and new_threshold <= 1.0:
-                attributes_lines = self.config_file_split[4].split('\n')
+                attributes_lines = self.config_file_split[5].split('\n')
                 attributes_lines[1] = f"pre-cluster-threshold={new_threshold}"
                 self.config_file_split[4] = "\n".join(attributes_lines)
                 self.threshold = new_threshold
@@ -745,12 +796,41 @@ class BuoyDetectionNode(Node):
             self.get_logger().info(f"Threshold is already {new_threshold}, not updating")
         self.file_lock.release()
     
-    def update_config_file(self):
+    def iou_threshold_callback(self, msg):
+        new_iou_threshold = float(msg.data)
+        if new_iou_threshold != self.iou_threshold:
+            self.iou_threshold = new_iou_threshold
+            self.get_logger().info(f"Updated iou threshold to {new_iou_threshold}")
+        else:
+            self.get_logger().info(f"IoU threshold is already {new_iou_threshold}, not updating")
+
+    def update_frequency_callback(self, msg):
+        new_update_frequency = float(msg.data)
+        if hasattr(self, 'timer'):
+            if new_update_frequency != self.update_frequency:
+                self.update_frequency = new_update_frequency
+                self.timer.cancel()
+                self.timer = self.create_timer(timer_period_sec=self.update_frequency, callback=self._iterate_results)
+                self.get_logger().info(f"Updated update frequency to {new_update_frequency}")
+            else:
+                self.get_logger().info(f"Update frequency is already {new_update_frequency}, not updating")
+        else:
+            self.get_logger().info("Inference is disabled, not updating update frequency")
+    
+    def buffer_window_callback(self, msg):
+        new_buffer_window = int(msg.data)
+        if new_buffer_window != self.triangulator.buffer_window:
+            self.triangulator.buffer_window = new_buffer_window
+            self.get_logger().info(f"Updated buffer window to {new_buffer_window}")
+        else:
+            self.get_logger().info(f"Buffer window is already {new_buffer_window}, not updating")
+
+    def update_config_file(self, file_name=YOLO_CONFIG[YOLO_VER]):
         # This doesn't need the file_lock because the caller already has it
-        with open(PATH_TO_YOLO_CONFIG, 'w') as file:
+        with open(file_name, 'w') as file:
             file.write("\n\n".join(self.config_file_split))
         if INFERENCE: # Should this check be here? Is it necessary?
-            self.pipeline.get_by_name('pgie').set_property('config-file-path', PATH_TO_YOLO_CONFIG)
+            self.pipeline.get_by_name('pgie').set_property('config-file-path', file_name)
             self.get_logger().info("Reloaded config file in nvinfer")
         else:
             self.get_logger().info("Not reloading config file in nvinfer since INFERENCE is disabled")

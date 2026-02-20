@@ -16,5 +16,5 @@ float32 height
 int32 object_id
 int32 class_id
 
-float64 latitude
-float64 longitude
+float32 angle_to_object
+# The angle to the object in degrees. 0 degrees is straight ahead. Positive angles are to the right, negative angles are to the left.
