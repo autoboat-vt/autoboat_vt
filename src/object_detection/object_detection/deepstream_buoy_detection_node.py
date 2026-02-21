@@ -183,7 +183,7 @@ class BuoyDetectionNode(Node):
         self.camera_K_inv = np.linalg.inv(self.camera_K)
         self.triangulator = ObjectTriangulator(camera_matrix=self.camera_K, frame_size=(self.CAM_LIST[0]["input_width"], self.CAM_LIST[0]["input_height"]))
         self.triangulation_lock = threading.Lock()
-        self.iou_threshold = 10.0 # If two detections are less than this distance apart, they are considered the same object and the older one is deleted. This is to prevent duplicate detections from multiple cameras or noisy detections.
+        self.iou_threshold = 10.0 # If two detections are less than this distance apart, they are considered the same object and the older one is deleted. This is to prevent duplicate detections in triangulation.
         self.update_frequency = 0.5 # seconds. How often to publish detection results. We can only publish the most recent detection for each object, so we don't need to publish every frame.
 
         # ROS2 Initialization
@@ -423,7 +423,6 @@ class BuoyDetectionNode(Node):
 
         msg = ObjectDetectionResultsList()
         msg.detection_results = []
-        # object_list = ObjectTracker()
 
         # Retrieve batch metadata from the gst_buffer
         # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
@@ -445,8 +444,6 @@ class BuoyDetectionNode(Node):
             msg.ntp_timestamp = frame_meta.ntp_timestamp
 
             if (frame_meta.source_id == 0):
-                # object_list.update_frame_number(frame_meta.frame_num)
-                # object_list.update_timestamp(frame_meta.ntp_timestamp)
                 if (frame_meta.frame_num % 60 == 0):
                     current_time = time.time()
                     fps = 60 / (current_time - self.last_time)
@@ -497,9 +494,11 @@ class BuoyDetectionNode(Node):
                         track = self.triangulator.observations[obj_meta.object_id]
                         if track.last_world_pos is not None:
                             x_world, y_world, z_world = track.last_world_pos
-                            obj_meta.text_params.display_text = f"{obj_meta.obj_label} {obj_meta.object_id}. Pos: [ {x_world:.01f}, {y_world:.01f}, {z_world:.01f} ]"
+                            obj_meta.text_params.display_text = f"{obj_meta.obj_label} {obj_meta.object_id} {obj_meta.confidence:.2f}. Pos: [ {x_world:.01f}, {y_world:.01f}, {z_world:.01f} ]"
                         else:
-                            obj_meta.text_params.display_text = f"{obj_meta.obj_label} {obj_meta.object_id}. Pos: N/A"
+                            obj_meta.text_params.display_text = f"{obj_meta.obj_label} {obj_meta.object_id} {obj_meta.confidence:.2f}. Pos: N/A"
+                    else:
+                        obj_meta.text_params.display_text = f"{obj_meta.obj_label} {obj_meta.object_id} {obj_meta.confidence:.2f}."
 
                 try:
                     l_obj = l_obj.next
@@ -522,7 +521,7 @@ class BuoyDetectionNode(Node):
 
         # Font , font-color and font-size
         py_nvosd_text_params.font_params.font_name = "Serif"
-        py_nvosd_text_params.font_params.font_size = 12
+        py_nvosd_text_params.font_params.font_size = 10
         # set(red, green, blue, alpha); set to White
         py_nvosd_text_params.font_params.font_color.set(1.0, 1.0, 1.0, 1.0)
 
@@ -737,6 +736,8 @@ class BuoyDetectionNode(Node):
         onnx_lines = lines_split[1].split('\n')
         engine_lines = lines_split[2].split('\n')
         labels_lines = lines_split[3].split('\n')
+        properties = lines_split[4].split('\n')
+        batch_size = int(properties[1].split('=')[-1].split(' ')[0])
 
         found_model_entry = False
         for i in range(len(onnx_lines)):
@@ -749,7 +750,7 @@ class BuoyDetectionNode(Node):
         for i in range(len(engine_lines)):
             if engine_lines[i].startswith('model-engine-file='):
                 engine_lines[i] = "#" + engine_lines[i]
-            if engine_lines[i] == f"#model-engine-file=./engine_files/{new_model}_model_b1_gpu0_fp16.engine":
+            if engine_lines[i] == f"#model-engine-file=./engine_files/{new_model}_model_b{batch_size}_gpu0_fp16.engine":
                 engine_lines[i] = engine_lines[i][1:] # uncomment line so the model can be used
 
         for i in range(len(labels_lines)):
