@@ -38,8 +38,22 @@ INPUT_WIDTH = 640
 INPUT_HEIGHT = 640
 FRAMERATE = "30/1"
 
-BATCH_SIZE = 1
-FP_VER = 16
+with open(PATH_TO_YOLO_CONFIG, 'r') as file:
+    content = file.read()
+    split_content = content.split('\n\n')
+    properties = split_content[4]
+    BATCH_SIZE = int(properties[1].split('=')[-1].split(' ')[0])
+    network_mode = int(properties[2].split('=')[-1].split(' ')[0])
+    match network_mode:
+        case 0:
+            QUANTIZE = "fp32"
+        case 1:
+            QUANTIZE = "int8"
+        case 2:
+            QUANTIZE = "fp16"
+        case _:
+            print(f"Unknown network mode {network_mode}, defaulting to fp16")
+            QUANTIZE = "fp16"
 
 class EngineGenerator:
     def __init__(self):
@@ -258,7 +272,7 @@ def main():
     if engine_file:
         target_engine_path = os.path.join(config_dir, engine_file)
         # Default engine filename that DeepStream creates
-        default_engine_file = f"model_b{BATCH_SIZE}_gpu0_fp{FP_VER}.engine"
+        default_engine_file = f"model_b{BATCH_SIZE}_gpu0_{QUANTIZE}.engine"
         default_engine_path = os.path.join(config_dir, default_engine_file)
         
         if os.path.exists(target_engine_path):

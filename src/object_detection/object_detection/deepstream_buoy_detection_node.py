@@ -10,10 +10,12 @@ import subprocess
 import re
 from math import tan, pi
 import numpy as np
+from jsonc_parser.parser import JsoncParser
+import json
 
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+from rclpy.qos import qos_profile_sensor_data
 
 # from realsense2_camera_msgs.msg import RGBD
 from std_msgs.msg import Float32, String, Int32
@@ -49,6 +51,7 @@ YOLO_CONFIG = {
     11: f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo11.txt",
     26: f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo26.txt"
 }
+PATH_TO_PARAMETERS_FILE = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/cv_default_parameters.jsonc"
 INFERENCE = True
 if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":
     INFERENCE = False
@@ -102,15 +105,12 @@ class ObjectTrack:
 
 
 class ObjectTriangulator:
-    def __init__(self, camera_matrix, frame_size):
+    def __init__(self, camera_matrix, frame_size, buffer_window_size):
         self.K = camera_matrix
         self.K_inv = np.linalg.inv(camera_matrix)
-        self.observations = {}
+        self.observations = {} # {obj_id: ObjectTrack}
         self.frame_size = frame_size
-        self.buffer_window = 300
-        """
-        {obj_id: ObjectTrack}
-        """
+        self.buffer_window = buffer_window_size
 
     def add_observation(self, detection: ObjectDetection):
         obj_id = detection.object_id
@@ -171,6 +171,14 @@ class BuoyDetectionNode(Node):
                 "input_height": 800
             }
         }
+        self.parameters = {
+            "buffer_window_size": None,
+            "iou_threshold": None, # If two detections are less than this distance apart, they are considered the same object and the older one is deleted. This is to prevent duplicate detections in triangulation.
+            "update_rate": None, # How often to publish detection results in seconds. We can only publish the most recent detection for each object, so we don't need to publish every frame.
+            "model_name": None,
+            "threshold": None
+        }
+        self._read_default_parameters()
 
         self.camera_baseline = 59 # Distance between cameras in mm
         self.camera_HFOV = 90 # Horizontal Field of View in degrees (from datasheet)
@@ -181,22 +189,30 @@ class BuoyDetectionNode(Node):
                                   [0, self.camera_focal_px, self.CAM_LIST[0]["input_height"] * 0.5],
                                   [0, 0, 1]])
         self.camera_K_inv = np.linalg.inv(self.camera_K)
-        self.triangulator = ObjectTriangulator(camera_matrix=self.camera_K, frame_size=(self.CAM_LIST[0]["input_width"], self.CAM_LIST[0]["input_height"]))
+        self.triangulator = ObjectTriangulator(camera_matrix=self.camera_K, frame_size=(self.CAM_LIST[0]["input_width"], self.CAM_LIST[0]["input_height"]), buffer_window_size=self.parameters["buffer_window_size"])
         self.triangulation_lock = threading.Lock()
-        self.iou_threshold = 10.0 # If two detections are less than this distance apart, they are considered the same object and the older one is deleted. This is to prevent duplicate detections in triangulation.
-        self.update_frequency = 0.5 # seconds. How often to publish detection results. We can only publish the most recent detection for each object, so we don't need to publish every frame.
 
         # ROS2 Initialization
-        sensor_qos_profile = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST, depth=1)
-        self.object_detection_results_publisher = self.create_publisher(msg_type=ObjectDetectionResultsList, topic="/object_detection_results_list", qos_profile=sensor_qos_profile)
-        self.triangulation_results_publisher = self.create_publisher(msg_type=TriangulationResultsList, topic="/triangulation_results_list", qos_profile=sensor_qos_profile)
-        self.position_listener = self.create_subscription(msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=sensor_qos_profile)
-        self.heading_listener = self.create_subscription(msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=sensor_qos_profile) # heading is counterclockwise of true east
-        self.model_listener = self.create_subscription(msg_type=String, topic="/model", callback=self.model_callback, qos_profile=sensor_qos_profile)
-        self.threshold_listener = self.create_subscription(msg_type=Float32, topic="/threshold", callback=self.threshold_callback, qos_profile=sensor_qos_profile)
-        self.buffer_window_listener = self.create_subscription(msg_type=Int32, topic="/buffer_window", callback=self.buffer_window_callback, qos_profile=sensor_qos_profile)
-        self.iou_threshold_listener = self.create_subscription(msg_type=Float32, topic="/iou_threshold", callback=self.iou_threshold_callback, qos_profile=sensor_qos_profile)
-        self.update_frequency_listener = self.create_subscription(msg_type=Float32, topic="/update_frequency", callback=self.update_frequency_callback, qos_profile=sensor_qos_profile)
+        self.object_detection_results_publisher = self.create_publisher(
+            msg_type=ObjectDetectionResultsList, topic="/object_detection_results_list", qos_profile=10
+        )
+        self.triangulation_results_publisher = self.create_publisher(
+            msg_type=TriangulationResultsList, topic="/triangulation_results_list", qos_profile=10
+        )
+        self.position_listener = self.create_subscription(
+            msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=qos_profile_sensor_data
+        )
+        self.heading_listener = self.create_subscription( # heading is counterclockwise of true east
+            msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=qos_profile_sensor_data
+        )
+        self.cv_parameters_listener = self.create_subscription(
+            msg_type=String, topic="/cv_parameters", callback=self.cv_parameters_callback, qos_profile=10
+        )
+        # self.model_listener = self.create_subscription(msg_type=String, topic="/model", callback=self.model_callback, qos_profile=sensor_qos_profile)
+        # self.threshold_listener = self.create_subscription(msg_type=Float32, topic="/threshold", callback=self.threshold_callback, qos_profile=sensor_qos_profile)
+        # self.buffer_window_listener = self.create_subscription(msg_type=Int32, topic="/buffer_window", callback=self.buffer_window_callback, qos_profile=sensor_qos_profile)
+        # self.iou_threshold_listener = self.create_subscription(msg_type=Float32, topic="/iou_threshold", callback=self.iou_threshold_callback, qos_profile=sensor_qos_profile)
+        # self.update_frequency_listener = self.create_subscription(msg_type=Float32, topic="/update_frequency", callback=self.update_frequency_callback, qos_profile=sensor_qos_profile)
 
         self.current_position = {
             "latitude": 0,
@@ -223,14 +239,14 @@ class BuoyDetectionNode(Node):
         self.file_lock = threading.Lock()
         self.last_published_frame_number = -1
         with self.file_lock:
-            self.config_file_split, self.model, self.threshold = self._read_file()
+            self.config_file_split, self.parameters["model_name"], self.parameters["threshold"] = self._read_file()
 
         self._init_pipeline()
         vs = threading.Thread(target=self.run, daemon=True)
         vs.start()
 
         if INFERENCE:
-            self.timer = self.create_timer(timer_period_sec=self.update_frequency, callback=self._iterate_results)
+            self.timer = self.create_timer(timer_period_sec=self.parameters["update_rate"], callback=self._iterate_results)
 
     def _init_pipeline(self):
         self.pipeline = Gst.Pipeline()
@@ -241,8 +257,8 @@ class BuoyDetectionNode(Node):
         # v4l2-ctl --list-devices
         # v4l2-ctl --device /dev/video0 --list-formats-ext
         source0 = Gst.ElementFactory.make("v4l2src", "usb-cam-0")
+        # source0 = Gst.ElementFactory.make("videotestsrc", "usb-cam-0")
         source0.set_property('device', self.CAM_LIST[0]["name"])
-        source0.set_property('brightness', 0)
         self.get_logger().info(f"Opening camera device: {self.CAM_LIST[0]['name']}")
 
         """
@@ -423,6 +439,10 @@ class BuoyDetectionNode(Node):
 
         msg = ObjectDetectionResultsList()
         msg.detection_results = []
+        if (self.parameters["model_name"] is not None):
+            msg.model_name = self.parameters["model_name"]
+        msg.yolo_version = YOLO_VER
+        msg.threshold = self.parameters["threshold"]
 
         # Retrieve batch metadata from the gst_buffer
         # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
@@ -513,7 +533,7 @@ class BuoyDetectionNode(Node):
         display_meta = pyds.nvds_acquire_display_meta_from_pool(batch_meta)
         display_meta.num_labels = 1
         py_nvosd_text_params = display_meta.text_params[0]
-        py_nvosd_text_params.display_text = f"Yolo Version: {YOLO_VER}\nCurrent Model: {self.model}\nThreshold: {self.threshold}"
+        py_nvosd_text_params.display_text = f"Yolo Version: {YOLO_VER}\nCurrent Model: {self.parameters['model_name']}\nThreshold: {self.parameters['threshold']}"
    
         # Set the offsets where the string should appear
         py_nvosd_text_params.x_offset = 10
@@ -622,7 +642,7 @@ class BuoyDetectionNode(Node):
                 if obj_id_1 >= obj_id_2 or det1["class_id"] != det2["class_id"]: # Don't compare the same pair twice or with different classes
                     continue
                 dist = np.linalg.norm(det1["world_pos"] - det2["world_pos"])
-                if dist < self.iou_threshold: # If detections are less than this many meters apart, keep the most recent one
+                if dist < self.parameters["iou_threshold"]: # If detections are less than this many meters apart, keep the most recent one
                     if det1["last_updated_frame_number"] > det2["last_updated_frame_number"]:
                         ids_to_delete.append(obj_id_2)
                     else:
@@ -632,7 +652,9 @@ class BuoyDetectionNode(Node):
             del detections[obj_id]
 
     def _publish_results(self, detections):
-        results_list = TriangulationResultsList()
+        msg = TriangulationResultsList()
+        msg.triangulation_results = []
+        msg.iou_threshold = self.parameters["iou_threshold"]
         for obj_id, det in detections.items():
             result = TriangulationResult()
             result.object_id = obj_id
@@ -640,8 +662,8 @@ class BuoyDetectionNode(Node):
             result.class_id = det["class_id"]
             result.latitude = det["lat"]
             result.longitude = det["lon"]
-            results_list.results.append(result)
-        self.triangulation_results_publisher.publish(results_list)
+            msg.triangulation_results.append(result)
+        self.triangulation_results_publisher.publish(msg)
 
     def _find_camera(self, format):
         """
@@ -668,6 +690,7 @@ class BuoyDetectionNode(Node):
             content = file.read()
             config_file_split = content.split('\n\n')
 
+        model = None
         # Read model
         onnx_section = config_file_split[1]
         onnx_lines = onnx_section.split('\n')
@@ -681,6 +704,34 @@ class BuoyDetectionNode(Node):
         threshold = float(attributes_lines[1].split('=')[-1])
         return (config_file_split, model, threshold)
 
+    def _read_default_parameters(self):
+        try:
+            parameters = JsoncParser.parse_file(PATH_TO_PARAMETERS_FILE)
+            for key in parameters.keys():
+                if key in self.parameters:
+                    self.parameters[key] = parameters[key]["default"]
+                else:
+                    self.get_logger().warn(f"Parameter {key} not found in self.parameters")
+        except Exception as e:
+            self.get_logger().error(f"Error reading parameters file: {e}")
+
+    def cv_parameters_callback(self, msg):
+        new_parameters_json: dict = json.loads(msg.data)
+        for key in new_parameters_json.keys():
+            match (key):
+                case "model_name":
+                    self.update_model(new_parameters_json[key])
+                case "threshold":
+                    self.update_threshold(new_parameters_json[key])
+                case "buffer_window_size":
+                    self.buffer_window_callback(new_parameters_json[key])
+                case "iou_threshold":
+                    self.iou_threshold_callback(new_parameters_json[key])
+                case "update_rate":
+                    self.update_frequency_callback(new_parameters_json[key])
+                case _:
+                    self.get_logger().warn(f"Received unknown parameter {key} in cv_parameters_callback")
+
     def position_callback(self, msg):
         self.current_position["latitude"] = msg.latitude
         self.current_position["longitude"] = msg.longitude
@@ -691,11 +742,10 @@ class BuoyDetectionNode(Node):
     def heading_callback(self, msg):
         self.current_heading = msg.data
     
-    def model_callback(self, msg):
+    def update_model(self, new_model):
         global YOLO_VER
         # TODO: check if config file was modified externally and reload if so
         self.file_lock.acquire() # Don't want multiple threads writing to the file at once
-        new_model = msg.data
         if new_model != self.model and INFERENCE:
             onnx_lines, engine_lines, labels_lines, found_model_entry = self._modify_config_lines(self.config_file_split, new_model)
             
@@ -725,7 +775,7 @@ class BuoyDetectionNode(Node):
             self.config_file_split[1] = onnx_content
             self.config_file_split[2] = engine_content
             self.config_file_split[3] = labels_content
-            self.model = new_model
+            self.parameters["model_name"] = new_model
             self.update_config_file(YOLO_CONFIG[YOLO_VER])
             self.get_logger().info(f"Updated model to {new_model}")
         else:
@@ -738,6 +788,17 @@ class BuoyDetectionNode(Node):
         labels_lines = lines_split[3].split('\n')
         properties = lines_split[4].split('\n')
         batch_size = int(properties[1].split('=')[-1].split(' ')[0])
+        network_mode = int(properties[2].split('=')[-1].split(' ')[0])
+        match network_mode:
+            case 0:
+                quantize = "fp32"
+            case 1:
+                quantize = "int8"
+            case 2:
+                quantize = "fp16"
+            case _:
+                self.get_logger().warn(f"Unknown network mode {network_mode}, defaulting to fp16")
+                quantize = "fp16"
 
         found_model_entry = False
         for i in range(len(onnx_lines)):
@@ -750,7 +811,7 @@ class BuoyDetectionNode(Node):
         for i in range(len(engine_lines)):
             if engine_lines[i].startswith('model-engine-file='):
                 engine_lines[i] = "#" + engine_lines[i]
-            if engine_lines[i] == f"#model-engine-file=./engine_files/{new_model}_model_b{batch_size}_gpu0_fp16.engine":
+            if engine_lines[i] == f"#model-engine-file=./engine_files/{new_model}_model_b{batch_size}_gpu0_{quantize}.engine":
                 engine_lines[i] = engine_lines[i][1:] # uncomment line so the model can be used
 
         for i in range(len(labels_lines)):
@@ -761,15 +822,15 @@ class BuoyDetectionNode(Node):
         
         return (onnx_lines, engine_lines, labels_lines, found_model_entry)
 
-    def threshold_callback(self, msg):
+    def threshold_callback(self, new_threshold):
         self.file_lock.acquire() # Don't want multiple threads writing to the file at once
-        new_threshold = float(msg.data)
+        # new_threshold = float(msg.data)
         if new_threshold != self.threshold:
             if new_threshold >= 0.0 and new_threshold <= 1.0:
                 attributes_lines = self.config_file_split[5].split('\n')
                 attributes_lines[1] = f"pre-cluster-threshold={new_threshold}"
-                self.config_file_split[4] = "\n".join(attributes_lines)
-                self.threshold = new_threshold
+                self.config_file_split[5] = "\n".join(attributes_lines)
+                self.parameters["threshold"] = new_threshold
                 self.update_config_file()
                 self.get_logger().info(f"Updated threshold to {new_threshold}")
             else:
@@ -778,29 +839,29 @@ class BuoyDetectionNode(Node):
             self.get_logger().info(f"Threshold is already {new_threshold}, not updating")
         self.file_lock.release()
     
-    def iou_threshold_callback(self, msg):
-        new_iou_threshold = float(msg.data)
-        if new_iou_threshold != self.iou_threshold:
-            self.iou_threshold = new_iou_threshold
+    def iou_threshold_callback(self, new_iou_threshold):
+        # new_iou_threshold = float(msg.data)
+        if new_iou_threshold >= 0:
+            self.parameters["iou_threshold"] = new_iou_threshold
             self.get_logger().info(f"Updated iou threshold to {new_iou_threshold}")
         else:
-            self.get_logger().info(f"IoU threshold is already {new_iou_threshold}, not updating")
+            self.get_logger().info(f"Bad iou threshold {new_iou_threshold}, must be >= 0, not updating")
 
-    def update_frequency_callback(self, msg):
-        new_update_frequency = float(msg.data)
+    def update_frequency_callback(self, new_update_frequency):
+        # new_update_frequency = float(msg.data)
         if hasattr(self, 'timer'):
-            if new_update_frequency != self.update_frequency:
+            if new_update_frequency > 0:
                 self.update_frequency = new_update_frequency
                 self.timer.cancel()
                 self.timer = self.create_timer(timer_period_sec=self.update_frequency, callback=self._iterate_results)
                 self.get_logger().info(f"Updated update frequency to {new_update_frequency}")
             else:
-                self.get_logger().info(f"Update frequency is already {new_update_frequency}, not updating")
+                self.get_logger().info(f"Bad update frequency {new_update_frequency}, must be > 0, not updating")
         else:
-            self.get_logger().info("Inference is disabled, not updating update frequency")
+            self.get_logger().warn("Inference is disabled, not updating update frequency")
     
-    def buffer_window_callback(self, msg):
-        new_buffer_window = int(msg.data)
+    def buffer_window_callback(self, new_buffer_window):
+        # new_buffer_window = int(msg.data)
         if new_buffer_window != self.triangulator.buffer_window:
             self.triangulator.buffer_window = new_buffer_window
             self.get_logger().info(f"Updated buffer window to {new_buffer_window}")

@@ -19,11 +19,22 @@ with open(CONFIG_FILE, 'r') as file:
     onnx_section = split_content[1]
     engine_section = split_content[2]
     labels_section = split_content[3]
-    other_section = split_content[4]
-    BATCH_SIZE = other_section.split('\n')[1].split('=')[1].split(' ')[0]
+    properties = split_content[4].split('\n')
+    BATCH_SIZE = properties[1].split('=')[1].split(' ')[0]
     onnx_lines = onnx_section.split('\n')
     engine_lines = engine_section.split('\n')
     labels_lines = labels_section.split('\n')
+    network_mode = int(properties[2].split('=')[-1].split(' ')[0])
+    match network_mode:
+        case 0:
+            quantize = "fp32"
+        case 1:
+            quantize = "int8"
+        case 2:
+            quantize = "fp16"
+        case _:
+            print(f"Unknown network mode {network_mode}. Exiting.")
+            sys.exit(1)
 
     found_onnx_entry = False
     for i in range(len(onnx_lines)):
@@ -39,11 +50,11 @@ with open(CONFIG_FILE, 'r') as file:
     for i in range(len(engine_lines)):
         if engine_lines[i].startswith('model-engine-file='):
             engine_lines[i] = "#" + engine_lines[i]
-        if engine_lines[i] == f"#model-engine-file=./engine_files/{model_name}_model_b{BATCH_SIZE}_gpu0_fp{FP_VER}.engine":
+        if engine_lines[i] == f"#model-engine-file=./engine_files/{model_name}_model_b{BATCH_SIZE}_gpu0_{quantize}.engine":
             engine_lines[i] = engine_lines[i][1:] # uncomment line so the model can be used
             found_engine_entry = True
     if not found_engine_entry:
-        engine_lines.append(f"model-engine-file=./engine_files/{model_name}_model_b{BATCH_SIZE}_gpu0_fp{FP_VER}.engine")
+        engine_lines.append(f"model-engine-file=./engine_files/{model_name}_model_b{BATCH_SIZE}_gpu0_{quantize}.engine")
     found_labels_entry = False
     for i in range(len(labels_lines)):
         if labels_lines[i].startswith('labelfile-path='):
