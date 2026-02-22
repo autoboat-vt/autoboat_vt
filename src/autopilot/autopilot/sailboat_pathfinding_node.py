@@ -19,17 +19,18 @@ class PathfindingNode(Node):
         self.create_timer(1.0,self.runpath)
 
         # creating origin for matrix
-        self.res=10000
-        self.origin = [0,0]
+        # self.res=10000 using the polar to cartesian coordinates, not using this
+        self.boat = []
         self.destinations=[]
         self.wayindex=0
 
     def gps_call(self,msg: NavSatFix): # argument in function is a shorthand for calling msg as object of NavSatFix
         # self.get_logger().info("latitude: " + str(msg.latitude) + " longitude: " + str(msg.longitude))
-        self.origin = [msg.longitude*self.res,msg.latitude*self.res]
+        self.boat = [msg.longitude,msg.latitude]
         
     def waypoint_call(self,msg: WaypointList): # function calling for waypoints once sent
         self.wayindex=0
+        waypts=Position((msg.waypoints[i].longitude for i in range(len(msg.waypoints))),(msg.waypoints[i].latitude for i in range(len(msg.waypoints))))
         self.destinations = [[msg.waypoints[i].longitude*self.res,msg.waypoints[i].latitude*self.res] for i in range(len(msg.waypoints))]
         self.make_matrix(self.origin,self.destinations[0])
     
