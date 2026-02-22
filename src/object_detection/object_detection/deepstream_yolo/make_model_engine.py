@@ -41,8 +41,8 @@ FRAMERATE = "30/1"
 with open(PATH_TO_YOLO_CONFIG, 'r') as file:
     content = file.read()
     split_content = content.split('\n\n')
-    properties = split_content[4]
-    BATCH_SIZE = int(properties[1].split('=')[-1].split(' ')[0])
+    properties = split_content[4].split('\n')
+    BATCH_SIZE = properties[1].split('=')[1].split(' ')[0]
     network_mode = int(properties[2].split('=')[-1].split(' ')[0])
     match network_mode:
         case 0:
