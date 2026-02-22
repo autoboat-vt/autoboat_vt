@@ -1,6 +1,16 @@
 {
+    "ROS2.distro": "humble",
+    "ruff.importStrategy": "useBundled",
+    "ruff.showSyntaxErrors": false,
+    "ruff.configurationPreference": "filesystemFirst",
+    "ruff.configuration": "${workspaceFolder}/ruff.toml",
+    "evenBetterToml.taplo.configFile.path": "taplo.toml",
+    "evenBetterToml.schema.links": true,
+    "evenBetterToml.semanticTokens": true,
     "cmake.ignoreCMakeListsMissing": true,
-
+    "[python]": {
+        "editor.formatOnSave": false
+    },
     "python.autoComplete.extraPaths": [
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages",
@@ -11,7 +21,7 @@
         "/opt/ros/humble/local/lib/python3.10/dist-packages",
         "/home/ws/install/autoboat_msgs/local/lib/python3.10/dist-packages"
     ],
-
+    "C_Cpp.errorSquiggles": "disabled",
     "files.associations": {
         "float32.h": "c",
         "pico_uart_transports.h": "c",

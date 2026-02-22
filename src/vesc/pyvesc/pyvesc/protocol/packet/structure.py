@@ -6,10 +6,11 @@ from crccheck.crc import CrcXmodem
 crc_checker = CrcXmodem()
 
 
-class Header(collections.namedtuple('Header', ['payload_index', 'payload_length'])):
+class Header(collections.namedtuple("Header", ["payload_index", "payload_length"])):
     """
     Tuple to help with packing and unpacking the header of a VESC packet.
     """
+
     @staticmethod
     def generate(payload):
         """
@@ -43,18 +44,19 @@ class Header(collections.namedtuple('Header', ['payload_index', 'payload_length'
         :return: The character format of the packet header.
         """
         if start_byte == 0x2:
-            return '>BB'
+            return ">BB"
         elif start_byte == 0x3:
-            return '>BH'
+            return ">BH"
         else:
             raise CorruptPacket("Invalid start byte: %u" % start_byte)
 
 
-class Footer(collections.namedtuple('Footer', ['crc', 'terminator'])):
+class Footer(collections.namedtuple("Footer", ["crc", "terminator"])):
     """
     Footer of a VESC packet.
     """
-    TERMINATOR = 0x3 # Terminator character
+
+    TERMINATOR = 0x3  # Terminator character
 
     @staticmethod
     def parse(buffer, header):
@@ -72,4 +74,4 @@ class Footer(collections.namedtuple('Footer', ['crc', 'terminator'])):
         Format of the footer.
         :return: Character format of the footer.
         """
-        return '>HB'
+        return ">HB"

@@ -9,7 +9,7 @@ def simple_example():
     packet = pyvesc.encode(my_msg)
 
     # now lets create a buffer with some garbage in it and put our packet in the middle
-    buffer = b'\x23\x82\x02' + packet + b'\x38\x23\x12\x01'
+    buffer = b"\x23\x82\x02" + packet + b"\x38\x23\x12\x01"
 
     # now lets parse our message which is hidden in the buffer
     msg, consumed = pyvesc.decode(buffer)

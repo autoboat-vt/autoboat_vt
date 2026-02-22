@@ -74,7 +74,10 @@ class BuoyDetectionNode(Node):
         # )
         # self.depth_image_listener = self.create_subscription(msg_type=Image, topic="/camera/depth/image_rect_raw", callback=self.depth_image_callback, qos_profile=sensor_qos_profile)
         self.rgb_image_listener = self.create_subscription(
-            msg_type=Image, topic="/camera/camera/color/image_raw", callback=self.rgb_image_callback, qos_profile=sensor_qos_profile
+            msg_type=Image,
+            topic="/camera/camera/color/image_raw",
+            callback=self.rgb_image_callback,
+            qos_profile=sensor_qos_profile,
         )
         # self.object_detection_results_publisher = self.create_publisher(msg_type=ObjectDetectionResults, topic="/object_detection_results", qos_profile=sensor_qos_profile)
 

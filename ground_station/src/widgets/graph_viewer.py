@@ -6,10 +6,9 @@ from urllib.parse import urljoin
 import numpy as np
 import numpy.typing as npt
 import pyqtgraph as pg
-from requests.exceptions import RequestException
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QCheckBox, QDialog, QGridLayout, QWidget
-
+from requests.exceptions import RequestException
 from utils import constants, misc
 from utils.thread_classes import BoatStatusThreadRouter
 
@@ -18,9 +17,15 @@ class GraphViewer(QWidget):
     """
     A widget for monitoring data in real-time using graphs.
 
+    Attributes
+    ----------
+    boat_data_signal
+        A signal that emits the latest boat data as a tuple containing a dictionary
+        of boat status and a ``TelemetryStatus`` enum value.
+
     Inherits
     -------
-    `QWidget`
+    ``QWidget``
     """
 
     boat_data_signal = Signal(tuple)
@@ -66,10 +71,10 @@ class GraphViewer(QWidget):
         request_result
             A tuple containing:
                 - a dictionary of boat status,
-                - a `TelemetryStatus` enum value indicating the status of the request.
+                - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
-        if not constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
+        if not constants.SM.read("has_telemetry_server_instance_changed"):
             self.boat_data_signal.emit(request_result)
             boat_data, telemetry_status = request_result
 
@@ -79,13 +84,15 @@ class GraphViewer(QWidget):
 
             try:
                 self.available_keys = {
-                    key
-                    for key in boat_data
-                    if isinstance(boat_data[key], (int, float)) and key != "current_waypoint_index"
+                    key for key in boat_data if
+                    (
+                        isinstance(boat_data[key], constants.NumberType)
+                        and key != "current_waypoint_index"
+                    )
                 }
                 filtered_values = {key: float(boat_data.get(key, np.nan)) for key in self.important_keys}
 
-                current_time = time.time() - constants.START_TIME
+                current_time = time.time() - constants.SM.read("start_time")
                 self.x_axis.append(current_time)
 
                 for key, val in filtered_values.items():
@@ -151,8 +158,8 @@ class GraphViewer(QWidget):
             try:
                 response = constants.REQ_SESSION.get(
                     urljoin(
-                        constants.TELEMETRY_SERVER_ENDPOINTS["get_boat_status"],
-                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                        misc.get_route("get_boat_status"),
+                        str(constants.SM.read("telemetry_server_instance_id"))
                     )
                 ).json()
 
@@ -175,9 +182,7 @@ class GraphViewer(QWidget):
         self.graph_dialog = GraphSelectionDialog(available_keys=self.available_keys, selected_keys=self.important_keys)
         self.graph_dialog.setWindowModality(Qt.ApplicationModal)
         self.graph_dialog.show()
-        self.graph_dialog.apply_button.clicked.connect(
-            lambda: self.apply_graph_selection(self.graph_dialog.selected_keys)
-        )
+        self.graph_dialog.apply_button.clicked.connect(lambda: self.apply_graph_selection(self.graph_dialog.selected_keys))
 
     def apply_graph_selection(self, selected_keys: list[str]) -> None:
         """
@@ -212,7 +217,7 @@ class GraphSelectionDialog(QDialog):
 
     Inherits
     -------
-    `QDialog`
+    ``QDialog``
     """
 
     def __init__(self, available_keys: list[str], selected_keys: list[str]) -> None:

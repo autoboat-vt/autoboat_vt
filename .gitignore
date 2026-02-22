@@ -23,19 +23,11 @@ pkg
 ground_station/bin
 ground_station/go.sum
 ground_station/last_build_time.txt
-ground_station/src/widgets/autopilot_param_editor/params_temp.json
-
-ground_station/app_data/
-
-!ground_station/app_data/assets/**
-!ground_station/app_data/js_libraries_cache/
-!ground_station/app_data/boat_data_bounds/
-!ground_station/app_data/boat_data_bounds/default.json
-!ground_station/app_data/buoy_data/
-!ground_station/app_data/buoy_data/default.json
-!ground_station/app_data/autopilot_params/
-!ground_station/app_data/autopilot_params/params_default.jsonc
-
+ground_station/app_data/app_state.json
+ground_station/app_data/assets/leaflet.css
+ground_station/app_data/assets/leaflet.js
+ground_station/app_data/assets/leaflet.rotatedMarker.js
+# ground_station/app_data/js_libraries_cache
 
 # src/object_detection
 src/object_detection/object_detection/runs/**
