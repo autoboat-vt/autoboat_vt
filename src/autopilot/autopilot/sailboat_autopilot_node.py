@@ -49,14 +49,7 @@ class SailboatAutopilotNode(Node):
         self.autopilot_refresh_timer = self.create_timer(
             1 / self.autopilot_parameters["autopilot_refresh_rate"], self.update_ros_topics
         )
-        self.publish_default_autopilot_parameters_timer = self.create_timer(
-            0.1, self.publish_default_autopilot_parameters_timer_callback
-        )
 
-        self.default_autopilot_parameters_publisher = self.create_publisher(String, "/default_autopilot_parameters", 1)
-        self.create_subscription(
-            Bool, "/default_autopilot_parameters_acknowledgement", self.default_autopilot_parameters_acknowledgement_callback, 1
-        )
 
         self.create_subscription(String, "/autopilot_parameters", self.autopilot_parameters_callback, 10)
         self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10)
@@ -252,15 +245,6 @@ class SailboatAutopilotNode(Node):
         self.apparent_wind_vector = np.array([apparent_wind_vector.x, apparent_wind_vector.y])
         _, self.apparent_wind_angle = cartesian_vector_to_polar(apparent_wind_vector.x, apparent_wind_vector.y)
 
-    def publish_default_autopilot_parameters_timer_callback(self) -> None:
-        """
-        Publish the default parameters so that the telemetry node/telemetry server/groundstation
-        know which parameters it can change. This should only be sent to the telemetry node once
-        and then should never be received again once the telemetry node properly receives and parses it.
-        """
-
-        if not self.has_default_autopilot_parameters_been_received_by_telemetry_node:
-            self.default_autopilot_parameters_publisher.publish(String(data=json.dumps(self.autopilot_parameters)))
 
     def step(self) -> tuple[float | None, float | None]:
         """

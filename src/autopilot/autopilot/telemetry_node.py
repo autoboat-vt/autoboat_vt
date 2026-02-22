@@ -483,6 +483,7 @@ class TelemetryNode(Node):
 
         if self.current_waypoints != []:
             current_position = Position(self.position.latitude, self.position.longitude)
+            print(f"current position: {current_position}")
             next_waypoint_position = Position(
                 self.current_waypoints[self.current_waypoint_index][0], self.current_waypoints[self.current_waypoint_index][1]
             )

@@ -1,13 +1,13 @@
 
-from .discrete_pid import Discrete_PID
-from .utils import *
-from rclpy.impl.rcutils_logger import RcutilsLogger
 from typing import Any
 
+import numpy as np
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
+from .utils.constants import SailboatStates
 from .utils.discrete_pid import DiscretePID
 from .utils.position import Position
+from .utils.utils_function_library import get_bearing, get_distance_between_angles, get_distance_between_positions
 
 
 class MotorboatAutopilot:
@@ -28,21 +28,21 @@ class MotorboatAutopilot:
 
         self.rudder_pid_controller = DiscretePID(
             sample_period=(1 / parameters["autopilot_refresh_rate"]),
-            Kp=parameters["heading_p_gain"],
-            Ki=parameters["heading_i_gain"],
-            Kd=parameters["heading_d_gain"],
+            k_p=parameters["heading_p_gain"],
+            k_i=parameters["heading_i_gain"],
+            k_d=parameters["heading_d_gain"],
             n=parameters["heading_n_gain"],
         )
 
-        self.rpm_pid_controller = Discrete_PID(
-            sample_period=(1 / autopilot_parameters['autopilot_refresh_rate']), 
-            Kp=autopilot_parameters['rpm_p_gain'], Ki=autopilot_parameters['rpm_i_gain'], 
-            Kd=autopilot_parameters['rpm_d_gain'], n=autopilot_parameters['rpm_n_gain'], 
+        self.rpm_pid_controller = DiscretePID(
+            sample_period=(1 / parameters['autopilot_refresh_rate']),
+            k_p=parameters['rpm_p_gain'], k_i=parameters['rpm_i_gain'],
+            k_d=parameters['rpm_d_gain'], n=parameters['rpm_n_gain'],
         )
         
-        self.autopilot_parameters = autopilot_parameters
+        self.parameters = parameters
         self.logger = logger
-        self.waypoints: list[Position] = None        
+        self.waypoints: list[Position] = None
         self.current_state = SailboatStates.NORMAL
         
         self.desired_tacking_angle = 0
@@ -52,28 +52,15 @@ class MotorboatAutopilot:
         self.propeller_rpm = 0.0
         self.rudder_angle = 0.0
         
-    
-    def reset(self):
-        """
-        Reinitializes the MotorboatAutopilot with the same parameters and the same logger. This essentially resets things like waypoints. 
-        """ 
-        self.__init__(self.autopilot_parameters, logger=self.logger)
-
-        self.parameters = parameters
-        self.logger = logger
-
-        self.waypoints: list[Position] | None = None
-        self.current_waypoint_index: int = 0
-
 
     def reset(self) -> None:
         """Resets the autopilot to its initial state."""
 
         self.rudder_pid_controller = DiscretePID(
             sample_period=(1 / self.parameters["autopilot_refresh_rate"]),
-            Kp=self.parameters["heading_p_gain"],
-            Ki=self.parameters["heading_i_gain"],
-            Kd=self.parameters["heading_d_gain"],
+            k_p=self.parameters["heading_p_gain"],
+            k_i=self.parameters["heading_i_gain"],
+            k_d=self.parameters["heading_d_gain"],
             n=self.parameters["heading_n_gain"],
         )
         self.waypoints = None
@@ -97,7 +84,8 @@ class MotorboatAutopilot:
         
     def _get_decision_zone_size(self, distance_to_waypoint: float) -> float:
         """
-        Check out this for more information on decision zones: https://autoboat-vt.github.io/autoboat_docs/ros2_packages/autopilot_package/sailboat_autopilot/.
+        Check out this for more information on decision zones:
+        https://autoboat-vt.github.io/autoboat_docs/ros2_packages/autopilot_package/sailboat_autopilot/.
         I would not be able to explain it here.
         Args:
             distance_to_waypoint (float): the distance to the next waypoint in meters
@@ -105,8 +93,8 @@ class MotorboatAutopilot:
         Returns:
             float: the total size of the decision zone in degrees
         """
-        tack_distance = self.autopilot_parameters['tack_distance']
-        no_sail_zone_size = self.autopilot_parameters['no_sail_zone_size']
+        tack_distance = self.parameters['tack_distance']
+        no_sail_zone_size = self.parameters['no_sail_zone_size']
         
         inner = (tack_distance/distance_to_waypoint) * np.sin(np.deg2rad(no_sail_zone_size/2))
         inner = np.clip(inner, -1, 1)
@@ -125,34 +113,31 @@ class MotorboatAutopilot:
         """
         # Update the gains of the controller in case they changed. If the gains didn't change, then nothing happens
         self.rudder_pid_controller.set_gains(
-            Kp=self.autopilot_parameters['heading_p_gain'], Ki=self.autopilot_parameters['heading_i_gain'], Kd=self.autopilot_parameters['heading_d_gain'], 
-            n=self.autopilot_parameters['heading_n_gain'], sample_period=self.autopilot_parameters['autopilot_refresh_rate']
+            k_p=self.parameters['heading_p_gain'], k_i=self.parameters['heading_i_gain'], k_d=self.parameters['heading_d_gain'], 
+            n=self.parameters['heading_n_gain'], sample_period=self.parameters['autopilot_refresh_rate']
         )
         
         error = get_distance_between_angles(desired_heading, heading)
         rudder_angle = self.rudder_pid_controller(error)
-        rudder_angle = np.clip(rudder_angle, self.autopilot_parameters['min_rudder_angle'], self.autopilot_parameters['max_rudder_angle'])
-        return rudder_angle
+        return np.clip(rudder_angle, self.parameters['min_rudder_angle'], self.parameters['max_rudder_angle'])
+
 
     def get_optimal_rpm(self, current_position: float ,desired_position: float) ->float:
         
         self.rpm_pid_controller.set_gains(
-            Kp=self.autopilot_parameters['rpm_p_gain'], Ki=self.autopilot_parameters['rpm_i_gain'], Kd=self.autopilot_parameters['rpm_d_gain'], 
-            n=self.autopilot_parameters['rpm_n_gain'], sample_period=self.autopilot_parameters['autopilot_refresh_rate']
+            k_p=self.parameters['rpm_p_gain'], k_i=self.parameters['rpm_i_gain'], k_d=self.parameters['rpm_d_gain'], 
+            n=self.parameters['rpm_n_gain'], sample_period=self.parameters['autopilot_refresh_rate']
         )
         error = get_distance_between_positions(desired_position,current_position)
         rpm = self.rpm_pid_controller(error)
-        rpm = np.clip(rpm, 0.0,300.0)
-
-        return rpm
+        return np.clip(rpm, 0.0,300.0)
 
     
 
     def run_waypoint_mission_step(
-         self, 
-            current_position: Position, 
-            # global_velocity_vector: np.ndarray, 
-            heading: float, 
+            self,
+            current_position: Position,
+            heading: float,
         ) -> tuple[float, float]:
         """
         Assumes that there are waypoints inputted in the autopilot.
@@ -167,7 +152,8 @@ class MotorboatAutopilot:
         """
 
     
-        if not self.waypoints: raise Exception("Expected route to be inputted into the autopilot. Field self.waypoints was not filled")
+        if not self.waypoints:
+            raise Exception("Expected route to be inputted into the autopilot. Field self.waypoints was not filled")
 
         desired_position = self.waypoints[self.current_waypoint_index]
         distance_to_desired_position = get_distance_between_positions(current_position, desired_position)
@@ -180,7 +166,7 @@ class MotorboatAutopilot:
         self.propeller_rpm = self.get_optimal_rpm(current_position,desired_position)
 
         self.logger.info(f"Bearing: {desired_heading}")
-        if distance_to_desired_position < self.autopilot_parameters['waypoint_accuracy']: 
+        if distance_to_desired_position < self.parameters['waypoint_accuracy']: 
             self.rudder_angle = 0.0
             self.propeller_rpm = 0.0
             if len(self.waypoints) <= self.current_waypoint_index + 1:    # Has Reached The Final Waypoint

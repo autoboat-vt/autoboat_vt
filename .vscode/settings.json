@@ -9,7 +9,12 @@
     "evenBetterToml.semanticTokens": true,
     "cmake.ignoreCMakeListsMissing": true,
     "[python]": {
-        "editor.formatOnSave": false
+        "editor.formatOnSave": false,
+        "editor.codeActionsOnSave": {
+            "source.fixAll.ruf`f": "explicit",
+            "source.organizeImports.ruff": "explicit"
+        },
+    "editor.defaultFormatter": "charliermarsh.ruff"
     },
     "python.autoComplete.extraPaths": [
         "/opt/ros/humble/lib/python3.10/site-packages",

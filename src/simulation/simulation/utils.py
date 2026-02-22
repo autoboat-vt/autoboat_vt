@@ -15,7 +15,6 @@ def cartesian_vector_to_polar(x, y):
     direction = direction * (180 / np.pi)  # angle from -180 to 180 degrees
     direction = direction % 360  # angle from 0 to 360 degrees
     return magnitude, direction
-<<<<<<< HEAD
 
 
 
@@ -38,5 +37,3 @@ def euler_from_quaternion(x,y,z,w):
     yaw = np.arctan2(siny_cosp, cosy_cosp)
 
     return roll, pitch, yaw
-=======
->>>>>>> main

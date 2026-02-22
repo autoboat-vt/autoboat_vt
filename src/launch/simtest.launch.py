@@ -9,7 +9,7 @@ from launch.substitutions import PathJoinSubstitution
 
 def generate_launch_description():
     ros_gz_sim_pkg_path = get_package_share_directory('ros_gz_sim')
-    # motorboat_pkg_path = FindPackageShare('motorboat_sim_testing')  # Replace with your own package name
+    # motorboat_pkg_path = FindPackageShare('motorboat_sim')  # Replace with your own package name
     gz_launch_path = PathJoinSubstitution([ros_gz_sim_pkg_path, 'launch','gz_sim.launch.py'])
 
     return LaunchDescription([
@@ -24,7 +24,7 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(gz_launch_path),
             launch_arguments={
-                'gz_args': "-r /home/ws/src/motorboat_sim_testing/buoyant_cylinder.sdf",  # Replace with your own world file
+                'gz_args': "-r /home/ws/src/motorboat_sim/buoyant_cylinder.sdf",  # Replace with your own world file
                 'on_exit_shutdown': 'True'
             }.items(),
         ),

@@ -12,7 +12,7 @@ echo "sudo chmod 777 /var/run/docker.sock" >> $AUTOBOAT_USER_HOME/.bashrc
 echo "sudo chmod -R 777 /home/" >> $AUTOBOAT_USER_HOME/.bashrc
 echo "sudo chmod -R 777 /etc/udev/" >> $AUTOBOAT_USER_HOME/.bashrc
 sudo chmod -R 777 /etc/udev/
-echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/src/motorboat_sim_testing/foil_dynamics/build/:/home/ws/src/motorboat_sim_testing/sail_limits/build/:/home/ws/src/motorboat_sim_testing/rudder_dynamics/build/:/home/ws/src/motorboat_sim_testing/wind_arrow/build/ >> "/home/autoboat_user/.bashrc"
+echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/build/foil_dynamics/:/home/ws/build/sail_limits/:/home/ws/build/rudder_dynamics/:/home/ws/build/wind_arrow/ >> "/home/autoboat_user/.bashrc"
 
 # Make sure that you can just type python and you don't have to type python3 because people will get confused
 echo 'alias python="python3"' >> $AUTOBOAT_USER_HOME/.bashrc

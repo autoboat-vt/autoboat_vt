@@ -335,7 +335,7 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
     <!-- Physics parameters -->
     <physics name="1ms" type="dart">
       <max_step_size>0.01</max_step_size>
-      <real_time_factor>10</real_time_factor>
+      <real_time_factor>60</real_time_factor>
     </physics>
 
     <!-- Model to load -->
