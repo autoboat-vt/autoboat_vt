@@ -1,13 +1,11 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>autopilot_transform</name>
+  <name>new_simulation</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="chrisjnassif@gmail.com">autoboat_user</maintainer>
+  <maintainer email="ashear@vt.edu">ganno</maintainer>
   <license>TODO: License declaration</license>
-
-  <depend>rclpy</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

@@ -125,12 +125,12 @@ class MotorboatAutopilot:
     def get_optimal_rpm(self, current_position: float ,desired_position: float) ->float:
         
         self.rpm_pid_controller.set_gains(
-            k_p=self.parameters['rpm_p_gain'], k_i=self.parameters['rpm_i_gain'], k_d=self.parameters['rpm_d_gain'], 
+            k_p=self.parameters['rpm_p_gain'], k_i=self.parameters['rpm_i_gain'], k_d=self.parameters['rpm_d_gain'],
             n=self.parameters['rpm_n_gain'], sample_period=self.parameters['autopilot_refresh_rate']
         )
         error = get_distance_between_positions(desired_position,current_position)
         rpm = self.rpm_pid_controller(error)
-        return np.clip(rpm, 0.0,300.0)
+        return np.clip(rpm, 0.0, 300.0) # TODO don't hardcode this
 
     
 
@@ -162,16 +162,17 @@ class MotorboatAutopilot:
         self.logger.info(f"Desired Position : {desired_position.get_longitude_latitude()}")
 
         desired_heading = get_bearing(current_position, desired_position)
+        # TODO: rudder angle and propeller angle should not be self. variables they should be local to the function
         self.rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading)
         self.propeller_rpm = self.get_optimal_rpm(current_position,desired_position)
 
         self.logger.info(f"Bearing: {desired_heading}")
-        if distance_to_desired_position < self.parameters['waypoint_accuracy']: 
+        if distance_to_desired_position < self.parameters['waypoint_accuracy']:
             self.rudder_angle = 0.0
             self.propeller_rpm = 0.0
             if len(self.waypoints) <= self.current_waypoint_index + 1:    # Has Reached The Final Waypoint
                 self.reset()
-                return None, None
+                return 0.0, 0.0
             self.current_waypoint_index += 1
             desired_position = self.waypoints[self.current_waypoint_index]
 

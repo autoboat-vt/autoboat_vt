@@ -1,28 +1,20 @@
 # from autopilot import Position 
-import os
-
 import numpy as np
 import rclpy
-import yaml
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
-from simulation.utils import cartesian_vector_to_polar, euler_from_quaternion
 from std_msgs.msg import Float32, Float64
+
+from .utils import cartesian_vector_to_polar, euler_from_quaternion
 
 
 class AutopilotTransformNode(Node):
 
     def __init__(self) -> None:
         super().__init__("autopilot_transform_node")
-        
 
-        cur_folder_path = os.path.dirname(os.path.realpath(__file__))
-        with open(cur_folder_path + "/config/motorboat_default_parameters.yaml", "r") as stream:
-            self.autopilot_parameters: dict = yaml.safe_load(stream)
-
-
-        self.autopilot_transform_refresh_timer = self.create_timer(1 / self.autopilot_parameters["autopilot_refresh_rate"], self.update_ros_topics)
+        self.autopilot_transform_refresh_timer = self.create_timer(0.1, self.update_ros_topics)
 
         self.velocity_publisher =  self.create_publisher(Twist, "/velocity",qos_profile=10) 
         self.odometry_listener = self.create_subscription(msg_type=Odometry, topic="/odometry", callback=self.odometry_callback, qos_profile=10)

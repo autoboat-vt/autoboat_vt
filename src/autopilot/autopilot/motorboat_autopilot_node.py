@@ -238,7 +238,7 @@ class MotorboatAutopilotNode(Node):
         new_parameters_json: dict = json.loads(new_parameters.data)
 
         for new_parameter_name, new_parameter_value in new_parameters_json.items():
-            if new_parameter_name not in self.autopilot_parameters.keys():
+            if new_parameter_name not in self.autopilot_parameters:
                 print("WARNING: Attempted to set an autopilot parameter that the autopilot doesn't know")
                 print("If you would like to make a new autopilot parameter, please edit default_parameters.yaml")
                 continue
@@ -366,25 +366,6 @@ class MotorboatAutopilotNode(Node):
 
         return sail_angle, rudder_angle
 
-    def get_optimal_rudder_angle(self, heading: float, desired_heading: float) -> float:
-        """
-        Args:
-            heading (float): the current heading of the boat measured counter-clockwise from true east.
-            desired_heading (float): the current desired heading of the boat measured counter-clockwise from true east.
-
-        Returns:
-            float: the angle we should turn the rudder in order to turn from our current heading to the desired heading.
-        """
-        # Update the gains of the controller in case they changed. If the gains didn't change, then nothing happens
-        self.rudder_pid_controller.set_gains(
-            Kp=self.autopilot_parameters['heading_p_gain'], Ki=self.autopilot_parameters['heading_i_gain'], Kd=self.autopilot_parameters['heading_d_gain'],
-            n=self.autopilot_parameters['heading_n_gain'], sample_period=self.autopilot_parameters['autopilot_refresh_rate']
-        )
-        
-        error = get_distance_between_angles(desired_heading, heading)
-        rudder_angle = self.rudder_pid_controller(error)
-        rudder_angle = np.clip(rudder_angle, self.autopilot_parameters['min_rudder_angle'], self.autopilot_parameters['max_rudder_angle'])
-        return rudder_angle
 
     def get_optimal_rudder_angle(self, heading: float, desired_heading: float) -> float:
         """
@@ -408,22 +389,17 @@ class MotorboatAutopilotNode(Node):
 
     def step(self) -> float:
         """TODO Documentation."""
-        rpm =0.0
+        rpm = 0.0
         rudder_angle = 0.0
-        if self.autopilot_mode == MotorboatAutopilotMode.WAYPOINT_MISSION and self.motorboat_autopilot.waypoints != None:
+
+        if self.autopilot_mode == MotorboatAutopilotMode.WAYPOINT_MISSION and self.motorboat_autopilot.waypoints is not None:
             rpm, rudder_angle = self.motorboat_autopilot.run_waypoint_mission_step(self.position,self.heading)
         elif self.autopilot_mode == MotorboatAutopilotMode.HOLD_HEADING:
             rudder_angle = self.get_optimal_rudder_angle(self.heading, self.heading_to_hold)
-
         elif self.autopilot_mode == MotorboatAutopilotMode.FULL_RC:
             _, rudder_angle = self.run_rc_control(self.joystick_left_y, self.joystick_right_x)
 
-        # else:
-        #     return None
-        # else:
-        #     return None
-
-        return rudder_angle,rpm
+        return rudder_angle, rpm
 
     def update_ros_topics(self) -> None:
         """

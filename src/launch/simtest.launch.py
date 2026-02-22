@@ -1,10 +1,11 @@
 
 from ament_index_python.packages import get_package_share_directory
-from launch import LaunchDescription
-from launch_ros.actions import Node
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import PathJoinSubstitution
+from launch_ros.actions import Node
+
+from launch import LaunchDescription
 
 
 def generate_launch_description():
@@ -32,7 +33,7 @@ def generate_launch_description():
         # Bridging and remapping Gazebo topics to ROS 2 (replace with your own topics)
          
         Node(
-            package='autopilot',
+            package='new_simulation',
             executable='autopilot_transform',
             name='autopilot_transform',
             respawn = True,

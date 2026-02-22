@@ -195,7 +195,7 @@ class SailboatAutopilotNode(Node):
                 self.get_logger().warn(warn_string)
                 continue
 
-            self.autopilot_parameters[new_parameter_name] = new_parameter_value["default"]
+            self.autopilot_parameters[new_parameter_name] = new_parameter_value
 
         # HANDLE SPECIAL CASES SINCE THEY DO NOT UPDATE AUTOMATICALLY
         if "autopilot_refresh_rate" in new_parameters_json:
