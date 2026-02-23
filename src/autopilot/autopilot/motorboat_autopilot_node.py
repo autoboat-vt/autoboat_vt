@@ -36,7 +36,10 @@ class MotorboatAutopilotNode(Node):
 
         self.logger = self.get_logger()
 
+        self.autopilot_param_config_path_publisher = self.create_publisher(String, "/autopilot_param_config_path", 10)
         parameters_path = CONFIG_DIRECTORY / "motorboat_default_parameters.json"
+        self.autopilot_param_config_path_publisher.publish(String(data=parameters_path.as_posix()))
+
         with open(parameters_path, "r", encoding="utf-8") as parameters_file:
             self.raw_autopilot_parameters: dict[str, dict[str, Any]] = json.load(parameters_file)
 
@@ -53,7 +56,6 @@ class MotorboatAutopilotNode(Node):
 
         self.create_subscription(String, "/autopilot_parameters", self.autopilot_parameters_callback, 10)
         self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10)
-
         self.create_subscription(NavSatFix, "/position", self.position_callback, qos_profile_sensor_data)
         self.create_subscription(Twist, "/velocity", self.velocity_callback, qos_profile_sensor_data)
         self.create_subscription(Float32, "/heading", self.heading_callback, qos_profile_sensor_data)
@@ -63,22 +65,19 @@ class MotorboatAutopilotNode(Node):
         self.autopilot_mode_publisher = self.create_publisher(String, "/autopilot_mode", qos_profile_sensor_data)
         self.full_autonomy_maneuver_publisher = self.create_publisher(String, "/full_autonomy_maneuver", qos_profile_sensor_data)
         self.desired_heading_publisher = self.create_publisher(Float32, "/desired_heading", 10)
-
         self.should_propeller_motor_be_powered_publisher = self.create_publisher(Bool, "/should_propeller_motor_be_powered", 10)
         self.propeller_motor_control_struct_publisher = self.create_publisher(
             VESCControlData, "/propeller_motor_control_struct", qos_profile_sensor_data
         )
         self.desired_rudder_angle_publisher = self.create_publisher(Float32, "/desired_rudder_angle", qos_profile_sensor_data)
-
         self.zero_rudder_encoder_publisher = self.create_publisher(Bool, "/zero_rudder_encoder", 10)
 
         self.heading_pid_controller = DiscretePID(
             sample_period=(1 / self.autopilot_parameters["autopilot_refresh_rate"]), Kp=1, Ki=0, Kd=0, n=1
         )
 
-        self.max_rpm: float = 10000
-
         # default values
+        self.max_rpm: float = 10000
         self.position = Position(longitude=0.0, latitude=0.0)
         self.velocity: npt.NDArray[np.float64] = np.zeros(2, dtype=np.float64)
         self.speed: float = 0.0
@@ -225,16 +224,16 @@ class MotorboatAutopilotNode(Node):
     def waypoints_list_callback(self, waypoint_list: WaypointList) -> None:
         """
         Callback function that is called whenever there is a new waypoint list message.
-        Converts the list of ROS2 `NavSatFix` objects to a list of `Position` objects,
+        Converts the list of ROS2 ``NavSatFix`` objects to a list of ``Position`` objects,
         which are a custom datatype that has some useful helper methods.
 
         Does not directly set the waypoints in the motorboat autopilot object,
-        instead it calls the `update_waypoints_list` method of the motorboat autopilot object.
+        instead it calls the ``update_waypoints_list`` method of the motorboat autopilot object.
 
         Parameters
         ----------
         waypoint_list
-            A ROS2 message that contains a list of waypoints as `NavSatFix` objects.
+            A ROS2 message that contains a list of waypoints as ``NavSatFix`` objects.
         """
 
         if len(waypoint_list.waypoints) == 0:
@@ -262,8 +261,6 @@ class MotorboatAutopilotNode(Node):
 
     def heading_callback(self, heading: Float32) -> None:
         self.heading = heading.data
-
-
 
 
     def get_optimal_rudder_angle(self, heading: float, desired_heading: float) -> float:

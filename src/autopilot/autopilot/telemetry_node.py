@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 from collections.abc import Generator
+from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
@@ -22,7 +23,6 @@ from autoboat_msgs.msg import VESCTelemetryData, WaypointList
 
 from .autopilot_library.utils.constants import (
     BOAT_STATUS_MAPPING,
-    CONFIG_DIRECTORY,
     TELEMETRY_SERVER_URL,
     BoatStatusPayload,
     TelemetryStatus,
@@ -92,9 +92,11 @@ class TelemetryNode(Node):
         self.autopilot_parameters_session = requests.Session()
         self.waypoints_session = requests.Session()
 
-        parameters_path = CONFIG_DIRECTORY / "sailboat_default_parameters.json"
-        with open(parameters_path, "r", encoding="utf-8") as parameters_file:
-            self.autopilot_parameters: dict[str, dict[str, Any]] = json.load(parameters_file)
+        self.autopilot_parameters_loaded: bool = False
+        self.create_subscription(String, "/autopilot_param_config_path", self.autopilot_param_config_path_callback, 10)
+
+        while not self.autopilot_parameters_loaded:
+            rclpy.spin_once(self)
 
         config_hash = hashlib.sha256(
             json.dumps(self.autopilot_parameters, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -163,8 +165,8 @@ class TelemetryNode(Node):
 
         self.autopilot_parameters_publisher = self.create_publisher(String, "/autopilot_parameters", 10)
         self.sensors_parameters_publisher = self.create_publisher(String, "/sensors_parameters", 10)
-
         self.waypoints_list_publisher = self.create_publisher(WaypointList, "/waypoints_list", 10)
+        
         self.create_subscription(Float32, "/desired_heading", self.desired_heading_callback, 10)
 
         self.create_subscription(Int32, "/current_waypoint_index", self.current_waypoint_index_callback, 10)
@@ -370,6 +372,25 @@ class TelemetryNode(Node):
         """
 
         self.desired_rudder_angle = desired_rudder_angle.data
+
+    
+    def autopilot_param_config_path_callback(self, autopilot_param_config_path: String) -> None:
+        """
+        Callback function for the autopilot parameter config path topic.
+        Updates the boat's autopilot parameters from the new config path.
+
+        Parameters
+        ----------
+        autopilot_param_config_path
+            The new config path for the autopilot parameters.
+        """
+
+        parameters_path = Path(autopilot_param_config_path.data)
+        with open(file=parameters_path, mode="r", encoding="utf-8") as parameters_file:
+            self.autopilot_parameters = json.load(parameters_file)
+
+        self.logger.info(f"Loaded autopilot parameters from new config path: {parameters_path}")
+        self.autopilot_parameters_loaded = True
 
 
     def should_terminate_callback(self, msg: Bool) -> None:

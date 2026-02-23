@@ -34,8 +34,11 @@ class SailboatAutopilotNode(Node):
 
         self.logger = self.get_logger()
 
+        self.autopilot_param_config_path_publisher = self.create_publisher(String, "/autopilot_param_config_path", 10)
         parameters_path = CONFIG_DIRECTORY / "sailboat_default_parameters.json"
-        with open(parameters_path, "r", encoding="utf-8") as parameters_file:
+        self.autopilot_param_config_path_publisher.publish(String(data=parameters_path.as_posix()))
+
+        with open(file=parameters_path, mode="r", encoding="utf-8") as parameters_file:
             self.raw_autopilot_parameters: dict[str, dict[str, Any]] = json.load(parameters_file)
 
         # structured like {parameter_name: parameter_value}
@@ -49,18 +52,9 @@ class SailboatAutopilotNode(Node):
         self.autopilot_refresh_timer = self.create_timer(
             1 / self.autopilot_parameters["autopilot_refresh_rate"], self.update_ros_topics
         )
-        self.publish_default_autopilot_parameters_timer = self.create_timer(
-            0.1, self.publish_default_autopilot_parameters_timer_callback
-        )
-
-        self.default_autopilot_parameters_publisher = self.create_publisher(String, "/default_autopilot_parameters", 1)
-        self.create_subscription(
-            Bool, "/default_autopilot_parameters_acknowledgement", self.default_autopilot_parameters_acknowledgement_callback, 1
-        )
 
         self.create_subscription(String, "/autopilot_parameters", self.autopilot_parameters_callback, 10)
         self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10)
-
         self.create_subscription(NavSatFix, "/position", self.position_callback, qos_profile_sensor_data)
         self.create_subscription(Twist, "/velocity", self.velocity_callback, qos_profile_sensor_data)
         self.create_subscription(Float32, "/heading", self.heading_callback, qos_profile_sensor_data)
@@ -87,8 +81,6 @@ class SailboatAutopilotNode(Node):
         self.apparent_wind_angle: float = 0.0
         self.sail_angle: float = 0.0
         self.rudder_angle: float = 0.0
-
-        self.has_default_autopilot_parameters_been_received_by_telemetry_node = False
 
         self.should_zero_rudder_encoder = False
         self.rudder_encoder_has_been_zeroed = False
@@ -252,15 +244,6 @@ class SailboatAutopilotNode(Node):
         self.apparent_wind_vector = np.array([apparent_wind_vector.x, apparent_wind_vector.y])
         _, self.apparent_wind_angle = cartesian_vector_to_polar(apparent_wind_vector.x, apparent_wind_vector.y)
 
-    def publish_default_autopilot_parameters_timer_callback(self) -> None:
-        """
-        Publish the default parameters so that the telemetry node/telemetry server/groundstation
-        know which parameters it can change. This should only be sent to the telemetry node once
-        and then should never be received again once the telemetry node properly receives and parses it.
-        """
-
-        if not self.has_default_autopilot_parameters_been_received_by_telemetry_node:
-            self.default_autopilot_parameters_publisher.publish(String(data=json.dumps(self.autopilot_parameters)))
 
     def step(self) -> tuple[float | None, float | None]:
         """
