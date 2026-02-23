@@ -172,11 +172,11 @@ class BuoyDetectionNode(Node):
             }
         }
         self.parameters = {
-            "buffer_window_size": None,
+            "buffer_window_size": None, # The number of frames to keep in the buffer for triangulation. Should be large enough to have multiple observations of the same object, but small enough to not cause too much delay in publishing results.
             "iou_threshold": None, # If two detections are less than this distance apart, they are considered the same object and the older one is deleted. This is to prevent duplicate detections in triangulation.
             "update_rate": None, # How often to publish detection results in seconds. We can only publish the most recent detection for each object, so we don't need to publish every frame.
-            "model_name": None,
-            "threshold": None
+            "model_name": None, # model name without .pt.onnx. Ex. yolo11m.pt.onnx -> yolo11m
+            "threshold": None # detection threshold
         }
         self._read_default_parameters()
 
@@ -208,11 +208,6 @@ class BuoyDetectionNode(Node):
         self.cv_parameters_listener = self.create_subscription(
             msg_type=String, topic="/cv_parameters", callback=self.cv_parameters_callback, qos_profile=10
         )
-        # self.model_listener = self.create_subscription(msg_type=String, topic="/model", callback=self.model_callback, qos_profile=sensor_qos_profile)
-        # self.threshold_listener = self.create_subscription(msg_type=Float32, topic="/threshold", callback=self.threshold_callback, qos_profile=sensor_qos_profile)
-        # self.buffer_window_listener = self.create_subscription(msg_type=Int32, topic="/buffer_window", callback=self.buffer_window_callback, qos_profile=sensor_qos_profile)
-        # self.iou_threshold_listener = self.create_subscription(msg_type=Float32, topic="/iou_threshold", callback=self.iou_threshold_callback, qos_profile=sensor_qos_profile)
-        # self.update_frequency_listener = self.create_subscription(msg_type=Float32, topic="/update_frequency", callback=self.update_frequency_callback, qos_profile=sensor_qos_profile)
 
         self.current_position = {
             "latitude": 0,
@@ -232,8 +227,6 @@ class BuoyDetectionNode(Node):
         self.loop = None
 
         # Config file parameters
-        self.threshold = 0
-        self.model = "" # model name without .pt.onnx. Ex. yolo11m.pt.onnx -> yolo11m
         self.config_file_split = []
         self.last_time = time.time()
         self.file_lock = threading.Lock()
@@ -284,7 +277,8 @@ class BuoyDetectionNode(Node):
         nvvidconvsrc0 = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-src-0')
         nvvidconvsrc0.set_property('nvbuf-memory-type', MEMORY_TYPE)
         nvvidconvsrc0.set_property('compute-hw', COMPUTE_HW)
-        nvvidconvsrc0.set_property('flip-method', 2)
+        if IS_DEV_CONTAINER:
+            nvvidconvsrc0.set_property('flip-method', 2)
 
         caps_nvvidconvsrc0 = Gst.ElementFactory.make('capsfilter', 'nvmm-caps-0')
         caps_nvvidconvsrc0.set_property('caps', Gst.Caps.from_string(f'video/x-raw(memory:NVMM), format=NV12, width={self.CAM_LIST[0]["input_width"]}, height={self.CAM_LIST[0]["input_height"]}'))
@@ -717,20 +711,24 @@ class BuoyDetectionNode(Node):
 
     def cv_parameters_callback(self, msg):
         new_parameters_json: dict = json.loads(msg.data)
+        updated_file = False
         for key in new_parameters_json.keys():
             match (key):
                 case "model_name":
-                    self.update_model(new_parameters_json[key])
+                    updated_file |= self.update_model(new_parameters_json[key])
                 case "threshold":
-                    self.update_threshold(new_parameters_json[key])
+                    updated_file |= self.update_threshold(new_parameters_json[key])
                 case "buffer_window_size":
-                    self.buffer_window_callback(new_parameters_json[key])
+                    self.update_buffer_window(new_parameters_json[key])
                 case "iou_threshold":
-                    self.iou_threshold_callback(new_parameters_json[key])
+                    self.update_iou_threshold(new_parameters_json[key])
                 case "update_rate":
-                    self.update_frequency_callback(new_parameters_json[key])
+                    self.update_publish_frequency(new_parameters_json[key])
                 case _:
                     self.get_logger().warn(f"Received unknown parameter {key} in cv_parameters_callback")
+        if updated_file: # We want to minimize how often we write the config file because nvinfer complains when it is updated too quickly
+            with self.file_lock:
+                self.update_config_file(YOLO_CONFIG[YOLO_VER])
 
     def position_callback(self, msg):
         self.current_position["latitude"] = msg.latitude
@@ -744,9 +742,10 @@ class BuoyDetectionNode(Node):
     
     def update_model(self, new_model):
         global YOLO_VER
+        updated_value = False
         # TODO: check if config file was modified externally and reload if so
         self.file_lock.acquire() # Don't want multiple threads writing to the file at once
-        if new_model != self.model and INFERENCE:
+        if new_model != self.parameters["model_name"] and INFERENCE:
             onnx_lines, engine_lines, labels_lines, found_model_entry = self._modify_config_lines(self.config_file_split, new_model)
             
             # Should we add the new model if not found?
@@ -760,7 +759,7 @@ class BuoyDetectionNode(Node):
                 if found_model_entry:
                     YOLO_VER = 26 if YOLO_VER == 11 else 11
                     attributes_lines = split_lines[5].split('\n')
-                    attributes_lines[1] = f"pre-cluster-threshold={self.threshold}"
+                    attributes_lines[1] = f"pre-cluster-threshold={self.parameters['threshold']}"
                     split_lines[5] = "\n".join(attributes_lines)
                     self.config_file_split = split_lines
                     self.get_logger().info(f"Model entry found in alternate config, switching to Yolo{YOLO_VER}")
@@ -776,11 +775,13 @@ class BuoyDetectionNode(Node):
             self.config_file_split[2] = engine_content
             self.config_file_split[3] = labels_content
             self.parameters["model_name"] = new_model
-            self.update_config_file(YOLO_CONFIG[YOLO_VER])
+            # self.update_config_file(YOLO_CONFIG[YOLO_VER])
             self.get_logger().info(f"Updated model to {new_model}")
+            updated_value = True
         else:
             self.get_logger().info(f"Model is already {new_model}, not updating")
         self.file_lock.release()
+        return updated_value
 
     def _modify_config_lines(self, lines_split, new_model):
         onnx_lines = lines_split[1].split('\n')
@@ -822,33 +823,33 @@ class BuoyDetectionNode(Node):
         
         return (onnx_lines, engine_lines, labels_lines, found_model_entry)
 
-    def threshold_callback(self, new_threshold):
+    def update_threshold(self, new_threshold):
+        updated_value = False
         self.file_lock.acquire() # Don't want multiple threads writing to the file at once
-        # new_threshold = float(msg.data)
-        if new_threshold != self.threshold:
+        if new_threshold != self.parameters["threshold"]:
             if new_threshold >= 0.0 and new_threshold <= 1.0:
                 attributes_lines = self.config_file_split[5].split('\n')
                 attributes_lines[1] = f"pre-cluster-threshold={new_threshold}"
                 self.config_file_split[5] = "\n".join(attributes_lines)
                 self.parameters["threshold"] = new_threshold
-                self.update_config_file()
+                # self.update_config_file(YOLO_CONFIG[YOLO_VER])
                 self.get_logger().info(f"Updated threshold to {new_threshold}")
+                updated_value = True
             else:
                 self.get_logger().info(f"Threshold {new_threshold} is out of range [0.0, 1.0], not updating")
         else:
             self.get_logger().info(f"Threshold is already {new_threshold}, not updating")
         self.file_lock.release()
+        return updated_value
     
-    def iou_threshold_callback(self, new_iou_threshold):
-        # new_iou_threshold = float(msg.data)
+    def update_iou_threshold(self, new_iou_threshold):
         if new_iou_threshold >= 0:
             self.parameters["iou_threshold"] = new_iou_threshold
             self.get_logger().info(f"Updated iou threshold to {new_iou_threshold}")
         else:
             self.get_logger().info(f"Bad iou threshold {new_iou_threshold}, must be >= 0, not updating")
 
-    def update_frequency_callback(self, new_update_frequency):
-        # new_update_frequency = float(msg.data)
+    def update_publish_frequency(self, new_update_frequency):
         if hasattr(self, 'timer'):
             if new_update_frequency > 0:
                 self.update_frequency = new_update_frequency
@@ -860,8 +861,7 @@ class BuoyDetectionNode(Node):
         else:
             self.get_logger().warn("Inference is disabled, not updating update frequency")
     
-    def buffer_window_callback(self, new_buffer_window):
-        # new_buffer_window = int(msg.data)
+    def update_buffer_window(self, new_buffer_window):
         if new_buffer_window != self.triangulator.buffer_window:
             self.triangulator.buffer_window = new_buffer_window
             self.get_logger().info(f"Updated buffer window to {new_buffer_window}")
