@@ -12,8 +12,7 @@
         "editor.formatOnSave": false,
         "editor.codeActionsOnSave": {
             "source.organizeImports.ruff": "explicit"
-        },
-    "editor.defaultFormatter": "charliermarsh.ruff"
+        }
     },
     "python.autoComplete.extraPaths": [
         "/opt/ros/humble/lib/python3.10/site-packages",
