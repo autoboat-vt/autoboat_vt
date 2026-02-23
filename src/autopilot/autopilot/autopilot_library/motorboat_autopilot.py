@@ -158,15 +158,15 @@ class MotorboatAutopilot:
         desired_position = self.waypoints[self.current_waypoint_index]
         distance_to_desired_position = get_distance_between_positions(current_position, desired_position)
 
-        self.logger.info(f"Current Position : {current_position.get_longitude_latitude()}")
-        self.logger.info(f"Desired Position : {desired_position.get_longitude_latitude()}")
+        # self.logger.info(f"Current Position : {current_position.get_longitude_latitude()}")
+        # self.logger.info(f"Desired Position : {desired_position.get_longitude_latitude()}")
 
         desired_heading = get_bearing(current_position, desired_position)
         # TODO: rudder angle and propeller angle should not be self. variables they should be local to the function
         self.rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading)
         self.propeller_rpm = self.get_optimal_rpm(current_position,desired_position)
 
-        self.logger.info(f"Bearing: {desired_heading}")
+        # self.logger.info(f"Bearing: {desired_heading}")
         if distance_to_desired_position < self.parameters['waypoint_accuracy']:
             self.rudder_angle = 0.0
             self.propeller_rpm = 0.0

@@ -481,7 +481,7 @@ class TelemetryNode(Node):
         true_wind_vector = self.apparent_wind_vector + self.velocity_vector
         self.true_wind_speed, self.true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
 
-        if self.current_waypoints != []:
+        if self.current_waypoints != [] and self.current_waypoint_index < len(self.current_waypoints):
             current_position = Position(self.position.latitude, self.position.longitude)
             print(f"current position: {current_position}")
             next_waypoint_position = Position(

@@ -10,7 +10,7 @@ from launch import LaunchDescription
 
 def generate_launch_description():
     ros_gz_sim_pkg_path = get_package_share_directory('ros_gz_sim')
-    # motorboat_pkg_path = FindPackageShare('motorboat_sim')  # Replace with your own package name
+    # motorboat_pkg_path = FindPackageShare('motorboat_simulation')  # Replace with your own package name
     gz_launch_path = PathJoinSubstitution([ros_gz_sim_pkg_path, 'launch','gz_sim.launch.py'])
 
     return LaunchDescription([
@@ -25,7 +25,7 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(gz_launch_path),
             launch_arguments={
-                'gz_args': "-r /home/ws/src/motorboat_sim/buoyant_cylinder.sdf",  # Replace with your own world file
+                'gz_args': "-s --headless-rendering -r /home/ws/src/motorboat_simulation/buoyant_cylinder.sdf",
                 'on_exit_shutdown': 'True'
             }.items(),
         ),
@@ -33,11 +33,11 @@ def generate_launch_description():
         # Bridging and remapping Gazebo topics to ROS 2 (replace with your own topics)
          
         Node(
-            package='new_simulation',
+            package='autopilot_transform',
             executable='autopilot_transform',
             name='autopilot_transform',
-            respawn = True,
-            respawn_delay =2.0,
+            respawn=True,
+            respawn_delay=2.0,
         ),
 
 
@@ -64,18 +64,14 @@ def generate_launch_description():
         Node(
             package='ros_gz_bridge',
             executable='parameter_bridge',
-            arguments=['/motorboat/propeller_topic@std_msgs/msg/Float64]gz.msgs.Double',
-                       '/rudder@std_msgs/msg/Float64]gz.msgs.Double',
-                       '/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
-                       '/navsat@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat'],
+            arguments=[
+                '/motorboat/propeller_topic@std_msgs/msg/Float64]gz.msgs.Double',
+                '/rudder@std_msgs/msg/Float64]gz.msgs.Double',
+                '/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
+                '/navsat@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat'
+            ],
             remappings=[('/motorboat/propeller_topic', '/propeller_sim_rpm'), ('/navsat', '/position')],
 
             output='screen'
         ),
-
-
-    ]
-    
-    
-    
-    )
+    ])

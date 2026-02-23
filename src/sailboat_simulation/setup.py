@@ -1,8 +1,8 @@
-from setuptools import find_packages, setup
 from glob import glob
 
+from setuptools import find_packages, setup
 
-package_name = "simulation"
+package_name = "sailboat_simulation"
 
 setup(
     name=package_name,
@@ -21,6 +21,6 @@ setup(
     license="TODO: License declaration",
     tests_require=["pytest"],
     entry_points={
-        "console_scripts": ["simulation = simulation.simulation_node:main"],
+        "console_scripts": ["simulation = sailboat_simulation.simulation_node:main"],
     },
 )

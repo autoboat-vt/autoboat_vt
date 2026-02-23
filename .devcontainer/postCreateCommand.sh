@@ -21,7 +21,7 @@ echo 'alias python="python3"' >> $AUTOBOAT_USER_HOME/.bashrc
 # "pip install -e" installs the packages as "editable" which just means that we can make changes in the packages
 # And you don't have to reinstall them, the changes will automatically be visible if you run another script again
 pip install -e /home/ws/src/vesc/pyvesc/
-pip install -e /home/ws/src/simulation/sailboat_gym/
+pip install -e /home/ws/src/sailboat_simulation/sailboat_gym/
 pip install -r /home/ws/.devcontainer/required_pip_packages.txt
 
 # Build the ros2 workspace for the first time
