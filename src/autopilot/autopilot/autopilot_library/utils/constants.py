@@ -1,5 +1,7 @@
+import ctypes
 from enum import Enum
 from pathlib import Path
+from typing import ClassVar, Final
 
 
 class SailboatAutopilotMode(Enum):
@@ -21,7 +23,6 @@ class SailboatStates(Enum):
     CCW_TACKING = 2
     STALL = 3
     # JIBE = 4
-
 
 class SailboatManeuvers(Enum):
     """
@@ -47,7 +48,6 @@ class MotorboatAutopilotMode(Enum):
     HOLD_HEADING = 2
     WAYPOINT_MISSION = 3
 
-
 class MotorboatControls(Enum):
     """An enum containing the different motorboat control types."""
 
@@ -55,15 +55,67 @@ class MotorboatControls(Enum):
     DUTY_CYCLE = 1
     CURRENT = 2
 
+
 class TelemetryStatus(Enum):
     """Enum representing the status of communication with the telemetry server."""
 
     SUCCESS = 0
     FAILURE = 1
 
+class BoatStatusPayload(ctypes.Structure):
+    """
+    A class representing the payload that will be sent to the telemetry server
+    to provide information about the boat's current state.
 
-# don't put '/' at the end of the URL
-TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
+    Inherits
+    --------
+    ``ctypes.Structure``
+    """
+
+    CType = type[ctypes._SimpleCData]
+
+    _pack_: ClassVar[int] = 1
+
+    four_byte_fields: Final[tuple[tuple[str, CType], ...]] = (
+        ("latitude", ctypes.c_int32),
+        ("longitude", ctypes.c_int32),
+        ("distance_to_next_waypoint", ctypes.c_uint32),
+    )
+
+    two_byte_fields: Final[tuple[tuple[str, CType], ...]] = (
+        ("speed", ctypes.c_int16),
+        ("velocity_x", ctypes.c_int16),
+        ("velocity_y", ctypes.c_int16),
+        ("desired_heading", ctypes.c_int16),
+        ("heading", ctypes.c_int16),
+        ("true_wind_speed", ctypes.c_uint16),
+        ("true_wind_angle", ctypes.c_int16),
+        ("apparent_wind_speed", ctypes.c_uint16),
+        ("apparent_wind_angle", ctypes.c_int16),
+        ("desired_sail_angle", ctypes.c_int16),
+        ("desired_rudder_angle", ctypes.c_int16),
+    )
+
+    one_byte_fields: Final[tuple[tuple[str, CType], ...]] = (
+        ("current_waypoint_index", ctypes.c_uint8),
+        ("autopilot_mode", ctypes.c_uint8),
+        ("full_autonomy_maneuver", ctypes.c_uint8),
+    )
+
+    _fields_: ClassVar[tuple[tuple[str, CType], ...]] = four_byte_fields + two_byte_fields + one_byte_fields
+    _field_names: ClassVar[tuple[str, ...]] = tuple(name for name, _ in _fields_)
+
+    def __str__(self) -> str:
+        """
+        Return a string representation of the telemetry payload, which includes the name and value of each field in the payload.
+
+        Returns
+        -------
+        str
+            A string representation of the telemetry payload.
+        """
+
+        return "\n".join(f"{field_name}: {getattr(self, field_name)}" for field_name in self._field_names)
 
 BOAT_STATUS_MAPPING: list[str] = [
     "position",
@@ -80,8 +132,11 @@ BOAT_STATUS_MAPPING: list[str] = [
     "sail_angle",
     "rudder_angle",
     "current_waypoint_index",
-    "distance_to_next_waypoint"
+    "distance_to_next_waypoint",
 ]
+
+# don't put '/' at the end of the URL
+TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
 
 BASE_DIRECTORY = Path(__file__).resolve().parent.parent.parent
 CONFIG_DIRECTORY = BASE_DIRECTORY / "config"

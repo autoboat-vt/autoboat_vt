@@ -1,5 +1,3 @@
-#!usr/bin/python3
-
 import base64
 import hashlib
 import json
@@ -22,7 +20,13 @@ from std_msgs.msg import Bool, Float32, Int32, String
 
 from autoboat_msgs.msg import VESCTelemetryData, WaypointList
 
-from .autopilot_library.utils.constants import BOAT_STATUS_MAPPING, CONFIG_DIRECTORY, TELEMETRY_SERVER_URL, TelemetryStatus
+from .autopilot_library.utils.constants import (
+    BOAT_STATUS_MAPPING,
+    CONFIG_DIRECTORY,
+    TELEMETRY_SERVER_URL,
+    BoatStatusPayload,
+    TelemetryStatus,
+)
 from .autopilot_library.utils.position import Position
 from .autopilot_library.utils.utils_function_library import (
     cartesian_vector_to_polar,
