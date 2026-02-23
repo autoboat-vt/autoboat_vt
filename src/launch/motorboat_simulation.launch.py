@@ -25,7 +25,7 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(gz_launch_path),
             launch_arguments={
-                'gz_args': "-s --headless-rendering -r /home/ws/src/motorboat_simulation/buoyant_cylinder.sdf",
+                'gz_args': "-s --headless-rendering -r /home/ws/src/motorboat_simulation/motorboat_model.sdf",
                 'on_exit_shutdown': 'True'
             }.items(),
         ),

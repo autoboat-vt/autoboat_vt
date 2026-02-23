@@ -5,7 +5,7 @@ Without ros2:
 
   0. Start the simulation:
 
-    gz sim buoyant_cylinder.sdf
+    gz sim motorboat_model.sdf
 
   1. Move the rudder:
 
@@ -13,7 +13,7 @@ Without ros2:
     
   1a. View rudder position:
 
-    gz topic -e -t /world/buoyant_cylinder/model/my_ship/joint_state
+    gz topic -e -t /world/motorboat_model/model/my_ship/joint_state
 
   2. Propel the vehicle:
 
@@ -24,7 +24,7 @@ With ros2:
 
   0. Start the simulation (in ../launch/):
 
-    ros2 launch simtest.launch.py
+    ros2 launch motorboat_simulation.launch.py
 
   1. Move the rudder:
 
@@ -38,7 +38,7 @@ ros2 topic pub /propeller_sim_rpm std_msgs/msg/Float64 'data: 500'
 
 With ROS2 autopilot node:
 0. Start the simulation (in ../launch/):
-    ros2 launch simtest.launch.py
+    ros2 launch motorboat_simulation.launch.py
 
 1. Move the rudder: 
 ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
@@ -49,7 +49,7 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
 -->
 
 <sdf version="1.7">
-  <world name="buoyant_cylinder">
+  <world name="motorboat_model">
 
     <scene>
       <ambient>0.0 1.0 1.0</ambient>

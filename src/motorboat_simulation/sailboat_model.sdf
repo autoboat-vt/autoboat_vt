@@ -5,7 +5,7 @@ Without ros2:
 
   0. Start the simulation:
 
-    gz sim buoyant_sphere.sdf
+    gz sim sailboat_model.sdf
 
   1. Move the rudder in radians:
 
@@ -13,7 +13,7 @@ Without ros2:
     
   1a. View rudder position:
 
-    gz topic -e -t /world/buoyant_sphere/model/my_ship/joint_state
+    gz topic -e -t /world/sailboat_model/model/my_ship/joint_state
 
   2. Set wind:
 
@@ -27,7 +27,7 @@ With ros2: TODO: UPDATE
 
   0. Start the simulation (in ../launch/):
 
-    ros2 launch simtest.launch.py
+    ros2 launch motorboat_simulation.launch.py
 
   1. Move the rudder:
 
@@ -36,7 +36,7 @@ With ros2: TODO: UPDATE
 -->
 
 <sdf version="1.7">
-  <world name="buoyant_sphere">
+  <world name="sailboat_model">
 
     <scene>
       <ambient>0.0 1.0 1.0</ambient>
