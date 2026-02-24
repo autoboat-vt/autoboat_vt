@@ -3,6 +3,24 @@ from enum import Enum
 from pathlib import Path
 from typing import ClassVar, Final
 
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+
+# used to specify what is available to import from this file
+__all__ = [
+    "BASE_DIRECTORY",
+    "BOAT_STATUS_MAPPING",
+    "CONFIG_DIRECTORY",
+    "QOS_AUTOPILOT_CONFIG",
+    "TELEMETRY_SERVER_URL",
+    "BoatStatusPayload",
+    "MotorboatAutopilotMode",
+    "MotorboatControls",
+    "SailboatAutopilotMode",
+    "SailboatManeuvers",
+    "SailboatStates",
+    "TelemetryStatus",
+]
+
 
 class SailboatAutopilotMode(Enum):
     """An enum containing the different modes that the sailboat autopilot can be in."""
@@ -116,6 +134,13 @@ class BoatStatusPayload(ctypes.Structure):
         """
 
         return "\n".join(f"{field_name}: {getattr(self, field_name)}" for field_name in self._field_names)
+
+QOS_AUTOPILOT_PARAM_CONFIG_PATH = QoSProfile(
+    reliability=ReliabilityPolicy.RELIABLE,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=1,
+)
 
 BOAT_STATUS_MAPPING: list[str] = [
     "position",

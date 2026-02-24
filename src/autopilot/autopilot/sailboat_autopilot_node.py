@@ -6,14 +6,14 @@ import numpy.typing as npt
 import rclpy
 from geometry_msgs.msg import Twist, Vector3
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import DurabilityPolicy, qos_profile_sensor_data
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Bool, Float32, Int32, String
 
 from autoboat_msgs.msg import RCData, WaypointList
 
 from .autopilot_library.sailboat_autopilot import SailboatAutopilot
-from .autopilot_library.utils.constants import CONFIG_DIRECTORY, SailboatAutopilotMode
+from .autopilot_library.utils.constants import CONFIG_DIRECTORY, QOS_AUTOPILOT_PARAM_CONFIG_PATH, SailboatAutopilotMode
 from .autopilot_library.utils.position import Position
 from .autopilot_library.utils.utils_function_library import cartesian_vector_to_polar, get_bearing
 
@@ -34,7 +34,9 @@ class SailboatAutopilotNode(Node):
 
         self.logger = self.get_logger()
 
-        self.autopilot_param_config_path_publisher = self.create_publisher(String, "/autopilot_param_config_path", 10)
+        self.autopilot_param_config_path_publisher = self.create_publisher(
+            String, "/autopilot_param_config_path", QOS_AUTOPILOT_PARAM_CONFIG_PATH
+        )
         parameters_path = CONFIG_DIRECTORY / "sailboat_default_parameters.json"
         self.autopilot_param_config_path_publisher.publish(String(data=parameters_path.as_posix()))
 

@@ -5,6 +5,8 @@ import pygeodesy
 import utm
 from pygeodesy.ellipsoidalKarney import LatLon
 
+# used to specify what is available to import from this file
+__all__ = ["Position"]
 
 class Position:
     """

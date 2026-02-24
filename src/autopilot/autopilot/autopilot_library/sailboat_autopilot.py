@@ -15,6 +15,8 @@ from .utils.utils_function_library import (
     is_angle_between_boundaries,
 )
 
+# used to specify what is available to import from this file
+__all__ = ["SailboatAutopilot"]
 
 class SailboatAutopilot:
     """A class containing algorithms to control a sailboat given sensor data."""

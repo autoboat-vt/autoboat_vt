@@ -5,6 +5,19 @@ import pyproj
 
 from .position import Position
 
+# used to specify what is available to import from this file
+__all__ = [
+    "cartesian_vector_to_polar",
+    "check_float_equivalence",
+    "does_line_segment_intersect_circle",
+    "does_line_violate_no_sail_zone",
+    "get_angle_between_vectors",
+    "get_bearing",
+    "get_distance_between_angles",
+    "get_distance_between_positions",
+    "is_angle_between_boundaries",
+]
+
 
 def check_float_equivalence(float1: float, float2: float) -> bool:
     """

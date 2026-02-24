@@ -14,7 +14,7 @@ from std_msgs.msg import Bool, Float32, Int32, String
 from autoboat_msgs.msg import RCData, VESCControlData, WaypointList
 
 from .autopilot_library.motorboat_autopilot import MotorboatAutopilot
-from .autopilot_library.utils.constants import CONFIG_DIRECTORY, MotorboatAutopilotMode, MotorboatControls
+from .autopilot_library.utils.constants import CONFIG_DIRECTORY, QOS_AUTOPILOT_PARAM_CONFIG_PATH, MotorboatAutopilotMode
 from .autopilot_library.utils.discrete_pid import DiscretePID
 from .autopilot_library.utils.position import Position
 from .autopilot_library.utils.utils_function_library import get_distance_between_angles
@@ -36,7 +36,9 @@ class MotorboatAutopilotNode(Node):
 
         self.logger = self.get_logger()
 
-        self.autopilot_param_config_path_publisher = self.create_publisher(String, "/autopilot_param_config_path", 10)
+        self.autopilot_param_config_path_publisher = self.create_publisher(
+            String, "/autopilot_param_config_path", QOS_AUTOPILOT_PARAM_CONFIG_PATH
+        )
         parameters_path = CONFIG_DIRECTORY / "motorboat_default_parameters.json"
         self.autopilot_param_config_path_publisher.publish(String(data=parameters_path.as_posix()))
 

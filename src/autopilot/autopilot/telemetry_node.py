@@ -23,6 +23,7 @@ from autoboat_msgs.msg import VESCTelemetryData, WaypointList
 
 from .autopilot_library.utils.constants import (
     BOAT_STATUS_MAPPING,
+    QOS_AUTOPILOT_PARAM_CONFIG_PATH,
     TELEMETRY_SERVER_URL,
     BoatStatusPayload,
     TelemetryStatus,
@@ -93,7 +94,9 @@ class TelemetryNode(Node):
         self.waypoints_session = requests.Session()
 
         self.autopilot_parameters_loaded: bool = False
-        self.create_subscription(String, "/autopilot_param_config_path", self.autopilot_param_config_path_callback, 10)
+        self.create_subscription(
+            String, "/autopilot_param_config_path", self.autopilot_param_config_path_callback, QOS_AUTOPILOT_PARAM_CONFIG_PATH
+        )
 
         while not self.autopilot_parameters_loaded:
             rclpy.spin_once(self)

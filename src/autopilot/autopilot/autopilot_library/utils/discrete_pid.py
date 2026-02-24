@@ -1,3 +1,6 @@
+# used to specify what is available to import from this file
+__all__ = ["DiscretePID"]
+
 class DiscretePID:
     """
     Modified discrete PID controller using a low pass filter only for the derivative term.
