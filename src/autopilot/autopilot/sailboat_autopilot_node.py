@@ -6,7 +6,7 @@ import numpy.typing as npt
 import rclpy
 from geometry_msgs.msg import Twist, Vector3
 from rclpy.node import Node
-from rclpy.qos import DurabilityPolicy, qos_profile_sensor_data
+from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Bool, Float32, Int32, String
 

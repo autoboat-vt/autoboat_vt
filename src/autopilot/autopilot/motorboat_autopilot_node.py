@@ -14,7 +14,12 @@ from std_msgs.msg import Bool, Float32, Int32, String
 from autoboat_msgs.msg import RCData, VESCControlData, WaypointList
 
 from .autopilot_library.motorboat_autopilot import MotorboatAutopilot
-from .autopilot_library.utils.constants import CONFIG_DIRECTORY, QOS_AUTOPILOT_PARAM_CONFIG_PATH, MotorboatAutopilotMode
+from .autopilot_library.utils.constants import (
+    CONFIG_DIRECTORY,
+    QOS_AUTOPILOT_PARAM_CONFIG_PATH,
+    MotorboatAutopilotMode,
+    MotorboatControls,
+)
 from .autopilot_library.utils.discrete_pid import DiscretePID
 from .autopilot_library.utils.position import Position
 from .autopilot_library.utils.utils_function_library import get_distance_between_angles
