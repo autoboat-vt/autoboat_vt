@@ -255,7 +255,7 @@ try:
             with open(APP_STATE_PATH, "w", encoding="utf-8") as f:
                 json.dump(STATE_FILE_CONTENTS, f, indent=4)
         
-        if "autopilot_params" not in os.listdir(DATA_DIR):
+        if "example_params.json" not in os.listdir(DATA_DIR):
             print("[Info] Creating autopilot parameters directory...")
             os.makedirs(DATA_DIR / "autopilot_params")
         
