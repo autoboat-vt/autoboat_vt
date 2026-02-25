@@ -259,7 +259,7 @@ try:
             print("[Info] Creating autopilot parameters directory...")
             os.makedirs(DATA_DIR / "autopilot_params")
         
-        if "params_default.json" not in os.listdir(DATA_DIR / "autopilot_params"):
+        if "example_params.json" not in os.listdir(DATA_DIR / "autopilot_params"):
             print("[Warning] Missing default autopilot parameters file!")
 
         if "boat_data" not in os.listdir(DATA_DIR):
