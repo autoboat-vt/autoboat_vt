@@ -254,13 +254,13 @@ try:
             print("[Info] Initializing app state file...")
             with open(APP_STATE_PATH, "w", encoding="utf-8") as f:
                 json.dump(STATE_FILE_CONTENTS, f, indent=4)
-        
-        if "example_params.json" not in os.listdir(DATA_DIR):
+
+        if "autopilot_params" not in os.listdir(DATA_DIR):
             print("[Info] Creating autopilot parameters directory...")
             os.makedirs(DATA_DIR / "autopilot_params")
-        
-        if "params_default.json" not in os.listdir(DATA_DIR / "autopilot_params"):
-            print("[Warning] Missing default autopilot parameters file!")
+
+        if "example_params.json" not in os.listdir(DATA_DIR / "autopilot_params"):
+            print("[Warning] Missing example autopilot parameters file.")
 
         if "boat_data" not in os.listdir(DATA_DIR):
             print("[Info] Creating boat data directory...")
