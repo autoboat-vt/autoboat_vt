@@ -27,7 +27,6 @@ from requests.exceptions import RequestException
 from syntax_highlighters.json import JsonHighlighter
 from utils import constants, misc
 from widgets.popup_edit import TextEditWindow
-from yaml import safe_load
 
 
 class AutopilotConfigEditor(QWidget):
@@ -143,27 +142,37 @@ class AutopilotConfigEditor(QWidget):
         print("[Info] Sending all parameters...")
 
         try:
-            remote_hash = constants.SM.read("remote_autopilot_param_hash")
+            remote_hash: str = constants.SM.read("remote_autopilot_param_hash")
+            tmp_autopilot_parameters: dict[str, dict[str, Any]] = constants.SM.read("current_autopilot_parameters")
+
+            # if "current" is set for the parameters, it means they have been modified from the default values,
+            # so we should use those for sending/pushing instead of the default values
+            # and then update the state manager at the end with the sent values to ensure consistency
+            for parameter in tmp_autopilot_parameters.values():
+                if "current" in parameter:
+                    parameter["default"] = parameter.pop("current")
             
             if remote_hash == "":
                 print("[Info] Setting current parameters as default on telemetry server.")
+
                 response = constants.REQ_SESSION.post(
                     urljoin(
                         misc.get_route("set_default_autopilot_parameters"),
                         str(constants.SM.read("telemetry_server_instance_id")),
                     ),
-                    json=json.dumps(constants.SM.read("current_autopilot_parameters"), indent=None)
+                    json=json.dumps(tmp_autopilot_parameters, indent=None)
                 )
 
                 status_message = response.text.strip().replace('"', "")
 
                 if response.status_code == 200:
                     print("[Info] Current parameters set as default successfully.")
+                    constants.SM.write("current_autopilot_parameters", tmp_autopilot_parameters)
 
                 elif status_message == "Configuration hash already exists.":
                     hash_from_config = hashlib.sha256(
                         json.dumps(
-                            constants.SM.read("current_autopilot_parameters"), sort_keys=True, separators=(",", ":")
+                            tmp_autopilot_parameters, sort_keys=True, separators=(",", ":")
                         ).encode(encoding="utf-8")
                     ).hexdigest()
                     
@@ -192,21 +201,21 @@ class AutopilotConfigEditor(QWidget):
 
             elif remote_hash != constants.SM.read("local_autopilot_param_hash"):
                 print("[Info] Creating new config on telemetry server.")
+
                 response = constants.REQ_SESSION.post(
                     misc.get_route("create_config"),
-                    json=json.dumps(constants.SM.read("current_autopilot_parameters"), indent=None),
+                    json=json.dumps(tmp_autopilot_parameters, indent=None),
                 )
 
                 status_message = response.text.strip().replace('"', "")
 
                 if response.status_code == 200:
                     print("[Info] New config created successfully.")
+                    constants.SM.write("current_autopilot_parameters", tmp_autopilot_parameters)
 
                 elif status_message == "Configuration hash already exists.":
                     hash_from_config = hashlib.sha256(
-                        json.dumps(
-                            constants.SM.read("current_autopilot_parameters"), sort_keys=True, separators=(",", ":")
-                        ).encode(encoding="utf-8")
+                        json.dumps(tmp_autopilot_parameters, sort_keys=True, separators=(",", ":")).encode(encoding="utf-8")
                     ).hexdigest()
 
                     response = constants.REQ_SESSION.post(
@@ -233,21 +242,18 @@ class AutopilotConfigEditor(QWidget):
                     print(f"[Warning] Failed to create new config; status {response.status_code}: {status_message}")
 
             else:
-                existing_data = {}
-                for widget in self.widgets:
-                    if isinstance(widget, AutopilotParamWidget):
-                        existing_data[widget.name] = widget.current_value
-
                 response = constants.REQ_SESSION.post(
                     urljoin(
                         misc.get_route("set_autopilot_parameters"),
                         str(constants.SM.read("telemetry_server_instance_id")),
                     ),
-                    json=json.dumps(existing_data, indent=None)
+                    json=json.dumps(tmp_autopilot_parameters, indent=None)
                 )
 
                 if response.status_code == 200:
                     print("[Info] All parameters sent successfully.")
+                    constants.SM.write("current_autopilot_parameters", tmp_autopilot_parameters)
+
                 else:
                     print(f"[Warning] Failed to send parameters; status {response.status_code}: {response.text.strip()}")
 
@@ -799,22 +805,25 @@ class AutopilotParamWidget(QFrame):
         """
 
         try:
-            edited_data = safe_load(text)
+            edited_data = literal_eval(text)
 
             if edited_data == self.current_value:
                 return
 
             if not isinstance(edited_data, self.type):
                 raise TypeError(f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}.")
+            
+            temp_params = constants.SM.read("current_autopilot_parameters")
+            temp_params[self.name] = {"current": edited_data, "default": self.default_val, "description": self.description}
+            constants.SM.write("current_autopilot_parameters", temp_params)
 
-        except TypeError:
+        except (ValueError, TypeError):
             print(f"[Error] Invalid value for {self.name}. Resetting to previous value.")
             self.value_display.setText(str(self.current_value))
             return
 
         self.current_value = edited_data
         self.value_display.setText(str(self.current_value))
-        print(f"[Info] {self.name} updated to {self.current_value}.")
 
         self.send_button.setEnabled(True)
         self.pull_button.setEnabled(True)
