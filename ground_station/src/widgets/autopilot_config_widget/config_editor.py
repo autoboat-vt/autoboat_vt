@@ -27,7 +27,6 @@ from requests.exceptions import RequestException
 from syntax_highlighters.json import JsonHighlighter
 from utils import constants, misc
 from widgets.popup_edit import TextEditWindow
-from yaml import safe_load
 
 
 class AutopilotConfigEditor(QWidget):
@@ -93,7 +92,7 @@ class AutopilotConfigEditor(QWidget):
         self.button_layout.addWidget(self.load_from_file_button)
         self.button_layout.addWidget(self.save_to_file_button)
         # endregion actions button group
-        
+
         try:
             self.config = constants.REQ_SESSION.get(
                 urljoin(
@@ -101,7 +100,7 @@ class AutopilotConfigEditor(QWidget):
                     str(constants.SM.read("telemetry_server_instance_id")),
                 )
             ).json()
-            
+
             constants.SM.write("current_autopilot_parameters", self.config)
             constants.SM.write("local_autopilot_param_hash", constants.SM.read("remote_autopilot_param_hash"))
             print("[Info] Fetched default autopilot parameters successfully.")
@@ -143,30 +142,38 @@ class AutopilotConfigEditor(QWidget):
         print("[Info] Sending all parameters...")
 
         try:
-            remote_hash = constants.SM.read("remote_autopilot_param_hash")
-            
+            remote_hash: str = constants.SM.read("remote_autopilot_param_hash")
+            tmp_autopilot_parameters: dict[str, dict[str, Any]] = constants.SM.read("current_autopilot_parameters")
+
+            # if "current" is set for the parameters, it means they have been modified from the default values,
+            # so we should use those for sending/pushing instead of the default values
+            # and then update the state manager at the end with the sent values to ensure consistency
+            for parameter in tmp_autopilot_parameters.values():
+                if "current" in parameter:
+                    parameter["default"] = parameter.pop("current")
+
             if remote_hash == "":
                 print("[Info] Setting current parameters as default on telemetry server.")
+
                 response = constants.REQ_SESSION.post(
                     urljoin(
                         misc.get_route("set_default_autopilot_parameters"),
                         str(constants.SM.read("telemetry_server_instance_id")),
                     ),
-                    json=json.dumps(constants.SM.read("current_autopilot_parameters"), indent=None)
+                    json=json.dumps(tmp_autopilot_parameters, indent=None),
                 )
 
                 status_message = response.text.strip().replace('"', "")
 
                 if response.status_code == 200:
                     print("[Info] Current parameters set as default successfully.")
+                    constants.SM.write("current_autopilot_parameters", tmp_autopilot_parameters)
 
                 elif status_message == "Configuration hash already exists.":
                     hash_from_config = hashlib.sha256(
-                        json.dumps(
-                            constants.SM.read("current_autopilot_parameters"), sort_keys=True, separators=(",", ":")
-                        ).encode(encoding="utf-8")
+                        json.dumps(tmp_autopilot_parameters, sort_keys=True, separators=(",", ":")).encode(encoding="utf-8")
                     ).hexdigest()
-                    
+
                     response = constants.REQ_SESSION.post(
                         urljoin(
                             misc.get_route("set_default_from_hash"),
@@ -179,7 +186,7 @@ class AutopilotConfigEditor(QWidget):
                             f"[Info] Default parameters set successfully from existing config with "
                             f"matching hash {hash_from_config}."
                         )
-                    
+
                     else:
                         print(
                             f"[Warning] Failed to set default parameters from existing config with "
@@ -192,21 +199,21 @@ class AutopilotConfigEditor(QWidget):
 
             elif remote_hash != constants.SM.read("local_autopilot_param_hash"):
                 print("[Info] Creating new config on telemetry server.")
+
                 response = constants.REQ_SESSION.post(
                     misc.get_route("create_config"),
-                    json=json.dumps(constants.SM.read("current_autopilot_parameters"), indent=None),
+                    json=json.dumps(tmp_autopilot_parameters, indent=None),
                 )
 
                 status_message = response.text.strip().replace('"', "")
 
                 if response.status_code == 200:
                     print("[Info] New config created successfully.")
+                    constants.SM.write("current_autopilot_parameters", tmp_autopilot_parameters)
 
                 elif status_message == "Configuration hash already exists.":
                     hash_from_config = hashlib.sha256(
-                        json.dumps(
-                            constants.SM.read("current_autopilot_parameters"), sort_keys=True, separators=(",", ":")
-                        ).encode(encoding="utf-8")
+                        json.dumps(tmp_autopilot_parameters, sort_keys=True, separators=(",", ":")).encode(encoding="utf-8")
                     ).hexdigest()
 
                     response = constants.REQ_SESSION.post(
@@ -233,21 +240,18 @@ class AutopilotConfigEditor(QWidget):
                     print(f"[Warning] Failed to create new config; status {response.status_code}: {status_message}")
 
             else:
-                existing_data = {}
-                for widget in self.widgets:
-                    if isinstance(widget, AutopilotParamWidget):
-                        existing_data[widget.name] = widget.current_value
-
                 response = constants.REQ_SESSION.post(
                     urljoin(
                         misc.get_route("set_autopilot_parameters"),
                         str(constants.SM.read("telemetry_server_instance_id")),
                     ),
-                    json=json.dumps(existing_data, indent=None)
+                    json=json.dumps(tmp_autopilot_parameters, indent=None),
                 )
 
                 if response.status_code == 200:
                     print("[Info] All parameters sent successfully.")
+                    constants.SM.write("current_autopilot_parameters", tmp_autopilot_parameters)
+
                 else:
                     print(f"[Warning] Failed to send parameters; status {response.status_code}: {response.text.strip()}")
 
@@ -277,7 +281,7 @@ class AutopilotConfigEditor(QWidget):
 
             if not isinstance(data, dict):
                 raise TypeError
-            
+
             if not all(isinstance(key, str) for key in data):
                 raise TypeError
 
@@ -286,15 +290,15 @@ class AutopilotConfigEditor(QWidget):
                     widget.current_value = data[widget.name]
                     if isinstance(widget.modify_element, QLineEdit):
                         widget.modify_element.setText(str(widget.current_value))
-                    
+
                     elif widget.value_display:
                         widget.value_display.setText(str(widget.current_value))
-                
+
                 else:
                     print(f"[Warning] {widget.name} not found in pulled data.")
 
-                    msg = f"The parameter '{widget.name}' was not found in the pulled data. Do you want to replace the existing config with the pulled data?" # noqa: E501
-                    
+                    msg = f"The parameter '{widget.name}' was not found in the pulled data. Do you want to replace the existing config with the pulled data?"  # noqa: E501
+
                     # give user option to use pulled data to overwrite existing data
                     if not rememeber_choice and response == QMessageBox.No:
                         response, rememeber_choice = misc.show_message_box(
@@ -302,7 +306,7 @@ class AutopilotConfigEditor(QWidget):
                             message=msg,
                             icon=constants.ICONS.warning,
                             buttons=[QMessageBox.Yes, QMessageBox.No],
-                            remember_choice_option=True
+                            remember_choice_option=True,
                         )
 
                         if response == QMessageBox.Yes:
@@ -318,7 +322,7 @@ class AutopilotConfigEditor(QWidget):
 
                                 if not isinstance(default_params, dict):
                                     raise TypeError
-                            
+
                             except RequestException as e:
                                 print(f"[Error] Failed to fetch default autopilot parameters: {e}")
                                 return
@@ -345,7 +349,7 @@ class AutopilotConfigEditor(QWidget):
                 message="Loading parameters from a file will overwrite the current configuration. Do you want to continue?",
                 icon=constants.ICONS.warning,
                 buttons=[QMessageBox.Yes, QMessageBox.No],
-                remember_choice_option=True
+                remember_choice_option=True,
             )
 
             if remember_choice:
@@ -354,7 +358,7 @@ class AutopilotConfigEditor(QWidget):
             if response == QMessageBox.No:
                 print("[Info] Load parameters from file operation cancelled by user.")
                 return
-        
+
         else:
             print("[Info] Loading parameters from file without warning as per user preference.")
 
@@ -392,7 +396,7 @@ class AutopilotConfigEditor(QWidget):
             self,
             caption="Load Parameters from File",
             directory=constants.AUTOPILOT_PARAMS_DIR.as_posix(),
-            filter="JSON Files (*.json);;All Files (*)"
+            filter="JSON Files (*.json);;All Files (*)",
         )
         if not file_path:
             return
@@ -420,7 +424,7 @@ class AutopilotConfigEditor(QWidget):
                 param_widget = AutopilotParamWidget(param_config)
                 self.params_layout.addWidget(param_widget)
                 self.widgets.append(param_widget)
-            
+
             except Exception as e:
                 print(f"Error creating widget for parameter '{key}': {e}")
 
@@ -449,7 +453,7 @@ class AutopilotConfigEditor(QWidget):
 
             if search_text and not (name_match or desc_match):
                 widget.hide()
-            
+
             else:
                 widget.show()
                 visible_count += 1
@@ -477,19 +481,14 @@ class AutopilotConfigEditor(QWidget):
         message_part = f"Showing config: {local_hash}" if local_hash else "No config loaded"
 
         if not search_text:
-                self.status_label.setText(
-                    f"Showing all {visible_count} parameters | {message_part}"
-                )
-        
+            self.status_label.setText(f"Showing all {visible_count} parameters | {message_part}")
+
         elif visible_count == 0:
-            self.status_label.setText(
-                f"No parameters match '{search_text}' | {message_part}"
-            )
-        
+            self.status_label.setText(f"No parameters match '{search_text}' | {message_part}")
+
         else:
-            self.status_label.setText(
-                f"Showing {visible_count} parameters matching '{search_text}' | {message_part}"
-            )
+            self.status_label.setText(f"Showing {visible_count} parameters matching '{search_text}' | {message_part}")
+
 
 class AutopilotParamWidget(QFrame):
     """
@@ -628,7 +627,7 @@ class AutopilotParamWidget(QFrame):
         if isinstance(existing_data, dict):
             if existing_data.get(self.name, None) is None:
                 print(f"[Warning] {self.name} not found in existing parameters. Adding it.")
-            
+
             existing_data[self.name] = self.current_value
 
             try:
@@ -637,7 +636,7 @@ class AutopilotParamWidget(QFrame):
                         misc.get_route("set_autopilot_parameters"),
                         str(constants.SM.read("telemetry_server_instance_id")),
                     ),
-                    json=json.dumps(existing_data, indent=None)
+                    json=json.dumps(existing_data, indent=None),
                 )
                 print(f"[Info] Successfully sent {self.name} with value {self.current_value}.")
 
@@ -709,7 +708,7 @@ class AutopilotParamWidget(QFrame):
     def update_value_from_lineedit(self) -> None:
         """
         Update value from ``QLineEdit`` input.
-        
+
         Raises
         ------
         TypeError
@@ -718,7 +717,7 @@ class AutopilotParamWidget(QFrame):
 
         try:
             text = self.modify_element.text()
-            
+
             # region string handling
             if self.type is str:
                 try:
@@ -726,7 +725,7 @@ class AutopilotParamWidget(QFrame):
 
                 except (ValueError, SyntaxError):
                     edited_data = text
-            
+
             else:
                 try:
                     edited_data = literal_eval(text)
@@ -734,11 +733,9 @@ class AutopilotParamWidget(QFrame):
                 except (ValueError, SyntaxError) as e:
                     raise TypeError(f"Invalid literal for type {self.type.__name__}: {text}") from e
             # endregion string handling
-            
+
             if not isinstance(edited_data, self.type):
-                if self.type is bool and (
-                    isinstance(edited_data, (int, str)) and edited_data in {0, 1, "true", "false"}
-                ):
+                if self.type is bool and (isinstance(edited_data, (int, str)) and edited_data in {0, 1, "true", "false"}):
                     edited_data = bool(edited_data)
 
                 elif self.type is float and isinstance(edited_data, int):
@@ -799,7 +796,7 @@ class AutopilotParamWidget(QFrame):
         """
 
         try:
-            edited_data = safe_load(text)
+            edited_data = literal_eval(text)
 
             if edited_data == self.current_value:
                 return
@@ -807,14 +804,17 @@ class AutopilotParamWidget(QFrame):
             if not isinstance(edited_data, self.type):
                 raise TypeError(f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}.")
 
-        except TypeError:
+            temp_params = constants.SM.read("current_autopilot_parameters")
+            temp_params[self.name] = {"current": edited_data, "default": self.default_val, "description": self.description}
+            constants.SM.write("current_autopilot_parameters", temp_params)
+
+        except (ValueError, TypeError):
             print(f"[Error] Invalid value for {self.name}. Resetting to previous value.")
             self.value_display.setText(str(self.current_value))
             return
 
         self.current_value = edited_data
         self.value_display.setText(str(self.current_value))
-        print(f"[Info] {self.name} updated to {self.current_value}.")
 
         self.send_button.setEnabled(True)
         self.pull_button.setEnabled(True)
