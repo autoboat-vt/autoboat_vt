@@ -5,15 +5,15 @@
 #include <cmath>
 #include "i2c_parent_class.h"
 
-#define INPUT_1_Register 0x0071
-#define INPUT_2_Register 0x0072
-#define INPUT_3_Register 0x0073
-#define INPUT_4_Register 0x0074
+#define INPUT_1_Register 0x71
+#define INPUT_2_Register 0x72
+#define INPUT_3_Register 0x73
+#define INPUT_4_Register 0x74
  
 
 class GVM : public I2CDevice { 
     public:
-        uint16_t registers[4]={INPUT_1_Register,INPUT_2_Register,INPUT_3_Register,INPUT_4_Register};
+        uint8_t registers[4]={INPUT_1_Register,INPUT_2_Register,INPUT_3_Register,INPUT_4_Register};
 
 
 

@@ -1,9 +1,9 @@
 #include "GVM_Subclass.h" 
 
-#define INPUT_1_Register 0x0071
-#define INPUT_2_Register 0x0072
-#define INPUT_3_Register 0x0073
-#define INPUT_4_Register 0x0074
+#define INPUT_1_Register 0x71
+#define INPUT_2_Register 0x72
+#define INPUT_3_Register 0x73
+#define INPUT_4_Register 0x74
 
 GVM::GVM(i2c_inst_t* port, uint8_t address) : I2CDevice(port,address) {
 
