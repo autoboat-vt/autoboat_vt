@@ -154,7 +154,7 @@ void application_init(rcl_allocator_t *allocator, rclc_support_t *support, rclc_
 
 
     #if BOAT_MODE == Theseus
-    initialize_contactor_driver(CONTACTOR_DRIVER_SEL0_PIN, CONTACTOR_DRIVER_PWM_PIN, CONTACTOR_DRIVER_IN_A_PIN, CONTACTOR_DRIVER_IN_B_PIN);
+    initialize_contactor_driver(CONTACTOR_DRIVER_IN_A_PIN);
     #endif
 
 
@@ -230,7 +230,22 @@ void led_callback(const void *msg_in) {
     gpio_put(LED_PIN, led_msg->data ? 1 : 0);
 }
 
+void contactor_test() {
+    
+    const uint RLY_PIN = 22; 
 
+    // stdio_init_all(); 
+
+    gpio_init(RLY_PIN); 
+
+    gpio_set_dir(RLY_PIN, GPIO_OUT); 
+
+    gpio_put(RLY_PIN, 0); 
+    sleep_ms(500); 
+
+    // gpio_put(LED_PIN, 0); 
+    // sleep_ms(500); 
+}
 
 // -----------------------------------------------------
 // MAIN APPLICATION LOOP

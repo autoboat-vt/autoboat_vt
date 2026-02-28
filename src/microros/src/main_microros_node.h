@@ -131,5 +131,7 @@ void zero_winch_encoder_callback(const void *msg_in);
 
 void led_callback(const void *msg_in);
 
+void contactor_test();
+
 
 #endif

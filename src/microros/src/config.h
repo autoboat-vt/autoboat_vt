@@ -5,7 +5,7 @@ PCB SPECIFIC CONFIGURATIONS
 
 #define Theseus 0
 #define Lumpy 1
-#define BOAT_MODE Lumpy
+#define BOAT_MODE Theseus
 
 // Important constants
 #define LED_PIN 25
@@ -49,10 +49,7 @@ PCB SPECIFIC CONFIGURATIONS
 #define RELAY_PIN 22 // NOTE: UNUSED BECAUSE OUR CURRENT BJT DRIVER DOESN'T WORK
 
 // Relay
-#define CONTACTOR_DRIVER_SEL0_PIN 19
-#define CONTACTOR_DRIVER_PWM_PIN 18
-#define CONTACTOR_DRIVER_IN_A_PIN 8
-#define CONTACTOR_DRIVER_IN_B_PIN 16
+#define CONTACTOR_DRIVER_IN_A_PIN 22
 
 // Port declarations
 #define I2C_PORT i2c0
