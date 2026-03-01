@@ -22,10 +22,12 @@ from std_msgs.msg import Bool, Float32, Int32, String
 from autoboat_msgs.msg import VESCTelemetryData, WaypointList
 
 from .autopilot_library.utils.constants import (
-    BOAT_STATUS_MAPPING,
     QOS_AUTOPILOT_PARAM_CONFIG_PATH,
     TELEMETRY_SERVER_URL,
     BoatStatusPayload,
+    MotorboatAutopilotMode,
+    SailboatAutopilotMode,
+    SailboatStates,
     TelemetryStatus,
 )
 from .autopilot_library.utils.position import Position
@@ -51,8 +53,8 @@ class TelemetryNode(Node):
 
         # If these values aren't changing then the ros node or telemetry server
         # thats supposed to be sending these values may not be working correctly
-        self.autopilot_mode: str = "N/A"
-        self.full_autonomy_maneuver: str = "N/A"
+        self.autopilot_mode: SailboatAutopilotMode | MotorboatAutopilotMode = -1
+        self.full_autonomy_maneuver: SailboatStates | None = -1
 
         self.current_waypoints: list[tuple[float, float]] = []
         self.current_waypoint_index: int = 0
@@ -115,25 +117,9 @@ class TelemetryNode(Node):
                     self.send_raw_data_to_telemetry_server(url, user_name, self.boat_status_session)
 
                 url = f"boat_status/set_mapping/{self.instance_id}"
-                self.send_raw_data_to_telemetry_server(url, BOAT_STATUS_MAPPING, self.boat_status_session)
+                self.send_raw_data_to_telemetry_server(url, self.construct_boat_status_mapping(), self.boat_status_session)
 
-                boat_status: list[Any] = [
-                    [self.position.latitude, self.position.longitude],
-                    self.autopilot_mode,
-                    self.full_autonomy_maneuver,
-                    self.speed,
-                    (self.velocity_vector[0], self.velocity_vector[1]),
-                    self.desired_heading,
-                    self.heading,
-                    -1, # true wind speed
-                    -1, # true wind angle
-                    self.apparent_wind_speed,
-                    self.apparent_wind_angle,
-                    self.desired_sail_angle,
-                    self.desired_rudder_angle,
-                    self.current_waypoint_index,
-                    -1, # distance to next waypoint
-                ]
+                boat_status = self.construct_boat_status_payload()
                 
                 url = f"boat_status/set_fast/{self.instance_id}"
                 self.send_raw_data_to_telemetry_server(url, boat_status, self.boat_status_session)
@@ -188,7 +174,6 @@ class TelemetryNode(Node):
         self.create_subscription(
             VESCTelemetryData, "/vesc_telemetry_data", self.vesc_telemetry_data_callback, qos_profile_sensor_data
         )
-
 
 
     def camera_rgb_image_callback(self, camera_rgb_image: Image) -> None:
@@ -447,7 +432,12 @@ class TelemetryNode(Node):
 
 
 
-    def send_raw_data_to_telemetry_server(self, route: str, data: float | str | list | dict, session: requests.Session) -> None:
+    def send_raw_data_to_telemetry_server(
+        self,
+        route: str,
+        data: float | str | list | dict | BoatStatusPayload,
+        session: requests.Session,
+    ) -> None:
         """
         This is essentially just a helper function to send a POST request to a specific telemetry server route
         and automatically retry if it cannot connect to that route.
@@ -479,6 +469,9 @@ class TelemetryNode(Node):
 
             elif isinstance(data, list):
                 response = session.post(url=url, json=data, timeout=10)
+
+            elif isinstance(data, BoatStatusPayload):
+                response = session.post(url=url, data=bytes(data), timeout=10)
             
             else:
                 response = session.post(url=url, json=json.dumps(data, separators=(",", ":"), indent=False), timeout=10)
@@ -493,17 +486,19 @@ class TelemetryNode(Node):
             self.send_raw_data_to_telemetry_server(route, data, session)
 
 
-
-    def update_boat_status(self) -> None:
+    def construct_boat_status_payload(self) -> BoatStatusPayload:
         """
-        Gathers the boat's current status and sends it to the telemetry server.
+        Constructs a ``BoatStatusPayload`` object from the boat's current status.
 
         Note
         ----
-        See ``constants.py`` for the mapping of the boat status list and what each index represents.
-
         This is bugged! You need to account for the velocity vector being measured globally
         rather than the apparent wind vector which is measured locally.
+
+        Returns
+        -------
+        BoatStatusPayload
+            The constructed boat status payload.
         """
 
         true_wind_vector = self.apparent_wind_vector + self.velocity_vector
@@ -514,29 +509,48 @@ class TelemetryNode(Node):
             next_waypoint_position = Position(
                 self.current_waypoints[self.current_waypoint_index][0], self.current_waypoints[self.current_waypoint_index][1]
             )
-            distance_to_next_waypoint = get_distance_between_positions(current_position, next_waypoint_position)
+            self.distance_to_next_waypoint = get_distance_between_positions(current_position, next_waypoint_position)
 
         else:
-            distance_to_next_waypoint = 0.0
+            self.distance_to_next_waypoint = 0.0
 
-        boat_status: list[Any] = [
-            [self.position.latitude, self.position.longitude],
-            self.autopilot_mode,
-            self.full_autonomy_maneuver,
-            self.speed,
-            (self.velocity_vector[0], self.velocity_vector[1]),
-            self.desired_heading,
-            self.heading,
-            self.true_wind_speed,
-            self.true_wind_angle,
-            self.apparent_wind_speed,
-            self.apparent_wind_angle,
-            self.desired_sail_angle,
-            self.desired_rudder_angle,
-            self.current_waypoint_index,
-            distance_to_next_waypoint,
-        ]
+        return BoatStatusPayload(
+            latitude=self.position.latitude,
+            longitude=self.position.longitude,
+            distance_to_next_waypoint=self.distance_to_next_waypoint,
+            speed=self.speed,
+            velocity_x=self.velocity_vector[0],
+            velocity_y=self.velocity_vector[1],
+            desired_heading=self.desired_heading,
+            heading=self.heading,
+            true_wind_speed=self.true_wind_speed,
+            true_wind_angle=self.true_wind_angle,
+            apparent_wind_speed=self.apparent_wind_speed,
+            apparent_wind_angle=self.apparent_wind_angle,
+            desired_sail_angle=self.desired_sail_angle,
+            desired_rudder_angle=self.desired_rudder_angle,
+            current_waypoint_index=self.current_waypoint_index,
+            autopilot_mode=int(self.autopilot_mode),
+            full_autonomy_maneuver=int(self.full_autonomy_maneuver),
+        )
 
+    def construct_boat_status_mapping(self) -> list[list[str]]:
+        """
+        Constructs a mapping of the boat status payload field names to their corresponding data types.
+
+        Returns
+        -------
+        list[list[str]]
+            A list of lists, where each inner list contains the field name and data type of a field in the boat status payload.
+        """
+
+        return [[field_name, field_type.__name__] for field_name, field_type in BoatStatusPayload._fields_]
+    
+
+    def update_boat_status(self) -> None:
+        """Gathers the boat's current status and sends it to the telemetry server."""
+
+        boat_status = self.construct_boat_status_payload()
         self.send_raw_data_to_telemetry_server(
             f"boat_status/set_fast/{self.instance_id}",
             boat_status,

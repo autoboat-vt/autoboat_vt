@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ctypes
 from enum import Enum
 from pathlib import Path
@@ -8,9 +10,8 @@ from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPo
 # used to specify what is available to import from this file
 __all__ = [
     "BASE_DIRECTORY",
-    "BOAT_STATUS_MAPPING",
     "CONFIG_DIRECTORY",
-    "QOS_AUTOPILOT_CONFIG",
+    "QOS_AUTOPILOT_PARAM_CONFIG_PATH",
     "TELEMETRY_SERVER_URL",
     "BoatStatusPayload",
     "MotorboatAutopilotMode",
@@ -80,48 +81,59 @@ class TelemetryStatus(Enum):
     SUCCESS = 0
     FAILURE = 1
 
-class BoatStatusPayload(ctypes.Structure):
+
+class BoatStatusPayload(ctypes.LittleEndianStructure):
     """
     A class representing the payload that will be sent to the telemetry server
     to provide information about the boat's current state.
 
+    Must inherit ``ctypes.LittleEndianStructure`` to ensure that the data is packed correctly when sent over the network.
+
     Inherits
     --------
-    ``ctypes.Structure``
+    ``ctypes.LittleEndianStructure``
     """
-
-    CType = type[ctypes._SimpleCData]
 
     _pack_: ClassVar[int] = 1
 
-    four_byte_fields: Final[tuple[tuple[str, CType], ...]] = (
+    four_byte_fields: Final[tuple[tuple[str, ctypes._SimpleCData], ...]] = (
         ("latitude", ctypes.c_int32),
         ("longitude", ctypes.c_int32),
         ("distance_to_next_waypoint", ctypes.c_uint32),
+        ("speed", ctypes.c_float),
+        ("velocity_x", ctypes.c_float),
+        ("velocity_y", ctypes.c_float),
+        ("desired_heading", ctypes.c_float),
+        ("heading", ctypes.c_float),
+        ("true_wind_speed", ctypes.c_float),
+        ("true_wind_angle", ctypes.c_float),
+        ("apparent_wind_speed", ctypes.c_float),
+        ("apparent_wind_angle", ctypes.c_float),
+        ("desired_sail_angle", ctypes.c_float),
+        ("desired_rudder_angle", ctypes.c_float),
     )
 
-    two_byte_fields: Final[tuple[tuple[str, CType], ...]] = (
-        ("speed", ctypes.c_int16),
-        ("velocity_x", ctypes.c_int16),
-        ("velocity_y", ctypes.c_int16),
-        ("desired_heading", ctypes.c_int16),
-        ("heading", ctypes.c_int16),
-        ("true_wind_speed", ctypes.c_uint16),
-        ("true_wind_angle", ctypes.c_int16),
-        ("apparent_wind_speed", ctypes.c_uint16),
-        ("apparent_wind_angle", ctypes.c_int16),
-        ("desired_sail_angle", ctypes.c_int16),
-        ("desired_rudder_angle", ctypes.c_int16),
-    )
-
-    one_byte_fields: Final[tuple[tuple[str, CType], ...]] = (
+    one_byte_fields: Final[tuple[tuple[str, ctypes._SimpleCData], ...]] = (
         ("current_waypoint_index", ctypes.c_uint8),
         ("autopilot_mode", ctypes.c_uint8),
         ("full_autonomy_maneuver", ctypes.c_uint8),
     )
 
-    _fields_: ClassVar[tuple[tuple[str, CType], ...]] = four_byte_fields + two_byte_fields + one_byte_fields
+    _fields_: ClassVar[tuple[tuple[str, ctypes._SimpleCData], ...]] = four_byte_fields + one_byte_fields
     _field_names: ClassVar[tuple[str, ...]] = tuple(name for name, _ in _fields_)
+
+    def to_dict(self) -> dict[str, int | float]:
+        """
+        Convert the telemetry payload to a dictionary, where the keys are the
+        field names and the values are the corresponding field values.
+
+        Returns
+        -------
+        dict[str, int | float]
+            A dictionary representation of the telemetry payload.
+        """
+
+        return {field_name: getattr(self, field_name) for field_name in self._field_names}
 
     def __str__(self) -> str:
         """
@@ -135,6 +147,44 @@ class BoatStatusPayload(ctypes.Structure):
 
         return "\n".join(f"{field_name}: {getattr(self, field_name)}" for field_name in self._field_names)
 
+    @classmethod
+    def from_bytes(cls, data: bytes) -> BoatStatusPayload:
+        """
+        Create a ``BoatStatusPayload`` instance from a ``bytes`` object.
+
+        Parameters
+        ----------
+        data
+            A bytes object containing the boat status data in the correct format.
+
+        Returns
+        -------
+        BoatStatusPayload
+            An instance of BoatStatusPayload populated with the data from the bytes object.
+        """
+
+        if not isinstance(data, (bytes, bytearray)):
+            raise TypeError("Input data must be of type bytes or bytearray.")
+
+        expected_size = cls.get_size()
+        if len(data) != expected_size:
+            raise ValueError(f"Invalid data size. Expected {expected_size} bytes, got {len(data)} bytes.")
+
+        return cls.from_buffer_copy(data)
+
+    @classmethod
+    def get_size(cls) -> int:
+        """
+        Get the size of the telemetry payload in bytes.
+
+        Returns
+        -------
+        int
+            The size of the telemetry payload in bytes.
+        """
+
+        return ctypes.sizeof(cls)
+
 QOS_AUTOPILOT_PARAM_CONFIG_PATH = QoSProfile(
     reliability=ReliabilityPolicy.RELIABLE,
     durability=DurabilityPolicy.TRANSIENT_LOCAL,
@@ -142,26 +192,8 @@ QOS_AUTOPILOT_PARAM_CONFIG_PATH = QoSProfile(
     depth=1,
 )
 
-BOAT_STATUS_MAPPING: list[str] = [
-    "position",
-    "state",
-    "full_autonomy_maneuver",
-    "speed",
-    "velocity_vector",
-    "bearing",
-    "heading",
-    "true_wind_speed",
-    "true_wind_angle",
-    "apparent_wind_speed",
-    "apparent_wind_angle",
-    "sail_angle",
-    "rudder_angle",
-    "current_waypoint_index",
-    "distance_to_next_waypoint",
-]
-
 # don't put '/' at the end of the URL
-TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
+TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk:8443"
 
 BASE_DIRECTORY = Path(__file__).resolve().parent.parent.parent
 CONFIG_DIRECTORY = BASE_DIRECTORY / "config"
