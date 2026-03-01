@@ -1,6 +1,6 @@
 {
     "name": "VT AutoBoat Development Container v1.2.0",
-    "image": "vtautoboat/autoboat_docker_dev_image",
+    "image": "vtautoboat/autoboat_docker_dev_image:simulation_testing",
     "initializeCommand": "bash .devcontainer/initializeCommand.sh",
     "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
     "privileged": true,
@@ -15,8 +15,8 @@
                 "Ranch-Hand-Robotics.rde-pack",
                 "ms-vscode.cpptools",
                 "ms-python.python",
-                "golang.go",
                 "ms-python.vscode-pylance",
+                "golang.go",
                 "donjayamanne.python-environment-manager",
                 "ms-python.debugpy",
                 "charliermarsh.ruff",

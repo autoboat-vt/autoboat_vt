@@ -1,6 +1,6 @@
-from setuptools import find_packages, setup
 from glob import glob
 
+from setuptools import find_packages, setup
 
 package_name = "autopilot"
 
@@ -20,10 +20,10 @@ setup(
     license="TODO: License declaration",
     tests_require=["pytest"],
     entry_points={
-        "console_scripts": [
-            "sailboat_autopilot = autopilot.sailboat_autopilot_node:main",
-            "motorboat_autopilot = autopilot.motorboat_autopilot_node:main",
-            "telemetry = autopilot.telemetry_node:main",
+        'console_scripts': [
+            'sailboat_autopilot = autopilot.sailboat_autopilot_node:main',
+            'motorboat_autopilot = autopilot.motorboat_autopilot_node:main',
+            'telemetry = autopilot.telemetry_node:main'
         ],
     },
 )

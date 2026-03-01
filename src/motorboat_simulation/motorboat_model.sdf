@@ -1,0 +1,728 @@
+<?xml version="1.0"?>
+<!--
+
+Without ros2:
+
+  0. Start the simulation:
+
+    gz sim motorboat_model.sdf
+
+  1. Move the rudder:
+
+    gz topic -t /rudder -m gz.msgs.Double -p 'data: .4'
+    
+  1a. View rudder position:
+
+    gz topic -e -t /world/motorboat_model/model/my_ship/joint_state
+
+  2. Propel the vehicle:
+
+    gz topic -t motorboat/propeller_topic -m gz.msgs.Double -p 'data: 500'
+
+
+With ros2:
+
+  0. Start the simulation (in ../launch/):
+
+    ros2 launch motorboat_simulation.launch.py
+
+  1. Move the rudder:
+
+    ros2 topic pub /rudder std_msgs/msg/Float64 'data: .4'
+  
+  
+  2. Propel the vehicle:
+
+ros2 topic pub /propeller_sim_rpm std_msgs/msg/Float64 'data: 500'
+
+
+With ROS2 autopilot node:
+0. Start the simulation (in ../launch/):
+    ros2 launch motorboat_simulation.launch.py
+
+1. Move the rudder: 
+ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
+2. Propel the vehicle:
+ ros2 topic pub /propeller_sim_rpm std_msgs/msg/Float64 'data: 5'
+
+
+-->
+
+<sdf version="1.7">
+  <world name="motorboat_model">
+
+    <scene>
+      <ambient>0.0 1.0 1.0</ambient>
+      <background>0.0 0.7 0.8</background>
+
+      <grid>false</grid>
+    </scene>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>1 1 1 1</diffuse>
+      <specular>0.5 0.5 0.5 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <world_frame_orientation>ENU</world_frame_orientation>
+      <latitude_deg>0</latitude_deg>
+      <longitude_deg>0</longitude_deg>
+      <elevation>0</elevation>
+      <heading_deg>0</heading_deg>
+    </spherical_coordinates>
+
+    <plugin
+      filename="gz-sim-physics-system"
+      name="gz::sim::systems::Physics">
+    </plugin>
+
+    <plugin
+      filename="gz-sim-buoyancy-system"
+      name="gz::sim::systems::Buoyancy">
+      <graded_buoyancy>
+        <default_density>1025</default_density>
+        <density_change>
+          <above_depth>0</above_depth>
+          <density>1.125</density>
+        </density_change>
+      </graded_buoyancy>
+    </plugin>
+
+    <plugin
+      filename="gz-sim-user-commands-system"
+      name="gz::sim::systems::UserCommands">
+    </plugin>
+
+    <plugin
+      filename="gz-sim-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+
+    <plugin
+      filename="gz-sim-sensors-system"
+      name="gz::sim::systems::Sensors">
+    </plugin>
+
+    <plugin
+      filename="gz-sim-navsat-system"
+      name="gz::sim::systems::NavSat">
+    </plugin>
+
+    <gui fullscreen="0">
+      <!-- 3D scene -->
+      <plugin filename="MinimalScene" name="3D View">
+        <gz-gui>
+          <title>3D View</title>
+          <property type="bool" key="showTitleBar">false</property>
+          <property type="string" key="state">docked</property>
+        </gz-gui>
+        <engine>ogre2</engine>
+        <scene>scene</scene>
+        <ambient_light>0.4 0.4 0.4</ambient_light>
+        <background_color>0.8 0.8 0.8</background_color>
+        <!-- looking at robot -->
+        <camera_pose>0 6 6 0 0.5 -1.57</camera_pose>
+        <!-- looking at all science data for 2003080103_mb_l3_las.csv -->
+        <!--camera_pose>-50000
+        -30000 250000 0 1.1 1.58</camera_pose-->
+        <camera_clip>
+          <!-- ortho view needs low near clip -->
+          <!-- but a very low near clip messes orbit's far clip ?! -->
+          <near>0.1</near>
+          <!-- See 3000 km away -->
+          <far>3000000</far>
+        </camera_clip>
+      </plugin>
+      <!-- Plugins that add functionality to the scene -->
+      <plugin filename="EntityContextMenuPlugin" name="Entity context menu">
+        <gz-gui>
+          <property key="state" type="string">floating</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+      </plugin>
+      <plugin filename="GzSceneManager" name="Scene Manager">
+        <gz-gui>
+          <anchors target="3D View">
+            <line own="right" target="right" />
+            <line own="top" target="top" />
+          </anchors>
+          <property key="resizable" type="bool">false</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="state" type="string">floating</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+      </plugin>
+      <plugin filename="InteractiveViewControl" name="Interactive view control">
+        <gz-gui>
+          <anchors target="3D View">
+            <line own="right" target="right" />
+            <line own="top" target="top" />
+          </anchors>
+          <property key="resizable" type="bool">false</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="state" type="string">floating</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+      </plugin>
+      <plugin filename="CameraTracking" name="Camera Tracking">
+        <gz-gui>
+          <anchors target="3D View">
+            <line own="right" target="right" />
+            <line own="top" target="top" />
+          </anchors>
+          <property key="resizable" type="bool">false</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="state" type="string">floating</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+      </plugin>
+      <plugin filename="MarkerManager" name="Marker manager">
+        <gz-gui>
+          <anchors target="3D View">
+            <line own="right" target="right" />
+            <line own="top" target="top" />
+          </anchors>
+          <property key="resizable" type="bool">false</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="state" type="string">floating</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+        <warn_on_action_failure>false</warn_on_action_failure>
+      </plugin>
+      <plugin filename="SelectEntities" name="Select Entities">
+        <gz-gui>
+          <anchors target="Select entities">
+            <line own="right" target="right" />
+            <line own="top" target="top" />
+          </anchors>
+          <property key="resizable" type="bool">false</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="state" type="string">floating</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+      </plugin>
+      <plugin filename="VisualizationCapabilities" name="Visualization Capabilities">
+        <gz-gui>
+          <anchors target="Select entities">
+            <line own="right" target="right" />
+            <line own="top" target="top" />
+          </anchors>
+          <property key="resizable" type="bool">false</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="state" type="string">floating</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+      </plugin>
+      <plugin filename="Spawn" name="Spawn Entities">
+        <gz-gui>
+          <anchors target="Select entities">
+            <line own="right" target="right" />
+            <line own="top" target="top" />
+          </anchors>
+          <property key="resizable" type="bool">false</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="state" type="string">floating</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+      </plugin>
+      <!-- World control -->
+      <plugin filename="WorldControl" name="World control">
+        <gz-gui>
+          <title>World control</title>
+          <property type="bool" key="showTitleBar">false</property>
+          <property type="bool" key="resizable">false</property>
+          <property type="double" key="height">72</property>
+          <property type="double" key="width">121</property>
+          <property type="double" key="z">1</property>
+          <property type="string" key="state">floating</property>
+          <anchors target="3D View">
+            <line own="left" target="left" />
+            <line own="bottom" target="bottom" />
+          </anchors>
+        </gz-gui>
+        <play_pause>true</play_pause>
+        <step>true</step>
+        <start_paused>false</start_paused>
+      </plugin>
+      <!-- World statistics -->
+      <plugin filename="WorldStats" name="World stats">
+        <gz-gui>
+          <title>World stats</title>
+          <property type="bool" key="showTitleBar">false</property>
+          <property type="bool" key="resizable">false</property>
+          <property type="double" key="height">110</property>
+          <property type="double" key="width">290</property>
+          <property type="double" key="z">1</property>
+          <property type="string" key="state">floating</property>
+          <anchors target="3D View">
+            <line own="right" target="right" />
+            <line own="bottom" target="bottom" />
+          </anchors>
+        </gz-gui>
+        <sim_time>true</sim_time>
+        <real_time>true</real_time>
+        <real_time_factor>true</real_time_factor>
+        <iterations>true</iterations>
+      </plugin>
+      <plugin filename="ComponentInspector" name="Component Inspector">
+        <gz-gui>
+          <title>Inspector</title>
+          <property type="string" key="state">docked_collapsed</property>
+        </gz-gui>
+      </plugin>
+      <plugin filename="GridConfig" name="Grid config">
+        <gz-gui>
+          <property type="string" key="state">docked_collapsed</property>
+        </gz-gui>
+        <insert>
+          <!-- 300 km x 300 km -->
+          <cell_count>6</cell_count>
+          <vertical_cell_count>0</vertical_cell_count>
+          <!-- 50 km -->
+          <cell_length>50000</cell_length>
+          <pose>0 100000 0 0 0 0.32</pose>
+          <color>0 1 0 1</color>
+        </insert>
+        <insert>
+          <!-- 0.1 km x 0.1 km -->
+          <cell_count>100</cell_count>
+          <vertical_cell_count>0</vertical_cell_count>
+          <!-- 1 m -->
+          <cell_length>1</cell_length>
+          <pose>0 0 0 0 0 0</pose>
+          <color>0.5 0.5 0.5 1</color>
+        </insert>
+      </plugin>
+    </gui>
+
+    <!-- This invisible plane helps with orbiting the camera, especially at large scales -->
+    <model name="horizontal_plane">
+      <static>true</static>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <!-- 300 km x 300 km -->
+              <size>300000 300000</size>
+            </plane>
+          </geometry>
+          <transparency>1.0</transparency>
+        </visual>
+      </link>
+    </model>
+
+
+    <!-- Physics parameters -->
+    <physics name="1ms" type="dart">
+      <max_step_size>0.01</max_step_size>
+      <real_time_factor>5</real_time_factor>
+    </physics>
+
+    <!-- Model to load -->
+    <model name="my_ship">
+      <link name='base_link'>
+        <sensor name="navsat" type="navsat">
+          <always_on>1</always_on>
+          <update_rate>50</update_rate>
+          <topic>navsat</topic>
+        </sensor>
+      </link>
+
+      <plugin
+        filename="gz-sim-odometry-publisher-system"
+        name="gz::sim::systems::OdometryPublisher">
+        <odom_topic>odometry</odom_topic>
+      </plugin>
+
+      <link name='left_front_link'>
+        <pose>0.48895 0.1397 0 0 0 0</pose>
+
+        <inertial>
+          <mass>39.52</mass>
+          <inertia>
+            <ixx>0.497982875</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1.03633556173</iyy>
+            <iyz>0</iyz>
+            <izz>1.03633556173</izz>
+          </inertia>
+        </inertial>
+
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>0.9779 0.2794 0.3556</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.9779 0.2794 0.3556</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+
+      <link name='right_front_link'>
+        <pose>0.48895 -0.1397 0 0 0 0</pose>
+
+        <inertial>
+          <mass>39.52</mass>
+          <inertia>
+            <ixx>0.497982875</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1.03633556173</iyy>
+            <iyz>0</iyz>
+            <izz>1.03633556173</izz>
+          </inertia>
+        </inertial>
+
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>0.9779 0.2794 0.3556</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.9779 0.2794 0.3556</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+
+      <link name='right_back_link'>
+        <pose>-0.48895 -0.1397 0 0 0 0</pose>
+
+        <inertial>
+          <mass>39.52</mass>
+          <inertia>
+            <ixx>0.497982875</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1.03633556173</iyy>
+            <iyz>0</iyz>
+            <izz>1.03633556173</izz>
+          </inertia>
+        </inertial>
+
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>0.9779 0.2794 0.3556</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.9779 0.2794 0.3556</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+
+      <link name='left_back_link'>
+        <pose>-0.48895 0.1397 0 0 0 0</pose>
+
+        <inertial>
+          <mass>39.52</mass>
+          <inertia>
+            <ixx>0.497982875</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1.03633556173</iyy>
+            <iyz>0</iyz>
+            <izz>1.03633556173</izz>
+          </inertia>
+        </inertial>
+
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>0.9779 0.2794 0.3556</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.9779 0.2794 0.3556</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+
+      <joint name="left_front_joint" type="fixed">
+        <parent>base_link</parent>
+        <child>left_front_link</child>
+      </joint>
+
+      <joint name="right_front_joint" type="fixed">
+        <parent>base_link</parent>
+        <child>right_front_link</child>
+      </joint>
+
+      <joint name="right_back_joint" type="fixed">
+        <parent>base_link</parent>
+        <child>right_back_link</child>
+      </joint>
+
+      <joint name="left_back_joint" type="fixed">
+        <parent>base_link</parent>
+        <child>left_back_link</child>
+      </joint>
+
+      <link name='propeller_link'>
+        <pose>-.75 0 -.222 0 0 0</pose>
+        <inertial>
+          <mass>2.3</mass>
+          <inertia>
+            <ixx>0.001218375</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001218375</iyy>
+            <iyz>0</iyz>
+            <izz>0.001218375</izz>
+          </inertia>
+        </inertial>
+
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>0.0855 0.0855 0.0855</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.0855 0.0855 0.0855</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+
+      <joint name="propeller_joint" type="revolute">
+        <parent>base_link</parent>
+        <child>propeller_link</child>
+        <axis>
+          <xyz>1 0 0</xyz>
+          <dynamics>
+          </dynamics>
+          <limit>
+            <lower>-1e+12</lower>
+            <upper>1e+12</upper>
+          </limit>
+        </axis>
+      </joint>
+
+      <link name='rudder_link'>
+        <pose>-.9 0 -0.2682 0 0 0</pose>
+
+        <inertial>
+          <mass>2.3</mass>
+          <inertia>
+            <ixx>0.00282940576</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.00401459983</iyy>
+            <iyz>0</iyz>
+            <izz>0.00139589893</izz>
+          </inertia>
+        </inertial>
+
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>0.124445 0.035556 0.1808</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.124445 0.035556 0.1808</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+
+      <joint name="rudder_joint" type="revolute">
+        <parent>base_link</parent>
+        <child>rudder_link</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-.61</lower>
+            <upper>.61</upper>
+          </limit>
+          <dynamics>
+            <damping>2</damping>
+          </dynamics>
+        </axis>
+      </joint>
+
+      <!-- Joint state publisher for the rudder -->
+      <plugin
+        filename="gz-sim-joint-state-publisher-system"
+        name="gz::sim::systems::JointStatePublisher">
+        <joint_name>rudder_joint</joint_name>
+      </plugin>
+
+      <plugin
+        filename="gz-sim-pose-publisher-system"
+        name="gz::sim::systems::PosePublisher">
+        <publish_link_pose>true</publish_link_pose>
+      </plugin>
+
+      <plugin
+        filename="gz-sim-joint-position-controller-system"
+        name="gz::sim::systems::JointPositionController">
+        <joint_name>rudder_joint</joint_name>
+        <p_gain>1</p_gain>
+        <topic>rudder</topic>
+      </plugin>
+
+      <!-- Propeller thruster -->
+      <plugin
+        filename="gz-sim-thruster-system"
+        name="gz::sim::systems::Thruster">
+        <namespace>motorboat</namespace>
+        <topic>propeller_topic</topic>
+        <joint_name>propeller_joint</joint_name>
+        <fluid_density>1025</fluid_density>
+        <propeller_diameter>0.0855</propeller_diameter>
+      </plugin>
+
+      <!-- Drag on the rudder to make it function + drag on the hull parts below -->
+      <plugin filename="libRudderDynamics.so"
+      name="rudder_dynamics::RudderDynamics">
+        <link0>rudder_link</link0>
+        <clmax>6</clmax>
+        <cdmax>6</cdmax>
+        <area>.0225</area>
+        <fluid_density>1025</fluid_density>
+        <forward>1 0 0</forward>
+        <upward>0 1 0</upward>
+      </plugin>
+
+       <plugin filename="libRudderDynamics.so"
+        name="rudder_dynamics::RudderDynamics">
+        <link0>left_front_link</link0>
+        <link1>right_front_link</link1>
+        <link2>left_back_link</link2>
+        <link3>right_back_link</link3>
+        <fluid_density>1025</fluid_density>
+        <clmax>2</clmax>
+        <cdmax>4</cdmax>
+        <area>0.04967732</area>
+        <upward>0 0 1</upward>
+        <forward>1 0 0</forward>
+      </plugin>
+      
+      <!-- Hydrodynamics on the hull parts -->
+      <plugin
+        filename="gz-sim-hydrodynamics-system"
+        name="gz::sim::systems::Hydrodynamics">
+        <link_name>left_front_link</link_name>
+        <xUabsU>-60</xUabsU>
+        <xU>-60</xU>
+        <yVabsV>-120</yVabsV>
+        <yV>-120</yV>
+        <zWabsW>-120</zWabsW>
+        <zW>-120</zW>
+        <kPabsP>-12</kPabsP>
+        <kP>-12</kP>
+        <mQabsQ>-50</mQabsQ>
+        <mQ>-50</mQ>
+        <nRabsR>-12</nRabsR>
+        <nR>-12</nR>
+      </plugin>
+      <plugin
+        filename="gz-sim-hydrodynamics-system"
+        name="gz::sim::systems::Hydrodynamics">
+        <link_name>right_front_link</link_name>
+        <xUabsU>-60</xUabsU>
+        <xU>-60</xU>
+        <yVabsV>-120</yVabsV>
+        <yV>-120</yV>
+        <zWabsW>-120</zWabsW>
+        <zW>-120</zW>
+        <kPabsP>-12</kPabsP>
+        <kP>-12</kP>
+        <mQabsQ>-50</mQabsQ>
+        <mQ>-50</mQ>
+        <nRabsR>-12</nRabsR>
+        <nR>-12</nR>
+      </plugin>
+      <plugin
+        filename="gz-sim-hydrodynamics-system"
+        name="gz::sim::systems::Hydrodynamics">
+        <link_name>right_back_link</link_name>
+        <xUabsU>-60</xUabsU>
+        <xU>-60</xU>
+        <yVabsV>-120</yVabsV>
+        <yV>-120</yV>
+        <zWabsW>-120</zWabsW>
+        <zW>-120</zW>
+        <kPabsP>-12</kPabsP>
+        <kP>-12</kP>
+        <mQabsQ>-50</mQabsQ>
+        <mQ>-50</mQ>
+        <nRabsR>-12</nRabsR>
+        <nR>-12</nR>
+      </plugin>
+      <plugin
+        filename="gz-sim-hydrodynamics-system"
+        name="gz::sim::systems::Hydrodynamics">
+        <link_name>left_back_link</link_name>
+        <xUabsU>-60</xUabsU>
+        <xU>-60</xU>
+        <yVabsV>-120</yVabsV>
+        <yV>-120</yV>
+        <zWabsW>-120</zWabsW>
+        <zW>-120</zW>
+        <kPabsP>-12</kPabsP>
+        <kP>-12</kP>
+        <mQabsQ>-50</mQabsQ>
+        <mQ>-50</mQ>
+        <nRabsR>-12</nRabsR>
+        <nR>-12</nR>
+      </plugin>
+
+    </model>
+
+  </world>
+</sdf>

@@ -69,5 +69,6 @@
         "amt22_encoder_library.h": "c",
         "*.def": "c"
     },
-    "ROS2.distro": "humble"
+    "C_Cpp.errorSquiggles": "disabled",
+    "ros.distro": "humble"
 }

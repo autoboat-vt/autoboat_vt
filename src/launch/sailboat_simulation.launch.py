@@ -1,5 +1,6 @@
-from launch import LaunchDescription
 from launch_ros.actions import Node
+
+from launch import LaunchDescription
 
 
 # VERY MUCH IN DEVELOPMENT THIS IS JUST A TEMPLATE
@@ -16,9 +17,9 @@ def generate_launch_description():
             ),
             Node(package="autopilot", executable="telemetry", name="telemetry", respawn=True, respawn_delay=2.0, output="log"),
             Node(
-                package="simulation",
+                package="sailboat_simulation",
                 executable="simulation",
-                name="simulation",
+                name="sailboat_simulation",
                 respawn=True,
                 respawn_delay=2.0,
                 output="screen",
