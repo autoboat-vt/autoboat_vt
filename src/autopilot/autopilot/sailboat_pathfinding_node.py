@@ -1,10 +1,14 @@
+import math
+
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import NavSatFix
-from autoboat_msgs.msg import WaypointList
 from rclpy.qos import qos_profile_sensor_data
+from sensor_msgs.msg import NavSatFix
+
+from autoboat_msgs.msg import WaypointList
+
 from .autopilot_library.utils import *
-import math
+
 
 class PathfindingNode(Node):
 
@@ -29,10 +33,20 @@ class PathfindingNode(Node):
         self.boat = [msg.longitude,msg.latitude]
         
     def waypoint_call(self,msg: WaypointList): # function calling for waypoints once sent
-        self.wayindex=0
-        waypts=Position((msg.waypoints[i].longitude for i in range(len(msg.waypoints))),(msg.waypoints[i].latitude for i in range(len(msg.waypoints))))
-        self.destinations = [[msg.waypoints[i].longitude*self.res,msg.waypoints[i].latitude*self.res] for i in range(len(msg.waypoints))]
-        self.make_matrix(self.origin,self.destinations[0])
+        self.wayindex=0     # resetting the index counter
+
+        posList=[]
+        for i in range(len(msg.waypoints)):
+                posList.append(Position(msg.waypoints[i].longitude,msg.waypoints[i].latitude))
+
+        self.destinations.append([0,0])
+
+        boat=Position(self.boat[0],self.boat[1])
+        self.boat=boat.get_local_coordinates([posList[0].longitude,posList[0].latitude])
+
+        for i in range(1,len(msg.waypoints)):
+            [lon,lat]=posList[i].get_local_coordinates([posList[0].longitude,posList[0].latitude])
+            self.destinations.append([lon,lat])
     
     def make_matrix(self, src, des):
         self.get_logger().info(str(src))
@@ -50,11 +64,11 @@ class PathfindingNode(Node):
 
     def runpath(self):
         if self.destinations:
-            dist=math.sqrt((self.destinations[self.wayindex][0]-self.origin[0])**2+(self.destinations[self.wayindex][1]-self.origin[1])**2)
+            dist=math.sqrt((self.destinations[self.wayindex][0]-self.boat[0])**2+(self.destinations[self.wayindex][1]-self.boat[1])**2)
             self.get_logger().info("\non waypoint " + str(self.wayindex+1) + "\nlongitude: " + str(self.destinations[self.wayindex][0]) + "\nlatitude: " + str(self.destinations[self.wayindex][1]) + "\ndistance: " + str(dist))
             if dist < 0.5 and self.wayindex < len(self.destinations)-1:
                 self.wayindex+= 1
-                self.make_matrix(self.origin, self.destinations[self.wayindex])
+                self.make_matrix(self.boat, self.destinations[self.wayindex])
     
 
     # checklist
@@ -63,6 +77,7 @@ class PathfindingNode(Node):
 
     # use position methods to convert degrees to local and otherwise ( check bottom of position node )
     # use 1st waypoint as reference
+
                 
 def main():
     rclpy.init()

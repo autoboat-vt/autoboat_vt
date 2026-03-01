@@ -72,7 +72,7 @@
         "description": "N gain for the rudder control."
     },
     "heading_p_gain": {
-        "default": 0.3,
+        "default": 0.05,
         "description": "Proportional gain for heading control."
     },
     "heading_i_gain": {
