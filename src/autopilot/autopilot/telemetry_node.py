@@ -54,7 +54,7 @@ class TelemetryNode(Node):
         # If these values aren't changing then the ros node or telemetry server
         # thats supposed to be sending these values may not be working correctly
         self.autopilot_mode: SailboatAutopilotMode | MotorboatAutopilotMode = -1
-        self.full_autonomy_maneuver: SailboatStates | None = -1
+        self.full_autonomy_maneuver: SailboatStates = -1
 
         self.current_waypoints: list[tuple[float, float]] = []
         self.current_waypoint_index: int = 0

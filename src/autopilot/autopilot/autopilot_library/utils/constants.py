@@ -97,9 +97,9 @@ class BoatStatusPayload(ctypes.LittleEndianStructure):
     _pack_: ClassVar[int] = 1
 
     four_byte_fields: Final[tuple[tuple[str, ctypes._SimpleCData], ...]] = (
-        ("latitude", ctypes.c_int32),
-        ("longitude", ctypes.c_int32),
-        ("distance_to_next_waypoint", ctypes.c_uint32),
+        ("latitude", ctypes.c_float),
+        ("longitude", ctypes.c_float),
+        ("distance_to_next_waypoint", ctypes.c_float),
         ("speed", ctypes.c_float),
         ("velocity_x", ctypes.c_float),
         ("velocity_y", ctypes.c_float),
