@@ -7,7 +7,7 @@ class BaseHighlighter(QSyntaxHighlighter):
 
     Inherits
     --------
-    `QSyntaxHighlighter`
+    ``QSyntaxHighlighter``
     """
 
     def __init__(self, parent: object | None = None) -> None:
@@ -16,7 +16,7 @@ class BaseHighlighter(QSyntaxHighlighter):
     @staticmethod
     def create_format(color: QColor, weight: QFont.Weight) -> QTextCharFormat:
         """
-        Create a `QTextCharFormat` with the specified color and font weight.
+        Create a ``QTextCharFormat`` with the specified color and font weight.
 
         Parameters
         ----------
@@ -27,7 +27,7 @@ class BaseHighlighter(QSyntaxHighlighter):
 
         Returns
         -------
-        `QTextCharFormat`
+        ``QTextCharFormat``
             A text format with the specified color and font weight.
         """
 
@@ -46,8 +46,9 @@ class BaseHighlighter(QSyntaxHighlighter):
             The text block to highlight.
 
         Raises
-        -------
+        ------
         NotImplementedError
+            If the method is not implemented in a subclass.
         """
 
         raise NotImplementedError("Subclasses must implement highlightBlock()!")

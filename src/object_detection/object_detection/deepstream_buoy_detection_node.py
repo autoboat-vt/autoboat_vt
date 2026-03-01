@@ -1,7 +1,8 @@
 import os
 import sys
 import gi
-gi.require_version('Gst', '1.0')
+
+gi.require_version("Gst", "1.0")
 from gi.repository import GLib, Gst
 import pyds
 import threading
@@ -21,13 +22,13 @@ from autoboat_msgs.msg import ObjectDetectionResultsList, ObjectDetectionResult
 
 os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
 # os.environ['NVDS_ENABLE_COMPONENT_LATENCY_MEASUREMENT'] = '1'
-os.environ['CUDA_VER'] = "12.6"
+os.environ["CUDA_VER"] = "12.6"
 # os.environ['OPENCV'] = "1" # These are for int8 calibration, not needed here
 # os.environ['INT8_CALIB_IMG_PATH'] = "calibration.txt"
 # os.environ['INT8_CALIB_BATCH_SIZE'] = "4"
 # os.environ['GST_DEBUG'] = "3"
 
-if (re.search("/home/ws", os.getcwd()) is not None):
+if re.search("/home/ws", os.getcwd()) is not None:
     IS_DEV_CONTAINER = True
 else:
     IS_DEV_CONTAINER = False
@@ -39,7 +40,7 @@ COMPUTE_HW = 1
 MEMORY_TYPE = 0
 LATENCY = False
 
-if (IS_DEV_CONTAINER):
+if IS_DEV_CONTAINER:
     PATH_TO_SRC_DIR = "/home/ws/src"
 else:
     PATH_TO_SRC_DIR = "/home/sailbot/autoboat_vt/src"
@@ -53,22 +54,19 @@ if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":
 if SHOULD_SAVE_IMAGES and not os.path.exists(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results"):
     os.makedirs(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results")
 
+
 class BuoyDetectionNode(Node):
     def __init__(self):
         super().__init__("buoy_detection")
         self.CAM_LIST = {
-            0: {
-                "name": self._find_camera(),
-                "framerate": "30/1",
-                "format": "YUY2",
-                "input_width": 1280,
-                "input_height": 800
-            }
+            0: {"name": self._find_camera(), "framerate": "30/1", "format": "YUY2", "input_width": 1280, "input_height": 800}
         }
 
         # ROS2 Initialization
         sensor_qos_profile = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST, depth=1)
-        self.object_detection_results_publisher = self.create_publisher(msg_type=ObjectDetectionResultsList, topic="/object_detection_results_list", qos_profile=sensor_qos_profile)
+        self.object_detection_results_publisher = self.create_publisher(
+            msg_type=ObjectDetectionResultsList, topic="/object_detection_results_list", qos_profile=sensor_qos_profile
+        )
 
         # TODO: add subscriber for image topics
         # TODO: add dynamic reconfigure for parameters from telemetry node
@@ -87,73 +85,90 @@ class BuoyDetectionNode(Node):
         self.pipeline = Gst.Pipeline()
 
         streammux = Gst.ElementFactory.make("nvstreammux", "muxer")
-        streammux.set_property('batch-size', 1)
+        streammux.set_property("batch-size", 1)
         # streammux.set_property('batched-push-timeout', MUXER_BATCH_TIMEOUT_USEC)
-        
+
         # v4l2-ctl --list-devices
         # v4l2-ctl --device /dev/video0 --list-formats-ext
         source0 = Gst.ElementFactory.make("v4l2src", "usb-cam-0")
-        source0.set_property('device', self.CAM_LIST[0]["name"])
+        source0.set_property("device", self.CAM_LIST[0]["name"])
         self.get_logger().info(f"Opening camera device: {self.CAM_LIST[0]['name']}")
 
-        caps_source0 = Gst.ElementFactory.make('capsfilter', 'source0-caps')
-        caps_source0.set_property('caps', Gst.Caps.from_string(f'video/x-raw, width={self.CAM_LIST[0]["input_width"]}, height={self.CAM_LIST[0]["input_height"]}, format={self.CAM_LIST[0]["format"]}, framerate={self.CAM_LIST[0]["framerate"]}'))
+        caps_source0 = Gst.ElementFactory.make("capsfilter", "source0-caps")
+        caps_source0.set_property(
+            "caps",
+            Gst.Caps.from_string(
+                f"video/x-raw, width={self.CAM_LIST[0]['input_width']}, height={self.CAM_LIST[0]['input_height']}, format={self.CAM_LIST[0]['format']}, framerate={self.CAM_LIST[0]['framerate']}"
+            ),
+        )
 
         # This is a workaround.
         # Issue with deepstream7.1 and jetpack6.2 requires compute-hw to be 1 instead of 0.
         # When compute-hw is 1, nvvidconv fails to convert from YUY2 to NV12 directly.
         # So we convert from YUY2 to RGB first, then from RGB to NV12
-        videoconvert = Gst.ElementFactory.make('videoconvert', 'convertor-0')
+        videoconvert = Gst.ElementFactory.make("videoconvert", "convertor-0")
 
-        caps_videoconvert = Gst.ElementFactory.make('capsfilter', 'convertor-caps-0')
-        caps_videoconvert.set_property('caps', Gst.Caps.from_string(f'video/x-raw, format=RGB'))
+        caps_videoconvert = Gst.ElementFactory.make("capsfilter", "convertor-caps-0")
+        caps_videoconvert.set_property("caps", Gst.Caps.from_string(f"video/x-raw, format=RGB"))
 
-        nvvidconvsrc0 = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-src-0')
-        nvvidconvsrc0.set_property('nvbuf-memory-type', MEMORY_TYPE)
-        nvvidconvsrc0.set_property('compute-hw', COMPUTE_HW)
+        nvvidconvsrc0 = Gst.ElementFactory.make("nvvideoconvert", "nvconverter-src-0")
+        nvvidconvsrc0.set_property("nvbuf-memory-type", MEMORY_TYPE)
+        nvvidconvsrc0.set_property("compute-hw", COMPUTE_HW)
 
-        caps_nvvidconvsrc0 = Gst.ElementFactory.make('capsfilter', 'nvmm-caps-0')
-        caps_nvvidconvsrc0.set_property('caps', Gst.Caps.from_string(f'video/x-raw(memory:NVMM), format=NV12, width={self.CAM_LIST[0]["input_width"]}, height={self.CAM_LIST[0]["input_height"]}'))
+        caps_nvvidconvsrc0 = Gst.ElementFactory.make("capsfilter", "nvmm-caps-0")
+        caps_nvvidconvsrc0.set_property(
+            "caps",
+            Gst.Caps.from_string(
+                f"video/x-raw(memory:NVMM), format=NV12, width={self.CAM_LIST[0]['input_width']}, height={self.CAM_LIST[0]['input_height']}"
+            ),
+        )
 
         if INFERENCE:
-            pgie = Gst.ElementFactory.make('nvinfer', 'pgie')
-            pgie.set_property('config-file-path', PATH_TO_YOLO_CONFIG)
+            pgie = Gst.ElementFactory.make("nvinfer", "pgie")
+            pgie.set_property("config-file-path", PATH_TO_YOLO_CONFIG)
 
-            tracker = Gst.ElementFactory.make('nvtracker', 'tracker')
+            tracker = Gst.ElementFactory.make("nvtracker", "tracker")
             # docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvtracker.html#nvidia-tao-reidentificationnet
-            tracker.set_property('ll-lib-file', '/opt/nvidia/deepstream/deepstream-7.1/lib/libnvds_nvmultiobjecttracker.so')
+            tracker.set_property("ll-lib-file", "/opt/nvidia/deepstream/deepstream-7.1/lib/libnvds_nvmultiobjecttracker.so")
             # tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_IOU.yml')
             # tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_NvSORT.yml')
             # tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_NvDeepSORT.yml')
             # tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_NvDCF_max_perf.yml')
-            tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_NvDCF_perf.yml')
+            tracker.set_property(
+                "ll-config-file",
+                "/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_NvDCF_perf.yml",
+            )
             # tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_NvDCF_accuracy.yml')
             # tracker.set_property('compute-hw', COMPUTE_HW)
-            tracker.set_property('tracking-id-reset-mode', 0)
-        
-        queue_multifilesink_valve = Gst.ElementFactory.make('queue', 'queue-valve')
+            tracker.set_property("tracking-id-reset-mode", 0)
 
-        multifilesink_valve = Gst.ElementFactory.make('valve', 'multifilesink-valve')
-        multifilesink_valve.set_property('drop', not SHOULD_SAVE_IMAGES) 
+        queue_multifilesink_valve = Gst.ElementFactory.make("queue", "queue-valve")
 
-        osd = Gst.ElementFactory.make('nvdsosd', 'nvosd')
+        multifilesink_valve = Gst.ElementFactory.make("valve", "multifilesink-valve")
+        multifilesink_valve.set_property("drop", not SHOULD_SAVE_IMAGES)
 
-        nvvidconv_jpeg = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-jpeg')
-        nvvidconv_jpeg.set_property('nvbuf-memory-type', MEMORY_TYPE)
-        nvvidconv_jpeg.set_property('compute-hw', COMPUTE_HW)
-        
-        caps_nvvidconv_jpeg = Gst.ElementFactory.make('capsfilter', 'nvconverter-jpeg-caps')
-        if (IS_DEV_CONTAINER):
-            caps_nvvidconv_jpeg.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=I420')) # Dev container needs I420
+        osd = Gst.ElementFactory.make("nvdsosd", "nvosd")
+
+        nvvidconv_jpeg = Gst.ElementFactory.make("nvvideoconvert", "nvconverter-jpeg")
+        nvvidconv_jpeg.set_property("nvbuf-memory-type", MEMORY_TYPE)
+        nvvidconv_jpeg.set_property("compute-hw", COMPUTE_HW)
+
+        caps_nvvidconv_jpeg = Gst.ElementFactory.make("capsfilter", "nvconverter-jpeg-caps")
+        if IS_DEV_CONTAINER:
+            caps_nvvidconv_jpeg.set_property(
+                "caps", Gst.Caps.from_string("video/x-raw(memory:NVMM), format=I420")
+            )  # Dev container needs I420
         else:
-            caps_nvvidconv_jpeg.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=NV12')) # Jetson needs NV12
+            caps_nvvidconv_jpeg.set_property(
+                "caps", Gst.Caps.from_string("video/x-raw(memory:NVMM), format=NV12")
+            )  # Jetson needs NV12
 
-        jpegenc = Gst.ElementFactory.make('nvjpegenc', 'jpegenc')
+        jpegenc = Gst.ElementFactory.make("nvjpegenc", "jpegenc")
 
-        multifilesink = Gst.ElementFactory.make('multifilesink', 'multifilesink')
-        multifilesink.set_property('location', f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results/frame%06d.jpg")
-        multifilesink.set_property('index', 0)
-        multifilesink.set_property('max-files', NUM_IMAGES_TO_SAVE)
+        multifilesink = Gst.ElementFactory.make("multifilesink", "multifilesink")
+        multifilesink.set_property("location", f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results/frame%06d.jpg")
+        multifilesink.set_property("index", 0)
+        multifilesink.set_property("max-files", NUM_IMAGES_TO_SAVE)
 
         self.pipeline.add(source0)
         self.pipeline.add(caps_source0)
@@ -178,9 +193,9 @@ class BuoyDetectionNode(Node):
         videoconvert.link(caps_videoconvert)
         caps_videoconvert.link(nvvidconvsrc0)
         nvvidconvsrc0.link(caps_nvvidconvsrc0)
-        
-        sinkpad0 = streammux.request_pad_simple('sink_0')
-        srcpad0 = caps_nvvidconvsrc0.get_static_pad('src')
+
+        sinkpad0 = streammux.request_pad_simple("sink_0")
+        srcpad0 = caps_nvvidconvsrc0.get_static_pad("src")
         srcpad0.link(sinkpad0)
 
         if INFERENCE:
@@ -204,7 +219,7 @@ class BuoyDetectionNode(Node):
         bus.add_signal_watch()
         bus.connect("message", self._bus_call, self.loop)
 
-        infer_probe_pad = queue_multifilesink_valve.get_static_pad('sink')
+        infer_probe_pad = queue_multifilesink_valve.get_static_pad("sink")
         infer_probe_pad.add_probe(Gst.PadProbeType.BUFFER, self._infer_probe, 0)
 
     def _bus_call(self, bus, message, loop):
@@ -221,7 +236,7 @@ class BuoyDetectionNode(Node):
             # sys.stderr.write("Error: %s: %s\n" % (err, debug))
             self.get_logger().error("Error: %s: %s\n" % (err, debug))
         return True
-    
+
     def run(self):
         self.get_logger().info("Starting pipeline\n")
         self.pipeline.set_state(Gst.State.PLAYING)
@@ -231,7 +246,7 @@ class BuoyDetectionNode(Node):
             self.get_logger().error(e)
         self.get_logger().info("Closing pipeline\n")
         self.pipeline.set_state(Gst.State.NULL)
-    
+
     def _infer_probe(self, pad, info, u_data):
         gst_buffer = info.get_buffer()
         if not gst_buffer:
@@ -256,10 +271,10 @@ class BuoyDetectionNode(Node):
                 frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
             except StopIteration:
                 break
-            
+
             msg.ntp_timestamp = frame_meta.ntp_timestamp
 
-            if (frame_meta.frame_num % 60 == 0):
+            if frame_meta.frame_num % 60 == 0:
                 current_time = time.process_time()
                 fps = 60 / (current_time - self.last_time)
                 self.last_time = current_time
@@ -270,15 +285,19 @@ class BuoyDetectionNode(Node):
             while l_obj is not None:
                 try:
                     # Casting l_obj.data to pyds.NvDsObjectMeta
-                    obj_meta=pyds.NvDsObjectMeta.cast(l_obj.data)
+                    obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
                 except StopIteration:
                     break
-                
+
                 obj_results = ObjectDetectionResult()
                 obj_results.detector_confidence = obj_meta.confidence
                 obj_results.tracker_confidence = obj_meta.tracker_confidence
-                obj_results.x_position = obj_meta.tracker_bbox_info.org_bbox_coords.left + (obj_meta.tracker_bbox_info.org_bbox_coords.width / 2)
-                obj_results.y_position = obj_meta.tracker_bbox_info.org_bbox_coords.top + (obj_meta.tracker_bbox_info.org_bbox_coords.height / 2)
+                obj_results.x_position = obj_meta.tracker_bbox_info.org_bbox_coords.left + (
+                    obj_meta.tracker_bbox_info.org_bbox_coords.width / 2
+                )
+                obj_results.y_position = obj_meta.tracker_bbox_info.org_bbox_coords.top + (
+                    obj_meta.tracker_bbox_info.org_bbox_coords.height / 2
+                )
                 obj_results.width = obj_meta.tracker_bbox_info.org_bbox_coords.width
                 obj_results.height = obj_meta.tracker_bbox_info.org_bbox_coords.height
                 obj_results.object_id = obj_meta.object_id
@@ -289,14 +308,14 @@ class BuoyDetectionNode(Node):
                     l_obj = l_obj.next
                 except StopIteration:
                     break
-            
+
             try:
                 l_frame = l_frame.next
             except StopIteration:
                 break
-        
+
         self.object_detection_results_publisher.publish(msg)
-        
+
         return Gst.PadProbeReturn.OK
 
     def _probe(self, pad, info, u_data):
@@ -314,13 +333,31 @@ class BuoyDetectionNode(Node):
             str: The /dev/video* device path
         """
 
-        camera_devices_output = subprocess.run(['v4l2-ctl', '--list-devices'], capture_output=True, text=True).stdout
+        camera_devices_output = subprocess.run(["v4l2-ctl", "--list-devices"], capture_output=True, text=True).stdout
         matches = re.findall(r"/dev/video[0-9]*", camera_devices_output)
         for match in matches:
             device_id = match.split("/dev/video")[-1]
             print(device_id)
-            if (re.search("RealSense", subprocess.run(['cat', f'/sys/class/video4linux/video{device_id}/name'], capture_output=True, text=True).stdout) is not None):
-                if (re.search("YUYV", subprocess.run(['v4l2-ctl', '--device', f'/dev/video{device_id}', '--list-formats-ext'], capture_output=True, text=True).stdout) is not None):
+            if (
+                re.search(
+                    "RealSense",
+                    subprocess.run(
+                        ["cat", f"/sys/class/video4linux/video{device_id}/name"], capture_output=True, text=True
+                    ).stdout,
+                )
+                is not None
+            ):
+                if (
+                    re.search(
+                        "YUYV",
+                        subprocess.run(
+                            ["v4l2-ctl", "--device", f"/dev/video{device_id}", "--list-formats-ext"],
+                            capture_output=True,
+                            text=True,
+                        ).stdout,
+                    )
+                    is not None
+                ):
                     return f"/dev/video{device_id}"
         self.get_logger().error("Could not find RealSense camera device with YUYV format")
         sys.exit(1)
@@ -331,5 +368,6 @@ def main():
     buoy_detection_node = BuoyDetectionNode()
     rclpy.spin(buoy_detection_node)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     sys.exit(main())

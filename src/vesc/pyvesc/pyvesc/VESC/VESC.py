@@ -40,7 +40,7 @@ class VESC(object):
         #     GetValues.fields = pre_v3_33_fields
 
         self.alive_msg = [encode(Alive())]
-        
+
         # store message info for getting values so it doesn't need to calculate it every time
         msg = GetValues()
         self._get_values_msg = encode_request(msg)
@@ -93,7 +93,7 @@ class VESC(object):
         #         time.sleep(0.000001)  # add some delay just to help the CPU
         #     response, consumed = decode(self.serial_port.read(self.serial_port.in_waiting))
         #     return response
-        
+
         if num_read_bytes is not None:
             start_time = time.time()
             while self.serial_port.in_waiting <= num_read_bytes:
