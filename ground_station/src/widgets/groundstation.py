@@ -1,55 +1,59 @@
-# region imports
+import json
 import os
 import time
-import requests
-import json
-
-from utils import constants, thread_classes, misc
-from syntax_highlighters import JsonHighlighter
-from widgets.popup_edit import TextEditWindow
-
-from pathlib import PurePath
 from functools import partial
+from pathlib import Path
+from typing import Any, Literal
 from urllib.parse import urljoin
-from typing import Literal, Any
 
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, Signal
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import (
+    QCheckBox,
+    QFileDialog,
     QGridLayout,
     QGroupBox,
     QLabel,
+    QMessageBox,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
     QTextEdit,
     QVBoxLayout,
     QWidget,
-    QFileDialog,
-    QMessageBox,
-    QCheckBox,
 )
-# endregion imports
+from requests.exceptions import RequestException
+from syntax_highlighters import JsonHighlighter
+from utils import constants, misc, thread_classes
+
+from widgets.popup_edit import TextEditWindow
 
 
 class GroundStationWidget(QWidget):
     """
     Main widget for the ground station application.
 
+    Parameters
+    ----------
+    boat_status_source
+        A ``Signal`` that provides boat status updates.
+
     Inherits
     -------
-    `QWidget`
+    ``QWidget``
     """
 
-    def __init__(self) -> None:
+    def __init__(self, boat_status_source: Signal) -> None:
         super().__init__()
+        self.fake_position: tuple[float] = (0.0, 0.0)
+        self.fake_heading: float = 180.0
+
         self.waypoints: list[list[float]] = []
         self.num_waypoints: int = 0
 
         # buoy_name => {"lat": float, "lon": float}
         self.buoys: dict[str, dict[str, float]] = {}
 
-        self.all_boat_data: dict[str, dict[str, dict]] = {}
         self.boat_data: dict[str, Any] = {}
         self.telemetry_data_limits: dict[str, float] = {}
 
@@ -65,10 +69,9 @@ class GroundStationWidget(QWidget):
         self.remember_waypoints_pull_service_status: bool = False
 
         # region timers
-        self.ten_ms_timer = misc.copy_qtimer(constants.TEN_MS_TIMER)
         self.one_ms_timer = misc.copy_qtimer(constants.ONE_MS_TIMER)
         self.thirty_second_timer = misc.copy_qtimer(constants.THIRTY_SECOND_TIMER)
-        self.timers = [self.thirty_second_timer, self.ten_ms_timer, self.one_ms_timer]
+        self.timers = [self.one_ms_timer, self.thirty_second_timer]
 
         # region define layouts
         self.main_layout = QGridLayout()
@@ -157,7 +160,7 @@ class GroundStationWidget(QWidget):
 
         # region middle section
         self.browser = QWebEngineView()
-        self.browser.setHtml(constants.HTML_MAP)
+        self.browser.setHtml(open(constants.HTML_MAP_PATH, encoding="utf-8").read())
         self.browser.setMinimumWidth(700)
         self.browser.setMinimumHeight(700)
 
@@ -281,27 +284,19 @@ class GroundStationWidget(QWidget):
         self.setLayout(self.main_layout)
         # endregion setup UI
 
-        self.telemetry_handler = thread_classes.TelemetryUpdater()
-        self.local_waypoint_handler = thread_classes.LocalWaypointFetcher()
-        self.remote_waypoint_handler = thread_classes.RemoteWaypointFetcher()
-
-        self.thirty_second_timer.timeout.connect(self.remote_waypoint_handler_starter)
-        self.ten_ms_timer.timeout.connect(self.update_telemetry_starter)
+        self.local_waypoint_handler = thread_classes.WaypointThreadRouter.LocalFetcherThread()
+        self.local_waypoint_handler.response.connect(self.update_waypoints_display)
         self.one_ms_timer.timeout.connect(self.local_waypoint_handler_starter)
 
-        # updating displays
-        self.telemetry_handler.boat_data_fetched.connect(self.update_telemetry_display)
-        self.local_waypoint_handler.waypoints_fetched.connect(self.update_waypoints_display)
-
-        # telemetry server URL change
-        self.telemetry_handler.request_url_change.connect(self.change_telemetry_server_url)
-        self.remote_waypoint_handler.request_url_change.connect(self.change_telemetry_server_url)
-
-        # misc
-        self.remote_waypoint_handler.waypoints_fetched.connect(self.check_telemetry_waypoints)
+        self.remote_waypoint_handler = thread_classes.WaypointThreadRouter.RemoteFetcherThread()
+        self.remote_waypoint_handler.response.connect(self.check_telemetry_waypoints)
+        self.thirty_second_timer.timeout.connect(self.remote_waypoint_handler_starter)
 
         for timer in self.timers:
             timer.start()
+
+        self.boat_status_source: Signal = boat_status_source
+        self.boat_status_source.connect(self.update_telemetry_display)
 
     # region button functions
     def send_waypoints(self, test: bool = False) -> None:
@@ -311,59 +306,55 @@ class GroundStationWidget(QWidget):
         Parameters
         ----------
         test
-            If `True`, use the test waypoint endpoint. Defaults to `False`.
+            If ``True``, use the test waypoint endpoint. Defaults to ``False``.
         """
 
         if not test:
             try:
+                instance_id = constants.SM.read("telemetry_server_instance_id")
                 constants.REQ_SESSION.post(
-                    urljoin(
-                        constants.TELEMETRY_SERVER_ENDPOINTS["set_waypoints"],
-                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
-                    ),
+                    urljoin(misc.get_route("set_waypoints"), str(instance_id)),
                     json=self.waypoints,
-                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
 
                 js_code = "map.change_color_waypoints('red')"
                 self.browser.page().runJavaScript(js_code)
                 print(f"[Info] Waypoints sent successfully. Waypoints: {self.waypoints}")
 
-            except requests.exceptions.RequestException as e:
+            except RequestException as e:
                 print(f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")
 
         else:
             try:
                 constants.REQ_SESSION.post(
                     urljoin(
-                        constants.TELEMETRY_SERVER_ENDPOINTS["waypoints_test"],
-                        str(constants.TELEMETRY_SERVER_INSTANCE_ID),
+                        constants.SM.read("test_waypoints"),
+                        str(constants.SM.read("telemetry_server_instance_id")),
                     ),
                     json=self.waypoints,
-                    timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
                 )
 
-            except requests.exceptions.RequestException as e:
+            except RequestException as e:
                 print(f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")
 
     def pull_waypoints(self) -> None:
         """Pull waypoints from the telemetry server and add them to the map."""
 
         try:
+            instance_id = constants.SM.read("telemetry_server_instance_id")
             remote_waypoints: list[list[float]] = constants.REQ_SESSION.get(
-                urljoin(
-                    constants.TELEMETRY_SERVER_ENDPOINTS["get_waypoints"], str(constants.TELEMETRY_SERVER_INSTANCE_ID)
-                ),
-                timeout=constants.TELEMETRY_TIMEOUT_SECONDS,
+                urljoin(misc.get_route("get_waypoints"), str(instance_id)),
             ).json()
 
             if remote_waypoints:
                 print(f"[Info] Fetched waypoints from server: {remote_waypoints}")
                 existing_waypoints = self.waypoints.copy()
                 self.browser.page().runJavaScript("map.clear_waypoints()")
+
                 for waypoint in remote_waypoints:
                     self.browser.page().runJavaScript(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})")
                 self.browser.page().runJavaScript("map.change_color_waypoints('red')")
+
                 for waypoint in existing_waypoints:
                     self.browser.page().runJavaScript(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})")
 
@@ -373,7 +364,7 @@ class GroundStationWidget(QWidget):
             self.can_pull_waypoints = False
             self.pull_waypoints_button.setDisabled(not self.can_pull_waypoints)
 
-        except requests.exceptions.RequestException as e:
+        except RequestException as e:
             print(f"[Error] Failed to pull waypoints. Exception: {e}")
 
     def clear_waypoints(self) -> None:
@@ -387,15 +378,15 @@ class GroundStationWidget(QWidget):
 
     def save_boat_data(self) -> None:
         """
-        Saves latest entry in the `self.boat_data` array to a file.
+        Saves latest entry in the ``self.boat_data`` array to a file.
 
-        Files are stored in the `boat_data` directory and are named `boat_data_<timestamp>.json`
-        where `<timestamp>` is nanoseconds since unix epoch.
+        Files are stored in the ``boat_data`` directory and are named ``boat_data_<timestamp>.json``
+        where ``<timestamp>`` is nanoseconds since unix epoch.
         """
 
         try:
-            file_path = PurePath(constants.BOAT_DATA_DIR / f"boat_data_{time.time_ns()}.json")
-            with open(file_path, "w") as f:
+            file_path = Path(constants.BOAT_DATA_DIR / f"boat_data_{time.time_ns()}.json")
+            with open(file_path, mode="w", encoding="utf-8") as f:
                 json.dump(self.boat_data, f, indent=4)
 
         except Exception as e:
@@ -407,8 +398,8 @@ class GroundStationWidget(QWidget):
         """
         Opens a text edit window to edit the telemetry data limits.
 
-        `self.edit_boat_data_limits_callback` is called when the user closes or clicks the save button in the text edit window.
-        `self.edit_boat_data_limits_callback` recieves the text from the text edit window when the user clicks the save button,
+        ``self.edit_boat_data_limits_callback`` is called when the user closes or clicks the save button in the text edit window.
+        ``self.edit_boat_data_limits_callback`` recieves the text from the text edit window when the user clicks the save button,
         otherwise it recieves the text without any changes.
         """
 
@@ -424,10 +415,10 @@ class GroundStationWidget(QWidget):
 
     def edit_boat_data_limits_callback(self, text: str) -> None:
         """
-        Callback function for the `edit_boat_data_limits` function.
+        Callback function for the ``edit_boat_data_limits`` function.
 
         This function is called when the user closes the text edit window.
-        It retrieves the edited text and saves it to the `self.telemetry_data_limits` variable and closes the window.
+        It retrieves the edited text and saves it to the ``self.telemetry_data_limits`` variable and closes the window.
 
         Parameters
         ----------
@@ -443,10 +434,10 @@ class GroundStationWidget(QWidget):
 
     def load_boat_data_limits(self) -> None:
         """
-        Load upper and lower bounds for some of the telemetry data, if no file selected use `default.json`.
+        Load upper and lower bounds for some of the telemetry data, if no file selected use ``default.json``.
 
-        Files are stored in the `boat_data_bounds` directory and are named `boat_data_bounds_<timestamp>.json`
-        where `<timestamp>` is nanoseconds since unix epoch.
+        Files are stored in the ``boat_data_bounds`` directory and are named ``boat_data_bounds_<timestamp>.json``
+        where ``<timestamp>`` is nanoseconds since unix epoch.
         """
 
         try:
@@ -457,8 +448,8 @@ class GroundStationWidget(QWidget):
                 "*.json",
             )
             if chosen_file == ("", ""):
-                chosen_file = [PurePath(constants.BOAT_DATA_LIMITS_DIR / "default.json")]
-            with open(chosen_file[0], "r") as f:
+                chosen_file = [Path(constants.BOAT_DATA_LIMITS_DIR / "default.json")]
+            with open(chosen_file[0], mode="r", encoding="utf-8") as f:
                 self.telemetry_data_limits = json.load(f)
 
         except Exception as e:
@@ -470,15 +461,15 @@ class GroundStationWidget(QWidget):
         """
         Save upper and lower bounds for some of the telemetry data.
 
-        Files are stored in the `boat_data_bounds` directory and are named `boat_data_bounds_<timestamp>.json`
-        where `<timestamp>` is nanoseconds since unix epoch.
+        Files are stored in the ``boat_data_bounds`` directory and are named ``boat_data_bounds_<timestamp>.json``
+        where ``<timestamp>`` is nanoseconds since unix epoch.
         """
 
         try:
-            file_path = PurePath(
+            file_path = Path(
                 constants.BOAT_DATA_LIMITS_DIR / f"boat_data_bounds_{time.time_ns()}.json",
             )
-            with open(file_path, "w") as f:
+            with open(file_path, mode="w", encoding="utf-8") as f:
                 json.dump(self.telemetry_data_limits, f, indent=4)
 
         except Exception as e:
@@ -490,8 +481,8 @@ class GroundStationWidget(QWidget):
         """
         Opens a text edit window to edit the buoy data.
 
-        `self.edit_buoy_data_callback` is called when the user closes or clicks the save button in the text edit window.
-        `self.edit_buoy_data_callback` recieves the text from the text edit window when the user clicks the save button,
+        ``self.edit_buoy_data_callback`` is called when the user closes or clicks the save button in the text edit window.
+        ``self.edit_buoy_data_callback`` recieves the text from the text edit window when the user clicks the save button,
         otherwise it recieves the text without any changes.
         """
 
@@ -507,10 +498,10 @@ class GroundStationWidget(QWidget):
 
     def edit_buoy_data_callback(self, text: str) -> None:
         """
-        Callback function for the `edit_buoy_data` function.
+        Callback function for the ``edit_buoy_data`` function.
 
         This function is called when the user closes the text edit window.
-        It retrieves the edited text and saves it to the `self.buoys` variable and closes the window.
+        It retrieves the edited text and saves it to the ``self.buoys`` variable and closes the window.
 
         Parameters
         ----------
@@ -553,15 +544,15 @@ class GroundStationWidget(QWidget):
 
     def save_buoy_data(self) -> None:
         """
-        Saves latest entry in the `self.buoys` array to a file.
+        Saves latest entry in the ``self.buoys`` array to a file.
 
-        Files are stored in the `buoy_data` directory and are named `buoy_data_<timestamp>.json`
-        where `<timestamp>` is nanoseconds since unix epoch.
+        Files are stored in the ``buoy_data`` directory and are named ``buoy_data_<timestamp>.json``
+        where ``<timestamp>`` is nanoseconds since unix epoch.
         """
 
         try:
-            file_path = PurePath(constants.BUOY_DATA_DIR / f"buoy_data_{time.time_ns()}.json")
-            with open(file_path, "w") as f:
+            file_path = Path(constants.BUOY_DATA_DIR / f"buoy_data_{time.time_ns()}.json")
+            with open(file_path, mode="w", encoding="utf-8") as f:
                 json.dump(self.buoys, f, indent=4)
 
         except Exception as e:
@@ -571,10 +562,10 @@ class GroundStationWidget(QWidget):
 
     def load_buoy_data(self) -> None:
         """
-        Load buoy data from the `buoy_data` directory, if none selected use `default.json`.
+        Load buoy data from the ``buoy_data`` directory, if none selected use ``default.json``.
 
-        Files are stored in the `buoy_data` directory and are named `buoy_data_<timestamp>.json`
-        where `<timestamp>` is nanoseconds since unix epoch.
+        Files are stored in the ``buoy_data`` directory and are named ``buoy_data_<timestamp>.json``
+        where ``<timestamp>`` is nanoseconds since unix epoch.
         """
 
         try:
@@ -590,9 +581,9 @@ class GroundStationWidget(QWidget):
                     "*.json",
                 )
                 if chosen_file == ("", ""):
-                    chosen_file = [PurePath(constants.BUOY_DATA_DIR / "default.json")]
+                    chosen_file = [Path(constants.BUOY_DATA_DIR / "default.json")]
 
-                with open(chosen_file[0], "r") as f:
+                with open(chosen_file[0], mode="r", encoding="utf-8") as f:
                     self.buoys = json.load(f)
 
                 self.update_buoy_table()
@@ -605,12 +596,7 @@ class GroundStationWidget(QWidget):
     def zoom_to_boat(self) -> None:
         """Center the view on the boat's position."""
 
-        if isinstance(self.boat_data.get("position"), list):
-            js_code = "map.focus_map_on_boat()"
-            self.browser.page().runJavaScript(js_code)
-
-        else:
-            print("[Warning] Boat position not available.")
+        self.browser.page().runJavaScript("map.focus_map_on_boat()")
 
     def zoom_to_marker(self, row: int, table: Literal["waypoints", "buoys"] = "waypoints") -> None:
         """
@@ -671,11 +657,6 @@ class GroundStationWidget(QWidget):
     # endregion button functions
 
     # region pyqt thread functions
-    def local_waypoint_handler_starter(self) -> None:
-        """Starts the JS waypoint handler thread."""
-
-        if not self.local_waypoint_handler.isRunning():
-            self.local_waypoint_handler.start()
 
     def remote_waypoint_handler_starter(self) -> None:
         """Starts the telemetry waypoint handler thread."""
@@ -688,26 +669,25 @@ class GroundStationWidget(QWidget):
         if not self.remote_waypoint_handler.isRunning():
             self.remote_waypoint_handler.start()
 
-    def update_telemetry_starter(self) -> None:
-        """Starts the telemetry handler thread."""
+    def local_waypoint_handler_starter(self) -> None:
+        """Starts the local waypoint handler thread."""
 
-        if constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED:
-            self.clear_waypoints()
-            constants.HAS_TELEMETRY_SERVER_INSTANCE_CHANGED = False
+        if not self.local_waypoint_handler.isRunning():
+            self.local_waypoint_handler.start()
 
-        if not self.telemetry_handler.isRunning():
-            self.telemetry_handler.start()
-
-    def update_waypoints_display(self, waypoints: list[list[float]]) -> None:
+    def update_waypoints_display(self, request_result: tuple[list[list[int | float]], constants.TelemetryStatus]) -> None:
         """
         Update waypoints display with waypoints fetched from the local server.
 
         Parameters
         ----------
-        waypoints
-            List of waypoints fetched from the server.
+        request_result
+            A tuple containing:
+            - a list of waypoints fetched from the local server.
+            - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
+        waypoints, _ = request_result
         self.waypoints = waypoints
         num_new_waypoints = len(waypoints)
 
@@ -744,20 +724,24 @@ class GroundStationWidget(QWidget):
                     item = QTableWidgetItem(f"{coord:.13f}")
                     item.setFlags(Qt.ItemFlag.ItemIsEnabled)
                     self.right_tab1_table.setItem(self.right_tab1_table.rowCount() - 1, i, item)
+
             self.right_tab1_table.resizeColumnsToContents()
             self.right_tab1_table.resizeRowsToContents()
 
-    def check_telemetry_waypoints(self, waypoints: list[list[float]]) -> None:
+    def check_telemetry_waypoints(self, request_result: tuple[list[list[int | float]], constants.TelemetryStatus]) -> None:
         """
         Check if the waypoints on the telemetry server are the same as the local waypoints.
         If they are different, show a dialog and let user decide whether to update the local waypoints.
 
         Parameters
         ----------
-        waypoints
-            List of waypoints to check.
+        request_result
+            A tuple containing:
+            - a list of waypoints fetched from the telemetry server.
+            - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
+        waypoints, _ = request_result
         equal_flag = sorted(self.waypoints) == sorted(waypoints)
 
         if not (equal_flag and self.remember_waypoints_pull_service_status) and self.can_pull_waypoints:
@@ -766,7 +750,7 @@ class GroundStationWidget(QWidget):
 
             response, temp_pull_waypoints_reminder = misc.show_message_box(
                 "Local Waypoints Mismatch",
-                "The local waypoints are different from the telemetry server waypoints. Do you want to update the local waypoints?",
+                "The local waypoints are different from the telemetry server waypoints. Do you want to update the local waypoints?",  # noqa: E501
                 constants.ICONS.warning,
                 [
                     QMessageBox.StandardButton.Yes,
@@ -778,9 +762,11 @@ class GroundStationWidget(QWidget):
                 not_uploaded_waypoints = [waypoint for waypoint in self.waypoints if waypoint not in waypoints]
                 self.waypoints = waypoints.copy()
                 self.browser.page().runJavaScript("map.clear_waypoints()")
+
                 for waypoint in self.waypoints:
                     self.browser.page().runJavaScript(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})")
                 self.browser.page().runJavaScript("map.change_color_waypoints('red')")
+
                 for waypoint in not_uploaded_waypoints:
                     self.browser.page().runJavaScript(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})")
                 print("[Info] Local waypoints updated from telemetry server.")
@@ -805,10 +791,9 @@ class GroundStationWidget(QWidget):
         Parameters
         ----------
         telemetry_status
-            <ul>
-            <li> <code>SUCCESS</code> indicates that the telemetry server is reachable and waypoints were fetched successfully.</li>
-            <li> <code>FAILURE</code> indicates that the telemetry server is not reachable and waypoints could not be fetched.</li>
-            </ul>
+            A ``TelemetryStatus`` enum value indicating the status of the request. Possible values are:
+            - ``SUCCESS`` indicates that the telemetry server is reachable and waypoints were fetched successfully.
+            - ``FAILURE`` indicates that the telemetry server is not reachable and waypoints could not be fetched.
         """
 
         if telemetry_status == constants.TelemetryStatus.FAILURE and not self.remember_telemetry_server_url_status:
@@ -830,17 +815,21 @@ class GroundStationWidget(QWidget):
                 new_url = misc.show_input_dialog(
                     "Change Telemetry Server URL",
                     "Enter the new telemetry server URL:",
-                    default_value=constants.TELEMETRY_SERVER_URL,
+                    default_value=constants.SM.read("telemetry_server_url"),
                     input_type=str,
                 )
 
                 if new_url:
-                    print(f"[Info] Changed telemetry server URL to {new_url}, was {constants.TELEMETRY_SERVER_URL}.")
-                    constants.TELEMETRY_SERVER_URL = new_url
-                    for endpoint in constants.TELEMETRY_SERVER_ENDPOINTS:
-                        path_tail = "/".join(constants.TELEMETRY_SERVER_ENDPOINTS[endpoint].split("/")[-2:])
-                        new_endpoint_url = constants.TELEMETRY_SERVER_URL + path_tail
-                        constants.TELEMETRY_SERVER_ENDPOINTS[endpoint] = new_endpoint_url
+                    print(f"[Info] Changed telemetry server URL to {new_url}, was {constants.SM.read('telemetry_server_url')}.")
+                    
+                    constants.SM.write("telemetry_server_url", new_url)
+                    tmp_dict = {}
+                    for endpoint, value in constants.SM.read("telemetry_server_endpoints").items():
+                        path_tail = "/".join(value.split("/")[-2:])
+                        new_endpoint_url = constants.SM.read("telemetry_server_url") + path_tail
+                        tmp_dict[endpoint] = new_endpoint_url
+
+                    constants.SM.write("telemetry_server_endpoints", tmp_dict)
 
                 else:
                     print("[Warning] No new telemetry server URL provided, keeping old one.")
@@ -855,17 +844,16 @@ class GroundStationWidget(QWidget):
             for timer in self.timers:
                 timer.start()
 
-    def update_telemetry_display(
-        self,
-        boat_data: dict[str, float | str | tuple[float, float] | list[tuple[float, float]]],
-    ) -> None:
+    def update_telemetry_display(self, request_result: tuple[dict[str, Any], constants.TelemetryStatus]) -> None:
         """
         Update telemetry display with boat data.
 
         Parameters
         ----------
-        boat_data
-            Dictionary containing boat data fetched from the telemetry server.
+        request_result
+            A tuple containing:
+            - a dictionary with the latest boat telemetry data.
+            - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
         def fix_formatting(data_item: float | None) -> str:
@@ -873,17 +861,16 @@ class GroundStationWidget(QWidget):
             Applies some formatting rules that multiple keys have in common.
 
             <ol>
-            <li> If the value is None, it is replaced with -69.420.
-            <li> If the value is negative, it is multiplied by -1.
-            <li> The value is rounded to 5 decimal places.
+            <li> If the value is None, displays "N/A".
+            <li> Otherwise, the value is rounded to 5 decimal places.
             </ol>
 
             Examples
-            -------
+            --------
             >>> fix_formatting(-69.420)
-            '69.42000'
-            >>> fix_formatting(None)
             '-69.42000'
+            >>> fix_formatting(None)
+            'N/A'
 
             Parameters
             ----------
@@ -896,69 +883,55 @@ class GroundStationWidget(QWidget):
                 The formatted value.
             """
 
-            return f"{abs(data_item):.5f}" if data_item is not None else f"{-69.420:.5f}"
+            return "N/A" if data_item is None else f"{float(data_item):.5f}"
 
-        def convert_to_seconds(ms: float) -> float:
-            """
-            Converts milliseconds to seconds. 1000 milliseconds = 1 second.
-
-            Parameters
-            ----------
-            ms
-                The time in milliseconds.
-
-            Returns
-            -------
-            float
-                The time in seconds.
-            """
-
-            return ms * 1000
-
+        boat_data, connection_status = request_result
         self.boat_data = boat_data
-        self.all_boat_data[f"{time.time_ns()}"] = boat_data
 
         try:
-            if not isinstance(self.boat_data.get("position"), list):
-                raise TypeError("Boat position is not a list. Expected format: [latitude, longitude]")
-            if not isinstance(self.boat_data.get("heading"), float):
-                raise TypeError("Boat heading is not a float. Expected format: float")
+            heading = self.boat_data.get("heading")
+            assert isinstance(heading, (float, int)), "heading is not a number."
 
-            if not all(isinstance(coord, (float, int)) for coord in self.boat_data["position"]):
-                raise TypeError("Boat position coordinates are not all floats or ints.")
+        except AssertionError:
+            heading = self.fake_heading
 
-            if len(self.boat_data["position"]) != 2:
-                raise ValueError("Boat position list does not contain exactly two elements.")
+        try:
+            position = self.boat_data.get("position")
+            assert isinstance(position, list), "position is not a list."
+            assert len(position) == 2, "position does not have length 2."
+            lat, lon = position
+            assert isinstance(lat, (float, int)), "latitude is not a number."
+            assert isinstance(lon, (float, int)), "longitude is not a number."
 
-            js_code = (
-                f"map.update_boat_location({self.boat_data['position'][0]}, {self.boat_data['position'][1]});"
-                f"map.update_boat_heading({self.boat_data['heading']});"
-            )
-            self.browser.page().runJavaScript(js_code)
+        except AssertionError:
+            lat, lon = self.fake_position
 
-        except (TypeError, ValueError):
-            self.boat_data["position"] = [-69.420, -69.420]
-            self.boat_data["heading"] = -69.420
+        if constants.SM.read("has_telemetry_server_instance_changed"):
+            constants.SM.write("remote_autopilot_param_hash", "")
+            self.clear_waypoints()
+            constants.SM.write("has_telemetry_server_instance_changed", False)
+
+        self.browser.page().runJavaScript(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})")
 
         telemetry_text = (
             "Position: "
-            f"{self.boat_data.get('position', [-69.420, -69.420])[0]:.8f}, "
-            f"{self.boat_data.get('position', [-69.420, -69.420])[1]:.8f}\n"
+            f"{self.boat_data.get('position', self.fake_position)[0]:.8f}, "
+            f"{self.boat_data.get('position', self.fake_position)[1]:.8f}\n"
             f"State: {self.boat_data.get('state', 'N/A')}\n"
+            f"Connection Status: {connection_status.name}\n"
             f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
-            f"Velocity Vector: {self.boat_data.get('velocity_vector', [-69.420, -69.420])[0]:.5f}, {self.boat_data.get('velocity_vector', [-69.420, -69.420])[1]:.5f}\n"
-            f"Speed: {self.boat_data.get('speed', -69.420):.5f} knots\n"
+            f"Velocity Vector: [{self.boat_data.get('velocity_vector', [-69.420, -69.420])[0]:.5f}, {self.boat_data.get('velocity_vector', [-69.420, -69.420])[1]:.5f}]\n"  # noqa: E501
+            f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
             f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
-            f"Bearing: {self.boat_data.get('bearing', -69.420):.5f}°\n"
-            f"Heading: {self.boat_data.get('heading', -69.420):.5f}°\n"
-            f"True Wind Speed: {self.boat_data.get('true_wind_speed', -69.420):.5f} knots\n"
-            f"True Wind Angle: {self.boat_data.get('true_wind_angle', -69.420):.5f}°\n"
-            f"Apparent Wind Speed: {self.boat_data.get('apparent_wind_speed', -69.420):.5f} knots\n"
-            f"Apparent Wind Angle: {self.boat_data.get('apparent_wind_angle', -69.420):.5f}°\n"
-            f"Sail Angle: {self.boat_data.get('sail_angle', -69.420):.5f}°\n"
-            f"Rudder Angle: {self.boat_data.get('rudder_angle', -69.420):.5f}°\n"
-            f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index', 'N/A')}\n"
-            f"Current Waypoint: {self.waypoints[self.boat_data.get('current_waypoint_index', -1)] if isinstance(self.boat_data.get('current_waypoint_index'), int) and 0 <= self.boat_data.get('current_waypoint_index', -1) < len(self.waypoints) else 'N/A'}"
+            f"Bearing: {fix_formatting(self.boat_data.get('bearing'))}°\n"
+            f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
+            f"True Wind Speed: {fix_formatting(self.boat_data.get('true_wind_speed'))} knots\n"
+            f"True Wind Angle: {fix_formatting(self.boat_data.get('true_wind_angle'))}°\n"
+            f"Apparent Wind Speed: {fix_formatting(self.boat_data.get('apparent_wind_speed'))} knots\n"
+            f"Apparent Wind Angle: {fix_formatting(self.boat_data.get('apparent_wind_angle'))}°\n"
+            f"Sail Angle: {fix_formatting(self.boat_data.get('sail_angle'))}°\n"
+            f"Rudder Angle: {fix_formatting(self.boat_data.get('rudder_angle'))}°\n"
+            f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
         )
 
         self.left_text_section.setText(telemetry_text)
@@ -978,7 +951,7 @@ class GroundStationWidget(QWidget):
         Returns
         -------
         float or Literal[0]
-            The converted float value, or `0` if conversion fails.
+            The converted float value, or ``0`` if conversion fails.
         """
 
         try:

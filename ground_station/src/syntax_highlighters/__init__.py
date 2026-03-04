@@ -1,5 +1,5 @@
 """
-Module for syntax highlighter classes in the ground station application.
+Package for syntax highlighter classes in the ground station application.
 
 Contains:
 - BaseHighlighter: Base class for syntax highlighters.

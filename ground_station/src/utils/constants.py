@@ -1,35 +1,23 @@
-"""
-Module containing constants for the ground station application.
+"""Module containing constants for the ground station application."""
 
-Constants:
-- TelemetryStatus: Enum representing the status of telemetry data fetching.
-- ICONS: A namespace containing application icons.
-- YELLOW, PURPLE, BLUE, WHITE, RED, GREY, GREEN: Color constants for the application.
-- PALLETTE: A QPalette object for the application's color scheme.
-- STYLE_SHEET: A string containing the application's style sheet.
-- WINDOW_BOX: QRect defining the main window dimensions.
-- TEN_SECOND_TIMER, HALF_SECOND_TIMER, TEN_MS_TIMER, ONE_MS_TIMER: QTimer objects for various intervals.
-- TELEMETRY_SERVER_URL: Base URL for the telemetry server.
-- TELEMETRY_SERVER_ENDPOINTS: Dictionary of endpoints for the telemetry server.
-- WAYPOINTS_SERVER_URL: URL for the local waypoints server.
-- TOP_LEVEL_DIR, SRC_DIR, DATA_DIR: Paths to the main directories of the application.
-- HTML_MAP_PATH, HTML_MAP: Path and content of the HTML file used by the map widget in the ground station.
-- HTML_CAMERA_PATH, HTML_CAMERA: Path and content of the HTML file used by the camera widget.
-- ASSETS_DIR, AUTO_PILOT_PARAMS_DIR, BOAT_DATA_DIR, BOAT_DATA_LIMITS_DIR, BUOY_DATA_DIR: Paths to various data directories.
-"""
-
+import inspect
+import json
 import os
-import shutil
-import requests
-from utils import misc
-from requests.adapters import HTTPAdapter
-from urllib.parse import urljoin
-from pathlib import PurePath
-from qtpy.QtCore import Qt, QRect, QTimer
-from qtpy.QtGui import QColor, QPalette
-from types import SimpleNamespace
+import time
 from enum import auto
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, TypeAlias
+from urllib.parse import urljoin
+
+import requests
+import requests.adapters
+from qtpy.QtCore import QPoint, QRect, QSize, Qt
+from qtpy.QtGui import QColor, QPalette
 from strenum import StrEnum
+
+from utils import misc
+from utils.state_manager import StateManager
 
 
 class TelemetryStatus(StrEnum):
@@ -38,17 +26,22 @@ class TelemetryStatus(StrEnum):
 
     Attributes
     ----------
-    `SUCCESS`: Indicates that telemetry data was fetched successfully. \\
-    `FAILURE`: Indicates that telemetry data fetching failed.
+    - ``SUCCESS``: Indicates that telemetry data was fetched successfully.
+    - ``FAILURE``: Indicates that telemetry data fetching failed.
+    - ``WRONG_FORMAT``: Indicates that the fetched telemetry data was in an incorrect format.
 
     Inherits
     --------
-    `StrEnum`
+    ``StrEnum``
     """
 
     SUCCESS = auto()
     FAILURE = auto()
+    WRONG_FORMAT = auto()
 
+NumberType: TypeAlias = int | float
+
+SM = StateManager()
 
 # see `main.py` for where this is set
 ICONS: SimpleNamespace
@@ -73,6 +66,7 @@ WEB_LINK_COLOR = QColor("#2a82da")
 BACKGROUND_COLOR = QColor("#333333")
 ACCENT_COLOR = QColor("#AAAAAA")
 FONT_COLOR = QColor("#F5F5F5")
+PLOT_COLORS: list[QColor] = [ORANGE, YELLOW, GREEN, BLUE, PURPLE, RED, WHITE]
 
 # pallette and style sheet
 PALLETTE = QPalette()
@@ -99,8 +93,9 @@ STYLE_SHEET = """
     }
 """
 
-# window dimensions
-WINDOW_BOX = QRect(100, 100, 800, 600)
+# window size and box
+WINDOW_SIZE = QSize(800, 600)
+WINDOW_BOX = QRect(QPoint(100, 100), WINDOW_SIZE)
 
 # timers
 THIRTY_SECOND_TIMER = misc.create_timer(30_000)
@@ -117,125 +112,173 @@ TEN_MS_TIMER = misc.create_timer(10)
 
 ONE_MS_TIMER = misc.create_timer(1)
 
+_start_time: float = time.time()
+
+JS_LIBRARIES: tuple[str, ...] = (
+    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
+    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
+    "https://cdn.jsdelivr.net/gh/bbecquet/Leaflet.RotatedMarker@master/leaflet.rotatedMarker.js",
+)
+
 # server ports
 ASSET_SERVER_PORT = 8000
 GO_SERVER_PORT = 3001
 
 # url for local waypoints server
-WAYPOINTS_SERVER_URL = f"http://localhost:{GO_SERVER_PORT}/waypoints"
+_waypoints_server_url: str = f"http://localhost:{GO_SERVER_PORT}/waypoints"
+
+TELEMETRY_TIMEOUT_SECONDS = 10
+TELEMETRY_RETRY_ATTEMPTS = 3
+
+REQ_SESSION = requests.Session()
+ADAPTER = requests.adapters.HTTPAdapter(max_retries=TELEMETRY_RETRY_ATTEMPTS)
+REQ_SESSION.mount("http://", ADAPTER)
+REQ_SESSION.mount("https://", ADAPTER)
 
 # base url for telemetry server (the CIA is inside of my brain...)
-TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
+_telemetry_server_url: str = "https://vt-autoboat-telemetry.uk"
 
-TELEMETRY_SERVER_INSTANCE_ID: int = -1  # -1 means no instance selected
-HAS_TELEMETRY_SERVER_INSTANCE_CHANGED: bool = False
+_local_autopilot_param_hash: str = ""
+_remote_autopilot_param_hash: str = ""
+_current_autopilot_parameters: dict[str, Any] = {}
 
-# endpoints for telemetry server, format is `TELEMETRY_SERVER_URL` + `endpoint` + `/`
-_instance_manager_endpoints = {
-    "create_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/create"),
-    "delete_instance": urljoin(TELEMETRY_SERVER_URL, "instance_manager/delete/"),
-    "delete_all_instances": urljoin(TELEMETRY_SERVER_URL, "instance_manager/delete_all"),
-    "clean_instances": urljoin(TELEMETRY_SERVER_URL, "instance_manager/clean_instances"),
-    "set_instance_user": urljoin(TELEMETRY_SERVER_URL, "instance_manager/set_user/"),
-    "set_instance_name": urljoin(TELEMETRY_SERVER_URL, "instance_manager/set_name/"),
-    "get_user_from_id": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_user/"),
-    "get_instance_name_from_id": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_name/"),
-    "get_instance_id_from_name": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_id/"),
-    "get_instance_info": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_instance_info/"),
-    "get_all_instance_info": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_all_instance_info"),
-    "get_all_ids": urljoin(TELEMETRY_SERVER_URL, "instance_manager/get_ids"),
+TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE: int = -1  # -1 means no instance selected
+_telemetry_server_instance_id: int = TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE
+_has_telemetry_server_instance_changed: bool = False
+
+# endpoints for telemetry server, format is `_telemetry_server_url` + `endpoint` + `/`
+_instance_manager_endpoints: dict[str, str] = {
+    "create_instance": urljoin(_telemetry_server_url, "instance_manager/create"),
+    "delete_instance": urljoin(_telemetry_server_url, "instance_manager/delete/"),
+    "delete_all_instances": urljoin(_telemetry_server_url, "instance_manager/delete_all"),
+    "clean_instances": urljoin(_telemetry_server_url, "instance_manager/clean_instances"),
+    "set_instance_user": urljoin(_telemetry_server_url, "instance_manager/set_user/"),
+    "set_instance_name": urljoin(_telemetry_server_url, "instance_manager/set_name/"),
+    "get_user_from_id": urljoin(_telemetry_server_url, "instance_manager/get_user/"),
+    "get_instance_name_from_id": urljoin(_telemetry_server_url, "instance_manager/get_name/"),
+    "get_instance_id_from_name": urljoin(_telemetry_server_url, "instance_manager/get_id/"),
+    "get_instance_info": urljoin(_telemetry_server_url, "instance_manager/get_instance_info/"),
+    "get_all_instance_info": urljoin(_telemetry_server_url, "instance_manager/get_all_instance_info"),
+    "get_all_ids": urljoin(_telemetry_server_url, "instance_manager/get_ids"),
 }
 
-_boat_status_endpoints = {
-    "get_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/get/"),
-    "get_new_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/get_new/"),
-    "test_boat_status": urljoin(TELEMETRY_SERVER_URL, "boat_status/test/"),
+_boat_status_endpoints: dict[str, str] = {
+    "get_boat_status": urljoin(_telemetry_server_url, "boat_status/get/"),
+    "get_new_boat_status": urljoin(_telemetry_server_url, "boat_status/get_new/"),
+    "test_boat_status": urljoin(_telemetry_server_url, "boat_status/test/"),
 }
 
-_autopilot_parameters_endpoints = {
-    "get_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get/"),
-    "get_new_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_new/"),
-    "get_default_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/get_default/"),
-    "set_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set/"),
-    "set_default_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/set_default/"),
-    "test_autopilot_parameters": urljoin(TELEMETRY_SERVER_URL, "autopilot_parameters/test/"),
+_autopilot_parameters_endpoints: dict[str, str] = {
+    "get_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/get/"),
+    "get_new_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/get_new/"),
+    "get_default_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/get_default/"),
+    "get_current_hash": urljoin(_telemetry_server_url, "autopilot_parameters/get_hash/"),
+    "get_config_from_hash": urljoin(_telemetry_server_url, "autopilot_parameters/get_config/"),
+    "get_hash_description": urljoin(_telemetry_server_url, "autopilot_parameters/get_hash_description/"),
+    "get_all_hashes": urljoin(_telemetry_server_url, "autopilot_parameters/get_all_hashes"),
+    "get_hash_exists": urljoin(_telemetry_server_url, "autopilot_parameters/get_hash_exists/"),
+    "set_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/set/"),
+    "set_default_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/set_default/"),
+    "set_default_from_hash": urljoin(_telemetry_server_url, "autopilot_parameters/set_default_from_hash/"),
+    "set_hash_description": urljoin(_telemetry_server_url, "autopilot_parameters/set_hash_description/"),
+    "create_config": urljoin(_telemetry_server_url, "autopilot_parameters/create_config"),
+    "delete_config": urljoin(_telemetry_server_url, "autopilot_parameters/delete_config/"),
+    "test_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/test/"),
 }
 
-_waypoints_endpoints = {
-    "get_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/get/"),
-    "get_new_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/get_new/"),
-    "set_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/set/"),
-    "test_waypoints": urljoin(TELEMETRY_SERVER_URL, "waypoints/test/"),
+_waypoints_endpoints: dict[str, str] = {
+    "get_waypoints": urljoin(_telemetry_server_url, "waypoints/get/"),
+    "get_new_waypoints": urljoin(_telemetry_server_url, "waypoints/get_new/"),
+    "set_waypoints": urljoin(_telemetry_server_url, "waypoints/set/"),
+    "test_waypoints": urljoin(_telemetry_server_url, "waypoints/test/"),
 }
 
-TELEMETRY_SERVER_ENDPOINTS = dict(
+_camera_endpoints: dict[str, str] = {
+    "get_current_camera_image": urljoin(_telemetry_server_url, "camera/get_current_image/"),
+}
+
+_telemetry_server_endpoints: dict[str, str] = dict(
     **_instance_manager_endpoints,
     **_boat_status_endpoints,
     **_autopilot_parameters_endpoints,
     **_waypoints_endpoints,
+    **_camera_endpoints,
 )
 
-TELEMETRY_TIMEOUT_SECONDS = 5
-TELEMETRY_RETRY_ATTEMPTS = 3
-
-REQ_SESSION = requests.Session()
-REQ_SESSION.mount(TELEMETRY_SERVER_URL, HTTPAdapter(max_retries=TELEMETRY_RETRY_ATTEMPTS))
+STATE_FILE_CONTENTS: dict[str, Any] = {
+    "start_time": _start_time,
+    "telemetry_server_url": _telemetry_server_url,
+    "waypoints_server_url": _waypoints_server_url,
+    "local_autopilot_param_hash": _local_autopilot_param_hash,
+    "remote_autopilot_param_hash": _remote_autopilot_param_hash,
+    "current_autopilot_parameters": _current_autopilot_parameters,
+    "telemetry_server_instance_id": _telemetry_server_instance_id,
+    "telemetry_server_instance_user": "",
+    "has_telemetry_server_instance_changed": _has_telemetry_server_instance_changed,
+    "telemetry_server_endpoints": _telemetry_server_endpoints,
+}
 
 try:
     # should be the path to wherever `ground_station` is located
-    TOP_LEVEL_DIR = PurePath(os.getcwd())
+    TOP_LEVEL_DIR = Path(os.getcwd())
 
-    SRC_DIR = PurePath(TOP_LEVEL_DIR / "src")
-    DATA_DIR = PurePath(TOP_LEVEL_DIR / "app_data")
+    SRC_DIR = Path(TOP_LEVEL_DIR / "src")
+    UTILS_DIR = Path(SRC_DIR / "utils")
+    WIDGETS_DIR = Path(SRC_DIR / "widgets")
 
-    MAP_DIR = PurePath(SRC_DIR / "widgets" / "map_widget")
-    HTML_MAP_PATH = PurePath(MAP_DIR / "map.html")
-    HTML_MAP = open(HTML_MAP_PATH).read()
+    DATA_DIR = Path(TOP_LEVEL_DIR / "app_data")
 
-    CAMERA_DIR = PurePath(SRC_DIR / "widgets" / "camera_widget")
-    HTML_CAMERA_PATH = PurePath(CAMERA_DIR / "camera.html")
-    HTML_CAMERA = open(HTML_CAMERA_PATH).read()
+    MAP_WIDGET_DIR = Path(WIDGETS_DIR / "map_widget")
+    HTML_MAP_PATH = Path(MAP_WIDGET_DIR / "map.html")
 
-    if __name__ == "__main__":
-        if "params_default.jsonc" not in os.listdir(DATA_DIR / "autopilot_params"):
-            raise Exception("Default autopilot parameters file not found, please redownload the directory from GitHub.")
+    CAMERA_WIDGET_DIR = Path(WIDGETS_DIR / "camera_widget")
+    HTML_CAMERA_PATH = Path(CAMERA_WIDGET_DIR / "camera.html")
+    
+    APP_STATE_PATH = Path(DATA_DIR / "app_state.json")
 
+    stack = inspect.stack()
+    active_flag: bool = stack[0].filename == Path(UTILS_DIR / "constants.py").as_posix()
+
+    # will not break if moved outside of if block, but prevents redundant checks
+    if active_flag:
+        if "assets" not in os.listdir(DATA_DIR):
+            raise Exception("Assets directory not found, pleacse redownload the directory from GitHub.")
+        
+        if not APP_STATE_PATH.exists():
+            print("[Info] Creating app state file...")
+            APP_STATE_PATH.touch()
+            with open(APP_STATE_PATH, "w") as f:
+                json.dump({}, f, indent=4)
+
+        if json.load(open(file=APP_STATE_PATH, mode="r", encoding="utf-8")) == {}:
+            print("[Info] Initializing app state file...")
+            with open(APP_STATE_PATH, "w", encoding="utf-8") as f:
+                json.dump(STATE_FILE_CONTENTS, f, indent=4)
+        
         if "autopilot_params" not in os.listdir(DATA_DIR):
+            print("[Info] Creating autopilot parameters directory...")
             os.makedirs(DATA_DIR / "autopilot_params")
 
-        _autopilot_param_editor_dir = PurePath(SRC_DIR / "widgets" / "autopilot_param_editor")
-        if "params_temp.json" not in os.listdir(_autopilot_param_editor_dir):
-            shutil.copyfile(
-                PurePath(DATA_DIR / "autopilot_params" / "params_default.jsonc"),
-                PurePath(_autopilot_param_editor_dir / "params_temp.json"),
-            )
-
-            with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "r") as f:
-                lines = f.readlines()
-
-            # remove comments and empty lines
-            with open(PurePath(_autopilot_param_editor_dir / "params_temp.json"), "w") as f:
-                for line in lines:
-                    if not line.strip().startswith("//"):
-                        f.write(line)
+        if "example_params.json" not in os.listdir(DATA_DIR / "autopilot_params"):
+            print("[Warning] Missing example autopilot parameters file.")
 
         if "boat_data" not in os.listdir(DATA_DIR):
+            print("[Info] Creating boat data directory...")
             os.makedirs(DATA_DIR / "boat_data")
 
         if "boat_data_bounds" not in os.listdir(DATA_DIR):
+            print("[Info] Creating boat data bounds directory...")
             os.makedirs(DATA_DIR / "boat_data_bounds")
 
         if "buoy_data" not in os.listdir(DATA_DIR):
+            print("[Info] Creating buoy data directory...")
             os.makedirs(DATA_DIR / "buoy_data")
 
-        if "assets" not in os.listdir(DATA_DIR):
-            raise Exception("Assets directory not found, please redownload the directory from GitHub.")
-
-    ASSETS_DIR = PurePath(DATA_DIR / "assets")
-    AUTO_PILOT_PARAMS_DIR = PurePath(DATA_DIR / "autopilot_params")
-    BOAT_DATA_DIR = PurePath(DATA_DIR / "boat_data")
-    BOAT_DATA_LIMITS_DIR = PurePath(DATA_DIR / "boat_data_bounds")
-    BUOY_DATA_DIR = PurePath(DATA_DIR / "buoy_data")
+    ASSETS_DIR = Path(DATA_DIR / "assets")
+    AUTOPILOT_PARAMS_DIR = Path(DATA_DIR / "autopilot_params")
+    BOAT_DATA_DIR = Path(DATA_DIR / "boat_data")
+    BOAT_DATA_LIMITS_DIR = Path(DATA_DIR / "boat_data_bounds")
+    BUOY_DATA_DIR = Path(DATA_DIR / "buoy_data")
 
 except Exception as e:
     raise RuntimeError(f"Initialization error: {e}") from e

@@ -17,6 +17,7 @@ set(msg_files
   "msg/WaypointList.msg"
   "msg/ObjectDetectionResult.msg"
   "msg/ObjectDetectionResultsList.msg"
+  "msg/JetsonStats.msg"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}

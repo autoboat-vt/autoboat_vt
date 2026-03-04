@@ -1,17 +1,17 @@
 import json
 
-from utils import constants, thread_classes, misc
 from qtpy.QtWebEngineWidgets import QWebEngineView
-from qtpy.QtWidgets import QWidget, QGridLayout, QHBoxLayout, QPushButton
+from qtpy.QtWidgets import QGridLayout, QHBoxLayout, QPushButton, QWidget
+from utils import constants, misc, thread_classes
 
 
 class CameraWidget(QWidget):
     """
-    A widget to display a camera feed using `QWebEngineView`.
+    A widget to display a camera feed using ``QWebEngineView``.
 
     Inherits
     -------
-    `QWidget`
+    ``QWidget``
     """
 
     def __init__(self) -> None:
@@ -23,7 +23,7 @@ class CameraWidget(QWidget):
         self.pause_button = QPushButton("Pause")
         self.pause_button.clicked.connect(self.pause_timer)
         self.is_paused = True
-        self.paused_icon_base64 = open(constants.ASSETS_DIR / "paused-icon-base64.txt").read()
+        self.paused_icon_base64 = open(constants.ASSETS_DIR / "paused-icon-base64.txt", encoding="utf-8").read()
         self.pause_button.setDisabled(not self.is_paused)
 
         self.run_button = QPushButton("Run")
@@ -37,14 +37,14 @@ class CameraWidget(QWidget):
         self.web_view_layout = QHBoxLayout()
 
         self.web_view = QWebEngineView()
-        self.web_view.setHtml(constants.HTML_CAMERA)
+        self.web_view.setHtml(open(constants.HTML_CAMERA_PATH, encoding="utf-8").read())
 
         self.web_view_layout.addWidget(self.web_view)
         self.main_layout.addLayout(self.web_view_layout, 0, 0)
         self.setLayout(self.main_layout)
 
         self.image_fetcher = thread_classes.ImageFetcher()
-        self.image_fetcher.image_fetched.connect(self.update_camera_feed)
+        self.image_fetcher.data_fetched.connect(self.update_camera_feed)
 
         self.timer = misc.copy_qtimer(constants.HALF_SECOND_TIMER)
         self.timer.timeout.connect(self.image_fetcher.get_image)
