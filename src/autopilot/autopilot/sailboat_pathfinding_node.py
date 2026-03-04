@@ -98,10 +98,11 @@ class PathfindingNode(Node):
 
     # checklist
     # -------------------------------------------------------------------------------------------------
+    # run the astar algorithm with the matrix generated to make intermediate waypoints
     # publish intermediate waypoints list ( check telemetry 467)
 
-    # use position methods to convert degrees to local and otherwise ( check bottom of position node )
-    # use 1st waypoint as reference
+    # add obstacles into the matrix (when the obstacles ROS topic is done)
+    
 
                 
 def main():
