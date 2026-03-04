@@ -24,37 +24,52 @@ class PathfindingNode(Node):
 
         # creating origin for matrix
         # self.res=10000 using the polar to cartesian coordinates, not using this
+
+        # initializing variables needed across functions
         self.boat = []
+        self.boatGPS=[]
         self.destinations=[]
         self.wayindex=0
+        self.reference=[0,0]
 
     def gps_call(self,msg: NavSatFix): # argument in function is a shorthand for calling msg as object of NavSatFix
         # self.get_logger().info("latitude: " + str(msg.latitude) + " longitude: " + str(msg.longitude))
-        self.boat = [msg.longitude,msg.latitude]
+        self.boatGPS=[msg.longitude,msg.latitude]
+
         
     def waypoint_call(self,msg: WaypointList): # function calling for waypoints once sent
         self.wayindex=0     # resetting the index counter
 
+        # creating list of position objects
         posList=[]
         for i in range(len(msg.waypoints)):
                 posList.append(Position(msg.waypoints[i].longitude,msg.waypoints[i].latitude))
 
+        # using position get local to convert gps into local coordinates for destinations list
+
+        # reference 1st waypoint
         self.destinations.append([0,0])
+        self.reference=[posList[0].longitude,posList[0].latitude]
 
-        boat=Position(self.boat[0],self.boat[1])
-        self.boat=boat.get_local_coordinates([posList[0].longitude,posList[0].latitude])
-
+        # local for rest of the waypoints
         for i in range(1,len(msg.waypoints)):
-            [lon,lat]=posList[i].get_local_coordinates([posList[0].longitude,posList[0].latitude])
+            [lon,lat]=posList[i].get_local_coordinates(self.reference)
             self.destinations.append([lon,lat])
     
     def make_matrix(self, src, des):
+
+        # outputting the boat and destination waypoint
         self.get_logger().info(str(src))
         self.get_logger().info(str(des))
+
+        # outputtin distance
         lims=int(math.ceil(math.sqrt((des[0]-src[0])**2+(des[1]-src[1])**2)))+1
+
+        # checking distances
         xdist=int(math.floor(des[0]-src[0]))+lims-1
         ydist=int(math.floor(des[1]-src[1]))+lims-1
 
+        # creating matrix
         matrix=[[0 for _ in range(lims*2)] for _ in range(lims*2)]
         self.get_logger().info(str(lims-1))
         self.get_logger().info(str(xdist) + " " + str(ydist))
@@ -63,12 +78,22 @@ class PathfindingNode(Node):
         self.get_logger().info(str(matrix))
 
     def runpath(self):
+
+        # creating boat position object for local coordinate change
+        boat = Position(self.boatGPS[0],self.boatGPS[1])
+        self.boat = boat.get_local_coordinates(self.reference)
+
+        # when destinations list is not empty, run the path
         if self.destinations:
-            dist=math.sqrt((self.destinations[self.wayindex][0]-self.boat[0])**2+(self.destinations[self.wayindex][1]-self.boat[1])**2)
-            self.get_logger().info("\non waypoint " + str(self.wayindex+1) + "\nlongitude: " + str(self.destinations[self.wayindex][0]) + "\nlatitude: " + str(self.destinations[self.wayindex][1]) + "\ndistance: " + str(dist))
-            if dist < 0.5 and self.wayindex < len(self.destinations)-1:
-                self.wayindex+= 1
+            if self.wayindex==0:
+                self.make_matrix(self.boat, self.destinations[0])
+                self.wayindex += 1
+
+            dist=math.sqrt((self.destinations[self.wayindex-1][0]-self.boat[0])**2+(self.destinations[self.wayindex-1][1]-self.boat[1])**2)
+            self.get_logger().info("\non waypoint " + str(self.wayindex) + "\nlongitude: " + str(self.destinations[self.wayindex-1][0]) + "\nlatitude: " + str(self.destinations[self.wayindex-1][1]) + "\ndistance: " + str(dist))
+            if dist < 10 and self.wayindex < len(self.destinations):
                 self.make_matrix(self.boat, self.destinations[self.wayindex])
+                self.wayindex+= 1
     
 
     # checklist
