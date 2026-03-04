@@ -2,10 +2,59 @@ FROM vtautoboat/autoboat_docker_dev_image:latest
 
 ARG USERNAME=autoboat_user
 USER $USERNAME
-RUN mkdir -p /home/${USERNAME}/scripts
 
-COPY object_detection_setup.sh /home/${USERNAME}/scripts/object_detection_setup.sh
 
-RUN bash /home/${USERNAME}/scripts/object_detection_setup.sh
+# RUN mkdir -p /home/${USERNAME}/scripts
+
+# COPY object_detection_setup.sh /home/${USERNAME}/scripts/object_detection_setup.sh
+
+# RUN bash /home/${USERNAME}/scripts/object_detection_setup.sh
+
+
+# Install yolo
+RUN pip install ultralytics sahi
+
+# ultralytics upgrades our numpy version to 2.x.x but we don't actually want that because it will conflict with other packages, 
+# specifically ros cv-bridge (https://github.com/ros-perception/vision_opencv/issues/535)
+RUN pip install numpy==1.26.4 
+
+# For a similar reason, we also need to uninstall python-opencv, since it is not compatible with ros's cv-bridge
+RUN pip uninstall opencv-python -y
+
+
+RUN sudo apt update \
+    && sudo apt install git-lfs \
+    && sudo apt install unzip \
+    && sudo rm -rf /var/lib/apt/lists/*
+
+
+
+
+RUN rm -rf /tmp/autoboat_weights \
+    && git-lfs clone https://huggingface.co/datasets/Aanimated/autoboat_vt_models /tmp/autoboat_weights
+# rm -rf src/object_detection/object_detection/weights/.git
+# rm src/object_detection/object_detection/weights/.gitattributes
+
+
+# Download the hard test images. This is just a bunch of really difficult images to validate our model
+RUN rm -rf /tmp/autoboat_hard_images \
+    && git-lfs clone https://huggingface.co/datasets/Aanimated/autoboat_vt_hard_images /tmp/autoboat_hard_images
+# rm -rf src/object_detection/object_detection/hard_images/.git
+# rm src/object_detection/object_detection/hard_images/.gitattributes
+
+
+# Download the training/ validation/ testing dataset for buoys and boats
+
+# TODO: fix this and make it always download the most recent roboflow dataset
+RUN rm -rf /tmp/autoboat_dataset \
+    && mkdir /tmp/autoboat_dataset \
+    && cd /tmp/autoboat_dataset \
+    && curl -L "https://app.roboflow.com/ds/uJ1jtWkUKW?key=2W32ZKVyMZ" > dataset.zip \
+    && unzip dataset.zip \
+    && rm dataset.zip
+
+
+RUN echo "export DEVCONTAINER_VARIANT=yolo" >> ~/.bashrc
+
 
 CMD ["/bin/bash"]
