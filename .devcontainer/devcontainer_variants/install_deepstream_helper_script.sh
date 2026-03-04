@@ -109,10 +109,10 @@ echo -e "\n\nCompiling deepstream_yolo library\n\n"
 
 # Install ultralytics
 echo -e "\n\nInstalling ultralytics\n\n"
-pip install ultralytics
-pip install onnx onnxslim onnxruntime onnxscript
-pip install sahi # sahi is currently not used
-pip install numpy==1.26.4
+pip install --no-cache-dir ultralytics
+pip install --no-cache-dir onnx onnxslim onnxruntime onnxscript
+pip install --no-cache-dir sahi # sahi is currently not used
+pip install --no-cache-dir numpy==1.26.4
 
 echo -e "\n\nInstalling Utils\n\n"
 sudo apt-get install -y v4l-utils
