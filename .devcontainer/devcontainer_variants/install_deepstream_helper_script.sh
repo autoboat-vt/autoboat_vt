@@ -71,7 +71,7 @@ if ! dpkg -l | grep -q deepstream-7.1; then
     git clone https://github.com/GNOME/glib.git
     cd glib/
     git checkout 2.76.6
-    meson build --prefix=/usr
+    meson build --prefix=/usr -Dtests=false
     ninja -C build/
     cd build/
     sudo ninja install
