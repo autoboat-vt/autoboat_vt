@@ -57,6 +57,7 @@ install_deepstream_aarch64() {
 cd ~/
 sudo -v # Prompt for sudo password at start
 sudo apt update
+sudo apt install -y meson ninja-build
 sudo apt install -y python3-gi python3-dev python3-gst-1.0 \
     python-gi-dev git meson python3 python3-pip python3.10-dev \
     cmake g++ build-essential libglib2.0-dev libglib2.0-dev-bin \
