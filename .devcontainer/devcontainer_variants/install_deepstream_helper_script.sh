@@ -127,4 +127,4 @@ export IS_DEV_CONTAINER=true # I don't think this persists after script ends oth
 
 echo -e "\n\nDeepstream setup complete!\n\n"
 
-cd /home/ws/
+# cd /home/ws/
