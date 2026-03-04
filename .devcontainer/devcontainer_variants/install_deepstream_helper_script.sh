@@ -65,8 +65,7 @@ sudo apt install -y python3-gi python3-dev python3-gst-1.0 \
     libgirepository1.0-dev libcairo2-dev
 
 
-sudo apt list | grep deepstream-7.1 -q
-if [[ $? -ne 0 ]]; then
+if ! dpkg -l | grep -q deepstream-7.1; then
     echo -e "\n\nDeepStream not found, installing DeepStream...\n\n"
     sudo apt install -y software-properties-common
     git clone https://github.com/GNOME/glib.git
