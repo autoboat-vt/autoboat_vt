@@ -6,6 +6,8 @@
 # NOTE: This is for x86 platforms. Untested on aarch64.
 
 # It might be necessary to run a gstreamer script once to initialize plugins
+set -e
+
 
 # https://docs.nvidia.com/metropolis/deepstream/7.1/text/DS_Installation.html
 install_deepstream_x86() {
@@ -55,13 +57,17 @@ install_deepstream_aarch64() {
 cd ~/
 sudo -v # Prompt for sudo password at start
 sudo apt update
+sudo apt install -y python3-gi python3-dev python3-gst-1.0 \
+    python-gi-dev git meson python3 python3-pip python3.10-dev \
+    cmake g++ build-essential libglib2.0-dev libglib2.0-dev-bin \
+    libgstreamer1.0-dev libtool m4 autoconf automake \
+    libgirepository1.0-dev libcairo2-dev
+
 
 sudo apt list | grep deepstream-7.1 -q
 if [[ $? -ne 0 ]]; then
     echo -e "\n\nDeepStream not found, installing DeepStream...\n\n"
     sudo apt install -y software-properties-common
-    pip3 install meson
-    pip3 install ninja
     git clone https://github.com/GNOME/glib.git
     cd glib/
     git checkout 2.76.6
@@ -84,11 +90,6 @@ fi
 # Install DeepStream-Python
 echo -e "\n\nInstalling DeepStream-Python\n\n"
 cd ~/
-sudo apt install -y python3-gi python3-dev python3-gst-1.0 \
-    python-gi-dev git meson python3 python3-pip python3.10-dev \
-    cmake g++ build-essential libglib2.0-dev libglib2.0-dev-bin \
-    libgstreamer1.0-dev libtool m4 autoconf automake \
-    libgirepository1.0-dev libcairo2-dev
 if uname -m | grep x86_64 -q; then
     echo -e "\nInstalling pyds for x86_64"
     sudo wget https://github.com/NVIDIA-AI-IOT/deepstream_python_apps/releases/download/v1.2.0/pyds-1.2.0-cp310-cp310-linux_x86_64.whl
