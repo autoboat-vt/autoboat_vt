@@ -57,16 +57,17 @@ class PathfindingNode(Node):
             [lon,lat]=posList[i].get_local_coordinates(self.reference)
             self.destinations.append([lon,lat])
     
-    def make_matrix(self, src, des):
+    def make_path(self, src, des):
 
         # outputting the boat and destination waypoint
         self.get_logger().info(str(src))
         self.get_logger().info(str(des))
 
-        # outputtin distance
+        # the euclidean distance between boat and waypoint
         lims=int(math.ceil(math.sqrt((des[0]-src[0])**2+(des[1]-src[1])**2)))+1
 
-        # checking distances
+        # making distance from boat to waypoint
+        # the boat is at the center of the matrix
         xdist=int(math.floor(des[0]-src[0]))+lims-1
         ydist=int(math.floor(des[1]-src[1]))+lims-1
 
@@ -78,30 +79,41 @@ class PathfindingNode(Node):
         # matrix[lims-1][lims-1]=2             this is the boat position
         # matrix[xdist][ydist]=3               this is the next waypoint position
         
-        self.get_logger().info(str(matrix))
+        # self.get_logger().info(str(matrix))
 
         # solving the matrix using Astar algo
         sol=Astar(matrix)
-        self.get_logger().info(str(sol.astar([lims-1,lims-1],[xdist,ydist])))
+
+        # --------------------- conversion of the astar indices back to local coordinates --------------------------------------
+        indexList=sol.astar([lims-1,lims-1],[xdist,ydist])
+        local = []
+
+        return sol.astar([lims-1,lims-1],[xdist,ydist])
     
+    def send_path(self,path):
+        pass
 
     def runpath(self):
 
         # creating boat position object for local coordinate change
         boat = Position(self.boatGPS[0],self.boatGPS[1])
         self.boat = boat.get_local_coordinates(self.reference)
-
+        path=[]
         # when destinations list is not empty, run the path
         if self.destinations:
             if self.wayindex==0:
-                self.make_matrix(self.boat, self.destinations[0])
+                path=self.make_path(self.boat, self.destinations[0])
                 self.wayindex += 1
 
             dist=math.sqrt((self.destinations[self.wayindex-1][0]-self.boat[0])**2+(self.destinations[self.wayindex-1][1]-self.boat[1])**2)
             self.get_logger().info("\non waypoint " + str(self.wayindex) + "\nlongitude: " + str(self.destinations[self.wayindex-1][0]) + "\nlatitude: " + str(self.destinations[self.wayindex-1][1]) + "\ndistance: " + str(dist))
             if dist < 10 and self.wayindex < len(self.destinations):
-                self.make_matrix(self.boat, self.destinations[self.wayindex])
+                path=self.make_path(self.boat, self.destinations[self.wayindex])
                 self.wayindex+= 1
+
+        if path:
+            self.get_logger().info("----------------------------sending path----------------------------------")
+            self.get_logger().info("path is" + str(path))
             
 # ---------------------------------------------------------------- start of the astar algorithm-------------------------------------------------------------
     

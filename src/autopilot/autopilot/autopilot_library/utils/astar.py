@@ -106,7 +106,7 @@ class Astar:
 
     # tracing path
     def tracer(self, nodeInfo, dest):
-        print("The Path is ")
+        # print("The Path is ")
         path = []
         row = dest[0]
         col = dest[1]
@@ -128,10 +128,11 @@ class Astar:
         path.reverse()
 
         # Print the path
+        '''
         for i in path:
             print("->", i, end=" ")
         print()
-
+        '''
         return path
 
     def astar(self, src, dest):
