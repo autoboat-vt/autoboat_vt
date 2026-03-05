@@ -1,10 +1,12 @@
-import math as m
 import heapq as h
-import turtle as t
-import shapely
-from random import randint
+import math as m
 
-class Node:
+#import turtle as t
+#from random import randint
+import shapely
+
+
+class MatrixNode:
     def __init__(self):
         # coordinates
         self.oldi = 0 
@@ -13,6 +15,7 @@ class Node:
         self.g = float('inf') # heuristic cost, default infinity
         self.h = 0 # cumulative movement cost
 
+'''
 class Space:
 
     def __init__(self, grid):
@@ -68,23 +71,26 @@ class Inside:
         self.y = y
     
     def check(self, polygon):
-        '''
+        
         path=matplotlib.path.Path(polygon)
         return path.contains_point([self.x,self.y]) or [self.x, self.y] in polygon
-        '''
+        
         poly=shapely.Polygon(polygon)
         poly=poly.buffer(2.0)
         pt=shapely.Point(self.x,self.y)
         return poly.contains(pt)
+'''
 
+# remember the use the polygon script above into astar class
 class Astar:
-
-    def __init__(self):
-        pass
+    def __init__(self,grid):
+        self.grid = grid
+        self.rows = len(grid)
+        self.cols = len(grid[0])
 
     # check bounds
-    def isValid(self, row, col):
-        return (row >= 0) and (row < rows) and (col >= 0) and (col < cols)
+    def isValid(self, row:int, col:int):
+        return (row >= 0) and (row < self.rows) and (col >= 0) and (col < self.cols)
 
     # check if cell is not blocked
     def isOpen(self, grid, row, col):
@@ -128,28 +134,28 @@ class Astar:
 
         return path
 
-    def astar(self,grid, src, dest):
+    def astar(self, src, dest):
 
         # out of map
         if not self.isValid(src[0], src[1]) or not self.isValid(dest[0], dest[1]):
             print("Source or destination is invalid")
-            return
+            return -1
 
         # bound to fail
-        if not self.isOpen(grid, src[0], src[1]) or not self.isOpen(grid, dest[0], dest[1]):
+        if not self.isOpen(self.grid, src[0], src[1]) or not self.isOpen(self.grid, dest[0], dest[1]):
             print("Source or the destination is blocked")
-            return
+            return -1
         
         # lucky go
         if self.checkHit(src[0], src[1], dest):
             print("We are already at the destination")
-            return
+            return -1
 
         # making list to close nodes (prevent cyclial graph)
-        closed = [[False for _ in range(cols)] for _ in range(rows)]
+        closed = [[False for _ in range(self.cols)] for _ in range(self.rows)]
 
         # setting a node object to each position
-        nodeInfo = [[Node() for _ in range(cols)] for _ in range(rows)]
+        nodeInfo = [[MatrixNode() for _ in range(self.cols)] for _ in range(self.rows)]
 
         # initializing the starting node
         i = src[0]
@@ -184,7 +190,7 @@ class Astar:
                 new_i = i + dir[0]
                 new_j = j + dir[1]
                 # If the successor is valid, unblocked, and not visited
-                if self.isValid(new_i, new_j) and self.isOpen(grid, new_i, new_j) and not closed[new_i][new_j]:
+                if self.isValid(new_i, new_j) and self.isOpen(self.grid, new_i, new_j) and not closed[new_i][new_j]:
                     # If the successor is the destination
                     if self.checkHit(new_i, new_j, dest):
                         # Set the parent of the destination cell
@@ -227,6 +233,7 @@ print(grid)
 '''
 
 # 20 by 20 grid with polygon with block
+'''
 grid = [[1 for _ in range(20)] for _ in range(20)]
 
 polygon=[[2,2],[5,2],[5,5],[2,5]]
@@ -253,7 +260,8 @@ if not moveset:
     print("failed")
     space.draw_grid(src, dest)
     space.complete()
-else:
+# else:
     space.draw_grid(src, dest)
     space.trace(src, moveset)
     space.complete()
+'''

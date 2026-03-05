@@ -8,6 +8,7 @@ from sensor_msgs.msg import NavSatFix
 from autoboat_msgs.msg import WaypointList
 
 from .autopilot_library.utils import *
+from .autopilot_library.utils.astar import Astar
 
 
 class PathfindingNode(Node):
@@ -70,12 +71,19 @@ class PathfindingNode(Node):
         ydist=int(math.floor(des[1]-src[1]))+lims-1
 
         # creating matrix
-        matrix=[[0 for _ in range(lims*2)] for _ in range(lims*2)]
+        matrix=[[1 for _ in range(lims*2)] for _ in range(lims*2)]
         self.get_logger().info(str(lims-1))
         self.get_logger().info(str(xdist) + " " + str(ydist))
-        matrix[lims-1][lims-1]=1
-        matrix[xdist][ydist]=2
+        
+        # matrix[lims-1][lims-1]=2             this is the boat position
+        # matrix[xdist][ydist]=3               this is the next waypoint position
+        
         self.get_logger().info(str(matrix))
+
+        # solving the matrix using Astar algo
+        sol=Astar(matrix)
+        self.get_logger().info(str(sol.astar([lims-1,lims-1],[xdist,ydist])))
+    
 
     def runpath(self):
 
@@ -94,6 +102,8 @@ class PathfindingNode(Node):
             if dist < 10 and self.wayindex < len(self.destinations):
                 self.make_matrix(self.boat, self.destinations[self.wayindex])
                 self.wayindex+= 1
+            
+# ---------------------------------------------------------------- start of the astar algorithm-------------------------------------------------------------
     
 
     # checklist
