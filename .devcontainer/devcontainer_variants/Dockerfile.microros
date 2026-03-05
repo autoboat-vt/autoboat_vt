@@ -1,4 +1,4 @@
-FROM vtautoboat/autoboat_docker_dev_image:latest
+FROM vtautoboat/development_image:latest
 
 
 RUN mkdir -p /tmp/autoboat_scripts

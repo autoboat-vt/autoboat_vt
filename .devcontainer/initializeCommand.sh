@@ -17,5 +17,5 @@ if docker container inspect autoboat_dev_container >/dev/null 2>&1; then
     echo "Container autoboat_dev_container exists."
 else
     echo "Container autoboat_dev_container does not exist."
-    docker pull --platform=linux/amd64 vtautoboat/autoboat_docker_dev_image
+    docker pull --platform=linux/amd64 vtautoboat/development_image_microros
 fi
