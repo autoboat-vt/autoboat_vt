@@ -55,6 +55,11 @@ PATH_TO_PARAMETERS_FILE = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/
 INFERENCE = True
 if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":
     INFERENCE = False
+
+CAMERA = True
+if "CAMERA" in os.environ and os.environ["CAMERA"] == "false":
+    CAMERA = False
+
 # MUXER_BATCH_TIMEOUT_USEC = 40_000
 
 # if SHOULD_SAVE_IMAGES and not os.path.exists(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/frame_results"):
@@ -164,7 +169,7 @@ class BuoyDetectionNode(Node):
         super().__init__("buoy_detection")
         self.CAM_LIST = {
             0: {
-                "name": self._find_camera("YUYV"),
+                "name": self._find_camera("YUYV") if CAMERA else "videotestsrc",
                 "framerate": "30/1",
                 "format": "YUY2",
                 "input_width": 1280,
@@ -249,9 +254,11 @@ class BuoyDetectionNode(Node):
         
         # v4l2-ctl --list-devices
         # v4l2-ctl --device /dev/video0 --list-formats-ext
-        source0 = Gst.ElementFactory.make("v4l2src", "usb-cam-0")
-        # source0 = Gst.ElementFactory.make("videotestsrc", "usb-cam-0")
-        source0.set_property('device', self.CAM_LIST[0]["name"])
+        if CAMERA:
+            source0 = Gst.ElementFactory.make("v4l2src", "usb-cam-0")
+            source0.set_property('device', self.CAM_LIST[0]["name"])
+        else:
+            source0 = Gst.ElementFactory.make("videotestsrc", "usb-cam-0")
         self.get_logger().info(f"Opening camera device: {self.CAM_LIST[0]['name']}")
 
         """
