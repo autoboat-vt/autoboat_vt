@@ -10,8 +10,6 @@ AUTOBOAT_USER_HOME="/home/autoboat_user"
 # Do not remove unless we are releasing this software as a product
 echo "sudo chmod 777 /var/run/docker.sock" >> $AUTOBOAT_USER_HOME/.bashrc
 echo "sudo chmod -R 777 /home/" >> $AUTOBOAT_USER_HOME/.bashrc
-echo "sudo chmod -R 777 /etc/udev/" >> $AUTOBOAT_USER_HOME/.bashrc
-sudo chmod -R 777 /etc/udev/
 echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/build/foil_dynamics/:/home/ws/build/sail_limits/:/home/ws/build/rudder_dynamics/:/home/ws/build/wind_arrow/ >> "/home/autoboat_user/.bashrc"
 
 # Make sure that you can just type python and you don't have to type python3 because people will get confused
@@ -44,26 +42,6 @@ echo "source /home/ws/install/setup.bash" >> $AUTOBOAT_USER_HOME/.bashrc
 crontab /home/ws/crontabs/chmod777job.txt
 echo "sudo service cron start" >> $AUTOBOAT_USER_HOME/.bashrc
 
-# Load udev rules for each device and remove any autoboat udev rules that existed before
-# Udev rules basically just rename devices for us so that they are easier to access
-# For example the raspberry pi pico udev rule would just make it so that the file descriptor for the raspberry pi pico device
-# Would always be at the file: /dev/pico
-# You can read more about udev rules here: https://opensource.com/article/18/11/udev
-# if [ -f "/etc/udev/rules.d/99-autoboat-udev.rules" ]; then
-#     rm -f /etc/udev/rules.d/99-autoboat-udev.rules
-# fi
-
-# sudo echo ACTION=="add", ATTRS{idVendor}=="2E8A", ATTRS{idProduct}=="0005", SYMLINK+="pico", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
-# sudo echo ACTION=="add", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", SYMLINK+="gps", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
-# # sudo echo ACTION=="add", ATTRS{idVendor}=="8086", ATTRS{idProduct}=="0b5c", SYMLINK+="camera", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
-# sudo echo ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="A9001WL3", SYMLINK+="rc", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
-# sudo echo ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="ABSCDYAB", SYMLINK+="wind_sensor", MODE="0666" >> /etc/udev/rules.d/99-autoboat-udev.rules
-
-# sudo udevadm control --reload-rules
-# sudo udevadm trigger
-
-
-
 
 
 # Move temporary files that were downloaded from each devcontainer variant
@@ -84,12 +62,6 @@ if [[ "$DEVCONTAINER_VARIANT" == "yolo" || "$DEVCONTAINER_VARIANT" == "deepstrea
     sudo chmod -R 777 src/object_detection/object_detection 
 fi
 
-
-sudo echo 'ACTION=="add", ATTRS{idVendor}=="2E8A", ATTRS{idProduct}=="0005", SYMLINK+="pico", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
-sudo echo 'ACTION=="add", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", SYMLINK+="gps", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
-# sudo echo 'ACTION=="add", ATTRS{idVendor}=="8086", ATTRS{idProduct}=="0b5c", SYMLINK+="camera", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
-sudo echo 'ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="A9001WL3", SYMLINK+="rc", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
-sudo echo 'ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="ABSCDYAB", SYMLINK+="wind_sensor", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
 
 
 if [[ "$DEVCONTAINER_VARIANT" == "microros" ]]; then
