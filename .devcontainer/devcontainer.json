@@ -1,6 +1,6 @@
 {
     "name": "VT AutoBoat Development Container v1.2.0",
-    "image": "vtautoboat/development_image_microros",
+    "image": "vtautoboat/development_image",
     "initializeCommand": "bash .devcontainer/initializeCommand.sh",
     "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
     "privileged": true,
