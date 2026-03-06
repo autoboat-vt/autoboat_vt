@@ -32,6 +32,9 @@
 set -euo pipefail
 
 
+# Make the script ask the user for their linux/ shell password
+sudo -v
+
 # -----------------------------------------------------------------------------
 # Setup
 # -----------------------------------------------------------------------------
@@ -150,6 +153,9 @@ setup() {
 setup_linux() {
 	log_info "Detected Linux environment."
 	
+	# Make sure that the user has proper permissions on this repository
+	sudo chmod -R 777 .
+
 	# install X11 tools
 	log_info "Installing X11 utilities..."
 	install_x11_linux
@@ -163,14 +169,16 @@ setup_linux() {
 	sudo chmod -R 666 /etc/udev/
 
 	if [ -f "/etc/udev/rules.d/99-autoboat-udev.rules" ]; then
-	    rm -f /etc/udev/rules.d/99-autoboat-udev.rules
+	    sudo rm -f /etc/udev/rules.d/99-autoboat-udev.rules
 	fi
 
-	sudo echo 'ACTION=="add", ATTRS{idVendor}=="2E8A", ATTRS{idProduct}=="0005", SYMLINK+="pico", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
-	sudo echo 'ACTION=="add", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", SYMLINK+="gps", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
-	# sudo echo 'ACTION=="add", ATTRS{idVendor}=="8086", ATTRS{idProduct}=="0b5c", SYMLINK+="camera", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
-	sudo echo 'ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="A9001WL3", SYMLINK+="rc", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
-	sudo echo 'ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="ABSCDYAB", SYMLINK+="wind_sensor", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
+	sudo bash -c 'cat <<EOF > /etc/udev/rules.d/99-autoboat-udev.rules
+ACTION=="add", ATTRS{idVendor}=="2E8A", ATTRS{idProduct}=="0005", SYMLINK+="pico", MODE="0666"
+ACTION=="add", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", SYMLINK+="gps", MODE="0666"
+ACTION=="add", ATTRS{idVendor}=="8086", ATTRS{idProduct}=="0b5c", SYMLINK+="camera", MODE="0666"
+ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="A9001WL3", SYMLINK+="rc", MODE="0666"
+ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="ABSCDYAB", SYMLINK+="wind_sensor", MODE="0666"
+EOF'
 
 	sudo udevadm control --reload-rules
 	sudo udevadm trigger
