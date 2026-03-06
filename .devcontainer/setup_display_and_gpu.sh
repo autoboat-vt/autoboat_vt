@@ -153,8 +153,8 @@ setup() {
 setup_linux() {
 	log_info "Detected Linux environment."
 	
-	# Make sure that the user has proper permissions on this repository
-	sudo chmod -R 777 .
+	# Make sure that the user has proper permissions on the entire repository
+	sudo chmod -R 777 ..
 
 	# install X11 tools
 	log_info "Installing X11 utilities..."

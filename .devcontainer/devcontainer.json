@@ -1,5 +1,5 @@
 {
-    "name": "VT AutoBoat Development Container v1.2.0",
+    "name": "VT AutoBoat Development Container v1.3.0",
     "image": "${localEnv:DEVCONTAINER_VARIANT:vtautoboat/development_image}",
     "initializeCommand": "bash .devcontainer/initializeCommand.sh",
     "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
