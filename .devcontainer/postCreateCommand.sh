@@ -35,15 +35,6 @@ colcon build --symlink-install
 
 echo "source /home/ws/install/setup.bash" >> $AUTOBOAT_USER_HOME/.bashrc
 
-# Load all crontabs
-# Crontabs allow us to run commands inside of the devcontainer at a fixed interval
-# For instance, every 0.5 seconds we can ensure that you have the permission to every USB device
-# If you would like to learn more about crontabs, you can do so here: https://www.geeksforgeeks.org/linux-unix/crontab-in-linux-with-examples/
-crontab /home/ws/crontabs/chmod777job.txt
-echo "sudo service cron start" >> $AUTOBOAT_USER_HOME/.bashrc
-
-
-
 # Move temporary files that were downloaded from each devcontainer variant
 # The reason that we have this is to make it faster to download certain repositories and dataset for each devcontainer variant
 # For instance, its far easier to just have the buoy/ boat computer vision dataset in the docker image and then just copy it
