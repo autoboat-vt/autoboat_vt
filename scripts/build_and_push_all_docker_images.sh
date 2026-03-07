@@ -1,3 +1,8 @@
+# Usage: scripts/build_and_push_all_docker_images.sh
+# You don't have to run this entire script and you can really just pick and choose which images you want to build
+# by copy pasting the commands into your command line
+
+echo "Login with the team's docker hub account"
 sudo docker login
 
 # Images for AMD/ Intel CPUs

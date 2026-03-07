@@ -2,8 +2,8 @@
 <package format="3">
   <name>rudder_dynamics</name>
   <version>1.0.0</version>
-  <description>Rudder Dynamics package for AutoboatVT.</description>
-  <maintainer email="ashear@vt.edu">ashear</maintainer>
+  <description>Rudder dynamics package.</description>
+  <maintainer email="autoboat@vt.edu">autoboatvt</maintainer>
   <license>http://www.apache.org/licenses/LICENSE-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
