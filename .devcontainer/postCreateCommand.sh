@@ -9,7 +9,6 @@ AUTOBOAT_USER_HOME="/home/autoboat_user"
 # This is very unsafe lol but I need this to be able to access docker from inside of the dev container for the sim. 
 # Do not remove unless we are releasing this software as a product
 echo "sudo chmod 777 /var/run/docker.sock" >> $AUTOBOAT_USER_HOME/.bashrc
-# echo "sudo chmod -R 777 /home/" >> $AUTOBOAT_USER_HOME/.bashrc
 echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/build/foil_dynamics/:/home/ws/build/sail_limits/:/home/ws/build/rudder_dynamics/:/home/ws/build/wind_arrow/ >> "/home/autoboat_user/.bashrc"
 # Make sure that you can just type python and you don't have to type python3 because people will get confused
 echo 'alias python="python3"' >> $AUTOBOAT_USER_HOME/.bashrc
@@ -26,13 +25,11 @@ pip install -r /home/ws/.devcontainer/required_pip_packages.txt
 # Building with symlink-install will allow us to edit python files without having to rebuild (which is super annoying!) 
 source /opt/ros/humble/setup.bash
 
-echo "echo 'hello1'" >> $AUTOBOAT_USER_HOME/.bashrc
 echo "source /opt/ros/humble/setup.bash" >> $AUTOBOAT_USER_HOME/.bashrc
 source $AUTOBOAT_USER_HOME/.bashrc
 
 colcon build --symlink-install
 
-echo "echo 'hello2'" >> $AUTOBOAT_USER_HOME/.bashrc
 echo "source /home/ws/install/setup.bash" >> $AUTOBOAT_USER_HOME/.bashrc
 
 
