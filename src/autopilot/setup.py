@@ -1,12 +1,12 @@
-from setuptools import find_packages, setup
 from glob import glob
 
+from setuptools import find_packages, setup
 
 package_name = "autopilot"
 
 setup(
     name=package_name,
-    version="0.0.0",
+    version="1.0.0",
     packages=find_packages(exclude=["test"]),
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
@@ -14,16 +14,16 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer="animated",
-    maintainer_email="73669160+ChrisNassif@users.noreply.github.com",
-    description="TODO: Package description",
-    license="TODO: License declaration",
+    maintainer="autoboatvt",
+    maintainer_email="autoboat@vt.edu",
+    description="Contains all of the ros2 nodes necessary to run the autopilot software and telemetry software",
+    license="http://www.apache.org/licenses/LICENSE-2.0",
     tests_require=["pytest"],
     entry_points={
-        "console_scripts": [
-            "sailboat_autopilot = autopilot.sailboat_autopilot_node:main",
-            "motorboat_autopilot = autopilot.motorboat_autopilot_node:main",
-            "telemetry = autopilot.telemetry_node:main",
+        'console_scripts': [
+            'sailboat_autopilot = autopilot.sailboat_autopilot_node:main',
+            'motorboat_autopilot = autopilot.motorboat_autopilot_node:main',
+            'telemetry = autopilot.telemetry_node:main'
         ],
     },
 )

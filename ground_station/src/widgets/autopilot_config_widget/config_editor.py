@@ -151,7 +151,7 @@ class AutopilotConfigEditor(QWidget):
             for parameter in tmp_autopilot_parameters.values():
                 if "current" in parameter:
                     parameter["default"] = parameter.pop("current")
-
+            
             if remote_hash == "":
                 print("[Info] Setting current parameters as default on telemetry server.")
 
@@ -160,7 +160,7 @@ class AutopilotConfigEditor(QWidget):
                         misc.get_route("set_default_autopilot_parameters"),
                         str(constants.SM.read("telemetry_server_instance_id")),
                     ),
-                    json=json.dumps(tmp_autopilot_parameters, indent=None),
+                    json=json.dumps(tmp_autopilot_parameters, indent=None)
                 )
 
                 status_message = response.text.strip().replace('"', "")
@@ -171,7 +171,9 @@ class AutopilotConfigEditor(QWidget):
 
                 elif status_message == "Configuration hash already exists.":
                     hash_from_config = hashlib.sha256(
-                        json.dumps(tmp_autopilot_parameters, sort_keys=True, separators=(",", ":")).encode(encoding="utf-8")
+                        json.dumps(
+                            tmp_autopilot_parameters, sort_keys=True, separators=(",", ":")
+                        ).encode(encoding="utf-8")
                     ).hexdigest()
 
                     response = constants.REQ_SESSION.post(
@@ -245,7 +247,7 @@ class AutopilotConfigEditor(QWidget):
                         misc.get_route("set_autopilot_parameters"),
                         str(constants.SM.read("telemetry_server_instance_id")),
                     ),
-                    json=json.dumps(tmp_autopilot_parameters, indent=None),
+                    json=json.dumps(tmp_autopilot_parameters, indent=None)
                 )
 
                 if response.status_code == 200:
@@ -803,7 +805,7 @@ class AutopilotParamWidget(QFrame):
 
             if not isinstance(edited_data, self.type):
                 raise TypeError(f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}.")
-
+            
             temp_params = constants.SM.read("current_autopilot_parameters")
             temp_params[self.name] = {"current": edited_data, "default": self.default_val, "description": self.description}
             constants.SM.write("current_autopilot_parameters", temp_params)

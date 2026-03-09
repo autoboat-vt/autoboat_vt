@@ -227,6 +227,11 @@ try:
     WIDGETS_DIR = Path(SRC_DIR / "widgets")
 
     DATA_DIR = Path(TOP_LEVEL_DIR / "app_data")
+    GIT_KEEP_DIR = Path(DATA_DIR / "git_keep")
+    DEFAULTS_EXAMPLES_DIR = Path(GIT_KEEP_DIR / "defaults_examples")
+
+    GIT_IGNORE_DIR = Path(DATA_DIR / "git_ignore")
+    os.makedirs(GIT_IGNORE_DIR, exist_ok=True)
 
     MAP_WIDGET_DIR = Path(WIDGETS_DIR / "map_widget")
     HTML_MAP_PATH = Path(MAP_WIDGET_DIR / "map.html")
@@ -234,15 +239,18 @@ try:
     CAMERA_WIDGET_DIR = Path(WIDGETS_DIR / "camera_widget")
     HTML_CAMERA_PATH = Path(CAMERA_WIDGET_DIR / "camera.html")
     
-    APP_STATE_PATH = Path(DATA_DIR / "app_state.json")
+    APP_STATE_PATH = Path(GIT_IGNORE_DIR / "app_state.json")
 
     stack = inspect.stack()
     active_flag: bool = stack[0].filename == Path(UTILS_DIR / "constants.py").as_posix()
 
     # will not break if moved outside of if block, but prevents redundant checks
     if active_flag:
-        if "assets" not in os.listdir(DATA_DIR):
-            raise Exception("Assets directory not found, pleacse redownload the directory from GitHub.")
+        if "assets" not in os.listdir(GIT_KEEP_DIR):
+            raise Exception("Assets directory not found, please redownload the directory from GitHub.")
+        
+        if "defaults_examples" not in os.listdir(GIT_KEEP_DIR):
+            raise Exception("Defaults/examples directory not found, please redownload the directory from GitHub.")
         
         if not APP_STATE_PATH.exists():
             print("[Info] Creating app state file...")
@@ -254,31 +262,34 @@ try:
             print("[Info] Initializing app state file...")
             with open(APP_STATE_PATH, "w", encoding="utf-8") as f:
                 json.dump(STATE_FILE_CONTENTS, f, indent=4)
-
-        if "autopilot_params" not in os.listdir(DATA_DIR):
+        
+        if "autopilot_params" not in os.listdir(GIT_IGNORE_DIR):
             print("[Info] Creating autopilot parameters directory...")
-            os.makedirs(DATA_DIR / "autopilot_params")
+            os.makedirs(GIT_IGNORE_DIR / "autopilot_params")
 
-        if "example_params.json" not in os.listdir(DATA_DIR / "autopilot_params"):
-            print("[Warning] Missing example autopilot parameters file.")
-
-        if "boat_data" not in os.listdir(DATA_DIR):
+        if "boat_data" not in os.listdir(GIT_IGNORE_DIR):
             print("[Info] Creating boat data directory...")
-            os.makedirs(DATA_DIR / "boat_data")
+            os.makedirs(GIT_IGNORE_DIR / "boat_data")
 
-        if "boat_data_bounds" not in os.listdir(DATA_DIR):
+        if "boat_data_bounds" not in os.listdir(GIT_IGNORE_DIR):
             print("[Info] Creating boat data bounds directory...")
-            os.makedirs(DATA_DIR / "boat_data_bounds")
+            os.makedirs(GIT_IGNORE_DIR / "boat_data_bounds")
 
-        if "buoy_data" not in os.listdir(DATA_DIR):
+        if "buoy_data" not in os.listdir(GIT_IGNORE_DIR):
             print("[Info] Creating buoy data directory...")
-            os.makedirs(DATA_DIR / "buoy_data")
+            os.makedirs(GIT_IGNORE_DIR / "buoy_data")
 
-    ASSETS_DIR = Path(DATA_DIR / "assets")
-    AUTOPILOT_PARAMS_DIR = Path(DATA_DIR / "autopilot_params")
-    BOAT_DATA_DIR = Path(DATA_DIR / "boat_data")
-    BOAT_DATA_LIMITS_DIR = Path(DATA_DIR / "boat_data_bounds")
-    BUOY_DATA_DIR = Path(DATA_DIR / "buoy_data")
+    ASSETS_DIR = Path(GIT_KEEP_DIR / "assets")
+    AUTOPILOT_PARAMS_DIR = Path(GIT_IGNORE_DIR / "autopilot_params")
+    misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "autopilot_params", AUTOPILOT_PARAMS_DIR)
+
+    BOAT_DATA_DIR = Path(GIT_IGNORE_DIR / "boat_data")
+
+    BOAT_DATA_LIMITS_DIR = Path(GIT_IGNORE_DIR / "boat_data_bounds")
+    misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "boat_data_bounds", BOAT_DATA_LIMITS_DIR)
+
+    BUOY_DATA_DIR = Path(GIT_IGNORE_DIR / "buoy_data")
+    misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "buoy_data", BUOY_DATA_DIR)
 
 except Exception as e:
     raise RuntimeError(f"Initialization error: {e}") from e
