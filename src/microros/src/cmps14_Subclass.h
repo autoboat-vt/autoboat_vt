@@ -33,6 +33,8 @@ class cmps14 : public I2CDevice {
 
     cmps14(i2c_inst_t* port, uint8_t address);
 
+    //int cmps14::requestData(uint8_t reg);
+
     int16_t getBearing();
 
     int8_t getPitch();

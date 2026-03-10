@@ -29,6 +29,8 @@
         int result = i2c_read_blocking(i2cPort, i2cAddress, buffer, length, false); //Take (#length) bytes and but them at the adress of buffer. Close communications
         return result;
     }
+
+  
     
     //read and write byte and the base things need for everything, but each individual device will have their own 
     //methods using read and write byte in order to gather data (getGYRO())

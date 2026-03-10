@@ -34,6 +34,21 @@ cmps14::cmps14(i2c_inst_t* port, uint8_t address) : I2CDevice(port,address) {
 
 }
 
+/*
+int cmps14::requestData(uint8_t reg){
+   i2c_write_blocking(i2cPort, i2cAddress, &reg, 1, true); 
+   i2c0->hw->data_cmd = I2C_IC_DATA_CMD_CMD_BITS | I2C_IC_DATA_CMD_STOP_BITS;
+
+}
+*/
+
+/*
+int I2CDevice::writeByte(uint8_t reg, uint8_t value){
+        uint8_t data[] = {reg, value};
+        int result = i2c_write_blocking(i2cPort,i2cAddress,data,2,false);
+        return result;
+    }
+*/
 int16_t cmps14::getBearing() {
     uint8_t buffer[2];
     if (readBytes(BEARING_Register, buffer, 2) != 2) { //0x02

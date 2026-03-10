@@ -39,6 +39,37 @@ static drv8711 winchStepperMotorDriver;
 static amt22   rudderEncoder;
 static amt22   winchEncoder;
 
+
+//Interupts
+
+
+/*
+#define MAX_BUFFER 32
+volatile bool data_ready = false;
+int currentSensor = 0;
+uint8_t data_buffer[32];
+void i2c0_irq_handler() {
+    uint32_t status = i2c0->hw->intr_stat;
+     if (status & I2C_IC_INTR_STAT_R_STOP_DET_BITS) {
+
+        while (i2c0->hw->status & I2C_IC_STATUS_RFNE_BITS) {
+            if (rx_length < MAX_BUFFER) {
+                data=buffer[rx_length++] = (uint8_t)(i2c0->hw->data_cmd & 0xFF);
+            }
+        }
+
+
+     }
+     else{
+        //Error
+
+     }
+
+
+    data_ready=true;
+}
+*/
+
 using namespace std;
 
 //uint8_t address = 0x60;
@@ -59,6 +90,17 @@ static float desired_winch_angle  = 0;
 
 void application_init(rcl_allocator_t *allocator, rclc_support_t *support, rclc_executor_t *executor) {
 
+    //Interupt
+    /*
+    irq_set_exclusive_handler(I2C0_IRQ, i2c0_irq_handler);
+    irq_set_enabled(I2C0_IRQ, true);
+
+    i2c0->hw->intr_mask = I2C_IC_INTR_MASK_M_STOP_DET_BITS | I2C_IC_INTR_MASK_M_TX_ABRT_BITS;
+    */
+
+
+
+    
     // -----------------------------------------------------
     // INITIALIZE THE MICROROS NODE
     // -----------------------------------------------------
