@@ -23,6 +23,10 @@ pkg
 ground_station/bin
 ground_station/go.sum
 ground_station/last_build_time.txt
+ground_station/app_data/app_state.json
+ground_station/app_data/assets/leaflet.css
+ground_station/app_data/assets/leaflet.js
+ground_station/app_data/assets/leaflet.rotatedMarker.js
 ground_station/app_data/git_ignore
 
 # src/object_detection
