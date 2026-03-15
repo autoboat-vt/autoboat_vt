@@ -38,7 +38,7 @@ class MotorboatAutopilotNode(Node):
 
         self.logger = self.get_logger()
 
-        parameters_path = CONFIG_DIRECTORY / "sailboat_default_parameters.json"
+        parameters_path = CONFIG_DIRECTORY / "motorboat_default_parameters.json"
         with open(parameters_path, "r", encoding="utf-8") as parameters_file:
             self.raw_autopilot_parameters: dict[str, dict[str, Any]] = json.load(parameters_file)
 
