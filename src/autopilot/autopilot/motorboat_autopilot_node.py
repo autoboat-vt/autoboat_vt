@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from typing import Any
 
 import numpy as np
 import rclpy
@@ -35,10 +36,18 @@ class MotorboatAutopilotNode(Node):
     def __init__(self) -> None:
         super().__init__("motorboat_autopilot")
 
-        cur_folder_path = os.path.dirname(os.path.realpath(__file__))
-        with open(cur_folder_path + "/config/motorboat_default_parameters.yaml", "r") as stream:
-            self.autopilot_parameters: dict = yaml.safe_load(stream)
+        self.logger = self.get_logger()
 
+        parameters_path = CONFIG_DIRECTORY / "sailboat_default_parameters.json"
+        with open(parameters_path, "r", encoding="utf-8") as parameters_file:
+            self.raw_autopilot_parameters: dict[str, dict[str, Any]] = json.load(parameters_file)
+
+        # structured like {parameter_name: parameter_value}
+        self.autopilot_parameters: dict[str, Any] = {}
+        for param in self.raw_autopilot_parameters:
+            self.autopilot_parameters[param] = self.raw_autopilot_parameters[param]["default"]
+            
+            
         # this is temporarily using the sailboat autopilot object for now since we still need to implement the motorboat autopilot object
         self.motorboat_autopilot = MotorboatAutopilot(parameters=self.autopilot_parameters, logger=self.get_logger())
 

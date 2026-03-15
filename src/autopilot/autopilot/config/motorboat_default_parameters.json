@@ -80,7 +80,7 @@
         "description": "Integral gain for heading control."
     },
     "heading_d_gain": {
-        "default": 0.0,
+        "default": 0.2,
         "description": "Derivative gain for heading control."
     },
     "heading_n_gain": {
