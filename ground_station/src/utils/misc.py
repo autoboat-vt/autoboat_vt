@@ -379,3 +379,36 @@ def cache_cdn_file(url: str, save_dir: str) -> None:
 
         else:
             raise RuntimeError(f"Failed to download and cache CDN file '{file_name}': {e}") from e
+
+def create_symlinks(source_dir: Path, target_dir: Path) -> None:
+    """
+    Create symbolic links for all files in the source directory to the target directory.
+
+    Parameters
+    ----------
+    source_dir
+        The directory containing the original files.
+    target_dir
+        The directory where the symbolic links will be created.
+
+    Raises
+    ------
+    RuntimeError
+        If a symbolic link cannot be created.
+    """
+
+    for item in source_dir.iterdir():
+        if item.is_file() and item.name != ".DS_Store":
+            target_path = target_dir / item.name
+            try:
+                if target_path.exists() or target_path.is_symlink():
+                    target_path.unlink()
+                
+                target_path.symlink_to(item.resolve())
+
+                # make file in git_ignore unwritable to prevent accidental edits
+                target_path.chmod(0o444)
+                print(f"[Info] Created symlink for '{item.name}' at '{target_path}'.")
+            
+            except Exception as e:
+                raise RuntimeError(f"Failed to create symlink for '{item.name}': {e}") from e
