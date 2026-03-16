@@ -80,11 +80,27 @@
         "description": "Integral gain for heading control."
     },
     "heading_d_gain": {
-        "default": 0.0,
+        "default": 0.2,
         "description": "Derivative gain for heading control."
     },
     "heading_n_gain": {
         "default": 0.0,
         "description": "N gain for heading control."
+    },
+    "rpm_p_gain": {
+        "default": 20.0,
+        "description": "Proportional gain for rpm control."
+    },
+    "rpm_i_gain": {
+        "default": 0.0,
+        "description": "Integral gain for rpm control."
+    },
+    "rpm_d_gain": {
+        "default": 0.0,
+        "description": "Derivative gain for rpm control."
+    },
+    "rpm_n_gain": {
+        "default": 0.0,
+        "description": "N gain for rpm control."
     }
 }
