@@ -87,6 +87,10 @@
         "default": 0.0,
         "description": "N gain for heading control."
     },
+    "max_rpm": {
+        "default": 300,
+        "description": "The maximum RPM that the autopilot will allow the motorboat to acheive"
+    },
     "rpm_p_gain": {
         "default": 20.0,
         "description": "Proportional gain for rpm control."

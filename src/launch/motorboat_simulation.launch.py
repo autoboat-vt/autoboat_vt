@@ -10,7 +10,7 @@ from launch import LaunchDescription
 
 def generate_launch_description():
     ros_gz_sim_pkg_path = get_package_share_directory('ros_gz_sim')
-    # motorboat_pkg_path = FindPackageShare('motorboat_simulation')  # Replace with your own package name
+
     gz_launch_path = PathJoinSubstitution([ros_gz_sim_pkg_path, 'launch','gz_sim.launch.py'])
 
     return LaunchDescription([
@@ -48,7 +48,7 @@ def generate_launch_description():
 
             respawn=True,
             respawn_delay=2.0,
-            # output="log"
+            output="log"
         ),
          
          Node(
@@ -58,19 +58,19 @@ def generate_launch_description():
 
             respawn=True,
             respawn_delay=2.0,
-            remappings=[('/motorboat/propeller_topic', '/propeller_sim_rpm'), ('/navsat', '/position')],
+            # remappings=[('/motorboat_simulation/position', '/position')],
             output="log"
         ),
         Node(
             package='ros_gz_bridge',
             executable='parameter_bridge',
             arguments=[
-                '/motorboat/propeller_topic@std_msgs/msg/Float64]gz.msgs.Double',
-                '/rudder@std_msgs/msg/Float64]gz.msgs.Double',
-                '/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
-                '/navsat@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat'
+                '/motorboat_simulation/desired_propeller_rpm@std_msgs/msg/Float64]gz.msgs.Double',
+                '/motorboat_simulation/desired_rudder_angle@std_msgs/msg/Float64]gz.msgs.Double',
+                '/motorboat_simulation/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
+                '/motorboat_simulation/position@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat'
             ],
-            remappings=[('/motorboat/propeller_topic', '/propeller_sim_rpm'), ('/navsat', '/position')],
+            remappings=[('/motorboat_simulation/position', '/position')],
 
             output='screen'
         ),

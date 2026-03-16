@@ -34,7 +34,7 @@ class SailboatAutopilot:
             please use ``logger.info("message")``.
         """
 
-        self.rudder_pid_controller = DiscretePID(
+        self.heading_pid_controller = DiscretePID(
             sample_period=(1 / parameters["autopilot_refresh_rate"]),
             k_p=parameters["heading_p_gain"],
             k_i=parameters["heading_i_gain"],
@@ -55,7 +55,7 @@ class SailboatAutopilot:
     def reset(self) -> None:
         """Resets the autopilot to its initial state."""
 
-        self.rudder_pid_controller = DiscretePID(
+        self.heading_pid_controller = DiscretePID(
             sample_period=(1 / self.parameters["autopilot_refresh_rate"]),
             k_p=self.parameters["heading_p_gain"],
             k_i=self.parameters["heading_i_gain"],
@@ -439,7 +439,7 @@ class SailboatAutopilot:
             The angle we should turn the rudder in order to turn from our current heading to the desired heading.
         """
 
-        self.rudder_pid_controller.set_gains(
+        self.heading_pid_controller.set_gains(
             k_p=self.parameters["heading_p_gain"],
             k_i=self.parameters["heading_i_gain"],
             k_d=self.parameters["heading_d_gain"],
@@ -448,7 +448,7 @@ class SailboatAutopilot:
         )
 
         error = get_distance_between_angles(desired_heading, heading)
-        rudder_angle = self.rudder_pid_controller(error)
+        rudder_angle = self.heading_pid_controller(error)
 
         min_rudder_angle: float = self.parameters["min_rudder_angle"]
         max_rudder_angle: float = self.parameters["max_rudder_angle"]

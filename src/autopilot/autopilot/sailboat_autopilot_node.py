@@ -46,9 +46,8 @@ class SailboatAutopilotNode(Node):
         self.sailboat_autopilot = SailboatAutopilot(parameters=self.autopilot_parameters, logger=self.logger)
 
         # Initialize ros2 subscriptions, publishers, and timers
-        self.autopilot_refresh_timer = self.create_timer(
-            1 / self.autopilot_parameters["autopilot_refresh_rate"], self.update_ros_topics
-        )
+        autopilot_refresh_period = 1 / self.autopilot_parameters["autopilot_refresh_rate"]
+        self.autopilot_refresh_timer = self.create_timer(autopilot_refresh_period, self.update_ros_topics)
 
 
         self.create_subscription(String, "/autopilot_parameters", self.autopilot_parameters_callback, 10)
@@ -105,6 +104,8 @@ class SailboatAutopilotNode(Node):
         self.button_d: bool = False
         self.toggle_e: int = 0
         self.toggle_f: int = 0
+
+
 
     def rc_data_callback(self, rc_data_message: RCData) -> None:
         """
@@ -232,16 +233,20 @@ class SailboatAutopilotNode(Node):
         self.has_default_autopilot_parameters_been_received_by_telemetry_node = default_autopilot_parameters_acknowledgement.data
 
     def position_callback(self, position: NavSatFix) -> None:
+        """A callback function to get the current position of the boat."""
         self.position = Position(longitude=position.longitude, latitude=position.latitude)
 
     def velocity_callback(self, global_velocity: Twist) -> None:
+        """A callback function to get the current velocity and speed of the boat."""
         self.global_velocity = np.array([global_velocity.linear.x, global_velocity.linear.y])
         self.speed = np.linalg.norm(self.global_velocity)
 
     def heading_callback(self, heading: Float32) -> None:
+        """A callback function to get the current heading of the boat."""
         self.heading = heading.data
 
     def apparent_wind_vector_callback(self, apparent_wind_vector: Vector3) -> None:
+        """A callback function to get the current apparent wind vector acting on the boat."""
         self.apparent_wind_vector = np.array([apparent_wind_vector.x, apparent_wind_vector.y])
         _, self.apparent_wind_angle = cartesian_vector_to_polar(apparent_wind_vector.x, apparent_wind_vector.y)
 
@@ -313,8 +318,9 @@ class SailboatAutopilotNode(Node):
         elif self.autopilot_mode == SailboatAutopilotMode.WAYPOINT_MISSION and self.sailboat_autopilot.waypoints is not None:
             current_waypoint = self.sailboat_autopilot.waypoints[self.sailboat_autopilot.current_waypoint_index]
 
-            # TODO: make it so that the bearing is the actual heading the autopilot is trying to follow (this is different when tacking)
-            # when tacking, the boat is not trying to head straight towards the waypoint, but rather, it is travelling on a tacking line
+            # TODO: make it so that the bearing is the actual heading the autopilot is trying to follow
+            # (this is different when tacking) when tacking, the boat is not trying to head straight towards the waypoint,
+            # but rather, it is travelling on a tacking line
             # maybe add a new ROS topic specifically for the actual heading that the autopilot is trying to follow
             bearing_to_waypoint = get_bearing(self.position, current_waypoint)
             self.desired_heading_publisher.publish(Float32(data=float(bearing_to_waypoint)))

@@ -1,10 +1,12 @@
-# from autopilot import Position 
 import numpy as np
 import rclpy
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from std_msgs.msg import Float32, Float64
+
+from autoboat_msgs.msg import VESCControlData
 
 from .utils import cartesian_vector_to_polar, euler_from_quaternion
 
@@ -16,28 +18,45 @@ class AutopilotTransformNode(Node):
 
         self.autopilot_transform_refresh_timer = self.create_timer(0.1, self.update_ros_topics)
 
-        self.velocity_publisher =  self.create_publisher(Twist, "/velocity",qos_profile=10) 
-        self.odometry_listener = self.create_subscription(msg_type=Odometry, topic="/odometry", callback=self.odometry_callback, qos_profile=10)
-        self.heading_publisher = self.create_publisher(Float32, "heading",qos_profile=10)
-        self.rudder_publisher = self.create_publisher(msg_type=Float64, topic="/rudder", qos_profile=10)
-        self.rudder_listener = self.create_subscription(msg_type=Float32,topic="/desired_rudder_angle", callback=self.rudder_callback, qos_profile=10)
+        self.velocity_publisher =  self.create_publisher(Twist, "/velocity", 10)
+        self.heading_publisher = self.create_publisher(Float32, "/heading", 10)
+        self.rudder_angle_publisher = self.create_publisher(Float64, "/motorboat_simulation/desired_rudder_angle", 10)
+        self.propeller_rpm_publisher = self.create_publisher(Float64, "/motorboat_simulation/desired_propeller_rpm", 10)
+        
+        self.create_subscription(Odometry, "/motorboat_simulation/odometry", self.odometry_callback, 10)
+        self.create_subscription(Float32, "/desired_rudder_angle", self.rudder_callback, 10)
+        self.create_subscription(
+            VESCControlData, "/propeller_motor_control_struct", self.vesc_control_data_callback, qos_profile_sensor_data
+        )
 
         self.velocity = Twist()
         self.speed= 0.0
         self.heading = 0.0
         self.odometry = Odometry()
-        self.rudder = 0.0
+        self.rudder_angle = 0.0
+        self.vesc_control_data = VESCControlData()
     
 
     def odometry_callback(self, odometry: Odometry) -> None:
+        """A callback function to get the current odometry of the boat."""
         self.odometry = odometry
 
-    def rudder_callback(self, rudder: Float32) -> None:
-        self.rudder = float(rudder.data)
-        self.rudder = np.deg2rad(self.rudder)
+    def rudder_callback(self, rudder_angle: Float32) -> None:
+        """A callback function to get the current rudder angle of the boat."""
+        self.rudder_angle = np.deg2rad(float(rudder_angle.data))
     
+    def vesc_control_data_callback(self, vesc_control_data: VESCControlData) -> None:
+        """A callback function to get the current propeller motor control the autopilot is attempting to output."""
+        self.vesc_control_data = vesc_control_data
+        
+        
 
-    def update_ros_topics(self):
+    def update_ros_topics(self) -> None:
+        """
+        A periodically called function that publishes data to the autopilot.
+        This published data is in a format that the autopilot can natively understand and
+        lets the autopilot node communicate with the gazebo simulation.
+        """
 
         twist = Twist()
         twist.linear = self.odometry.twist.twist.linear
@@ -65,7 +84,8 @@ class AutopilotTransformNode(Node):
         # yaw = np.arctan2(2*(w*z + x*y) , 1 - 2*(pow(x,2) + pow(y, 2))) * 180 / np.pi % 360
 
         self.heading_publisher.publish(Float32(data=yaw))
-        self.rudder_publisher.publish(Float64(data=self.rudder))
+        self.rudder_angle_publisher.publish(Float64(data=self.rudder_angle))
+        self.propeller_rpm_publisher.publish(Float64(data=self.vesc_control_data.desired_vesc_rpm))
 
 
 
@@ -75,5 +95,3 @@ def main() -> None:
     rclpy.spin(autopilot_transform_node)
     autopilot_transform_node.destroy_node()
     rclpy.shutdown()
-
-
