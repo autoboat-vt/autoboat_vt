@@ -902,6 +902,8 @@ class GroundStationWidget(QWidget):
             lon = self.boat_data.get("longitude")
             assert isinstance(lon, (float, int)), "longitude is not a number."
 
+            self.boat_data.setdefault("position", (lat, lon))
+
         except AssertionError:
             lat, lon = self.fake_position
 
@@ -914,8 +916,8 @@ class GroundStationWidget(QWidget):
 
         telemetry_text = (
             "Position: "
-            f"{self.boat_data.get('latitude', self.fake_position)[0]:.8f}, "
-            f"{self.boat_data.get('longitude', self.fake_position)[1]:.8f}\n"
+            f"{self.boat_data.get('position', self.fake_position)[0]:.8f}, "
+            f"{self.boat_data.get('position', self.fake_position)[1]:.8f}\n"
             f"State: {self.boat_data.get('state', 'N/A')}\n"
             f"Connection Status: {connection_status.name}\n"
             f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
