@@ -4,8 +4,8 @@ import time
 from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 import rclpy
-import yaml
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
@@ -21,10 +21,11 @@ from .autopilot_library.utils.constants import (
     QOS_AUTOPILOT_PARAM_CONFIG_PATH,
     MotorboatAutopilotMode,
     MotorboatControls,
+    SailboatStates,
 )
 from .autopilot_library.utils.discrete_pid import DiscretePID
 from .autopilot_library.utils.position import Position
-from .autopilot_library.utils.utils_function_library import get_bearing, get_distance_between_angles
+from .autopilot_library.utils.utils_function_library import get_distance_between_angles
 
 
 class MotorboatAutopilotNode(Node):
@@ -374,8 +375,7 @@ class MotorboatAutopilotNode(Node):
         if self.autopilot_mode == MotorboatAutopilotMode.WAYPOINT_MISSION:
             self.full_autonomy_maneuver_publisher.publish(String(data=self.motorboat_autopilot.current_state.name))
         else:
-            self.full_autonomy_maneuver_publisher.publish(String(data="N/A"))
-        self.autopilot_mode_publisher.publish(String(data=self.autopilot_mode.name))
+            self.full_autonomy_maneuver_publisher.publish(String(data=SailboatStates.NA.name))
 
 
         if self.autopilot_mode == MotorboatAutopilotMode.HOLD_HEADING:

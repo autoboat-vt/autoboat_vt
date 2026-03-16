@@ -53,8 +53,6 @@ class TelemetryNode(Node):
 
         # If these values aren't changing then the ros node or telemetry server
         # thats supposed to be sending these values may not be working correctly
-        self.autopilot_mode: SailboatAutopilotMode | MotorboatAutopilotMode = -1
-        self.full_autonomy_maneuver: SailboatStates = -1
 
         self.current_waypoints: list[tuple[float, float]] = []
         self.current_waypoint_index: int = 0
@@ -95,6 +93,8 @@ class TelemetryNode(Node):
         self.autopilot_parameters_session = requests.Session()
         self.waypoints_session = requests.Session()
 
+        self.is_sailboat_mode: bool = False
+        self.is_motorboat_mode: bool = False
         self.autopilot_parameters_loaded: bool = False
         self.create_subscription(
             String, "/autopilot_param_config_path", self.autopilot_param_config_path_callback, QOS_AUTOPILOT_PARAM_CONFIG_PATH
@@ -102,6 +102,14 @@ class TelemetryNode(Node):
 
         while not self.autopilot_parameters_loaded:
             rclpy.spin_once(self)
+
+        if self.is_sailboat_mode:
+            self.autopilot_mode: SailboatAutopilotMode | MotorboatAutopilotMode = SailboatAutopilotMode.DISABLED
+            self.full_autonomy_maneuver = SailboatStates.NORMAL
+        
+        elif self.is_motorboat_mode:
+            self.autopilot_mode: SailboatAutopilotMode | MotorboatAutopilotMode = MotorboatAutopilotMode.DISABLED
+            self.full_autonomy_maneuver = SailboatStates.NORMAL
 
         config_hash = hashlib.sha256(
             json.dumps(self.autopilot_parameters, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -117,7 +125,7 @@ class TelemetryNode(Node):
                     self.send_raw_data_to_telemetry_server(url, user_name, self.boat_status_session)
 
                 url = f"boat_status/set_mapping/{self.instance_id}"
-                self.send_raw_data_to_telemetry_server(url, self.construct_boat_status_mapping(), self.boat_status_session)
+                self.send_raw_data_to_telemetry_server(url, BoatStatusPayload.construct_mapping(), self.boat_status_session)
 
                 boat_status = self.construct_boat_status_payload()
                 
@@ -320,7 +328,7 @@ class TelemetryNode(Node):
             The current full autonomy maneuver of the boat.
         """
 
-        self.full_autonomy_maneuver = full_autonomy_maneuver.data
+        self.full_autonomy_maneuver = SailboatStates[full_autonomy_maneuver.data] if self.is_sailboat_mode else SailboatStates.NA
 
 
     def autopilot_mode_callback(self, autopilot_mode: String) -> None:
@@ -333,7 +341,10 @@ class TelemetryNode(Node):
             The current autopilot mode of the boat.
         """
 
-        self.autopilot_mode = autopilot_mode.data
+        if self.is_sailboat_mode:
+            self.autopilot_mode = SailboatAutopilotMode[autopilot_mode.data]
+        else:
+            self.autopilot_mode = MotorboatAutopilotMode[autopilot_mode.data]
 
 
     def desired_sail_angle_callback(self, desired_sail_angle: Float32) -> None:
@@ -374,11 +385,28 @@ class TelemetryNode(Node):
         """
 
         parameters_path = Path(autopilot_param_config_path.data)
-        with open(file=parameters_path, mode="r", encoding="utf-8") as parameters_file:
-            self.autopilot_parameters = json.load(parameters_file)
 
-        self.logger.info(f"Loaded autopilot parameters from new config path: {parameters_path}")
-        self.autopilot_parameters_loaded = True
+        if parameters_path.stem in {"sailboat_default_parameters", "motorboat_default_parameters"}:
+            with open(file=parameters_path, mode="r", encoding="utf-8") as parameters_file:
+                self.autopilot_parameters = json.load(parameters_file)
+            
+            self.logger.info(f"Loaded autopilot parameters from new config path: {parameters_path}")
+
+            if parameters_path.stem == "sailboat_default_parameters":
+                self.is_sailboat_mode = True
+                self.is_motorboat_mode = False
+
+            elif parameters_path.stem == "motorboat_default_parameters":
+                self.is_sailboat_mode = False
+                self.is_motorboat_mode = True
+
+            self.autopilot_parameters_loaded = True
+
+        else:
+            self.logger.warning(
+                f"Unrecognized autopilot parameters config file name: {parameters_path.stem}. "
+                f"Cannot determine whether in sailboat or motorboat mode."
+            )
 
 
     def should_terminate_callback(self, msg: Bool) -> None:
@@ -531,22 +559,9 @@ class TelemetryNode(Node):
             desired_sail_angle=self.desired_sail_angle,
             desired_rudder_angle=self.desired_rudder_angle,
             current_waypoint_index=self.current_waypoint_index,
-            autopilot_mode=int(self.autopilot_mode),
-            full_autonomy_maneuver=int(self.full_autonomy_maneuver),
+            autopilot_mode=self.autopilot_mode.value,
+            full_autonomy_maneuver=self.full_autonomy_maneuver.value,
         )
-
-    def construct_boat_status_mapping(self) -> list[list[str]]:
-        """
-        Constructs a mapping of the boat status payload field names to their corresponding data types.
-
-        Returns
-        -------
-        list[list[str]]
-            A list of lists, where each inner list contains the field name and data type of a field in the boat status payload.
-        """
-
-        return [[field_name, field_type.__name__] for field_name, field_type in BoatStatusPayload._fields_]
-    
 
     def update_boat_status(self) -> None:
         """Gathers the boat's current status and sends it to the telemetry server."""

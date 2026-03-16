@@ -37,6 +37,7 @@ class SailboatAutopilotMode(Enum):
 class SailboatStates(Enum):
     """An enum containing the different states that the sailboat autopilot can be in."""
 
+    NA = -1
     NORMAL = 0
     CW_TACKING = 1
     CCW_TACKING = 2
@@ -122,19 +123,6 @@ class BoatStatusPayload(ctypes.LittleEndianStructure):
     _fields_: ClassVar[tuple[tuple[str, ctypes._SimpleCData], ...]] = four_byte_fields + one_byte_fields
     _field_names: ClassVar[tuple[str, ...]] = tuple(name for name, _ in _fields_)
 
-    def to_dict(self) -> dict[str, int | float]:
-        """
-        Convert the telemetry payload to a dictionary, where the keys are the
-        field names and the values are the corresponding field values.
-
-        Returns
-        -------
-        dict[str, int | float]
-            A dictionary representation of the telemetry payload.
-        """
-
-        return {field_name: getattr(self, field_name) for field_name in self._field_names}
-
     def __str__(self) -> str:
         """
         Return a string representation of the telemetry payload, which includes the name and value of each field in the payload.
@@ -146,31 +134,19 @@ class BoatStatusPayload(ctypes.LittleEndianStructure):
         """
 
         return "\n".join(f"{field_name}: {getattr(self, field_name)}" for field_name in self._field_names)
-
+    
     @classmethod
-    def from_bytes(cls, data: bytes) -> BoatStatusPayload:
+    def construct_mapping(cls) -> list[list[str]]:
         """
-        Create a ``BoatStatusPayload`` instance from a ``bytes`` object.
-
-        Parameters
-        ----------
-        data
-            A bytes object containing the boat status data in the correct format.
+        Constructs a mapping of the boat status payload field names to their corresponding data types.
 
         Returns
         -------
-        BoatStatusPayload
-            An instance of BoatStatusPayload populated with the data from the bytes object.
+        list[list[str]]
+            A list of lists, where each inner list contains the field name and data type of a field in the boat status payload.
         """
 
-        if not isinstance(data, (bytes, bytearray)):
-            raise TypeError("Input data must be of type bytes or bytearray.")
-
-        expected_size = cls.get_size()
-        if len(data) != expected_size:
-            raise ValueError(f"Invalid data size. Expected {expected_size} bytes, got {len(data)} bytes.")
-
-        return cls.from_buffer_copy(data)
+        return [[field_name, field_type.__name__] for field_name, field_type in cls._fields_]
 
     @classmethod
     def get_size(cls) -> int:

@@ -13,7 +13,12 @@ from std_msgs.msg import Bool, Float32, Int32, String
 from autoboat_msgs.msg import RCData, WaypointList
 
 from .autopilot_library.sailboat_autopilot import SailboatAutopilot
-from .autopilot_library.utils.constants import CONFIG_DIRECTORY, QOS_AUTOPILOT_PARAM_CONFIG_PATH, SailboatAutopilotMode
+from .autopilot_library.utils.constants import (
+    CONFIG_DIRECTORY,
+    QOS_AUTOPILOT_PARAM_CONFIG_PATH,
+    SailboatAutopilotMode,
+    SailboatStates,
+)
 from .autopilot_library.utils.position import Position
 from .autopilot_library.utils.utils_function_library import cartesian_vector_to_polar, get_bearing
 
@@ -229,9 +234,6 @@ class SailboatAutopilotNode(Node):
 
         self.sailboat_autopilot.update_waypoints_list(waypoint_positions)
 
-    def default_autopilot_parameters_acknowledgement_callback(self, default_autopilot_parameters_acknowledgement: Bool) -> None:
-        self.has_default_autopilot_parameters_been_received_by_telemetry_node = default_autopilot_parameters_acknowledgement.data
-
     def position_callback(self, position: NavSatFix) -> None:
         self.position = Position(longitude=position.longitude, latitude=position.latitude)
 
@@ -305,7 +307,7 @@ class SailboatAutopilotNode(Node):
             self.full_autonomy_maneuver_publisher.publish(String(data=self.sailboat_autopilot.current_state.name))
 
         else:
-            self.full_autonomy_maneuver_publisher.publish(String(data="N/A"))
+            self.full_autonomy_maneuver_publisher.publish(String(data=SailboatStates.NA.name))
 
         # Publish the desired heading
         if self.autopilot_mode in (SailboatAutopilotMode.HOLD_HEADING, SailboatAutopilotMode.HOLD_HEADING_AND_BEST_SAIL):

@@ -896,11 +896,10 @@ class GroundStationWidget(QWidget):
             heading = self.fake_heading
 
         try:
-            position = self.boat_data.get("position")
-            assert isinstance(position, list), "position is not a list."
-            assert len(position) == 2, "position does not have length 2."
-            lat, lon = position
+            lat = self.boat_data.get("latitude")
             assert isinstance(lat, (float, int)), "latitude is not a number."
+
+            lon = self.boat_data.get("longitude")
             assert isinstance(lon, (float, int)), "longitude is not a number."
 
         except AssertionError:
@@ -915,15 +914,15 @@ class GroundStationWidget(QWidget):
 
         telemetry_text = (
             "Position: "
-            f"{self.boat_data.get('position', self.fake_position)[0]:.8f}, "
-            f"{self.boat_data.get('position', self.fake_position)[1]:.8f}\n"
+            f"{self.boat_data.get('latitude', self.fake_position)[0]:.8f}, "
+            f"{self.boat_data.get('longitude', self.fake_position)[1]:.8f}\n"
             f"State: {self.boat_data.get('state', 'N/A')}\n"
             f"Connection Status: {connection_status.name}\n"
             f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
             f"Velocity Vector: [{self.boat_data.get('velocity_vector', [-69.420, -69.420])[0]:.5f}, {self.boat_data.get('velocity_vector', [-69.420, -69.420])[1]:.5f}]\n"  # noqa: E501
             f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
             f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
-            f"Bearing: {fix_formatting(self.boat_data.get('bearing'))}°\n"
+            f"Desired Heading: {fix_formatting(self.boat_data.get('desired_heading'))}°\n"
             f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
             f"True Wind Speed: {fix_formatting(self.boat_data.get('true_wind_speed'))} knots\n"
             f"True Wind Angle: {fix_formatting(self.boat_data.get('true_wind_angle'))}°\n"
