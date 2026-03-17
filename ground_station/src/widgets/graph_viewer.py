@@ -39,7 +39,7 @@ class GraphViewer(QWidget):
         self.time_stopped: float | None = None
         self.time_started: float | None = None
 
-        self.important_keys: list[str] = []
+        self.important_keys: list[str] = ["speed", "distance_to_next_waypoint", "bearing", "heading", "true_wind_speed"]
         self.available_keys: list[str] = []
 
         self.history_length: int = 200
