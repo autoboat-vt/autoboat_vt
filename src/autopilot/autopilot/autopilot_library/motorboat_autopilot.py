@@ -3,6 +3,7 @@ from typing import Any
 
 import numpy as np
 from rclpy.impl.rcutils_logger import RcutilsLogger
+from scipy.interpolate import interp1d
 
 from .utils.discrete_pid import DiscretePID
 from .utils.position import Position
@@ -97,28 +98,32 @@ class MotorboatAutopilot:
 
 
 
-    def get_optimal_rpm(self, current_heading: float, desired_heading: float) ->float:
+    def get_optimal_rpm(self, rudder_angle: float) ->float:
         """
-        Gets the optimal motor RPM that will help it arrive at the destination waypoint
-        efficiently using a PID controller.
+        Gets the optimal motor RPM that will help it arrive at the destination waypoint efficiently.
         
         Parameters
         ----------
-            current_heading (float): the current heading of the boat measured counter-clockwise from true east
-            desired_heading (float): the desired heading of the boat measured counter-clockwise from true east
+            rudder_angle (float): the angle the rudder is currently at
 
         Returns
         -------
             float: The rpm the boat should use to get to the desired heading
         """
         
-        
-        error = abs(get_distance_between_angles(desired_heading, current_heading))
+
+        error = abs(rudder_angle)
         
         # if the error == 180 degrees, then we want to be going at min rpm, if the error == 0 degrees,
         # then we want to be going at max rpm
-        return np.interp(error, [0, 180], [self.parameters['max_rpm'], self.parameters['min_rpm']])
-
+        max_rpm = self.parameters['max_rpm']
+        min_rpm = self.parameters['min_rpm']
+        
+        rpm_output = min_rpm + (max_rpm - min_rpm) * np.exp(-self.parameters["rpm_decay_rate"] * error)
+        
+        self.logger.info(f"Error: {error}, RPM Output: {rpm_output}")
+        
+        return float(np.clip(rpm_output, min_rpm, max_rpm))
     
 
     def run_waypoint_mission_step(self, current_position: Position, heading: float) -> tuple[float, float]:
@@ -146,7 +151,7 @@ class MotorboatAutopilot:
         desired_heading = get_bearing(current_position, desired_position)
 
         rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading)
-        propeller_rpm = self.get_optimal_rpm(heading, desired_heading)
+        propeller_rpm = self.get_optimal_rpm(rudder_angle)
 
 
         if distance_to_desired_position < self.parameters['waypoint_accuracy']:
