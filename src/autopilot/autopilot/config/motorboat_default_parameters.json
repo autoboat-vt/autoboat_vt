@@ -55,22 +55,6 @@
         "default": 25.0,
         "description": "Hard over default for the rudder control, in radians."
     },
-    "rudder_p_gain": {
-        "default": 1.0,
-        "description": "Proportional gain for the rudder control."
-    },
-    "rudder_i_gain": {
-        "default": 0.3,
-        "description": "Integral gain for the rudder control."
-    },
-    "rudder_d_gain": {
-        "default": 0.2,
-        "description": "Derivative gain for the rudder control."
-    },
-    "rudder_n_gain": {
-        "default": 1.0,
-        "description": "N gain for the rudder control."
-    },
     "heading_p_gain": {
         "default": 0.3,
         "description": "Proportional gain for heading control."
