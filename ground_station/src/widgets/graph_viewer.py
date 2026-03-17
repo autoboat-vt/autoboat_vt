@@ -39,7 +39,7 @@ class GraphViewer(QWidget):
         self.time_stopped: float | None = None
         self.time_started: float | None = None
 
-        self.important_keys: list[str] = ["speed", "distance_to_next_waypoint", "bearing", "heading", "true_wind_speed"]
+        self.important_keys: list[str] = ["speed", "distance_to_next_waypoint", "desired_heading", "heading", "true_wind_speed"]
         self.available_keys: list[str] = []
 
         self.history_length: int = 200
@@ -239,8 +239,8 @@ class GraphSelectionDialog(QDialog):
             self.checkboxes[key] = checkbox
             self.layout.addWidget(checkbox, i // 2, i % 2)
 
-        self._apply_button = misc.pushbutton_maker("Apply", constants.ICONS.save, self.on_apply_clicked)
-        self.layout.addWidget(self._apply_button, (len(self.available_keys) + 1) // 2, 0, 1, 2)
+        self.apply_button = misc.pushbutton_maker("Apply", constants.ICONS.save, self.on_apply_clicked)
+        self.layout.addWidget(self.apply_button, (len(self.available_keys) + 1) // 2, 0, 1, 2)
 
         self.setLayout(self.layout)
 

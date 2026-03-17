@@ -918,20 +918,20 @@ class GroundStationWidget(QWidget):
             "Position: "
             f"{self.boat_data.get('position', self.fake_position)[0]:.8f}, "
             f"{self.boat_data.get('position', self.fake_position)[1]:.8f}\n"
-            f"State: {self.boat_data.get('state', 'N/A')}\n"
+            f"State: {self.boat_data.get('autopilot_mode', 'N/A')}\n"
             f"Connection Status: {connection_status.name}\n"
             f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
-            f"Velocity Vector: [{self.boat_data.get('velocity_vector', [-69.420, -69.420])[0]:.5f}, {self.boat_data.get('velocity_vector', [-69.420, -69.420])[1]:.5f}]\n"  # noqa: E501
+            f"Velocity Vector: [{self.boat_data.get('velocity_x', -69.420):.5f}, {self.boat_data.get('velocity_y', -69.420):.5f}]\n"  # noqa: E501
             f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
-            f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
-            f"Desired Heading: {fix_formatting(self.boat_data.get('desired_heading'))}°\n"
-            f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
             f"True Wind Speed: {fix_formatting(self.boat_data.get('true_wind_speed'))} knots\n"
             f"True Wind Angle: {fix_formatting(self.boat_data.get('true_wind_angle'))}°\n"
             f"Apparent Wind Speed: {fix_formatting(self.boat_data.get('apparent_wind_speed'))} knots\n"
             f"Apparent Wind Angle: {fix_formatting(self.boat_data.get('apparent_wind_angle'))}°\n"
-            f"Sail Angle: {fix_formatting(self.boat_data.get('sail_angle'))}°\n"
-            f"Rudder Angle: {fix_formatting(self.boat_data.get('rudder_angle'))}°\n"
+            f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
+            f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
+            f"Desired Heading: {fix_formatting(self.boat_data.get('desired_heading'))}°\n"
+            f"Desired Sail Angle: {fix_formatting(self.boat_data.get('desired_sail_angle'))}°\n"
+            f"Desired Rudder Angle: {fix_formatting(self.boat_data.get('desired_rudder_angle'))}°\n"
             f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
         )
 
