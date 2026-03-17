@@ -106,5 +106,17 @@
     "rpm_n_gain": {
         "default": 0.0,
         "description": "N gain for rpm control."
+    },
+    "gps_position_failsafe_time": {
+        "default": 3.0,
+        "description": "If the autopilot isn't receiving GPS data for this amount of seconds, then it will set the propeller rpm to 0 for safety"
+    },
+    "rc_data_failsafe_time": {
+        "default": 100000000000.0,
+        "description": "If the autopilot isn't receiving remote controller data for this amount of seconds, then it will set the propeller rpm to 0 for safety"
+    },
+    "heading_data_failsafe_time": {
+        "default": 3,
+        "description": "If the autopilot isn't receiving heading data for this amount of seconds, then it will set the propeller rpm to 0 for safety"
     }
 }

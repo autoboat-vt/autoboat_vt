@@ -347,16 +347,25 @@ class MotorboatAutopilotNode(Node):
 
         # Manually check whether any of the sensors have disconnecteds
         # if we have not received data from the sensor for 3 seconds then stop the propeller for safety reasons
-        # has_rc_data_disconnected = (time.time() - self.last_rc_data_received_time >= 3)
-        has_rc_data_disconnected = False
-        has_gps_disconnected = (time.time() - self.last_gps_position_received_time >= 3)
-        has_heading_disconnected = (time.time() - self.last_heading_received_time >= 3)
-        has_sensor_disconnected = has_rc_data_disconnected or has_gps_disconnected or has_heading_disconnected
+        time_since_last_rc_data = time.time() - self.last_rc_data_received_time
+        has_rc_data_disconnected = time_since_last_rc_data >= self.autopilot_parameters["rc_data_failsafe_time"]
         
-        # self.get_logger().info(f"has sensor disconnected: {has_sensor_disconnected}")
-        # self.get_logger().info(f"has gps disconnected: {has_gps_disconnected}")
-        # self.get_logger().info(f"has heading disconnected: {has_heading_disconnected}")
+        time_since_last_gps_data = time.time() - self.last_gps_position_received_time
+        has_gps_disconnected = time_since_last_gps_data >= self.autopilot_parameters["gps_position_failsafe_time"]
+        
+        time_since_last_heading_data = time.time() - self.last_heading_received_time
+        has_heading_disconnected = time_since_last_heading_data >= self.autopilot_parameters["heading_data_failsafe_time"]
+        
+        has_sensor_disconnected = has_rc_data_disconnected or has_gps_disconnected or has_heading_disconnected
+
+            
+            
         if has_sensor_disconnected:
+            self.get_logger().info(f"has sensor disconnected: {has_sensor_disconnected}")
+            self.get_logger().info(f"has remote controller disconnected: {has_rc_data_disconnected}")
+            self.get_logger().info(f"has gps disconnected: {has_gps_disconnected}")
+            self.get_logger().info(f"has heading disconnected: {has_heading_disconnected}")
+            
             vesc_control_data = VESCControlData(
                 control_type_for_vesc="rpm",
                 desired_vesc_current=0.0,
@@ -366,7 +375,7 @@ class MotorboatAutopilotNode(Node):
         
 
         # Now it is time to apply the RC control, check the control type, and then tell the VESC node to turn
-        elif self.autopilot_mode == MotorboatAutopilotMode.FULL_RC:
+        elif self.autopilot_mode in {MotorboatAutopilotMode.FULL_RC, MotorboatAutopilotMode.HOLD_HEADING}:
             if self.propeller_motor_control_mode == MotorboatControls.RPM:
                 vesc_control_data = VESCControlData(
                     control_type_for_vesc = "rpm",
@@ -399,6 +408,14 @@ class MotorboatAutopilotNode(Node):
                 control_type_for_vesc = "rpm",
                 desired_vesc_current = 0.0,
                 desired_vesc_rpm = desired_rpm,
+                desired_vesc_duty_cycle = 0.0,
+            )
+            
+        else:
+            vesc_control_data = VESCControlData(
+                control_type_for_vesc = "rpm",
+                desired_vesc_current = 0.0,
+                desired_vesc_rpm = 0.0,
                 desired_vesc_duty_cycle = 0.0,
             )
         
