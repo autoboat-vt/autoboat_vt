@@ -32,12 +32,6 @@ class MotorboatAutopilot:
             k_d=parameters["heading_d_gain"],
             n=parameters["heading_n_gain"],
         )
-
-        self.rpm_pid_controller = DiscretePID(
-            sample_period=(1 / parameters['autopilot_refresh_rate']),
-            k_p=parameters['rpm_p_gain'], k_i=parameters['rpm_i_gain'],
-            k_d=parameters['rpm_d_gain'], n=parameters['rpm_n_gain'],
-        )
         
         self.parameters = parameters
         self.logger = logger
@@ -57,8 +51,10 @@ class MotorboatAutopilot:
             k_d=self.parameters["heading_d_gain"],
             n=self.parameters["heading_n_gain"],
         )
+        
         self.waypoints = None
         self.current_waypoint_index = 0
+
 
 
     def update_waypoints_list(self, waypoints_list: list[Position]) -> None:
@@ -101,28 +97,27 @@ class MotorboatAutopilot:
 
 
 
-    def get_optimal_rpm(self, current_position: Position, desired_position: Position) ->float:
+    def get_optimal_rpm(self, current_heading: float, desired_heading: float) ->float:
         """
         Gets the optimal motor RPM that will help it arrive at the destination waypoint
         efficiently using a PID controller.
         
         Parameters
         ----------
-            current_position (Position): the current position of the boat stored in a Position object
-            desired_position (Position): the desired position of the boat (next waypoint) stored in a Position object
+            current_heading (float): the current heading of the boat measured counter-clockwise from true east
+            desired_heading (float): the desired heading of the boat measured counter-clockwise from true east
 
         Returns
         -------
-            float: The rpm the boat should use to get to the desired position
+            float: The rpm the boat should use to get to the desired heading
         """
         
-        self.rpm_pid_controller.set_gains(
-            k_p=self.parameters['rpm_p_gain'], k_i=self.parameters['rpm_i_gain'], k_d=self.parameters['rpm_d_gain'],
-            n=self.parameters['rpm_n_gain'], sample_period=self.parameters['autopilot_refresh_rate']
-        )
-        error = get_distance_between_positions(desired_position, current_position)
-        rpm = self.rpm_pid_controller(error)
-        return np.clip(rpm, 0.0, self.parameters["max_rpm"])
+        
+        error = abs(get_distance_between_angles(desired_heading, current_heading))
+        
+        # if the error == 180 degrees, then we want to be going at min rpm, if the error == 0 degrees,
+        # then we want to be going at max rpm
+        return np.interp(error, [0, 180], [self.parameters['max_rpm'], self.parameters['min_rpm']])
 
     
 
@@ -151,7 +146,7 @@ class MotorboatAutopilot:
         desired_heading = get_bearing(current_position, desired_position)
 
         rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading)
-        propeller_rpm = self.get_optimal_rpm(current_position,desired_position)
+        propeller_rpm = self.get_optimal_rpm(heading, desired_heading)
 
 
         if distance_to_desired_position < self.parameters['waypoint_accuracy']:

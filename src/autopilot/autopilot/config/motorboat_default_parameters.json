@@ -89,23 +89,11 @@
     },
     "max_rpm": {
         "default": 300,
-        "description": "The maximum RPM that the autopilot will allow the motorboat to acheive"
+        "description": "The maximum RPM that the autopilot will allow the motorboat to achieve"
     },
-    "rpm_p_gain": {
-        "default": 20.0,
-        "description": "Proportional gain for rpm control."
-    },
-    "rpm_i_gain": {
-        "default": 0.0,
-        "description": "Integral gain for rpm control."
-    },
-    "rpm_d_gain": {
-        "default": 0.0,
-        "description": "Derivative gain for rpm control."
-    },
-    "rpm_n_gain": {
-        "default": 0.0,
-        "description": "N gain for rpm control."
+    "min_rpm": {
+        "default": 100.0,
+        "description": "The minimum RPM that the autopilot will allow the motorboat to achieve while it is actively trying to get to a waypoint."
     },
     "gps_position_failsafe_time": {
         "default": 3.0,

@@ -9,7 +9,7 @@ from geometry_msgs.msg import Twist
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import NavSatFix
-from std_msgs.msg import Bool, Float32, Float64, Int32, String
+from std_msgs.msg import Bool, Float32, Int32, String
 
 from autoboat_msgs.msg import RCData, VESCControlData, WaypointList
 
@@ -301,7 +301,7 @@ class MotorboatAutopilotNode(Node):
         rudder_angle = 0.0
 
         if self.autopilot_mode == MotorboatAutopilotMode.WAYPOINT_MISSION and self.motorboat_autopilot.waypoints is not None:
-            rpm, rudder_angle = self.motorboat_autopilot.run_waypoint_mission_step(self.position,self.heading)
+            rpm, rudder_angle = self.motorboat_autopilot.run_waypoint_mission_step(self.position, self.heading)
             
         elif self.autopilot_mode == MotorboatAutopilotMode.HOLD_HEADING:
             rudder_angle = self.motorboat_autopilot.get_optimal_rudder_angle(self.heading, self.heading_to_hold)
@@ -339,10 +339,8 @@ class MotorboatAutopilotNode(Node):
         else:
             self.desired_heading_publisher.publish(Float32(data=0.))
 
-        
-        self.desired_rudder_angle_publisher.publish(Float32(data=desired_rudder_angle))
-        if desired_rudder_angle is not None:
-            self.desired_rudder_angle_publisher.publish(Float32(data=float(desired_rudder_angle)))
+
+        self.desired_rudder_angle_publisher.publish(Float32(data=float(desired_rudder_angle)))
 
 
         # Manually check whether any of the sensors have disconnecteds
