@@ -5,7 +5,7 @@ PCB SPECIFIC CONFIGURATIONS
 
 #define Theseus 0
 #define Lumpy 1
-#define BOAT_MODE Lumpy
+#define BOAT_MODE THESEUS
 
 // Important constants
 #define LED_PIN 25
@@ -38,9 +38,9 @@ PCB SPECIFIC CONFIGURATIONS
 #define RC_CHANNEL3_PIN 26
 
 // Chip Selections
-#define RUDDER_MOTOR_CS_PIN 13
+#define RUDDER_MOTOR_CS_PIN 4
 #define WINCH_MOTOR_CS_PIN 6
-#define RUDDER_ENCODER_CS_PIN 7
+#define RUDDER_ENCODER_CS_PIN 0
 #define WINCH_ENCODER_CS_PIN 9
 
 // Miscellaneous
