@@ -24,7 +24,8 @@ setup(
             'sailboat_autopilot = autopilot.sailboat_autopilot_node:main',
             'motorboat_autopilot = autopilot.motorboat_autopilot_node:main',
             'telemetry = autopilot.telemetry_node:main',
-            'pathfinding = autopilot.sailboat_pathfinding_node:main'
+            'pathfinding = autopilot.sailboat_pathfinding_node:main',
+            'obstacles = autopilot.sailboat_obstacles_node:main'
         ],
     },
 )

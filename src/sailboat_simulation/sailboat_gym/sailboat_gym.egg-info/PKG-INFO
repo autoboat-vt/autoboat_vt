@@ -1,4 +1,4 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.4
 Name: sailboat-gym
 Version: 1.2.0
 Summary: A dynamic gym simulation environment specifically designed for sailboats.
@@ -11,7 +11,6 @@ Project-URL: Repository, https://github.com/lucasmrdt/sailboat-gym
 Project-URL: Documentation, https://github.com/lucasmrdt/sailboat-gym/blob/main/DOCUMENTATION.md
 Project-URL: Bug Report, https://github.com/lucasmrdt/sailboat-gym/issues
 Keywords: Simulation,Sailboat,Gymnasium,Gym
-Platform: UNKNOWN
 Classifier: Development Status :: 4 - Beta
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Programming Language :: Python :: 3
@@ -23,10 +22,30 @@ Classifier: Intended Audience :: Science/Research
 Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
 Requires-Python: >=3.7
 License-File: LICENSE
+Requires-Dist: gymnasium==0.28.1
+Requires-Dist: msgpack_python==0.5.6
+Requires-Dist: pyzmq==25.0.2
+Requires-Dist: numpy==1.26.4
+Requires-Dist: pydantic
+Requires-Dist: tqdm
+Requires-Dist: imageio-ffmpeg
+Requires-Dist: docker
+Requires-Dist: moviepy
+Requires-Dist: multiexit
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license
+Dynamic: license-file
+Dynamic: project-url
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
 
 
 
 Welcome to Sailboat Gym! This repository provides a dynamic simulation environment specifically designed for sailboats. With Sailboat Gym, you can explore and experiment with different control algorithms and strategies in a realistic virtual sailing environment.
-
-
 
