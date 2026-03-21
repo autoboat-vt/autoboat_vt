@@ -5,7 +5,6 @@
 #include "microros.hpp"
 
 
-
 // Change when adding new nodes
 #define NUMBER_OF_NODES 1
 
@@ -43,7 +42,7 @@ int main()
         rclc_support_init(&support_core, 0, NULL, &allocator_core);
         rclc_executor_init(&executor_core, &support_core.context, 5, &allocator_core);
 
-        //application_init(&allocator_core, &support_core, &executor_core);
+        // application_init(&allocator_core, &support_core, &executor_core);
 
         //---------------initialize microros--------------------------
         Microros microros(&allocator_core, &support_core, &executor_core);
@@ -55,8 +54,9 @@ int main()
             if (rmw_uros_ping_agent(1000, 5) != RMW_RET_OK) {
                 break;
             }
-        
+            
             rclc_executor_spin_some(&executor_core, RCL_MS_TO_NS(100));
+            
         }
         
         rclc_executor_fini(&executor_core);

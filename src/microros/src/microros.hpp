@@ -7,8 +7,15 @@
 #include <math.h>
 
 //change these with rewritten libraries
-#include "amt22_encoder_library.h"
+#include "Amt22_encoder_library.h"
 #include "contactor_driver_library.h"
+
+
+// Specific device libraries
+#include "hardware/pwm.h"
+
+#include <math.h>
+
 
 
 using namespace std;
@@ -65,10 +72,26 @@ const int MAX_WINCH_ERROR = (float)(MAX_WINCH_ANGLE - MIN_RUDDER_ANGLE);
 const int MAX_SAIL_ERROR = (float)(MAX_SAIL_ANGLE - MIN_SAIL_ANGLE);
 
 
+// static drv8711 rudderStepperMotorDriver;
+// static drv8711 winchStepperMotorDriver;
+static amt22 rudderEncoder(RUDDER_ENCODER_CS_PIN, SPI_PORT);
+static amt22 winchEncoder(WINCH_ENCODER_CS_PIN, SPI_PORT);
+// static cmps14 compass;
+
+static float desired_rudder_angle = 0;
+static float desired_rudder_motor_angle = 0;
+
+static float desired_sail_angle = 0;
+static float desired_winch_angle = 0;
+
+
 
 // -----------------------------------------------------
 // Polynomials
 // -----------------------------------------------------
+
+void application_loop();
+
 
 inline float get_rudder_angle_from_motor_angle(float motor_angle) {
     #if BOAT_MODE == Theseus
@@ -205,6 +228,7 @@ public:
 
     void initialize_lumpy_peripherals();
     void initialize_theseus_peripherals();
+
 
 private:
     rcl_node_t microros_node;

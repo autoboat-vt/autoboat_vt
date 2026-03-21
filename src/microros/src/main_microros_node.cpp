@@ -1,46 +1,6 @@
 #include "main_microros_node.h"
 
-rcl_node_t microros_node;
-rmw_qos_profile_t best_effort_qos_profile;
 
-rcl_subscription_t should_propeller_motor_be_powered_subscriber;
-rcl_subscription_t desired_rudder_angle_subscriber;
-rcl_subscription_t desired_winch_angle_subscriber;
-rcl_subscription_t zero_rudder_encoder_subscriber;
-rcl_subscription_t zero_winch_encoder_subscriber;
-rcl_publisher_t current_rudder_angle_publisher;
-rcl_publisher_t current_rudder_motor_angle_publisher;
-rcl_publisher_t current_sail_angle_publisher;
-rcl_publisher_t current_winch_angle_publisher;
-rcl_publisher_t compass_angle_publisher;
-rcl_publisher_t test_publisher;
-rcl_timer_t application_loop_timer;
-
-std_msgs__msg__Bool should_propeller_motor_be_powered_msg;
-std_msgs__msg__Bool zero_rudder_encoder_msg;
-std_msgs__msg__Bool zero_winch_encoder_msg;
-std_msgs__msg__Float32 compass_angle_msg;
-std_msgs__msg__Float32 current_winch_angle_msg;
-std_msgs__msg__Float32 current_sail_angle_msg;
-std_msgs__msg__Float32 current_rudder_angle_msg;
-std_msgs__msg__Float32 current_rudder_motor_angle_msg;
-std_msgs__msg__Float32 desired_rudder_angle_msg;
-std_msgs__msg__Float32 desired_winch_angle_msg;
-std_srvs__srv__Empty_Request empty_request_msg;
-std_srvs__srv__Empty_Response empty_response_msg;
-std_msgs__msg__Float32 test_msg;
-
-static drv8711 rudderStepperMotorDriver;
-static drv8711 winchStepperMotorDriver;
-static amt22 rudderEncoder;
-static amt22 winchEncoder;
-static cmps14 compass;
-
-static float desired_rudder_angle = 0;
-static float desired_rudder_motor_angle = 0;
-
-static float desired_sail_angle = 0;
-static float desired_winch_angle = 0;
 
 void application_init(rcl_allocator_t *allocator, rclc_support_t *support, rclc_executor_t *executor)
 {
@@ -216,6 +176,10 @@ void zero_winch_encoder_callback(const void *msg_in)
 // MAIN APPLICATION LOOP
 // -----------------------------------------------------
 
+//S0 -- GPIO 14
+//S1 -- GPIO 15
+//S2 -- GPIO 16
+
 void application_loop()
 {
 
@@ -258,6 +222,13 @@ void application_loop()
     // -----------------------------------------------------
     int number_of_steps_winch = 0;
     bool winch_step_enabled = false;
+
+
+    current_rudder_motor_angle_msg.data = 67.0;
+
+     rcl_publish(&current_rudder_angle_publisher,
+                &current_rudder_angle_msg,
+                NULL);
 
 #if BOAT_MODE == Lumpy
     float current_winch_angle = get_motor_angle(&winchEncoder) + WINCH_ANGLE_OFFSET + 360 * get_turn_count(&winchEncoder);

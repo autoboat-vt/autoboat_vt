@@ -2,6 +2,7 @@
 #define SYSTEMS_H
 
 #include "boat.hpp"
+#include "main_microros_node.h"
 
 class Systems {
     public:

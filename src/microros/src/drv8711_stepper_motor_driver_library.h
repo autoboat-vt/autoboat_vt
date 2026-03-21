@@ -57,20 +57,23 @@ typedef struct {
 
 
 // PRIVATE METHODS
-static inline void select_chip(drv8711 *driver) {
+static inline void select_chip(drv8711 driver) {
     // I sentence the TI engineer who wrote the datasheet
-    // To two semesters of Coop*r for being unclear about this
+    // To two semesters of Coopr for being unclear about this
     asm volatile("nop \n nop \n nop");
-    gpio_put(driver->cs_pin, 1);  // Active High
+    gpio_put(14, driver->cs_pin & 0x01);  // Active High
+    gpio_put(15, (driver->cs_pin >> 1) & 0x01);  // Active High
+    gpio_put(16, (driver->cs_pin >> 2) & 0x01);  // Active High
     asm volatile("nop \n nop \n nop");
 }
-
 static inline void deselect_chip(drv8711 *driver) {
     asm volatile("nop \n nop \n nop");
-    gpio_put(driver->cs_pin, 0);  // Active High
+    //Corresponds to multiplexer pin 7 -- Unused
+    gpio_put(14,1);  // Active High
+    gpio_put(15, 1);  // Active High
+    gpio_put(16, 1);  // Active High
     asm volatile("nop \n nop \n nop");
 }
-
 static inline void set_cs_pin(drv8711 *driver, uint8_t pin) {
     driver->cs_pin = pin;
     gpio_init(pin);
@@ -298,3 +301,4 @@ sleep_ms(50);
 }
 
 #endif
+
