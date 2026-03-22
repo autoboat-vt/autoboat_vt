@@ -22,6 +22,11 @@ from std_msgs.msg import Float32, String, Int32
 from sensor_msgs.msg import NavSatFix, Image
 from autoboat_msgs.msg import ObjectDetectionResultsList, ObjectDetectionResult, TriangulationResultsList, TriangulationResult
 
+from geopy.distance import geodesic
+from geopy.point import Point
+from random import random
+import matplotlib.pyplot as plt
+
 os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
 # os.environ['GST_DEBUG'] = "3"
 
@@ -102,6 +107,7 @@ class ObjectTrack:
         self.class_id = class_id
         self.obj_label = obj_label
         self.last_world_pos = None
+        # self.eig_debug_log_count = 0
     
     def add_detection(self, detection: ObjectDetection, buffer_window):
         self.detection_results.append(detection)
@@ -110,12 +116,13 @@ class ObjectTrack:
 
 
 class ObjectTriangulator:
-    def __init__(self, camera_matrix, frame_size, buffer_window_size):
+    def __init__(self, camera_matrix, frame_size, buffer_window_size, logger):
         self.K = camera_matrix
         self.K_inv = np.linalg.inv(camera_matrix)
         self.observations = {} # {obj_id: ObjectTrack}
         self.frame_size = frame_size
         self.buffer_window = buffer_window_size
+        self.logger = logger
 
     def add_observation(self, detection: ObjectDetection):
         obj_id = detection.object_id
@@ -129,17 +136,11 @@ class ObjectTriangulator:
         track = self.observations[obj_id]
         obs = track.detection_results
         if len(obs) < 2:
-            return None # Need at least 2 observations to triangulate
+            return track.last_world_pos # Need at least 2 observations to triangulate
         
         if (obs[-1].frame_number == track.last_updated_frame_number):
             return track.last_world_pos # If we already triangulated this frame, return the last result
 
-        first_dir = obs[0].triangle_position[1]
-        last_dir = obs[-1].triangle_position[1]
-        dot_prod = float(np.dot(first_dir.T, last_dir))
-        if abs(dot_prod) > 0.99: # If the rays are almost parallel, we can't triangulate accurately
-            return None
-        
         A = np.zeros((3, 3))
         b = np.zeros((3, 1))
 
@@ -148,6 +149,36 @@ class ObjectTriangulator:
             identity_minus_ddt = np.eye(3) - (d @ d.T)
             A += identity_minus_ddt
             b += identity_minus_ddt @ p
+
+        # Degenerate geometry (all rays nearly along one axis) makes A poorly conditioned.
+        # In that case, the least-squares position is numerically unstable.
+        eigvals = np.linalg.eigvalsh(A)
+        lambda_min = float(np.min(eigvals))
+        lambda_max = float(np.max(eigvals))
+        condition_ratio = lambda_min / lambda_max if lambda_max > 0.0 else 0.0
+
+        # Temporary tuning telemetry: keep sparse to avoid log spam.
+        # current_frame = obs[-1].frame_number
+        # should_log_tuning = (
+        #     track.eig_debug_log_count < 20
+        #     and (track.eig_debug_log_count < 5 or current_frame % 15 == 0)
+        # )
+        # if should_log_tuning:
+        #     self.logger.info(
+        #         f"Object {obj_id} triangulation eigvals={eigvals.tolist()} "
+        #         f"ratio={condition_ratio:.3e} n_obs={len(obs)}"
+        #     )
+        #     track.eig_debug_log_count += 1
+
+        lambda_threshold = 1e-9
+        condition_threshold = 1e-4
+        if lambda_max < lambda_threshold or condition_ratio < condition_threshold:
+            self.logger.info(
+                f"Object {obj_id} has ill-conditioned triangulation geometry "
+                f"(lambda_min={lambda_min:.3e}, lambda_max={lambda_max:.3e}), skipping triangulation"
+                f"(condition_ratio={condition_ratio:.3e} threshold={condition_threshold:.3e}, n_obs={len(obs)})"
+            )
+            return track.last_world_pos
         
         world_pos = np.linalg.lstsq(A, b, rcond=None)[0].flatten()
         track.last_world_pos = world_pos
@@ -194,7 +225,7 @@ class BuoyDetectionNode(Node):
                                   [0, self.camera_focal_px, self.CAM_LIST[0]["input_height"] * 0.5],
                                   [0, 0, 1]])
         self.camera_K_inv = np.linalg.inv(self.camera_K)
-        self.triangulator = ObjectTriangulator(camera_matrix=self.camera_K, frame_size=(self.CAM_LIST[0]["input_width"], self.CAM_LIST[0]["input_height"]), buffer_window_size=self.parameters["buffer_window_size"])
+        self.triangulator = ObjectTriangulator(camera_matrix=self.camera_K, frame_size=(self.CAM_LIST[0]["input_width"], self.CAM_LIST[0]["input_height"]), buffer_window_size=self.parameters["buffer_window_size"], logger=self.get_logger())
         self.triangulation_lock = threading.Lock()
 
         # ROS2 Initialization
@@ -242,6 +273,10 @@ class BuoyDetectionNode(Node):
         self._init_pipeline()
         vs = threading.Thread(target=self.run, daemon=True)
         vs.start()
+
+        # TODO: Remove this when done testing
+        t = threading.Thread(target=self._test, daemon=True)
+        t.start()
 
         if INFERENCE:
             self.timer = self.create_timer(timer_period_sec=self.parameters["update_rate"], callback=self._iterate_results)
@@ -291,6 +326,9 @@ class BuoyDetectionNode(Node):
         caps_nvvidconvsrc0.set_property('caps', Gst.Caps.from_string(f'video/x-raw(memory:NVMM), format=NV12, width={self.CAM_LIST[0]["input_width"]}, height={self.CAM_LIST[0]["input_height"]}'))
 
         if INFERENCE:
+            preprocess = Gst.ElementFactory.make('nvdspreprocess', 'preprocess')
+            preprocess.set_property('config-file', f'{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/preprocess_config.txt')
+
             pgie = Gst.ElementFactory.make('nvinfer', 'pgie')
             pgie.set_property('config-file-path', YOLO_CONFIG[YOLO_VER])
             self.get_logger().info(f"Running Inference with Yolo{YOLO_VER}")
@@ -345,6 +383,7 @@ class BuoyDetectionNode(Node):
         self.pipeline.add(caps_nvvidconvsrc0)
         self.pipeline.add(streammux)
         if INFERENCE:
+            # self.pipeline.add(preprocess)
             self.pipeline.add(pgie)
             self.pipeline.add(tracker)
         self.pipeline.add(queue_multifilesink_valve)
@@ -369,6 +408,8 @@ class BuoyDetectionNode(Node):
 
         if INFERENCE:
             streammux.link(pgie)
+            # streammux.link(preprocess)
+            # preprocess.link(pgie)
             pgie.link(tracker)
             tracker.link(queue_multifilesink_valve)
         else:
@@ -392,6 +433,9 @@ class BuoyDetectionNode(Node):
         bus.add_signal_watch()
         bus.connect("message", self._bus_call, self.loop)
 
+        # if INFERENCE:
+        #     pgie_probe_pad = pgie.get_static_pad('src')
+        #     pgie_probe_pad.add_probe(Gst.PadProbeType.BUFFER, self._sahi_probe, 0)
         infer_probe_pad = queue_multifilesink_valve.get_static_pad('sink')
         infer_probe_pad.add_probe(Gst.PadProbeType.BUFFER, self._infer_probe, 0)
 
@@ -431,6 +475,93 @@ class BuoyDetectionNode(Node):
         # Trigger ROS2 node shutdown to exit the process
         self.get_logger().info("Shutting down ROS2 node\n")
         rclpy.shutdown()
+
+    def _sahi_probe(self, pad, info, u_data):
+        gst_buffer = info.get_buffer()
+        if not gst_buffer:
+            self.get_logger().info("Unable to get GstBuffer in sahi probe")
+            return
+        batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
+        l_frame = batch_meta.frame_meta_list
+        while l_frame is not None:
+            try:
+                frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
+            except StopIteration:
+                break
+            # self.get_logger().info(f"Frame {frame_meta.frame_num}, Source {frame_meta.source_id}, Number of Objects {frame_meta.num_obj_meta}")
+            l_obj = frame_meta.obj_meta_list
+            while l_obj is not None:
+                try:
+                    obj_meta=pyds.NvDsObjectMeta.cast(l_obj.data)
+                except StopIteration:
+                    break
+                self.get_logger().info("here")
+                self.get_logger().info(f"Frame {frame_meta.frame_num}, Object {obj_meta.object_id}, Class {obj_meta.obj_label}, Confidence {obj_meta.confidence}, left {obj_meta.detector_bbox_info.org_bbox_coords.left}, top {obj_meta.detector_bbox_info.org_bbox_coords.top}, width {obj_meta.detector_bbox_info.org_bbox_coords.width}, height {obj_meta.detector_bbox_info.org_bbox_coords.height}")
+                center_x = obj_meta.detector_bbox_info.org_bbox_coords.left + (obj_meta.detector_bbox_info.org_bbox_coords.width / 2)
+                center_y = obj_meta.detector_bbox_info.org_bbox_coords.top + (obj_meta.detector_bbox_info.org_bbox_coords.height / 2)
+                if (center_x < 320 or center_x > 960 or center_y < 80 or center_y > 720):
+                    self.get_logger().warn(f"Object {obj_meta.object_id} is out of bounds with center at ({center_x}, {center_y})")
+            
+                try:
+                    l_obj = l_obj.next
+                except StopIteration:
+                    break
+            try:
+                l_frame = l_frame.next
+            except StopIteration:
+                break
+
+        l_user_meta = batch_meta.batch_user_meta_list
+
+        while l_user_meta is not None:
+            try:
+                # Casting l_user_meta.data to pyds.NvDsUserMeta
+                user_meta = pyds.NvDsUserMeta.cast(l_user_meta.data)
+            except StopIteration:
+                break
+            # self.get_logger().info(f"User Meta Type: {user_meta.base_meta.meta_type}")
+            # if (user_meta.base_meta.meta_type == pyds.NVDS_PREPROCESS_BATCH_META):
+            #     try:
+            #         # Casting user_meta.data to pyds.GstNvDsPreProcessBatchMeta
+            #         preprocess_batchmeta = pyds.GstNvDsPreProcessBatchMeta.cast(user_meta.user_meta_data)
+            #     except StopIteration:
+            #         break
+            #     roi_cnt = 0
+                
+            #     for roi_meta in preprocess_batchmeta.roi_vector:
+            #         # Label ROI in display
+            #         display_meta = pyds.nvds_acquire_display_meta_from_pool(batch_meta)
+            #         display_meta.num_labels = 1
+
+            #         txt_params = display_meta.text_params[0]
+            #         txt_params.display_text = f"Roi:{roi_cnt}"
+                    
+            #         txt_params.x_offset = int(roi_meta.roi.left)
+            #         txt_params.y_offset = int(roi_meta.roi.top)
+                    
+            #         txt_params.font_params.font_name = "Serif"
+            #         txt_params.font_params.font_size = 10
+            #         txt_params.font_params.font_color.red = 1.0
+            #         txt_params.font_params.font_color.green = 1.0
+            #         txt_params.font_params.font_color.blue = 1.0
+            #         txt_params.font_params.font_color.alpha = 1.0
+                    
+            #         txt_params.set_bg_clr = 1
+            #         txt_params.text_bg_clr.red = 0.0
+            #         txt_params.text_bg_clr.green = 0.0
+            #         txt_params.text_bg_clr.blue = 0.0
+            #         txt_params.text_bg_clr.alpha = 0.5
+
+            #         pyds.nvds_add_display_meta_to_frame(roi_meta.frame_meta, display_meta)
+            #         print(f"frame {roi_meta.frame_meta.frame_num} src {roi_meta.frame_meta.source_id} roi {roi_cnt}")
+
+            #         roi_cnt += 1
+            try:
+                l_user_meta = l_user_meta.next
+            except StopIteration:
+                break
+        
+        return Gst.PadProbeReturn.OK
 
     def _infer_probe(self, pad, info, u_data):
         gst_buffer = info.get_buffer()
@@ -534,7 +665,7 @@ class BuoyDetectionNode(Node):
         display_meta = pyds.nvds_acquire_display_meta_from_pool(batch_meta)
         display_meta.num_labels = 1
         py_nvosd_text_params = display_meta.text_params[0]
-        py_nvosd_text_params.display_text = f"Yolo Version: {YOLO_VER}\nCurrent Model: {self.parameters['model_name']}\nThreshold: {self.parameters['threshold']}"
+        py_nvosd_text_params.display_text = f"Yolo Version: {YOLO_VER}\nCurrent Model: {self.parameters['model_name'] if INFERENCE else 'DISABLED'}\nThreshold: {self.parameters['threshold']}"
    
         # Set the offsets where the string should appear
         py_nvosd_text_params.x_offset = 10
@@ -608,12 +739,13 @@ class BuoyDetectionNode(Node):
             }
 
         detections = {}
+        EARTH_RADIUS = 6378137.0 # in meters
         for obj_id, obs_track in observations_snapshot.items():
             # obs_list = obs_track.detection_results
             world_pos = self.triangulator.triangulate(obj_id)
             if world_pos is not None:
-                lat = self.origin_position["latitude"] + (world_pos[1] / 6378137.0) * (180 / pi)
-                lon = self.origin_position["longitude"] + (world_pos[0] / (6378137.0 * np.cos(np.radians(self.origin_position["latitude"])))) * (180 / pi)
+                lat = self.origin_position["latitude"] + (world_pos[1] / EARTH_RADIUS) * (180 / pi)
+                lon = self.origin_position["longitude"] + (world_pos[0] / (EARTH_RADIUS * np.cos(np.radians(self.origin_position["latitude"])))) * (180 / pi)
                 detections[obj_id] = {
                     "label": obs_track.obj_label,
                     "class_id": obs_track.class_id,
@@ -884,6 +1016,67 @@ class BuoyDetectionNode(Node):
             self.get_logger().info("Reloaded config file in nvinfer")
         else:
             self.get_logger().info("Not reloading config file in nvinfer since INFERENCE is disabled")
+
+    def _compass_angle(self, theta):
+        # Used to convert from a mathematical angle in degrees where 0 is facing right and increases counterclockwise,
+        #  to a compass angle where 0 is facing up and increases clockwise
+        theta = theta % 360
+        if theta <= 90:
+            return 90 - theta
+        else:
+            return 450 - theta
+
+    def _test(self):
+        time.sleep(2)
+        self.get_logger().info("Starting test trajectory")
+        current_angle = 0
+        steps = 300
+        count = 0
+        degrees = 1
+        buoy_location = Point(1.0, 1.0)
+        radius = 200 # radius of the circle around the buoy that the boat will be traveling, in meters
+        xpoints = np.array([])
+        ypoints = np.array([])
+        self.get_logger().info(f"Buoy location: {buoy_location.latitude}, {buoy_location.longitude}")
+        np.append(xpoints, buoy_location.longitude)
+        np.append(ypoints, buoy_location.latitude)
+        while count < steps:
+            heading = current_angle + 180 if current_angle < 180 else current_angle - 180
+            self.heading_callback(Float32(data=float(heading)))
+            current_point = geodesic(meters=radius).destination(buoy_location, bearing=self._compass_angle(current_angle))
+            xpoints = np.append(xpoints, current_point.longitude)
+            ypoints = np.append(ypoints, current_point.latitude)
+            # self.get_logger().info(f"Current position: {current_point.latitude}, {current_point.longitude}, heading: {heading}")
+            self.position_callback(NavSatFix(latitude=current_point.latitude, longitude=current_point.longitude))
+
+            pixel_x = 640
+            pixel_y = 400
+
+            with self.triangulation_lock:
+                if (self.origin_position["latitude"] != 0 and self.origin_position["longitude"] != 0):
+                    self.triangulator.add_observation(ObjectDetection(
+                                                        frame_number = count,
+                                                        detector_confidence = 0.5,
+                                                        tracker_confidence = 0.5,
+                                                        x_position = pixel_x,
+                                                        y_position = pixel_y,
+                                                        width = 20,
+                                                        height = 20,
+                                                        object_id = 999,
+                                                        class_id = 2,
+                                                        obj_label = "fake",
+                                                        pose_matrix = self._get_current_pose(current_point.latitude, current_point.longitude, heading),
+                                                        camera_matrix_inv = self.camera_K_inv
+                    ))
+
+            current_angle += degrees / steps
+            current_angle = current_angle % 360
+            # radius = random() * 150 + 50 # Randomize radius between 50 and 200 meters
+            # current_angle = random() * 360 # Randomize angle
+            count += 1
+        self.get_logger().info("Test trajectory completed")
+        # plt.plot(xpoints, ypoints, 'o')
+        # plt.show()
 
 
 def main():

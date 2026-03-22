@@ -1,3 +1,8 @@
+"""
+This is a test file to publish CV parameters to the /cv_parameters topic as a JSON string.
+This is for testing purposes only and should not be used in production.
+The parameters published here will be used by the deepstream_buoy_detection_node to update the CV parameters in real-time.
+"""
 import rclpy
 from rclpy.node import Node
 
