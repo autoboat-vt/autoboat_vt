@@ -395,7 +395,7 @@
                  * Focuses the map on the boat.
                  */
                 focus_map_on_boat() {
-                    this.map.setView(this.boat.location, this.map.getZoom());
+                    this.map.setView(this.boat.location, this.map.getMaxZoom());
                 }
 
                 /**
