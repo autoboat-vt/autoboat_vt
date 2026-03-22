@@ -121,7 +121,7 @@ class MotorboatAutopilot:
         
         rpm_output = min_rpm + (max_rpm - min_rpm) * np.exp(-self.parameters["rpm_decay_rate"] * error)
         
-        self.logger.info(f"Error: {error}, RPM Output: {rpm_output}")
+        # self.logger.info(f"Error: {error}, RPM Output: {rpm_output}")
         
         return float(np.clip(rpm_output, min_rpm, max_rpm))
     
