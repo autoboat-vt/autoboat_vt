@@ -114,7 +114,7 @@ class MotorboatAutopilot:
 
         error = abs(rudder_angle)
         
-        # if the error == 180 degrees, then we want to be going at min rpm, if the error == 0 degrees,
+        # if the error is high, then we want to be going at min rpm and if the error is low,
         # then we want to be going at max rpm
         max_rpm = self.parameters['max_rpm']
         min_rpm = self.parameters['min_rpm']
