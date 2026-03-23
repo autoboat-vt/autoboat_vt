@@ -1,6 +1,8 @@
 #ifndef BOAT_H
 #define BOAT_H
 
+#include <stdint.h>
+
 //Author: Elias Mihkael
 //Designed so main does not need to know type of boat 
 //Each subclass should handle initialization of hardware peripherals 
@@ -15,21 +17,21 @@ class Boat{
         virtual ~Boat() = default; 
         virtual uint8_t lifecycle() = 0;
 
-}
+};
 
 class Lumpy : public Boat{
     public:
         Lumpy();
         uint8_t lifecycle() override;
     private:
-}
+};
 
 class Theseus : public Boat{
     public:
         Theseus();
         uint8_t lifecycle() override;
     private:
-}
+};
 
 class Titan : public Boat{
     public:
@@ -37,7 +39,7 @@ class Titan : public Boat{
         uint8_t lifecycle() override;
     private:
 
-}
+};
 
 class DuckHunter : public Boat{
     public:
@@ -45,6 +47,6 @@ class DuckHunter : public Boat{
         uint8_t lifecycle() override;
     private:
 
-}
+};
 
 #endif

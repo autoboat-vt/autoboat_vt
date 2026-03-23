@@ -17,6 +17,20 @@
 #include <math.h>
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+#include <std_msgs/msg/float64.h>
+#include <std_msgs/msg/empty.h>
+
+
+#ifdef __cplusplus
+}
+#endif
+
+
 
 using namespace std;
 
@@ -89,8 +103,6 @@ static float desired_winch_angle = 0;
 // -----------------------------------------------------
 // Polynomials
 // -----------------------------------------------------
-
-void application_loop();
 
 
 inline float get_rudder_angle_from_motor_angle(float motor_angle) {
@@ -224,7 +236,9 @@ struct current_heading
 class Microros
 {
 public:
-    Microros(rcl_allocator_t* allocator, rclc_support_t* support, rclc_executor_t* executor);
+    Microros();
+    
+    void set_cores(rcl_allocator_t* allocator, rclc_support_t* support, rclc_executor_t* executor);
 
     void initialize_lumpy_peripherals();
     void initialize_theseus_peripherals();
