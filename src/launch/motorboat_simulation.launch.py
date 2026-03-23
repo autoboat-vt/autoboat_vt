@@ -68,7 +68,8 @@ def generate_launch_description():
                 '/motorboat_simulation/desired_propeller_rpm@std_msgs/msg/Float64]gz.msgs.Double',
                 '/motorboat_simulation/desired_rudder_angle@std_msgs/msg/Float64]gz.msgs.Double',
                 '/motorboat_simulation/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
-                '/motorboat_simulation/position@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat'
+                '/motorboat_simulation/position@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat',
+                '/world/motorboat_model/model/my_ship/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model'
             ],
             remappings=[('/motorboat_simulation/position', '/position')],
 
