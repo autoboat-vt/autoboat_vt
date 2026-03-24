@@ -79,6 +79,7 @@ class TelemetryStatus(Enum):
     SUCCESS = 0
     FAILURE = 1
 
+
 QOS_AUTOPILOT_PARAM_CONFIG_PATH = QoSProfile(
     reliability=ReliabilityPolicy.RELIABLE,
     durability=DurabilityPolicy.TRANSIENT_LOCAL,

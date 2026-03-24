@@ -885,55 +885,102 @@ class GroundStationWidget(QWidget):
 
             return "N/A" if data_item is None else f"{float(data_item):.5f}"
 
+        def sailboat_mode(boat_data: dict[str, Any]) -> str:
+            self.boat_data["full_autonomy_maneuver"] = constants.SailboatStates(boat_data["full_autonomy_maneuver"]).name
+            self.boat_data["autopilot_mode"] = constants.SailboatAutopilotModes(boat_data["autopilot_mode"]).name
+
+            return (
+                "Position: "
+                f"{self.boat_data.get('position', self.fake_position)[0]:.8f}, "
+                f"{self.boat_data.get('position', self.fake_position)[1]:.8f}\n"
+                f"State: {self.boat_data.get('autopilot_mode', 'N/A')}\n"
+                f"Connection Status: {connection_status.name}\n"
+                f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
+                f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
+                f"Velocity Vector: [{self.boat_data.get('velocity_x', -69.420):.5f}, {self.boat_data.get('velocity_y', -69.420):.5f}]\n"  # noqa: E501
+                f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
+                f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
+                f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
+                f"True Wind Speed: {fix_formatting(self.boat_data.get('true_wind_speed'))} knots\n"
+                f"True Wind Angle: {fix_formatting(self.boat_data.get('true_wind_angle'))}°\n"
+                f"Apparent Wind Speed: {fix_formatting(self.boat_data.get('apparent_wind_speed'))} knots\n"
+                f"Apparent Wind Angle: {fix_formatting(self.boat_data.get('apparent_wind_angle'))}°\n"
+                f"Desired Heading: {fix_formatting(self.boat_data.get('desired_heading'))}°\n"
+                f"Desired Sail Angle: {fix_formatting(self.boat_data.get('desired_sail_angle'))}°\n"
+                f"Desired Rudder Angle: {fix_formatting(self.boat_data.get('desired_rudder_angle'))}°\n"
+            )
+
+
+        def motorboat_mode(boat_data: dict[str, Any]) -> str:
+            self.boat_data["autopilot_mode"] = constants.MotorboatAutopilotModes(boat_data["autopilot_mode"]).name
+
+            return (
+                "Position: "
+                f"{self.boat_data.get('position', self.fake_position)[0]:.8f}, "
+                f"{self.boat_data.get('position', self.fake_position)[1]:.8f}\n"
+                f"State: {self.boat_data.get('autopilot_mode', 'N/A')}\n"
+                f"Connection Status: {connection_status.name}\n"
+                f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
+                f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
+                f"Velocity Vector: [{self.boat_data.get('velocity_x', -69.420):.5f}, {self.boat_data.get('velocity_y', -69.420):.5f}]\n"  # noqa: E501
+                f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
+                f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
+                f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
+                f"Motor RPM: {fix_formatting(self.boat_data.get('rpm'))} RPM\n"
+                f"Duty Cycle: {fix_formatting(self.boat_data.get('duty_cycle'))}%\n"
+                f"Amp Hours Charged: {fix_formatting(self.boat_data.get('amp_hours_charged'))} Ah\n"
+                f"VESC Current: {fix_formatting(self.boat_data.get('current_to_vesc'))} A\n"
+                f"Motor Voltage: {fix_formatting(self.boat_data.get('voltage_to_motor'))} V\n"
+                f"VESC Voltage: {fix_formatting(self.boat_data.get('voltage_to_vesc'))} V\n"
+                f"Motor Wattage: {fix_formatting(self.boat_data.get('wattage_to_motor'))} W\n"
+                f"VESC Online: {fix_formatting(self.boat_data.get('time_since_vesc_startup'))}\n"
+                f"Motor Temperature: {fix_formatting(self.boat_data.get('motor_temperature'))} °C\n"
+                f"VESC Temperature: {fix_formatting(self.boat_data.get('vesc_temperature'))} °C\n"
+            )
+        
+        def universal(boat_data: dict[str, Any]) -> None:
+            """
+            Runs code that is common to both sailboat and motorboat modes, to avoid code duplication.
+
+            Parameters
+            ----------
+            boat_data
+                The boat data dictionary to extract data from.
+            """
+
+            self.boat_data = boat_data
+
+            try:
+                heading = self.boat_data.get("heading")
+                assert isinstance(heading, (float, int)), "heading is not a number."
+
+            except AssertionError:
+                heading = self.fake_heading
+
+            try:
+                lat = self.boat_data.get("latitude")
+                assert isinstance(lat, (float, int)), "latitude is not a number."
+
+                lon = self.boat_data.get("longitude")
+                assert isinstance(lon, (float, int)), "longitude is not a number."
+
+                self.boat_data.setdefault("position", (lat, lon))
+
+            except AssertionError:
+                lat, lon = self.fake_position
+
+            if constants.SM.read("has_telemetry_server_instance_changed"):
+                constants.SM.write("remote_autopilot_param_hash", "")
+                self.clear_waypoints()
+                constants.SM.write("has_telemetry_server_instance_changed", False)
+
+            self.browser.page().runJavaScript(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})")
+
+        
         boat_data, connection_status = request_result
-        self.boat_data = boat_data
+        universal(boat_data)
 
-        try:
-            heading = self.boat_data.get("heading")
-            assert isinstance(heading, (float, int)), "heading is not a number."
-
-        except AssertionError:
-            heading = self.fake_heading
-
-        try:
-            lat = self.boat_data.get("latitude")
-            assert isinstance(lat, (float, int)), "latitude is not a number."
-
-            lon = self.boat_data.get("longitude")
-            assert isinstance(lon, (float, int)), "longitude is not a number."
-
-            self.boat_data.setdefault("position", (lat, lon))
-
-        except AssertionError:
-            lat, lon = self.fake_position
-
-        if constants.SM.read("has_telemetry_server_instance_changed"):
-            constants.SM.write("remote_autopilot_param_hash", "")
-            self.clear_waypoints()
-            constants.SM.write("has_telemetry_server_instance_changed", False)
-
-        self.browser.page().runJavaScript(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})")
-
-        telemetry_text = (
-            "Position: "
-            f"{self.boat_data.get('position', self.fake_position)[0]:.8f}, "
-            f"{self.boat_data.get('position', self.fake_position)[1]:.8f}\n"
-            f"State: {self.boat_data.get('autopilot_mode', 'N/A')}\n"
-            f"Connection Status: {connection_status.name}\n"
-            f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
-            f"Velocity Vector: [{self.boat_data.get('velocity_x', -69.420):.5f}, {self.boat_data.get('velocity_y', -69.420):.5f}]\n"  # noqa: E501
-            f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
-            f"True Wind Speed: {fix_formatting(self.boat_data.get('true_wind_speed'))} knots\n"
-            f"True Wind Angle: {fix_formatting(self.boat_data.get('true_wind_angle'))}°\n"
-            f"Apparent Wind Speed: {fix_formatting(self.boat_data.get('apparent_wind_speed'))} knots\n"
-            f"Apparent Wind Angle: {fix_formatting(self.boat_data.get('apparent_wind_angle'))}°\n"
-            f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
-            f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
-            f"Desired Heading: {fix_formatting(self.boat_data.get('desired_heading'))}°\n"
-            f"Desired Sail Angle: {fix_formatting(self.boat_data.get('desired_sail_angle'))}°\n"
-            f"Desired Rudder Angle: {fix_formatting(self.boat_data.get('desired_rudder_angle'))}°\n"
-            f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
-        )
+        telemetry_text = sailboat_mode(boat_data) if "full_autonomy_maneuver" in boat_data else motorboat_mode(boat_data)
 
         self.left_text_section.setText(telemetry_text)
 

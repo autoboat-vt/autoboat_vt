@@ -120,19 +120,23 @@ class TelemetryNode(Node):
             if status == TelemetryStatus.SUCCESS and isinstance(response, int):
                 self.instance_id = response
 
+                # set username
                 user_name = os.environ.get("USER")
                 if user_name:
                     url = f"instance_manager/set_user/{self.instance_id}"
                     self.send_raw_data_to_telemetry_server(url, user_name, self.boat_status_session)
 
+                # set mapping for boat status payload
                 url = f"boat_status/set_mapping/{self.instance_id}"
                 self.send_raw_data_to_telemetry_server(url, self.mapping, self.boat_status_session)
 
+                # set initial boat status so that the groundstation has something to
+                # display while the telemetry node is still gathering data
                 boat_status = self.construct_boat_status_payload()
-                
                 url = f"boat_status/set_fast/{self.instance_id}"
                 self.send_raw_data_to_telemetry_server(url, boat_status, self.boat_status_session)
 
+                # check if the config hash already exists on the server to avoid sending over all the parameters again if it does
                 does_hash_exist: bool = False
                 for hash_response, hash_status in self.get_raw_response_from_telemetry_server(
                     f"autopilot_parameters/get_hash_exists/{config_hash}", self.autopilot_parameters_session
@@ -153,6 +157,7 @@ class TelemetryNode(Node):
 
                 self.logger.info(f"Telemetry node instance ID: {self.instance_id}")
                 self.logger.info(f"Using hash: {config_hash}")
+                
                 break
 
         self.create_timer(0.01, self.update_boat_status)  # 10 ms
@@ -190,6 +195,7 @@ class TelemetryNode(Node):
         Callback function for the camera RGB image topic. Updates the boat's current RGB image in base64 encoded format.
 
         Note
+        ----
         Refer to this stack overflow post: https://stackoverflow.com/questions/40928205/python-opencv-image-to-byte-string-for-json-transfer
 
         Parameters
@@ -264,10 +270,10 @@ class TelemetryNode(Node):
         """
 
         self.apparent_wind_vector = np.array([apparent_wind_vector.x, apparent_wind_vector.y], dtype=np.float64)
+        
         self.apparent_wind_speed, self.apparent_wind_angle = cartesian_vector_to_polar(
             apparent_wind_vector.x, apparent_wind_vector.y
         )
-
 
 
     def desired_heading_callback(self, desired_heading: Float32) -> None:
@@ -391,7 +397,7 @@ class TelemetryNode(Node):
             with open(file=parameters_path, mode="r", encoding="utf-8") as parameters_file:
                 self.autopilot_parameters = json.load(parameters_file)
             
-            self.logger.info(f"Loaded autopilot parameters from new config path: {parameters_path}")
+            self.logger.info(f"Loaded autopilot parameters from config path: {parameters_path}")
 
             if parameters_path.stem == "sailboat_default_parameters":
                 self.is_sailboat_mode = True
@@ -410,21 +416,54 @@ class TelemetryNode(Node):
             )
 
 
-    def should_terminate_callback(self, msg: Bool) -> None:
-        """
-        Callback function for the should terminate topic. Shuts down the ROS node if the message data is ``True``.
+    def update_boat_status(self) -> None:
+        """Gathers the boat's current status and sends it to the telemetry server."""
 
-        Parameters
-        ----------
-        msg
-            The message indicating whether to terminate the node.
-        """
+        boat_status = self.construct_boat_status_payload()
+        if boat_status is not None:
+            self.send_raw_data_to_telemetry_server(
+                f"boat_status/set_fast/{self.instance_id}",
+                boat_status,
+                self.boat_status_session,
+            )
 
-        if msg.data:
-            rclpy.shutdown()
+        else:
+            self.logger.warning(
+                "Failed to construct boat status payload, likely because boat is not in "
+                "sailboat or motorboat mode. Boat status payload will not be sent to telemetry server."
+            )
 
+    def update_waypoints_from_telemetry(self) -> None:
+        """Updates the boat's current waypoints from the telemetry server and publishes them over ROS."""
 
+        route = f"waypoints/get_new/{self.instance_id}"
+        for new_waypoints, status in self.get_raw_response_from_telemetry_server(route, self.waypoints_session):
+            if status == TelemetryStatus.SUCCESS and isinstance(new_waypoints, list):
+                self.current_waypoints = new_waypoints
 
+                # update the ROS2 topic so that the autopilot actually knows what the new waypoints are
+                waypoints_nav_sat_fix_list = [
+                    NavSatFix(latitude=waypoint[0], longitude=waypoint[1]) for waypoint in self.current_waypoints
+                ]
+                self.waypoints_list_publisher.publish(WaypointList(waypoints=waypoints_nav_sat_fix_list))
+
+                break
+
+    def update_autopilot_parameters_from_telemetry(self) -> None:
+        """Updates the boat's current autopilot parameters from the telemetry server and publishes them over ROS."""
+
+        route = f"autopilot_parameters/get_new/{self.instance_id}"
+        for new_autopilot_parameters, status in self.get_raw_response_from_telemetry_server(
+            route, self.autopilot_parameters_session
+        ):
+            if status == TelemetryStatus.SUCCESS and isinstance(new_autopilot_parameters, dict):
+                self.autopilot_parameters = new_autopilot_parameters
+
+                # update the ROS2 topic so that the autopilot actually knows what the new parameters are
+                serialized_autopilot_parameters_string = String(data=json.dumps(self.autopilot_parameters))
+                self.autopilot_parameters_publisher.publish(serialized_autopilot_parameters_string)
+
+                break
 
     def get_raw_response_from_telemetry_server(
         self, route: str, session: requests.Session
@@ -457,9 +496,6 @@ class TelemetryNode(Node):
         except Exception as e:
             self.logger.error(f"Error: {e} \n Could not recieve data with telemetry server route {route}, retrying...")
             yield from self.get_raw_response_from_telemetry_server(route, session)
-
-
-
 
     def send_raw_data_to_telemetry_server(
         self,
@@ -592,52 +628,20 @@ class TelemetryNode(Node):
         
         return payload
 
-    def update_boat_status(self) -> None:
-        """Gathers the boat's current status and sends it to the telemetry server."""
-
-        boat_status = self.construct_boat_status_payload()
-        self.send_raw_data_to_telemetry_server(
-            f"boat_status/set_fast/{self.instance_id}",
-            boat_status,
-            self.boat_status_session,
-        )
-
-    def update_waypoints_from_telemetry(self) -> None:
-        """Updates the boat's current waypoints from the telemetry server and publishes them over ROS."""
-
-        route = f"waypoints/get_new/{self.instance_id}"
-        for new_waypoints, status in self.get_raw_response_from_telemetry_server(route, self.waypoints_session):
-            if status == TelemetryStatus.SUCCESS and isinstance(new_waypoints, list):
-                self.current_waypoints = new_waypoints
-                
-                # update the ROS2 topic so that the autopilot actually knows what the new waypoints are
-                waypoints_nav_sat_fix_list = [
-                    NavSatFix(latitude=waypoint[0], longitude=waypoint[1]) for waypoint in self.current_waypoints
-                ]
-                self.waypoints_list_publisher.publish(WaypointList(waypoints=waypoints_nav_sat_fix_list))
-                
-                break
 
 
+    def should_terminate_callback(self, msg: Bool) -> None:
+        """
+        Callback function for the should terminate topic. Shuts down the ROS node if the message data is ```True```.
 
+        Parameters
+        ----------
+        msg
+            The message indicating whether to terminate the node.
+        """
 
-    def update_autopilot_parameters_from_telemetry(self) -> None:
-        """Updates the boat's current autopilot parameters from the telemetry server and publishes them over ROS."""
-
-        route = f"autopilot_parameters/get_new/{self.instance_id}"
-        for new_autopilot_parameters, status in self.get_raw_response_from_telemetry_server(
-            route, self.autopilot_parameters_session
-        ):
-            if status == TelemetryStatus.SUCCESS and isinstance(new_autopilot_parameters, dict):
-                self.autopilot_parameters = new_autopilot_parameters
-
-                # update the ROS2 topic so that the autopilot actually knows what the new parameters are
-                serialized_autopilot_parameters_string = String(data=json.dumps(self.autopilot_parameters))
-                self.autopilot_parameters_publisher.publish(serialized_autopilot_parameters_string)
-
-                break
-
-
+        if msg.data:
+            rclpy.shutdown()
 
 
 def main() -> None:

@@ -18,7 +18,7 @@ class BoatStatusPayload(ctypes.LittleEndianStructure):
     A class representing the payload that will be sent to the telemetry server
     to provide information about the boat's current state.
 
-    Must inherit ``ctypes.LittleEndianStructure`` to ensure that the data is packed correctly when sent over the network.
+    Must inherit ```ctypes.LittleEndianStructure``` to ensure that the data is packed correctly when sent over the network.
 
     Inherits
     --------
@@ -79,7 +79,7 @@ class SailboatStatusPayload(BoatStatusPayload):
     A class representing the payload that will be sent to the telemetry server
     to provide information about the sailboat's current state.
 
-    Must inherit ``BoatStatusPayload`` to ensure that it has all the necessary fields for the telemetry payload.
+    Must inherit ```BoatStatusPayload``` to ensure that it has all the necessary fields for the telemetry payload.
 
     Inherits
     --------
@@ -128,7 +128,7 @@ class MotorboatStatusPayload(BoatStatusPayload):
     A class representing the payload that will be sent to the telemetry server
     to provide information about the motorboat's current state.
 
-    Must inherit ``BoatStatusPayload`` to ensure that it has all the necessary fields for the telemetry payload.
+    Must inherit ```BoatStatusPayload``` to ensure that it has all the necessary fields for the telemetry payload.
 
     Inherits
     --------
