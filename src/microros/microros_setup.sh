@@ -5,9 +5,9 @@ SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 REPOSITORY_ROOT="/home/ws"
 
 # Install dependencies
-sudo apt install -y cmake g++ gcc-arm-none-eabi doxygen libnewlib-arm-none-eabi git python3 build-essential pkg-config libusb-1.0-0-dev
 sudo apt-get update || true  # continue even if this "fails" for whatever reason
-sudo apt-get upgrade -y
+sudo apt install -y cmake g++ gcc-arm-none-eabi doxygen libnewlib-arm-none-eabi git python3 build-essential pkg-config libusb-1.0-0-dev
+sudo apt-get upgrade -y --allow-downgrades
 source /opt/ros/humble/setup.bash
 
 
