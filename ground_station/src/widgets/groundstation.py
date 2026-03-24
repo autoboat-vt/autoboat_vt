@@ -938,47 +938,34 @@ class GroundStationWidget(QWidget):
                 f"VESC Temperature: {fix_formatting(self.boat_data.get('vesc_temperature'))} °C\n"
             )
         
-        def universal(boat_data: dict[str, Any]) -> None:
-            """
-            Runs code that is common to both sailboat and motorboat modes, to avoid code duplication.
-
-            Parameters
-            ----------
-            boat_data
-                The boat data dictionary to extract data from.
-            """
-
-            self.boat_data = boat_data
-
-            try:
-                heading = self.boat_data.get("heading")
-                assert isinstance(heading, (float, int)), "heading is not a number."
-
-            except AssertionError:
-                heading = self.fake_heading
-
-            try:
-                lat = self.boat_data.get("latitude")
-                assert isinstance(lat, (float, int)), "latitude is not a number."
-
-                lon = self.boat_data.get("longitude")
-                assert isinstance(lon, (float, int)), "longitude is not a number."
-
-                self.boat_data.setdefault("position", (lat, lon))
-
-            except AssertionError:
-                lat, lon = self.fake_position
-
-            if constants.SM.read("has_telemetry_server_instance_changed"):
-                constants.SM.write("remote_autopilot_param_hash", "")
-                self.clear_waypoints()
-                constants.SM.write("has_telemetry_server_instance_changed", False)
-
-            self.browser.page().runJavaScript(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})")
-
-        
         boat_data, connection_status = request_result
-        universal(boat_data)
+        self.boat_data = boat_data
+
+        try:
+            heading = self.boat_data.get("heading")
+            assert isinstance(heading, (float, int)), "heading is not a number."
+
+        except AssertionError:
+            heading = self.fake_heading
+
+        try:
+            lat = self.boat_data.get("latitude")
+            assert isinstance(lat, (float, int)), "latitude is not a number."
+
+            lon = self.boat_data.get("longitude")
+            assert isinstance(lon, (float, int)), "longitude is not a number."
+
+            self.boat_data.setdefault("position", (lat, lon))
+
+        except AssertionError:
+            lat, lon = self.fake_position
+
+        if constants.SM.read("has_telemetry_server_instance_changed"):
+            constants.SM.write("remote_autopilot_param_hash", "")
+            self.clear_waypoints()
+            constants.SM.write("has_telemetry_server_instance_changed", False)
+
+        self.browser.page().runJavaScript(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})")
 
         if "full_autonomy_maneuver" in self.boat_data:
             telemetry_text = sailboat_mode(boat_data)
