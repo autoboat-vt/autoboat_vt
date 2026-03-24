@@ -1,10 +1,14 @@
 import numpy as np
 
 
-def cartesian_vector_to_polar(x, y):
+def cartesian_vector_to_polar(x: float, y: float) -> tuple[float, float]:
     """
     Converts a cartesian vector (x and y coordinates) to polar form (magnitude and direction).
-    Outputs a tuple of magnitude and direction of the inputted vector
+    Outputs a tuple of magnitude and direction of the inputted vector.
+    
+    Returns
+    -------
+        tuple[float, float]: the magnitude and direction of the passed vector
     """
     # arctan2 doesn't like when we pass 2 zeros into it so we should cover that case
     if x == 0.0 and y == 0.0:
@@ -18,11 +22,15 @@ def cartesian_vector_to_polar(x, y):
 
 
 
-def euler_from_quaternion(x,y,z,w):
+def euler_from_quaternion(x: float, y: float, z: float, w: float) -> tuple[float, float, float]:
     """
-    Converts quaternion (w in last place) to euler roll, pitch, yaw
-    quaternion = [x, y, z, w]
+    Converts quaternion (w in last place) to euler roll, pitch, yaw.
+    quaternion = [x, y, z, w].
     Below should be replaced when porting for ROS 2 Python tf_conversions is done.
+    
+    Returns
+    -------
+        tuple[float, float, float]: the roll, pitch, and yaw of the quaternion
     """
 
     sinr_cosp = 2 * (w * x + y * z)
