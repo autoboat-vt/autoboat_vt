@@ -980,7 +980,14 @@ class GroundStationWidget(QWidget):
         boat_data, connection_status = request_result
         universal(boat_data)
 
-        telemetry_text = sailboat_mode(boat_data) if "full_autonomy_maneuver" in boat_data else motorboat_mode(boat_data)
+        if "full_autonomy_maneuver" in self.boat_data:
+            telemetry_text = sailboat_mode(boat_data)
+        
+        elif "rpm" in self.boat_data:
+            telemetry_text = motorboat_mode(boat_data)
+
+        else:
+            telemetry_text = "Boat data received, but could not determine boat type."
 
         self.left_text_section.setText(telemetry_text)
 
