@@ -891,8 +891,8 @@ class GroundStationWidget(QWidget):
 
             return (
                 "Position: "
-                f"{self.boat_data.get('position', self.fake_position)[0]:.8f}, "
-                f"{self.boat_data.get('position', self.fake_position)[1]:.8f}\n"
+                f"[{self.boat_data.get('position', self.fake_position)[0]:.8f}, "
+                f"{self.boat_data.get('position', self.fake_position)[1]:.8f}]\n"
                 f"State: {self.boat_data.get('autopilot_mode', 'N/A')}\n"
                 f"Connection Status: {connection_status.name}\n"
                 f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
