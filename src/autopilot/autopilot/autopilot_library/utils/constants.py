@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import ctypes
 from enum import Enum
 from pathlib import Path
-from typing import ClassVar, Final
 
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 
@@ -13,7 +11,6 @@ __all__ = [
     "CONFIG_DIRECTORY",
     "QOS_AUTOPILOT_PARAM_CONFIG_PATH",
     "TELEMETRY_SERVER_URL",
-    "BoatStatusPayload",
     "MotorboatAutopilotMode",
     "MotorboatControls",
     "SailboatAutopilotMode",

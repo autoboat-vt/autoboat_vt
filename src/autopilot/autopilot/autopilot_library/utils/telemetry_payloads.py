@@ -5,6 +5,7 @@ from typing import ClassVar, Final
 
 from typing_extensions import override
 
+# used to specify what is available to import from this file
 __all__ = [
     "BoatStatusPayload",
     "MotorboatStatusPayload",
