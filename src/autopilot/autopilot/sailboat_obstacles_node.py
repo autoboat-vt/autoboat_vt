@@ -14,8 +14,8 @@ class ObstaclesNode(Node):
         super().__init__("sailboat_obstacles")
         self.get_logger().info("working")
 
-        self.obstacles_list_subscriber = self.create_subscription(NavSatFix, "/new_obstacle", self.update_obstacle_list, 10)
-        self.obstacles_list_publisher = self.create_publisher(WaypointList, "/obstacles_list", 10)
+        self.obstacles_list_subscriber = self.create_subscription(NavSatFix, "/new_obstacle", self.update_obstacle_list, qos_profile_sensor_data)
+        self.obstacles_list_publisher = self.create_publisher(WaypointList, "/obstacles_list", qos_profile_sensor_data)
         self.current_obstacles: list[tuple[float, float]] = []
 
         self.publisher_ = self.create_publisher(NavSatFix, 'new_obstacle', 10)

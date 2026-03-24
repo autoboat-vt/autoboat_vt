@@ -64,22 +64,20 @@ class Space:
     
     def complete(self):
         t.done()
+'''
 
 class Inside:
-    def __init__(self, x, y):
+    def __init__(self, x, y, buffer):
         self.x = x
         self.y = y
+        self.buffer = buffer
     
     def check(self, polygon):
-        
-        path=matplotlib.path.Path(polygon)
-        return path.contains_point([self.x,self.y]) or [self.x, self.y] in polygon
-        
         poly=shapely.Polygon(polygon)
-        poly=poly.buffer(2.0)
+        poly=poly.buffer(self.buffer)
         pt=shapely.Point(self.x,self.y)
         return poly.contains(pt)
-'''
+
 
 # remember the use the polygon script above into astar class
 class Astar:

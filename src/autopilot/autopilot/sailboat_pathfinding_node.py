@@ -8,7 +8,7 @@ from sensor_msgs.msg import NavSatFix
 from autoboat_msgs.msg import WaypointList
 
 from .autopilot_library.utils import *
-from .autopilot_library.utils.astar import Astar
+from .autopilot_library.utils.astar import Astar, Inside
 
 
 class PathfindingNode(Node):
@@ -16,11 +16,11 @@ class PathfindingNode(Node):
     def __init__(self):
         super().__init__("sailboat_pathfinding")
         self.get_logger().info("working")
-        # create publisher stuff here (later)
 
         # subscribing to position and waypoints
         self.gps_subscriber=self.create_subscription(NavSatFix, "/position", self.gps_call, qos_profile_sensor_data)
         self.waypoint_subscriber=self.create_subscription(WaypointList, "/waypoints_list", self.waypoint_call, qos_profile_sensor_data)
+        self.obstacle_subscriber=self.create_subscription(WaypointList, "/obstacles_list", self.obstacle_call, qos_profile_sensor_data)
         self.create_timer(1.0,self.runpath)
 
         # creating intermediate waypoint publisher
@@ -32,11 +32,11 @@ class PathfindingNode(Node):
         self.destinations=[]
         self.wayindex=0
         self.reference=[0,0]
+        self.obstacles=[]
 
     def gps_call(self,msg: NavSatFix): # argument in function is a shorthand for calling msg as object of NavSatFix
         # boat GPS coordinates (updates over time so I made it a self variable)
         self.boatGPS=[msg.longitude,msg.latitude]
-
         
     def waypoint_call(self,msg: WaypointList): # function calling for waypoints once sent
         self.wayindex=0     # resetting the index counter when new waypoints are sent
@@ -56,6 +56,11 @@ class PathfindingNode(Node):
             [lon,lat]=posList[i].get_local_coordinates(self.reference)
             self.destinations.append([lon,lat])
     
+    def obstacle_call(self,msg: WaypointList):
+        self.obstacles.append([msg.waypoints])
+        self.get_logger().info(self.obstacles)
+
+    
     def make_path(self, src, des):
 
         # outputting the boat and destination waypoint
@@ -70,6 +75,12 @@ class PathfindingNode(Node):
         # the boat is at the center of the matrix
         xdist=int(math.floor(des[0]-src[0]))+lims-1
         ydist=int(math.floor(des[1]-src[1]))+lims-1
+
+        local_obs=[]
+        if self.obstacles:
+            for obstacle in self.obstacles:
+                # conversion from global GPS to local matrix coordinates
+                pass
 
         # creating matrix
         matrix=[[1 for _ in range(lims*2)] for _ in range(lims*2)]
@@ -135,12 +146,12 @@ class PathfindingNode(Node):
 
         if path:
             self.get_logger().info("----------------------------sending path----------------------------------")
-            self.send_path(path)    
+            self.send_path(path)
 
     # checklist
     # -------------------------------------------------------------------------------------------------
 
-    # add obstacles into the matrix (when the obstacles ROS topic is done)
+    # add obstacles into the matrix (when the obstacles ROS topic is done) ** in progress **
     
 
                 
