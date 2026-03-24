@@ -5,7 +5,7 @@
 #include <cmath>
 #include "i2c_parent_class.h"
 
-#define CELL_1_REGISTER 0x14
+#define CELL_1_REGISTER 0x01
 #define CELL_2_REGISTER 0x16
 #define CELL_3_REGISTER 0x18
 #define CELL_4_REGISTER 0x1A

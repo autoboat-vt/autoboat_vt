@@ -13,7 +13,7 @@ int16_t GVM::readVoltage(int cell) {
     if (readBytes(registers[cell-1], buffer, 2) != 2) {
         return -1;
     }
-    int16_t result = ((buffer[0] << 8) | buffer[1]);
+    int16_t result = ((buffer[1] << 8) | buffer[0]);
     return result;
 
 }

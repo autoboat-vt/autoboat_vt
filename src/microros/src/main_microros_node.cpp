@@ -410,7 +410,7 @@ void application_loop() {
        cell_voltage_msgs[i].data=glorifiedVoltMeter.readVoltage(i);
     }
     */
-   test_cell_voltage_msgs.data = glorifiedVoltMeter.readVoltage(2);
+   test_cell_voltage_msgs.data = glorifiedVoltMeter.readVoltage(1);
 
     // fmod((-compass.getBearing() / 10.0 + COMPASS_OFFSET + 360), 360.0);
     // current_rudder_angle_msg.data = current_rudder_angle;
