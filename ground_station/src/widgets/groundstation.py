@@ -887,7 +887,7 @@ class GroundStationWidget(QWidget):
 
         def sailboat_mode(boat_data: dict[str, Any]) -> str:
             self.boat_data["full_autonomy_maneuver"] = constants.SailboatStates(boat_data["full_autonomy_maneuver"]).name
-            self.boat_data["autopilot_mode"] = constants.SailboatAutopilotModes(boat_data["autopilot_mode"]).name
+            self.boat_data["autopilot_mode"] = constants.SailboatAutopilotMode(boat_data["autopilot_mode"]).name
 
             return (
                 "Position: "
@@ -912,7 +912,7 @@ class GroundStationWidget(QWidget):
 
 
         def motorboat_mode(boat_data: dict[str, Any]) -> str:
-            self.boat_data["autopilot_mode"] = constants.MotorboatAutopilotModes(boat_data["autopilot_mode"]).name
+            self.boat_data["autopilot_mode"] = constants.MotorboatAutopilotMode(boat_data["autopilot_mode"]).name
 
             return (
                 "Position: "
