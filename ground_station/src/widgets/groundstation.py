@@ -912,6 +912,7 @@ class GroundStationWidget(QWidget):
             constants.SM.write("has_telemetry_server_instance_changed", False)
 
         self.browser.page().runJavaScript(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})")
+        self.browser.page().runJavaScript(f'map.update_svg({lat * 100000}, {lon * 100000})')
 
         telemetry_text = (
             "Position: "

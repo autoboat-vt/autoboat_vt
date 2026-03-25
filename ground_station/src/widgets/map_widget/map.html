@@ -133,6 +133,8 @@
                         rotationOrigin: "center"
                     }).addTo(this.map);
 
+                    this.no_go_svg = null;
+
                     // this.map.on("zoomend", () => {
                     //     const newZoom = this.map.getZoom();
                     //     if (newZoom !== this.currentZoom) {
@@ -387,6 +389,28 @@
                 update_boat_location_and_heading(lat, lon, heading) {
                     this.update_boat_location(lat, lon);
                     this.update_boat_heading(heading);
+                    this.update_no_go_svg();
+                }
+
+                // SVG Methods
+
+                /**
+                 * Updates the no-go svg.
+                 */
+                update_no_go_svg() {
+                    if (this.no_go_svg != null) {
+                        this.no_go_svg.remove();
+                    }
+                    
+                    var svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                    svgElement.setAttribute('xmlns', "http://www.w3.org/2000/svg");
+                    svgElement.setAttribute('viewBox', "0 0 200 200");
+                    svgElement.innerHTML = `<path d="M 100 25
+                                                     A 75 75 0 0 0 100 175"
+                                                  style="fill:green"/>`;
+                    var svgElementBounds = [[this.boat.location[0]+0.0001, this.boat.location[1]+0.0001], [this.boat.location[0]-0.0001, this.boat.location[1]-0.0001]];
+                    this.no_go_svg = L.svgOverlay(svgElement, svgElementBounds);
+                    this.no_go_svg.addTo(this.map);
                 }
 
                 // Map Focus Methods
