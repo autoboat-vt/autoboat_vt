@@ -88,7 +88,7 @@ QOS_AUTOPILOT_PARAM_CONFIG_PATH = QoSProfile(
 )
 
 # don't put '/' at the end of the URL
-TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk:8443"
+TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
 
 BASE_DIRECTORY = Path(__file__).resolve().parent.parent.parent
 CONFIG_DIRECTORY = BASE_DIRECTORY / "config"
