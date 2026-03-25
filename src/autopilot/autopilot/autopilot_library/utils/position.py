@@ -5,15 +5,17 @@ import pygeodesy
 import utm
 from pygeodesy.ellipsoidalKarney import LatLon
 
+# used to specify what is available to import from this file
+__all__ = ["Position"]
 
 class Position:
     """
     A position that describes a point on the earth which is stored internally as its longitude and latitude.
 
-    Whenever a function such as ``get_local_coordinates`` is called, this class has to convert to the proper
+    Whenever a function such as ```get_local_coordinates``` is called, this class has to convert to the proper
     position measurement system such as NED or UTM.
 
-    This class mainly just calls on python libraries such as ``navpy``, ``utm``, and ``pygeodesy`` to convert to
+    This class mainly just calls on python libraries such as ```navpy```, ```utm```, and ```pygeodesy``` to convert to
     other position measurement systems.
     """
 
@@ -100,7 +102,7 @@ class Position:
 
         Returns
         -------
-        tuple
+        tuple[float, float]
             A tuple where the first element is the easting and the second element is the northing.
         """
 

@@ -14,7 +14,12 @@ from std_msgs.msg import Bool, Float32, Int32, String
 from autoboat_msgs.msg import RCData, VESCControlData, WaypointList
 
 from .autopilot_library.motorboat_autopilot import MotorboatAutopilot
-from .autopilot_library.utils.constants import CONFIG_DIRECTORY, MotorboatAutopilotMode, MotorboatControls
+from .autopilot_library.utils.constants import (
+    CONFIG_DIRECTORY,
+    QOS_AUTOPILOT_PARAM_CONFIG_PATH,
+    MotorboatAutopilotMode,
+    MotorboatControls,
+)
 from .autopilot_library.utils.position import Position
 from .autopilot_library.utils.utils_function_library import get_bearing
 
@@ -35,7 +40,12 @@ class MotorboatAutopilotNode(Node):
 
         self.logger = self.get_logger()
 
+        self.autopilot_param_config_path_publisher = self.create_publisher(
+            String, "/autopilot_param_config_path", QOS_AUTOPILOT_PARAM_CONFIG_PATH
+        )
         parameters_path = CONFIG_DIRECTORY / "motorboat_default_parameters.json"
+        self.autopilot_param_config_path_publisher.publish(String(data=parameters_path.as_posix()))
+
         with open(parameters_path, "r", encoding="utf-8") as parameters_file:
             self.raw_autopilot_parameters: dict[str, dict[str, Any]] = json.load(parameters_file)
 
@@ -53,7 +63,6 @@ class MotorboatAutopilotNode(Node):
 
         self.create_subscription(String, "/autopilot_parameters", self.autopilot_parameters_callback, 10)
         self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10)
-
         self.create_subscription(NavSatFix, "/position", self.position_callback, qos_profile_sensor_data)
         self.create_subscription(Twist, "/velocity", self.velocity_callback, qos_profile_sensor_data)
         self.create_subscription(Float32, "/heading", self.heading_callback, qos_profile_sensor_data)
@@ -226,16 +235,16 @@ class MotorboatAutopilotNode(Node):
     def waypoints_list_callback(self, waypoint_list: WaypointList) -> None:
         """
         Callback function that is called whenever there is a new waypoint list message.
-        Converts the list of ROS2 `NavSatFix` objects to a list of `Position` objects,
+        Converts the list of ROS2 ``NavSatFix`` objects to a list of ``Position`` objects,
         which are a custom datatype that has some useful helper methods.
 
         Does not directly set the waypoints in the motorboat autopilot object,
-        instead it calls the `update_waypoints_list` method of the motorboat autopilot object.
+        instead it calls the ``update_waypoints_list`` method of the motorboat autopilot object.
 
         Parameters
         ----------
         waypoint_list
-            A ROS2 message that contains a list of waypoints as `NavSatFix` objects.
+            A ROS2 message that contains a list of waypoints as ``NavSatFix`` objects.
         """
 
         if len(waypoint_list.waypoints) == 0:

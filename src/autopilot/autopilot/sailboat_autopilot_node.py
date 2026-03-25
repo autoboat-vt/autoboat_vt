@@ -13,7 +13,12 @@ from std_msgs.msg import Bool, Float32, Int32, String
 from autoboat_msgs.msg import RCData, WaypointList
 
 from .autopilot_library.sailboat_autopilot import SailboatAutopilot
-from .autopilot_library.utils.constants import CONFIG_DIRECTORY, SailboatAutopilotMode
+from .autopilot_library.utils.constants import (
+    CONFIG_DIRECTORY,
+    QOS_AUTOPILOT_PARAM_CONFIG_PATH,
+    SailboatAutopilotMode,
+    SailboatStates,
+)
 from .autopilot_library.utils.position import Position
 from .autopilot_library.utils.utils_function_library import cartesian_vector_to_polar, get_bearing
 
@@ -34,8 +39,13 @@ class SailboatAutopilotNode(Node):
 
         self.logger = self.get_logger()
 
+        self.autopilot_param_config_path_publisher = self.create_publisher(
+            String, "/autopilot_param_config_path", QOS_AUTOPILOT_PARAM_CONFIG_PATH
+        )
         parameters_path = CONFIG_DIRECTORY / "sailboat_default_parameters.json"
-        with open(parameters_path, "r", encoding="utf-8") as parameters_file:
+        self.autopilot_param_config_path_publisher.publish(String(data=parameters_path.as_posix()))
+
+        with open(file=parameters_path, mode="r", encoding="utf-8") as parameters_file:
             self.raw_autopilot_parameters: dict[str, dict[str, Any]] = json.load(parameters_file)
 
         # structured like {parameter_name: parameter_value}
@@ -49,10 +59,8 @@ class SailboatAutopilotNode(Node):
         autopilot_refresh_period = 1 / self.autopilot_parameters["autopilot_refresh_rate"]
         self.autopilot_refresh_timer = self.create_timer(autopilot_refresh_period, self.update_ros_topics)
 
-
         self.create_subscription(String, "/autopilot_parameters", self.autopilot_parameters_callback, 10)
         self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10)
-
         self.create_subscription(NavSatFix, "/position", self.position_callback, qos_profile_sensor_data)
         self.create_subscription(Twist, "/velocity", self.velocity_callback, qos_profile_sensor_data)
         self.create_subscription(Float32, "/heading", self.heading_callback, qos_profile_sensor_data)
@@ -79,8 +87,6 @@ class SailboatAutopilotNode(Node):
         self.apparent_wind_angle: float = 0.0
         self.sail_angle: float = 0.0
         self.rudder_angle: float = 0.0
-
-        self.has_default_autopilot_parameters_been_received_by_telemetry_node = False
 
         self.should_zero_rudder_encoder = False
         self.rudder_encoder_has_been_zeroed = False
@@ -229,9 +235,6 @@ class SailboatAutopilotNode(Node):
 
         self.sailboat_autopilot.update_waypoints_list(waypoint_positions)
 
-    def default_autopilot_parameters_acknowledgement_callback(self, default_autopilot_parameters_acknowledgement: Bool) -> None:
-        self.has_default_autopilot_parameters_been_received_by_telemetry_node = default_autopilot_parameters_acknowledgement.data
-
     def position_callback(self, position: NavSatFix) -> None:
         """A callback function to get the current position of the boat."""
         self.position = Position(longitude=position.longitude, latitude=position.latitude)
@@ -309,7 +312,7 @@ class SailboatAutopilotNode(Node):
             self.full_autonomy_maneuver_publisher.publish(String(data=self.sailboat_autopilot.current_state.name))
 
         else:
-            self.full_autonomy_maneuver_publisher.publish(String(data="N/A"))
+            self.full_autonomy_maneuver_publisher.publish(String(data=SailboatStates.NA.name))
 
         # Publish the desired heading
         if self.autopilot_mode in (SailboatAutopilotMode.HOLD_HEADING, SailboatAutopilotMode.HOLD_HEADING_AND_BEST_SAIL):

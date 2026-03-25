@@ -4,7 +4,7 @@ import inspect
 import json
 import os
 import time
-from enum import auto
+from enum import Enum, auto
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, TypeAlias
@@ -19,6 +19,34 @@ from strenum import StrEnum
 from utils import misc
 from utils.state_manager import StateManager
 
+
+class SailboatAutopilotMode(Enum):
+    """An enum containing the different modes that the sailboat autopilot can be in."""
+
+    DISABLED = 0
+    FULL_RC = 1
+    HOLD_BEST_SAIL = 2
+    HOLD_HEADING = 3
+    HOLD_HEADING_AND_BEST_SAIL = 4
+    WAYPOINT_MISSION = 5
+
+class MotorboatAutopilotMode(Enum):
+    """An enum containing the different modes that the motorboat autopilot can be in."""
+
+    DISABLED = 0
+    FULL_RC = 1
+    HOLD_HEADING = 2
+    WAYPOINT_MISSION = 3
+
+class SailboatStates(Enum):
+    """An enum containing the different states that the sailboat autopilot can be in."""
+
+    NA = -1
+    NORMAL = 0
+    CW_TACKING = 1
+    CCW_TACKING = 2
+    STALL = 3
+    # JIBE = 4
 
 class TelemetryStatus(StrEnum):
     """

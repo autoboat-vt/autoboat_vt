@@ -9,6 +9,8 @@ from .utils.discrete_pid import DiscretePID
 from .utils.position import Position
 from .utils.utils_function_library import get_bearing, get_distance_between_angles, get_distance_between_positions
 
+# used to specify what is available to import from this file
+__all__ = ["MotorboatAutopilot"]
 
 class MotorboatAutopilot:
     """A class containing algorithms to control a motorboat given sensor data."""
@@ -65,8 +67,9 @@ class MotorboatAutopilot:
         Parameters
         ----------
         waypoints_list
-            A list of ``Position`` objects that form the path the boat should follow.
+            A list of ```Position``` objects that form the path the boat should follow.
         """
+
         self.waypoints = waypoints_list
         self.current_waypoint_index = 0
     
@@ -79,13 +82,17 @@ class MotorboatAutopilot:
         
         Parameters
         ----------
-            heading (float): the current heading of the boat measured counter-clockwise from true east.
-            desired_heading (float): the current desired heading of the boat measured counter-clockwise from true east.
+        heading
+            The current heading of the boat measured counter-clockwise from true east.
+        desired_heading
+            The current desired heading of the boat measured counter-clockwise from true east.
 
         Returns
         -------
-            float: the angle we should turn the rudder in order to turn from our current heading to the desired heading
+        float
+            The angle we should turn the rudder in order to turn from our current heading to the desired heading.
         """
+
         # Update the gains of the controller in case they changed. If the gains didn't change, then nothing happens
         self.heading_pid_controller.set_gains(
             k_p=self.parameters['heading_p_gain'], k_i=self.parameters['heading_i_gain'], k_d=self.parameters['heading_d_gain'],
@@ -104,14 +111,15 @@ class MotorboatAutopilot:
         
         Parameters
         ----------
-            rudder_angle (float): the angle the rudder is currently at
+        rudder_angle
+            The angle the rudder is currently at.
 
         Returns
         -------
-            float: The rpm the boat should use to get to the desired heading
+        float
+            The rpm the boat should use to get to the desired heading
         """
         
-
         error = abs(rudder_angle)
         
         # if the error is high, then we want to be going at min rpm and if the error is low,
@@ -128,20 +136,26 @@ class MotorboatAutopilot:
 
     def run_waypoint_mission_step(self, current_position: Position, heading: float) -> tuple[float, float]:
         """
+        Runs a single step of the waypoint mission algorithm to get the optimal propeller RPM
+        and rudder angle to get to the next waypoint.
+
+        Note
+        ----
         Assumes that there are waypoints loaded in the autopilot.
-        
+
         Parameters
         ----------
-            current_position (Position): a Position object from position.py thatrepresents the boat's current
-                latitude and longitude position
-            heading (float): direction the boat is facing in degrees measured counter-clockwise from true east
+        current_position
+            Represents the boat's current latitude and longitude position.
+        heading
+            Direction the boat is facing in degrees measured counter-clockwise from true east.
 
         Returns
         -------
-            tuple[float, float]: (propeller_rpm, rudder_angle) that the autopilot believes that we should take
+        tuple[float, float]
+            tuple of the form ```(propeller_rpm, rudder_angle)``` that the autopilot believes that we should take.
         """
 
-    
         if not self.waypoints:
             raise Exception("Expected route to be loaded into the autopilot. Field self.waypoints was not filled")
 
@@ -153,17 +167,15 @@ class MotorboatAutopilot:
         rudder_angle = self.get_optimal_rudder_angle(heading, desired_heading)
         propeller_rpm = self.get_optimal_rpm(rudder_angle)
 
-
         if distance_to_desired_position < self.parameters['waypoint_accuracy']:
             rudder_angle = 0.0
             propeller_rpm = 0.0
             
-            if len(self.waypoints) <= self.current_waypoint_index + 1:    # Has Reached The Final Waypoint
+            if len(self.waypoints) <= self.current_waypoint_index + 1: # Has Reached The Final Waypoint
                 self.reset()
                 return 0.0, 0.0
             
             self.current_waypoint_index += 1
             desired_position = self.waypoints[self.current_waypoint_index]
 
-            
         return propeller_rpm, rudder_angle
