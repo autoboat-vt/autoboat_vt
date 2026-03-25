@@ -16,7 +16,6 @@ setup(
     maintainer_email="autoboat@vt.edu",
     description="Contains a library of autoboat compatible sensor drivers",
     license="http://www.apache.org/licenses/LICENSE-2.0",
-    tests_require=["pytest"],
     entry_points={
         "console_scripts": [
             "gps = sensors.gps_publisher:main",

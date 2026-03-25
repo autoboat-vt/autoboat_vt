@@ -18,7 +18,6 @@ setup(
     maintainer_email="autoboat@vt.edu",
     description="Contains all of the ros2 nodes necessary to run the autopilot software and telemetry software",
     license="http://www.apache.org/licenses/LICENSE-2.0",
-    tests_require=["pytest"],
     entry_points={
         'console_scripts': [
             'sailboat_autopilot = autopilot.sailboat_autopilot_node:main',
