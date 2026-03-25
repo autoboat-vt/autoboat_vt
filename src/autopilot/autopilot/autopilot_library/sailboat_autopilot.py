@@ -15,6 +15,8 @@ from .utils.utils_function_library import (
     is_angle_between_boundaries,
 )
 
+# used to specify what is available to import from this file
+__all__ = ["SailboatAutopilot"]
 
 class SailboatAutopilot:
     """A class containing algorithms to control a sailboat given sensor data."""
@@ -271,10 +273,10 @@ class SailboatAutopilot:
         Parameters
         ----------
         current_position
-            A ``Position`` object that represents the boat's current latitude and longitude position.
+            A ```Position``` object that represents the boat's current latitude and longitude position.
 
         global_velocity_vector
-            A ``NDArray`` with 2 elements where the first element is the velocity in the x direction, and the second
+            A ```NDArray``` with 2 elements where the first element is the velocity in the x direction, and the second
             element is the velocity in the y direction. Both elements are in meters per second.
 
         heading

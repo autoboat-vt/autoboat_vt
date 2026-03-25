@@ -19,7 +19,6 @@ setup(
     maintainer_email="autoboat@vt.edu",
     description="Contains a ros2 compatible version of the usv sim lsa sailboat simulation",
     license="http://www.apache.org/licenses/LICENSE-2.0",
-    tests_require=["pytest"],
     entry_points={
         "console_scripts": ["simulation = sailboat_simulation.simulation_node:main"],
     },

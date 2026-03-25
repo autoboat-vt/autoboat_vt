@@ -14,14 +14,6 @@ def generate_launch_description():
     gz_launch_path = PathJoinSubstitution([ros_gz_sim_pkg_path, 'launch','gz_sim.launch.py'])
 
     return LaunchDescription([
-        # SetEnvironmentVariable(
-        #     'GZ_SIM_RESOURCE_PATH',
-        #     PathJoinSubstitution([example_pkg_path, 'models'])
-        # ),
-        # SetEnvironmentVariable(
-        #     'GZ_SIM_PLUGIN_PATH',
-        #     PathJoinSubstitution([example_pkg_path, 'plugins'])
-        # ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(gz_launch_path),
             launch_arguments={
@@ -30,8 +22,6 @@ def generate_launch_description():
             }.items(),
         ),
 
-        # Bridging and remapping Gazebo topics to ROS 2 (replace with your own topics)
-         
         Node(
             package='autopilot_transform',
             executable='autopilot_transform',
@@ -58,7 +48,6 @@ def generate_launch_description():
 
             respawn=True,
             respawn_delay=2.0,
-            # remappings=[('/motorboat_simulation/position', '/position')],
             output="log"
         ),
         Node(
@@ -68,7 +57,8 @@ def generate_launch_description():
                 '/motorboat_simulation/desired_propeller_rpm@std_msgs/msg/Float64]gz.msgs.Double',
                 '/motorboat_simulation/desired_rudder_angle@std_msgs/msg/Float64]gz.msgs.Double',
                 '/motorboat_simulation/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
-                '/motorboat_simulation/position@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat'
+                '/motorboat_simulation/position@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat',
+                '/world/motorboat_model/model/my_ship/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model'
             ],
             remappings=[('/motorboat_simulation/position', '/position')],
 

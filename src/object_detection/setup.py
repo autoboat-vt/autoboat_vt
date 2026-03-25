@@ -16,7 +16,6 @@ setup(
     maintainer_email="autoboat@vt.edu",
     description="Contains nodes that perform object detection/ localization on marine objects such as boats and buoys",
     license="http://www.apache.org/licenses/LICENSE-2.0",
-    tests_require=["pytest"],
     entry_points={
         "console_scripts": [
             # 'object_detection = object_detection.buoy_detection_node:main'

@@ -1,5 +1,23 @@
+from __future__ import annotations
+
 from enum import Enum
 from pathlib import Path
+
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+
+# used to specify what is available to import from this file
+__all__ = [
+    "BASE_DIRECTORY",
+    "CONFIG_DIRECTORY",
+    "QOS_AUTOPILOT_PARAM_CONFIG_PATH",
+    "TELEMETRY_SERVER_URL",
+    "MotorboatAutopilotMode",
+    "MotorboatControls",
+    "SailboatAutopilotMode",
+    "SailboatManeuvers",
+    "SailboatStates",
+    "TelemetryStatus",
+]
 
 
 class SailboatAutopilotMode(Enum):
@@ -16,12 +34,12 @@ class SailboatAutopilotMode(Enum):
 class SailboatStates(Enum):
     """An enum containing the different states that the sailboat autopilot can be in."""
 
+    NA = -1
     NORMAL = 0
     CW_TACKING = 1
     CCW_TACKING = 2
     STALL = 3
     # JIBE = 4
-
 
 class SailboatManeuvers(Enum):
     """
@@ -47,13 +65,13 @@ class MotorboatAutopilotMode(Enum):
     HOLD_HEADING = 2
     WAYPOINT_MISSION = 3
 
-
 class MotorboatControls(Enum):
     """An enum containing the different motorboat control types."""
 
     RPM = 0
     DUTY_CYCLE = 1
     CURRENT = 2
+
 
 class TelemetryStatus(Enum):
     """Enum representing the status of communication with the telemetry server."""
@@ -62,26 +80,15 @@ class TelemetryStatus(Enum):
     FAILURE = 1
 
 
+QOS_AUTOPILOT_PARAM_CONFIG_PATH = QoSProfile(
+    reliability=ReliabilityPolicy.RELIABLE,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=1,
+)
+
 # don't put '/' at the end of the URL
 TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
-
-BOAT_STATUS_MAPPING: list[str] = [
-    "position",
-    "state",
-    "full_autonomy_maneuver",
-    "speed",
-    "velocity_vector",
-    "bearing",
-    "heading",
-    "true_wind_speed",
-    "true_wind_angle",
-    "apparent_wind_speed",
-    "apparent_wind_angle",
-    "sail_angle",
-    "rudder_angle",
-    "current_waypoint_index",
-    "distance_to_next_waypoint"
-]
 
 BASE_DIRECTORY = Path(__file__).resolve().parent.parent.parent
 CONFIG_DIRECTORY = BASE_DIRECTORY / "config"
