@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import time
 from functools import partial
@@ -966,9 +967,19 @@ class GroundStationWidget(QWidget):
             constants.SM.write("has_telemetry_server_instance_changed", False)
 
         self.browser.page().runJavaScript(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})")
-        no_sail_zone_size = self.telemetry_data_limits.get("no_sail_zone_size", 180)
+
+        no_sail_zone_size = constants.SM.read("current_autopilot_parameters").get("no_sail_zone_size", {"default": 180.0})
+        no_sail_size = no_sail_zone_size["default"] if "current" not in no_sail_zone_size else no_sail_zone_size["current"]
         wind_direction = self.boat_data.get("true_wind_angle", 0)
-        self.browser.page().runJavaScript(f"map.update_no_sail_svg({no_sail_zone_size}, {wind_direction})")
+
+        head = heading + wind_direction + 180 # opposite the direction of wind
+        r = 1
+        size = 0.00006
+        x1 = (r + r*math.cos((head - no_sail_size/2)*math.pi/180))
+        y1 = (r - r*math.sin((head - no_sail_size/2)*math.pi/180))
+        x2 = (r + r*math.cos((head + no_sail_size/2)*math.pi/180))
+        y2 = (r - r*math.sin((head + no_sail_size/2)*math.pi/180))
+        self.browser.page().runJavaScript(f"map.update_no_sail_svg({r}, {x1}, {y1}, {x2}, {y2}, {size})")
 
         if "full_autonomy_maneuver" in self.boat_data:
             telemetry_text = sailboat_mode(boat_data)
