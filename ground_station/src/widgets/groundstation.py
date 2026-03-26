@@ -966,6 +966,9 @@ class GroundStationWidget(QWidget):
             constants.SM.write("has_telemetry_server_instance_changed", False)
 
         self.browser.page().runJavaScript(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})")
+        no_sail_zone_size = self.telemetry_data_limits.get("no_sail_zone_size", 180)
+        wind_direction = self.boat_data.get("true_wind_angle", 0)
+        self.browser.page().runJavaScript(f"map.update_no_sail_svg({no_sail_zone_size}, {wind_direction})")
 
         if "full_autonomy_maneuver" in self.boat_data:
             telemetry_text = sailboat_mode(boat_data)

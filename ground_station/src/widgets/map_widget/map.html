@@ -133,7 +133,7 @@
                         rotationOrigin: "center"
                     }).addTo(this.map);
 
-                    this.no_go_svg = null;
+                    this.no_sail_svg = null;
 
                     // this.map.on("zoomend", () => {
                     //     const newZoom = this.map.getZoom();
@@ -361,7 +361,6 @@
                 update_boat_location_and_heading(lat, lon, heading) {
                     this.update_boat_location(lat, lon);
                     this.update_boat_heading(heading);
-                    this.update_no_go_svg();
                 }
 
                 // SVG Methods
@@ -369,20 +368,26 @@
                 /**
                  * Updates the no-go svg.
                  */
-                update_no_go_svg() {
-                    if (this.no_go_svg != null) {
-                        this.no_go_svg.remove();
+                update_no_sail_svg(no_sail_angle, wind_direction) {
+                    if (this.no_sail_svg != null) {
+                        this.no_sail_svg.remove();
                     }
-                    
+                    const head = wind_direction;
+                    const r = 1;
+                    var size = 0.00006;
                     var svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
                     svgElement.setAttribute('xmlns', "http://www.w3.org/2000/svg");
-                    svgElement.setAttribute('viewBox', "0 0 200 200");
-                    svgElement.innerHTML = `<path d="M 100 25
-                                                     A 75 75 0 0 0 100 175"
-                                                  style="fill:green"/>`;
-                    var svgElementBounds = [[this.boat.location[0]+0.0001, this.boat.location[1]+0.0001], [this.boat.location[0]-0.0001, this.boat.location[1]-0.0001]];
-                    this.no_go_svg = L.svgOverlay(svgElement, svgElementBounds);
-                    this.no_go_svg.addTo(this.map);
+                    svgElement.setAttribute('viewBox', `0 0 ${2*r} ${2*r}`);
+                    // don't think about it too hard
+                    const x1 = (r + r*Math.cos((head + no_sail_angle/2)*Math.PI/180));
+                    const y1 = (r + r*Math.sin((head + no_sail_angle/2)*Math.PI/180));
+                    const x2 = (r + r*Math.cos((head - no_sail_angle/2)*Math.PI/180));
+                    const y2 = (r + r*Math.sin((head - no_sail_angle/2)*Math.PI/180));
+                    svgElement.innerHTML = `<path d="M ${x1} ${y1}
+                                                    A ${r} ${r} 0 0 0 ${x2} ${y2}"
+                                                style="fill:#c9140a"/>`;
+                    var svgElementBounds = [[this.boat.location[0]+size, this.boat.location[1]+size], [this.boat.location[0]-size, this.boat.location[1]-size]];
+                    this.no_sail_svg = L.svgOverlay(svgElement, svgElementBounds).addTo(this.map);
                 }
 
                 // Miscellaneous Map Methods
