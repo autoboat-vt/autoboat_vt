@@ -973,13 +973,12 @@ class GroundStationWidget(QWidget):
         wind_direction = self.boat_data.get("true_wind_angle", 0)
 
         head = heading + wind_direction + 180 # opposite the direction of wind
-        r = 1
-        size = 0.00006
-        x1 = (r + r*math.cos((head - no_sail_size/2)*math.pi/180))
-        y1 = (r - r*math.sin((head - no_sail_size/2)*math.pi/180))
-        x2 = (r + r*math.cos((head + no_sail_size/2)*math.pi/180))
-        y2 = (r - r*math.sin((head + no_sail_size/2)*math.pi/180))
-        self.browser.page().runJavaScript(f"map.update_no_sail_svg({r}, {x1}, {y1}, {x2}, {y2}, {size})")
+        size = 0.1
+        x1 = (1 + math.cos((head - no_sail_size/2)*math.pi/180))
+        y1 = (1 - math.sin((head - no_sail_size/2)*math.pi/180))
+        x2 = (1 + math.cos((head + no_sail_size/2)*math.pi/180))
+        y2 = (1 - math.sin((head + no_sail_size/2)*math.pi/180))
+        self.browser.page().runJavaScript(f"map.update_no_sail_svg({x1}, {y1}, {x2}, {y2}, {size})")
 
         if "full_autonomy_maneuver" in self.boat_data:
             telemetry_text = sailboat_mode(boat_data)

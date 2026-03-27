@@ -366,23 +366,30 @@
                 // SVG Methods
 
                 /**
-                 * Updates the no-go svg.
+                 * @param {number} x1
+                 * @param {number} y1
+                 * @param {number} x2
+                 * @param {number} y2
+                 * @param {number} size
                  */
-                update_no_sail_svg(r, x1, y1, x2, y2, size) {
-                    if (this.no_sail_svg != null) {
+                update_no_sail_svg(x1, y1, x2, y2, size) {
+                    if (this.no_sail_svg == null) {
+                        var svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                        svgElement.setAttribute('xmlns', "http://www.w3.org/2000/svg");
+                        svgElement.setAttribute('viewBox', `0 0 2 2`);
+                    } else {
                         this.no_sail_svg.remove();
+                        var svgElement = this.no_sail_svg.getElement();
                     }
-                    var svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-                    svgElement.setAttribute('xmlns', "http://www.w3.org/2000/svg");
-                    svgElement.setAttribute('viewBox', `0 0 ${2*r} ${2*r}`);
-                    // don't think about it too hard
-                    
-                    svgElement.innerHTML = `<path d="M ${r} ${r}
-                                                     L ${x1} ${y1}
-                                                     A ${r} ${r} 0 0 0 ${x2} ${y2}
-                                                     L ${r} ${r}"
-                                                style="fill:#c9140a"/>`;
-                    var svgElementBounds = [[this.boat.location[0]+size, this.boat.location[1]+size], [this.boat.location[0]-size, this.boat.location[1]-size]];
+                    svgElement.innerHTML = `<path d="M 1 1
+                                                            L ${x1} ${y1}
+                                                            A 1 1 0 0 0 ${x2} ${y2}
+                                                            L 1 1"
+                                                    style="fill:#c9140a"/>`;
+                    const bounds = this.map.getBounds();
+                    const width = bounds.getEast()-bounds.getWest();
+                    const height = bounds.getSouth()-bounds.getNorth();
+                    const svgElementBounds = [[this.boat.location[0]+width/2*size, this.boat.location[1]+height/2*size], [this.boat.location[0]-width/2*size, this.boat.location[1]-height/2*size]];
                     this.no_sail_svg = L.svgOverlay(svgElement, svgElementBounds).addTo(this.map);
                 }
 
