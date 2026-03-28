@@ -24,13 +24,13 @@ PCB SPECIFIC CONFIGURATIONS
 #define SWDRX_PIN 5
 
 // I2C
-#define SDA_PIN 20
-#define SCL_PIN 21
+#define SDA_PIN 6
+#define SCL_PIN 7
 
 // SPI
-#define SCLK_PIN 10
-#define MISO_PIN 12
-#define MOSI_PIN 11
+#define SCLK_PIN 2
+#define MOSI_PIN 3
+#define MISO_PIN 4
 
 // RC Channels
 #define RC_CHANNEL1_PIN 28
@@ -38,10 +38,17 @@ PCB SPECIFIC CONFIGURATIONS
 #define RC_CHANNEL3_PIN 26
 
 // Chip Selections
+//Updated for the current 2026 Digital PCB
+//Peripheral we have chip selected is determined by multiplexer
+//Multiplexer controlled by S0, S1, S2
+#define SPI_MUX_S0 14
+#define SPI_MUX_S1 15
+#define SPI_MUX_S2 16
+
 #define RUDDER_MOTOR_CS_PIN 4
-#define WINCH_MOTOR_CS_PIN 6
+#define WINCH_MOTOR_CS_PIN 5
 #define RUDDER_ENCODER_CS_PIN 0
-#define WINCH_ENCODER_CS_PIN 9
+#define WINCH_ENCODER_CS_PIN 1
 
 // Miscellaneous
 #define RUDDER_MOTOR_SLEEP_PIN 17
@@ -55,5 +62,14 @@ PCB SPECIFIC CONFIGURATIONS
 #define CONTACTOR_DRIVER_IN_B_PIN 16
 
 // Port declarations
-#define I2C_PORT i2c0
-#define SPI_PORT spi1
+#define I2C_PORT i2c1
+#define SPI_PORT spi0
+
+
+//Magnetometer
+#define MAGNETOMETER_ADDRESS 0x60
+
+
+//Motor Controllers
+#define RUDDER_MICROSTEP (DRV8711_stepMode)32
+#define MAX_RUDDER_CURRENT 2000

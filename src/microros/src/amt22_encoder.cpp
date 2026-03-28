@@ -1,4 +1,4 @@
-#include "Amt22_encoder_library.h"
+#include "amt22_encoder_library.hpp"
 
 #define LED_PIN 25
 
@@ -10,7 +10,7 @@
         
         // Chip select is active-low, so we'll initialise it to a driven-high state
         // gpio_put(cs_pin, 1);
-        gpio_pull_up(cs_pin);
+        // gpio_pull_up(cs_pin);
 
         turn_count = 0;
         cur_angle = 0;
