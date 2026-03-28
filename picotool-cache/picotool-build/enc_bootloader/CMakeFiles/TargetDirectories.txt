@@ -1,2 +1,0 @@
-/home/ws/picotool-cache/picotool-build/enc_bootloader/CMakeFiles/edit_cache.dir
-/home/ws/picotool-cache/picotool-build/enc_bootloader/CMakeFiles/rebuild_cache.dir
