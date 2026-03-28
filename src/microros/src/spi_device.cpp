@@ -2,8 +2,8 @@
 
         spi_device::spi_device(spi_inst_t* spi_port, uint csPin) : csPin(csPin), spi_port(spi_port) {
 
-            gpio_init(csPin);
-            gpio_set_dir(csPin, GPIO_OUT);
+            // gpio_init(csPin);
+            // gpio_set_dir(csPin, GPIO_OUT);
             // TODO: replace with decoder
             //gpio_put(csPin, 0); // idle (inactive) for DRV8711 (active high)
         }

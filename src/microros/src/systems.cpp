@@ -98,7 +98,7 @@ void Systems::application_loop(rcl_timer_t * timer, int64_t last_call_time)
     current_rudder::current_angle_msg.data = angle;
     // select_chip(&rudderStepperMotorDriver);
 
-    rcl_publish(&current_rudder::current_rudder_angle_publisher, &(current_rudder::current_angle_msg), NULL);
+    RCCHECK(rcl_publish(&current_rudder::current_rudder_angle_publisher, &current_rudder::current_angle_msg, NULL));
 
     //Ending the look here
 // #if BOAT_MODE == Lumpy
