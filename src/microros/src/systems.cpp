@@ -21,6 +21,7 @@ void Systems::initialize_microros(){
         microros_node.set_cores(&allocator, &support, &executor);
         //change this to rely on boat system
         microros_node.initialize_theseus_peripherals();
+        Systems::initialize_debug_readers();
 }
 
 
