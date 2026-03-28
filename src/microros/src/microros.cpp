@@ -206,6 +206,16 @@ void current_heading::create_heading_publisher(rcl_node_t *microros_node)
         current_heading::topic.c_str());
 }
 
+
+//-------------------DEBUG-----------------------
+void rudder_debug::create_rudder_debug_publisher(rcl_node_t *microros_node){
+        rclc_publisher_init_default(
+        &rudder_debug::rudder_debug_publisher,
+        microros_node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+        rudder_debug::debug_publisher_topic.c_str());
+}
+
 //----------------MICROROS-CLASS----------------------------------
 Microros::Microros(){
 
@@ -219,6 +229,9 @@ void Microros::set_cores(rcl_allocator_t* allocator, rclc_support_t* support, rc
     rclc_node_init_default(&this->microros_node, "microros", "", this->support);
 }
 
+void Microros::initialize_debug(){
+    rudder_debug::create_rudder_debug_publisher(&microros_node);
+}
 
 //for now the focus is on theseus, this will be updated later
 void Microros::initialize_lumpy_peripherals()

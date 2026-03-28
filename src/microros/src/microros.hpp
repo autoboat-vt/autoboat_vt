@@ -199,6 +199,14 @@ struct current_rudder
     static void desired_rudder_angle_received_callback(const void *msg_in);
 };
 
+struct rudder_debug
+{
+     inline static rcl_publisher_t rudder_debug_publisher;
+    inline static string debug_publisher_topic = "/motor_controller_register";
+    static void create_rudder_debug_publisher(rcl_node_t *microros_node);
+    inline static std_msgs__msg__Int32 current_register_value_msg;
+};
+
 // Lumpy peripheral
 struct current_sail
 {
@@ -241,6 +249,7 @@ public:
 
     void initialize_lumpy_peripherals();
     void initialize_theseus_peripherals();
+    void initialize_debug();
 
 
 private:

@@ -23,6 +23,14 @@ void Systems::initialize_microros(){
         microros_node.initialize_theseus_peripherals();
 }
 
+
+
+void Systems::initialize_debug_readers(){
+    microros_node.initialize_debug();
+
+
+}
+
 void Systems::check_microros(){
     rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
 }
@@ -100,6 +108,11 @@ void Systems::application_loop(rcl_timer_t * timer, int64_t last_call_time)
 
     RCCHECK(rcl_publish(&current_rudder::current_rudder_angle_publisher, &current_rudder::current_angle_msg, NULL));
 
+
+    //----------------debug--------------------------
+    u_int16_t register_return = HAL::debug(&rudderStepperMotorDriver);
+    rudder_debug::current_register_value_msg.data = register_return;
+    rcl_publish(&rudder_debug::rudder_debug_publisher, &rudder_debug::current_register_value_msg, NULL);
     //Ending the look here
 // #if BOAT_MODE == Lumpy
 //     float current_winch_angle = get_motor_angle(&winchEncoder) + WINCH_ANGLE_OFFSET + 360 * get_turn_count(&winchEncoder);
