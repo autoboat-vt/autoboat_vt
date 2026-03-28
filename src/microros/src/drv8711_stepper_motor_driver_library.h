@@ -285,7 +285,7 @@ static inline void drv8711_init(
 
 
 driver->spi_port = spi_port;
-set_cs_pin(driver, cs_pin);     // Pulled low by default
+// set_cs_pin(driver, cs_pin);     // Pulled low by default
 set_slp_pin(driver, slp_pin);   // Pulled low by default
 sleep_ms(1000);
 
