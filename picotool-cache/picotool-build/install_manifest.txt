@@ -1,7 +1,0 @@
-/home/ws/picotool-cache/picotool/picotool
-/home/ws/picotool-cache/picotool/picotoolTargets.cmake
-/home/ws/picotool-cache/picotool/picotoolTargets-release.cmake
-/home/ws/picotool-cache/picotool/picotoolConfig.cmake
-/home/ws/picotool-cache/picotool/picotoolConfigVersion.cmake
-/home/ws/picotool-cache/picotool/enc_bootloader.elf
-/home/ws/picotool-cache/picotool/enc_bootloader_mbedtls.elf
