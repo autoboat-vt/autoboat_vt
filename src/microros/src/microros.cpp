@@ -109,7 +109,7 @@ void current_rudder::create_current_rudder_angle_publisher(rcl_node_t *microros_
     rclc_publisher_init_default(
         &current_rudder::current_rudder_angle_publisher,
         microros_node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float64),
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
         current_rudder::angle_publisher_topic.c_str());
 }
 

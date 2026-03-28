@@ -4,6 +4,8 @@
 //TODO: include all driver libraries here
 #include "spi_device.hpp"
 #include "common_libraries.h"
+#include "drv8711_stepper_motor_driver_library.h"
+#include "i2c_device.hpp"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,6 +20,8 @@ extern rmw_qos_profile_t best_effort_qos_profile; //{Pragya} why was this used
 extern std_msgs__msg__Float64 desired_rudder_angle_msg;
 extern std_msgs__msg__Float64 current_rudder_angle_msg;
 extern std_msgs__msg__Float64 compass_angle_msg;
+
+
 
 
 #ifdef __cplusplus
@@ -41,7 +45,7 @@ namespace HAL {
 
 
     //device specifics
-    void init_stepper();
+    void init_rudder_stepper(drv8711* rudderStepperMotorDriver);
     void init_contactor();
     void init_hydraulics();
     void init_magnetometer();

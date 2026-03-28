@@ -27,13 +27,10 @@
         void spi_device::cs_low() {
             asm volatile("nop \n nop \n nop");
             asm volatile("nop \n nop \n nop");
-            // gpio_put(csPin, 0);  // Active low
-            // gpio_put(14, !(csPin & 0x01));  // Active Low
-            // gpio_put(15, !((csPin >> 1) & 0x01));  // Active Low
-            // gpio_put(16, !((csPin >> 2) & 0x01));  // Active Low
-            gpio_put(14,0);
-            gpio_put(15,0);
-            gpio_put(16,0);
+            gpio_put(SPI_MUX_S0, (csPin & 0x01)); 
+            gpio_put(SPI_MUX_S1, ((csPin >> 1) & 0x01));  
+            gpio_put(SPI_MUX_S2, ((csPin >> 2) & 0x01)); 
+    
 
             asm volatile("nop \n nop \n nop");
             asm volatile("nop \n nop \n nop");
@@ -42,10 +39,10 @@
         void spi_device::cs_high() {
             asm volatile("nop \n nop \n nop");
             asm volatile("nop \n nop \n nop");
-            // gpio_put(csPin, 1);  //Activate high
-            gpio_put(14, 1);  // Active Low
-            gpio_put(15, 1);  // Active Low
-            gpio_put(16, 0);  // Active Low
+            //This corresponds to "7" on the multiplexer, an unsused pin.
+            gpio_put(SPI_MUX_S0, 1);  // Active Low
+            gpio_put(SPI_MUX_S1, 1);  // Active Low
+            gpio_put(SPI_MUX_S2, 1);  // Active Low
             asm volatile("nop \n nop \n nop");
             asm volatile("nop \n nop \n nop");
         }

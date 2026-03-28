@@ -1,5 +1,11 @@
 #include "systems.hpp"
 
+
+static drv8711 rudderStepperMotorDriver;
+static drv8711 winchStepperMotorDriver;
+
+
+
 Systems::Systems(boat_type bt){
     current_boat = bt;
     initalize_cores(); //assumption is application loop will be called
@@ -23,7 +29,9 @@ void Systems::check_microros(){
 
 void Systems::initialize_hal(){
     //write boat specific intialization later 
+    HAL::init_i2c();
     HAL::init_spi();
+    HAL::init_rudder_stepper(&rudderStepperMotorDriver);
 }
 
 void Systems::cleanup(){
@@ -83,19 +91,16 @@ void Systems::application_loop(rcl_timer_t * timer, int64_t last_call_time)
     // int number_of_steps_winch = 0;
     // bool winch_step_enabled = false;
 
-    // float angle = get_motor_angle(&rudderEncoder);
-
-    // cs_select(&rudderEncoder);
-
-    // float angle = rudderEncoder.get_motor_angle();
+//Looking at here rn
+    float angle = rudderEncoder.get_motor_angle();
     // rudderEncoder.putLow();
 
+    current_rudder::current_angle_msg.data = angle;
+    // select_chip(&rudderStepperMotorDriver);
 
-    // current_rudder_angle_msg.data = angle;
+    rcl_publish(&current_rudder::current_rudder_angle_publisher, &(current_rudder::current_angle_msg), NULL);
 
-
-    // RCCHECK(rcl_publish(&current_rudder::current_rudder_angle_publisher, &current_rudder_angle_msg, NULL));
-
+    //Ending the look here
 // #if BOAT_MODE == Lumpy
 //     float current_winch_angle = get_motor_angle(&winchEncoder) + WINCH_ANGLE_OFFSET + 360 * get_turn_count(&winchEncoder);
 //     float current_sail_angle = get_sail_angle_from_winch_angle(current_winch_angle);
@@ -157,7 +162,6 @@ void Systems::application_loop(rcl_timer_t * timer, int64_t last_call_time)
 //     rcl_publish(&current_sail_angle_publisher, &current_sail_angle_msg, NULL);
 
 //     // counter clockwise from true east
-//     compass_angle_msg.data = fmod((-cmps14_getBearing(&compass) / 10.0 + COMPASS_OFFSET + 360), 360.0);
 //     current_rudder_angle_msg.data = current_rudder_angle;
 //     current_rudder_motor_angle_msg.data = current_rudder_motor_angle;
 
@@ -166,7 +170,8 @@ void Systems::application_loop(rcl_timer_t * timer, int64_t last_call_time)
 //     rcl_publish(&test_publisher, &test_msg, NULL);
 //     rcl_publish(&current_rudder_motor_angle_publisher, &current_rudder_motor_angle_msg, NULL);
 //     rcl_publish(&current_rudder_angle_publisher, &current_rudder_angle_msg, NULL);
-//     rcl_publish(&compass_angle_publisher, &compass_angle_msg, NULL);
+        current_heading::heading_msg.data = fmod((-compass.getBearing() / 10.0 + COMPASS_OFFSET + 360), 360.0);
 
+        rcl_publish(&current_heading::compass_angle_publisher,    &current_heading::heading_msg,NULL);
 // #endif
 }

@@ -15,7 +15,7 @@
 int main()
 {
     //instantiate boat system
-    Systems boat_system(THESEUS);
+    // Systems current_boat(THESEUS);
 
 
     stdio_init_all();

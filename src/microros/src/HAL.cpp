@@ -1,4 +1,5 @@
 #include "HAL.hpp"
+
   std_msgs__msg__Float64 desired_rudder_angle_msg;
   std_msgs__msg__Float64 current_rudder_angle_msg;
   std_msgs__msg__Float64 compass_angle_msg;
@@ -18,21 +19,35 @@ void HAL::init_spi(){
     compass_angle_msg.data = 0.0;
 
 
-    gpio_init(14);
-    gpio_set_dir(14, GPIO_OUT);
+    gpio_init(SPI_MUX_S0);
+    gpio_set_dir(SPI_MUX_S0, GPIO_OUT);
 
-    gpio_init(15);
-    gpio_set_dir(15, GPIO_OUT);
+    gpio_init(SPI_MUX_S1);
+    gpio_set_dir(SPI_MUX_S1, GPIO_OUT);
 
-    gpio_init(16);
-    gpio_set_dir(16, GPIO_OUT);
+    gpio_init(SPI_MUX_S2);
+    gpio_set_dir(SPI_MUX_S2,GPIO_OUT);
 
-    // gpio_pull_up(14);
-    // gpio_pull_up(15);
-    // gpio_pull_up(16);
-
-                gpio_put(14,0);
-            gpio_put(15,0);
-            gpio_put(16,1);
+    gpio_put(SPI_MUX_S0,0);
+    gpio_put(SPI_MUX_S1,0);
+    gpio_put(SPI_MUX_S2,0);
 
 }
+
+void HAL::init_i2c(){
+    i2c_init(I2C_PORT, 100 * 1000);
+    gpio_set_function(SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(SDA_PIN);
+    gpio_pull_up(SCL_PIN);
+
+
+
+}
+
+
+void HAL::init_rudder_stepper(drv8711* rudderStepperMotorDriver){
+      drv8711_init(rudderStepperMotorDriver, SPI_PORT, RUDDER_MOTOR_CS_PIN, RUDDER_MOTOR_SLEEP_PIN, AutoMixed, RUDDER_MICROSTEP, MAX_RUDDER_CURRENT);
+
+}
+

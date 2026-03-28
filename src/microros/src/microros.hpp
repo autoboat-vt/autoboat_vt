@@ -7,8 +7,9 @@
 #include <math.h>
 
 //change these with rewritten libraries
-#include "Amt22_encoder_library.h"
+#include "amt22_encoder_library.hpp"
 #include "contactor_driver_library.h"
+#include "cmps14_compass.hpp"
 
 
 // Specific device libraries
@@ -86,11 +87,9 @@ const int MAX_WINCH_ERROR = (float)(MAX_WINCH_ANGLE - MIN_RUDDER_ANGLE);
 const int MAX_SAIL_ERROR = (float)(MAX_SAIL_ANGLE - MIN_SAIL_ANGLE);
 
 
-// static drv8711 rudderStepperMotorDriver;
-// static drv8711 winchStepperMotorDriver;
 static amt22 rudderEncoder(RUDDER_ENCODER_CS_PIN, SPI_PORT);
 static amt22 winchEncoder(WINCH_ENCODER_CS_PIN, SPI_PORT);
-// static cmps14 compass;
+static cmps14 compass(I2C_PORT,MAGNETOMETER_ADDRESS);
 
 static float desired_rudder_angle = 0;
 static float desired_rudder_motor_angle = 0;
@@ -144,7 +143,7 @@ struct zero_rudder
     inline static rcl_subscription_t zero_rudder_encoder_subscriber;
     inline static string topic = "/zero_rudder_encoder";
     inline static std_msgs__msg__Bool zero_rudder_encoder_msg;
-    inline static amt22 *encoder = nullptr; // pointer to rudderEncoder
+    inline static amt22 *encoder = &rudderEncoder; // pointer to rudderEncoder
 
     static void zero_rudder_encoder_callback(const void *msg_in);
     static void zero_rudder_create_subscription(rcl_node_t *microros_node);
@@ -156,7 +155,7 @@ struct zero_winch
     inline static rcl_subscription_t zero_winch_encoder_subscriber;
     inline static std_msgs__msg__Bool zero_winch_encoder_msg;
     inline static string topic = "/zero_winch_encoder";
-    inline static amt22 *encoder = nullptr; // pointer to winchEncoder
+    inline static amt22 *encoder = &winchEncoder; // pointer to winchEncoder
 
     static void zero_winch_encoder_callback(const void *msg_in);
     static void zero_winch_create_subscription(rcl_node_t *microros_node);
