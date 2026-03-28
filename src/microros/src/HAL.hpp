@@ -52,6 +52,9 @@ namespace HAL {
     void init_servo();
     void init_pump();
     void init_propeller();
+
+    //debug
+    u_int16_t debug(drv8711* rudderStepperMotorDriver);
 }
 
 #endif

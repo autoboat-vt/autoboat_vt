@@ -19,6 +19,8 @@ class Systems {
         void initialize_microros();
         void check_microros();
         
+        void initialize_debug_readers();
+        
         void initialize_hal();
 
         void cleanup();
