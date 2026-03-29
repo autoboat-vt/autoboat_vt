@@ -22,6 +22,7 @@ class CamCorderNode(Node):
         
         if self.get_storage_util() > self.storage_cap:
             return
+        
         self.CAM_LIST = {
             0: {
                 "name": self._find_camera("YUYV"),
