@@ -38,6 +38,10 @@ class BoatStatusPayload(ctypes.LittleEndianStructure):
         ("desired_heading", ctypes.c_float),
         ("heading", ctypes.c_float),
         ("desired_rudder_angle", ctypes.c_float),
+        ("current_rudder_angle", ctypes.c_float),
+        ("rudder_angle_error", ctypes.c_float),
+        ("current_sail_angle", ctypes.c_float),
+        ("sail_angle_error", ctypes.c_float),
     )
 
     one_byte_fields: Final[tuple[tuple[str, ctypes._SimpleCData], ...]] = (

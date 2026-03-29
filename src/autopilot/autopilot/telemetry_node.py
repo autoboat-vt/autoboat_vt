@@ -67,6 +67,11 @@ class TelemetryNode(Node):
         self.desired_sail_angle: float = 0.0
         self.desired_rudder_angle: float = 0.0
 
+        self.current_sail_angle: float = 0.0
+        self.current_rudder_angle: float = 0.0
+        self.rudder_angle_error: float = 0.0
+        self.sail_angle_error: float = 0.0
+
         self.apparent_wind_vector: npt.NDArray[np.float64] = np.zeros(2, dtype=np.float64)
         self.apparent_wind_speed: float = 0.0
         self.apparent_wind_angle: float = 0.0
@@ -169,6 +174,9 @@ class TelemetryNode(Node):
         self.autopilot_parameters_publisher = self.create_publisher(String, "/autopilot_parameters", 10)
         self.sensors_parameters_publisher = self.create_publisher(String, "/sensors_parameters", 10)
         self.waypoints_list_publisher = self.create_publisher(WaypointList, "/waypoints_list", 10)
+
+        self.rudder_angle_error_publisher = self.create_publisher(Float32, "/rudder_angle_error", 10)
+        self.sail_angle_error_publisher = self.create_publisher(Float32, "/sail_angle_error", 10)
         
         self.create_subscription(Float32, "/desired_heading", self.desired_heading_callback, 10)
 
@@ -178,6 +186,10 @@ class TelemetryNode(Node):
 
         self.create_subscription(Float32, "/desired_sail_angle", self.desired_sail_angle_callback, qos_profile_sensor_data)
         self.create_subscription(Float32, "/desired_rudder_angle", self.desired_rudder_angle_callback, qos_profile_sensor_data)
+
+        # new current measurements for analysis / error tracking
+        self.create_subscription(Float32, "/current_sail_angle", self.current_sail_angle_callback, qos_profile_sensor_data)
+        self.create_subscription(Float32, "/current_rudder_angle", self.current_rudder_angle_callback, qos_profile_sensor_data)
 
         self.create_subscription(Image, "/camera/camera/color/image_raw", self.camera_rgb_image_callback, qos_profile_sensor_data)
 
@@ -379,6 +391,32 @@ class TelemetryNode(Node):
 
         self.desired_rudder_angle = desired_rudder_angle.data
 
+
+    def current_sail_angle_callback(self, current_sail_angle: Float32) -> None:
+        """
+        Callback function for the current sail angle topic. Updates the boat's current sail angle.
+
+        Parameters
+        ----------
+        current_sail_angle
+            The current sail angle of the boat.
+        """
+
+        self.current_sail_angle = current_sail_angle.data
+
+
+    def current_rudder_angle_callback(self, current_rudder_angle: Float32) -> None:
+        """
+        Callback function for the current rudder angle topic. Updates the boat's current rudder angle.
+
+        Parameters
+        ----------
+        current_rudder_angle
+            The current rudder angle of the boat.
+        """
+
+        self.current_rudder_angle = current_rudder_angle.data
+
     
     def autopilot_param_config_path_callback(self, autopilot_param_config_path: String) -> None:
         """
@@ -426,6 +464,10 @@ class TelemetryNode(Node):
                 boat_status,
                 self.boat_status_session,
             )
+
+            # expose error topics
+            self.rudder_angle_error_publisher.publish(Float32(data=float(self.rudder_angle_error)))
+            self.sail_angle_error_publisher.publish(Float32(data=float(self.sail_angle_error)))
 
         else:
             self.logger.warning(
@@ -582,6 +624,9 @@ class TelemetryNode(Node):
         else:
             self.distance_to_next_waypoint = 0.0
 
+        self.rudder_angle_error = float(self.desired_rudder_angle - self.current_rudder_angle)
+        self.sail_angle_error = float(self.desired_sail_angle - self.current_sail_angle)
+
         base: dict[str, int | float] = {
             "latitude": self.position.latitude,
             "longitude": self.position.longitude,
@@ -592,6 +637,10 @@ class TelemetryNode(Node):
             "desired_heading": self.desired_heading,
             "heading": self.heading,
             "desired_rudder_angle": self.desired_rudder_angle,
+            "current_rudder_angle": self.current_rudder_angle,
+            "rudder_angle_error": self.rudder_angle_error,
+            "current_sail_angle": self.current_sail_angle,
+            "sail_angle_error": self.sail_angle_error,
             "current_waypoint_index": self.current_waypoint_index,
             "autopilot_mode": self.autopilot_mode.value,
         }
