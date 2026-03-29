@@ -973,24 +973,46 @@ class GroundStationWidget(QWidget):
         no_sail_size = no_sail_zone_size["default"] if "current" not in no_sail_zone_size else no_sail_zone_size["current"]
         wind_direction = self.boat_data.get("true_wind_angle", 0)
         head = heading + wind_direction + 180 # opposite the direction of wind
-        size = 0.1
+        size = 0.2
         # don't think about it too hard
-        x1 = (1 + math.cos((head - no_sail_size/2)*math.pi/180))
-        y1 = (1 - math.sin((head - no_sail_size/2)*math.pi/180))
-        x2 = (1 + math.cos((head + no_sail_size/2)*math.pi/180))
-        y2 = (1 - math.sin((head + no_sail_size/2)*math.pi/180))
+        # 1* to mark that radius is 1
+        x1 = (2 + 1*math.cos((head - no_sail_size/2)*math.pi/180))
+        y1 = (2 - 1*math.sin((head - no_sail_size/2)*math.pi/180))
+        x2 = (2 + 1*math.cos((head + no_sail_size/2)*math.pi/180))
+        y2 = (2 - 1*math.sin((head + no_sail_size/2)*math.pi/180))
 
-        svg_html = svg.Path(
+        no_go_html = svg.Path(
             d=[
-                svg.M(1, 1),
+                svg.M(2, 2),
                 svg.L(x1, y1),
                 svg.Arc(1, 1, 0, 0, 0, x2, y2),
-                svg.L(1, 1),
+                svg.L(2, 2),
             ],
             fill="#c9140a"
         )
+
+
+        speed = self.boat_data.get('speed', 0.0001)
+        if speed == 0:
+            speed = 0.0001
+        # adjusted to be radius 2
+        x1 = 2 + 2*self.boat_data.get('velocity_x', -69.420)/speed
+        y1 = 2 + 2*self.boat_data.get('velocity_y', -69.420)/speed
+        head = heading
         
-        self.browser.page().runJavaScript(f"map.update_no_sail_svg('{svg_html}', {size})")
+        velocity_html = svg.Path(
+            d = [
+                svg.M(2, 2),
+                svg.L(x1, y1)
+            ],
+            stroke="blue",
+            stroke_width="0.1",
+            transform=[
+                svg.Rotate(-head, 2, 2),
+            ]
+        )
+        
+        self.browser.page().runJavaScript(f"map.update_no_sail_svg('{no_go_html.as_str() + velocity_html.as_str()}', {size})")
 
         if "full_autonomy_maneuver" in self.boat_data:
             telemetry_text = sailboat_mode(boat_data)
