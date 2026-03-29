@@ -2,10 +2,10 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>object_detection</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="chrisjnassif@gmail.com">animated</maintainer>
-  <license>TODO: License declaration</license>
+  <version>1.0.0</version>
+  <description>Contains nodes that perform object detection/ localization on marine objects such as boats and buoys</description>
+  <maintainer email="autoboat@vt.edu">autoboatvt</maintainer>
+  <license>http://www.apache.org/licenses/LICENSE-2.0</license>
 
   <depend>rclpy</depend>
 

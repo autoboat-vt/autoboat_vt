@@ -1,0 +1,87 @@
+# top level
+indent-width      = 4
+line-length       = 130
+respect-gitignore = true
+
+[lint.pydocstyle]
+convention = "numpy"
+
+[lint.pylint]
+max-positional-args = 8
+max-returns         = 10
+max-locals          = 30
+
+[lint]
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+future-annotations = true
+logger-objects     = ["rclpy.impl.rcutils_logger.RcutilsLogger"]
+
+select    = ["ALL"]
+unfixable = ["F401"]
+
+ignore = [
+    "ANN401",
+    "BLE001",
+    "COM812",
+    "CPY001",
+    "D212",
+    "D404",
+    "DOC501",
+    "DOC502",
+    "S101",
+    "S113",
+    "S311",
+    "SIM115",
+    "SLF001",
+    "INP001",
+    "D100",
+    "D101",
+    "D103",
+    "D107",
+    "D202",
+    "D205",
+    "D401",
+    "C901",
+    "E401",
+    "E303",
+    "E741",
+    "EM101",
+    "ERA001",
+    "EXE002",
+    "EM102",
+    "F403",
+    "F405",
+    "FBT001",
+    "FBT002",
+    "FBT003",
+    "N802",
+    "N813",
+    "PIE790",
+    "PLC2801",
+    "PLR0904",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+    "PLR2004",
+    "PLR6201",
+    "PLR6301",
+    "PERF203",
+    "PERF401",
+    "PTH",
+    "T201",
+    "TD002",
+    "TD003",
+    "TC001",
+    "TC002",
+    "TC003",
+    "TRY002",
+    "TRY003",
+    "TRY301",
+    "TRY400",
+    "RET505",
+    "RUF023",
+    "G004",
+    "UP015",
+    "W293",
+    "Q000",
+]

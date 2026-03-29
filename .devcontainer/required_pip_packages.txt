@@ -45,21 +45,24 @@ dataclass_wizard
 click
 pympler
 ruff
-
+packaging
 
 
 # Groundstation
 urllib3
-QtAwesome
-python-dateutil
-PyQtWebEngine
-PyQt5
-QtPy
-packaging
-idna
-charset-normalizer
+QtAwesome==1.4.0
+QtPy==2.4.3
+PyQt5==5.15.11
+PyQtWebEngine==5.15.7
+pyqtgraph
 jsonc-parser
-requests
 PyYAML
 pytz
-strenum
+StrEnum
+python-dateutil
+idna
+charset-normalizer
+jetson-stats
+pynput
+
+

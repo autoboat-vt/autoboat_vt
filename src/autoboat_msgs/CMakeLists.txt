@@ -19,6 +19,7 @@ set(msg_files
   "msg/ObjectDetectionResultsList.msg"
   "msg/TriangulationResult.msg"
   "msg/TriangulationResultsList.msg"
+  "msg/JetsonStats.msg"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}

@@ -1,36 +1,38 @@
 import os
 import sys
+
 import gi
-gi.require_version('Gst', '1.0')
-from gi.repository import GLib, Gst
-import pyds
+
+gi.require_version("Gst", "1.0")
+import json
+import re
+import subprocess
 import threading
 import time
-import subprocess
-import re
-from math import tan, pi
+from math import pi, tan
+from random import random
+
+import matplotlib.pyplot as plt
 import numpy as np
-from jsonc_parser.parser import JsoncParser
-import json
-
+import pyds
 import rclpy
-from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
-
-# from realsense2_camera_msgs.msg import RGBD
-from std_msgs.msg import Float32, String, Int32
-from sensor_msgs.msg import NavSatFix, Image
-from autoboat_msgs.msg import ObjectDetectionResultsList, ObjectDetectionResult, TriangulationResultsList, TriangulationResult
-
 from geopy.distance import geodesic
 from geopy.point import Point
-from random import random
-import matplotlib.pyplot as plt
+from gi.repository import GLib, Gst
+from jsonc_parser.parser import JsoncParser
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
+from sensor_msgs.msg import Image, NavSatFix
+
+# from realsense2_camera_msgs.msg import RGBD
+from std_msgs.msg import Float32, Int32, String
+
+from autoboat_msgs.msg import ObjectDetectionResult, ObjectDetectionResultsList, TriangulationResult, TriangulationResultsList
 
 os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
 # os.environ['GST_DEBUG'] = "3"
 
-if (re.search("/home/ws", os.getcwd()) is not None):
+if re.search("/home/ws", os.getcwd()) is not None:
     IS_DEV_CONTAINER = True
 else:
     IS_DEV_CONTAINER = False
@@ -42,7 +44,7 @@ SHOULD_SAVE_IMAGES = True
 COMPUTE_HW = 1
 MEMORY_TYPE = 0
 
-if (IS_DEV_CONTAINER):
+if IS_DEV_CONTAINER:
     PATH_TO_SRC_DIR = "/home/ws/src"
 else:
     PATH_TO_SRC_DIR = "/home/sailbot/autoboat_vt/src"
@@ -322,8 +324,13 @@ class BuoyDetectionNode(Node):
         if IS_DEV_CONTAINER:
             nvvidconvsrc0.set_property('flip-method', 2)
 
-        caps_nvvidconvsrc0 = Gst.ElementFactory.make('capsfilter', 'nvmm-caps-0')
-        caps_nvvidconvsrc0.set_property('caps', Gst.Caps.from_string(f'video/x-raw(memory:NVMM), format=NV12, width={self.CAM_LIST[0]["input_width"]}, height={self.CAM_LIST[0]["input_height"]}'))
+        caps_nvvidconvsrc0 = Gst.ElementFactory.make("capsfilter", "nvmm-caps-0")
+        caps_nvvidconvsrc0.set_property(
+            "caps",
+            Gst.Caps.from_string(
+                f"video/x-raw(memory:NVMM), format=NV12, width={self.CAM_LIST[0]['input_width']}, height={self.CAM_LIST[0]['input_height']}"
+            ),
+        )
 
         if INFERENCE:
             preprocess = Gst.ElementFactory.make('nvdspreprocess', 'preprocess')
@@ -333,9 +340,9 @@ class BuoyDetectionNode(Node):
             pgie.set_property('config-file-path', YOLO_CONFIG[YOLO_VER])
             self.get_logger().info(f"Running Inference with Yolo{YOLO_VER}")
 
-            tracker = Gst.ElementFactory.make('nvtracker', 'tracker')
+            tracker = Gst.ElementFactory.make("nvtracker", "tracker")
             # docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvtracker.html#nvidia-tao-reidentificationnet
-            tracker.set_property('ll-lib-file', '/opt/nvidia/deepstream/deepstream-7.1/lib/libnvds_nvmultiobjecttracker.so')
+            tracker.set_property("ll-lib-file", "/opt/nvidia/deepstream/deepstream-7.1/lib/libnvds_nvmultiobjecttracker.so")
             # tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_IOU.yml')
             # tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_NvSORT.yml')
             # tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_NvDeepSORT.yml')
@@ -344,14 +351,14 @@ class BuoyDetectionNode(Node):
             # tracker.set_property('ll-config-file', '/opt/nvidia/deepstream/deepstream-7.1/samples/configs/deepstream-app/config_tracker_NvDCF_accuracy.yml')
             tracker.set_property('ll-config-file', f'{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_tracker_NvDCF_perf.yml')
             # tracker.set_property('compute-hw', COMPUTE_HW)
-            tracker.set_property('tracking-id-reset-mode', 0)
-        
-        queue_multifilesink_valve = Gst.ElementFactory.make('queue', 'queue-valve')
+            tracker.set_property("tracking-id-reset-mode", 0)
+
+        queue_multifilesink_valve = Gst.ElementFactory.make("queue", "queue-valve")
 
         multifilesink_valve = Gst.ElementFactory.make('valve', 'multifilesink-valve')
         multifilesink_valve.set_property('drop', not SHOULD_SAVE_IMAGES)
 
-        osd = Gst.ElementFactory.make('nvdsosd', 'nvosd')
+        osd = Gst.ElementFactory.make("nvdsosd", "nvosd")
 
         # sink_tee = Gst.ElementFactory.make('tee', 'sink-tee')
 
@@ -454,7 +461,7 @@ class BuoyDetectionNode(Node):
             self.get_logger().error("Error: %s: %s\n" % (err, debug))
             self.close_pipeline()
         return True
-    
+
     def run(self):
         self.get_logger().info("Starting pipeline\n")
         self.pipeline.set_state(Gst.State.PLAYING)
@@ -592,7 +599,7 @@ class BuoyDetectionNode(Node):
                 frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
             except StopIteration:
                 break
-            
+
             msg.ntp_timestamp = frame_meta.ntp_timestamp
 
             if (frame_meta.source_id == 0):
@@ -609,10 +616,10 @@ class BuoyDetectionNode(Node):
             while l_obj is not None:
                 try:
                     # Casting l_obj.data to pyds.NvDsObjectMeta
-                    obj_meta=pyds.NvDsObjectMeta.cast(l_obj.data)
+                    obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
                 except StopIteration:
                     break
-                
+
                 obj_results = ObjectDetectionResult()
                 obj_results.detector_confidence = obj_meta.confidence
                 obj_results.tracker_confidence = obj_meta.tracker_confidence
@@ -656,7 +663,7 @@ class BuoyDetectionNode(Node):
                     l_obj = l_obj.next
                 except StopIteration:
                     break
-            
+
             try:
                 l_frame = l_frame.next
             except StopIteration:
@@ -683,7 +690,7 @@ class BuoyDetectionNode(Node):
         py_nvosd_text_params.text_bg_clr.set(0.0, 0.0, 0.0, 0.25)
 
         self.object_detection_results_publisher.publish(msg)
-        
+
         return Gst.PadProbeReturn.OK
 
     def _get_current_pose(self, lat, long, heading):
@@ -1084,5 +1091,6 @@ def main():
     buoy_detection_node = BuoyDetectionNode()
     rclpy.spin(buoy_detection_node)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     sys.exit(main())

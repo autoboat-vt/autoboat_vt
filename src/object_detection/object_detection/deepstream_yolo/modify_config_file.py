@@ -13,9 +13,9 @@ FP_VER = 16
 CONFIG_FILE = f'config_infer_primary_yolo{sys.argv[2]}.txt'
 model_name = sys.argv[1]
 
-with open(CONFIG_FILE, 'r') as file:
+with open(CONFIG_FILE, "r") as file:
     content = file.read()
-    split_content = content.split('\n\n')
+    split_content = content.split("\n\n")
     onnx_section = split_content[1]
     engine_section = split_content[2]
     labels_section = split_content[3]
@@ -38,7 +38,7 @@ with open(CONFIG_FILE, 'r') as file:
 
     found_onnx_entry = False
     for i in range(len(onnx_lines)):
-        if onnx_lines[i].startswith('onnx-file='):
+        if onnx_lines[i].startswith("onnx-file="):
             onnx_lines[i] = "#" + onnx_lines[i]
         if onnx_lines[i] == f"#onnx-file=./onnx_files/{model_name}.pt.onnx":
             onnx_lines[i] = onnx_lines[i][1:] # uncomment line so the model can be used
@@ -48,7 +48,7 @@ with open(CONFIG_FILE, 'r') as file:
 
     found_engine_entry = False
     for i in range(len(engine_lines)):
-        if engine_lines[i].startswith('model-engine-file='):
+        if engine_lines[i].startswith("model-engine-file="):
             engine_lines[i] = "#" + engine_lines[i]
         if engine_lines[i] == f"#model-engine-file=./engine_files/{model_name}_model_b{BATCH_SIZE}_gpu0_{quantize}.engine":
             engine_lines[i] = engine_lines[i][1:] # uncomment line so the model can be used
@@ -75,5 +75,5 @@ with open(CONFIG_FILE, 'r') as file:
 
     content = "\n\n".join(split_content)
 
-with open(CONFIG_FILE, 'w') as file:
+with open(CONFIG_FILE, "w") as file:
     file.write(content)
