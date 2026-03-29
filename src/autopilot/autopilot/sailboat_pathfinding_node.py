@@ -22,6 +22,7 @@ class PathfindingNode(Node):
         self.waypoint_subscriber=self.create_subscription(WaypointList, "/waypoints_list", self.waypoint_call, qos_profile_sensor_data)
         self.obstacle_subscriber=self.create_subscription(WaypointList, "/obstacles_list", self.obstacle_call, qos_profile_sensor_data)
         self.create_timer(1.0,self.runpath)
+        
 
         # creating intermediate waypoint publisher
         self.waypath_publisher=self.create_publisher(WaypointList, "/waypoint_path", qos_profile_sensor_data)
@@ -76,6 +77,8 @@ class PathfindingNode(Node):
         xdist=int(math.floor(des[0]-src[0]))+lims-1
         ydist=int(math.floor(des[1]-src[1]))+lims-1
 
+
+        # ** in progress: working on manipulation of each object **
         local_obs=[]
         if self.obstacles:
             for obstacle in self.obstacles:
@@ -152,7 +155,7 @@ class PathfindingNode(Node):
     # -------------------------------------------------------------------------------------------------
 
     # add obstacles into the matrix (when the obstacles ROS topic is done) ** in progress **
-    
+    # run obstacle data to test pathfinding node
 
                 
 def main():
