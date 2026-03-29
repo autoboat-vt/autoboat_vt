@@ -68,5 +68,7 @@
         "cmps14_compass_library.h": "c",
         "amt22_encoder_library.h": "c",
         "*.def": "c"
-    }
+    },
+    "C_Cpp.errorSquiggles": "disabled",
+    "ROS2.distro": "humble"
 }

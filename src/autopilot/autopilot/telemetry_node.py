@@ -165,9 +165,9 @@ class TelemetryNode(Node):
                 
                 break
 
-        self.create_timer(0.01, self.update_boat_status)  # 10 ms
-        self.create_timer(0.5, self.update_waypoints_from_telemetry)  # 500 ms
-        self.create_timer(0.5, self.update_autopilot_parameters_from_telemetry)  # 500 ms
+        self.create_timer(0.01, self.update_boat_status)
+        self.create_timer(0.5, self.update_waypoints_from_telemetry)
+        self.create_timer(0.5, self.update_autopilot_parameters_from_telemetry)
 
         self.cv_bridge = CvBridge()
 

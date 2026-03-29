@@ -1,4 +1,4 @@
-# NOTE: THIS IS FOR YOLO11
+# NOTE: THIS IS FOR YOLO26
 [property]
 gpu-id=0
 net-scale-factor=0.0039215697906911373
@@ -11,7 +11,7 @@ model-color-format=0
 # Engine files are created by running the deepstream pipeline
 
 # This is the label file section
-# Label files are created by running export_yolo11.py
+# Label files are created by running export_yolo26.py
 
 #int8-calib-file=calib.table
 batch-size=1 # This should equal the number of video streams
@@ -21,10 +21,10 @@ interval=0
 gie-unique-id=1
 process-mode=1
 network-type=0
-cluster-mode=2
+cluster-mode=4
 maintain-aspect-ratio=1
 symmetric-padding=1
-#workspace-size=1000
+#workspace-size=2000
 parse-bbox-func-name=NvDsInferParseYolo
 #parse-bbox-func-name=NvDsInferParseYoloCuda
 custom-lib-path=nvdsinfer_custom_impl_Yolo/libnvdsinfer_custom_impl_Yolo.so
@@ -32,5 +32,4 @@ engine-create-func-name=NvDsInferYoloCudaEngineGet
 
 [class-attrs-all]
 pre-cluster-threshold=0.25
-nms-iou-threshold=0.45
 topk=300
