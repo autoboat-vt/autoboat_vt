@@ -174,9 +174,6 @@ class TelemetryNode(Node):
         self.autopilot_parameters_publisher = self.create_publisher(String, "/autopilot_parameters", 10)
         self.sensors_parameters_publisher = self.create_publisher(String, "/sensors_parameters", 10)
         self.waypoints_list_publisher = self.create_publisher(WaypointList, "/waypoints_list", 10)
-
-        self.rudder_angle_error_publisher = self.create_publisher(Float32, "/rudder_angle_error", 10)
-        self.sail_angle_error_publisher = self.create_publisher(Float32, "/sail_angle_error", 10)
         
         self.create_subscription(Float32, "/desired_heading", self.desired_heading_callback, 10)
 
@@ -464,10 +461,6 @@ class TelemetryNode(Node):
                 boat_status,
                 self.boat_status_session,
             )
-
-            # expose error topics
-            self.rudder_angle_error_publisher.publish(Float32(data=float(self.rudder_angle_error)))
-            self.sail_angle_error_publisher.publish(Float32(data=float(self.sail_angle_error)))
 
         else:
             self.logger.warning(
