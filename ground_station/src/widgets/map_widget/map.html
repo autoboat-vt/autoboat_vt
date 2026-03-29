@@ -387,6 +387,28 @@
                     this.no_sail_svg = L.svgOverlay(svgElement, svgElementBounds).addTo(this.map);
                 }
 
+                /**
+                 * @param {string} innerHTML
+                 * @param {number} size
+                 */
+                // update_wind_svg(innerHTML, size) {
+                //     if (this.wind_svg == null) {
+                //         var svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                //         svgElement.setAttribute('xmlns', "http://www.w3.org/2000/svg");
+                //         svgElement.setAttribute('viewBox', `0 0 2 2`);
+                //     } else {
+                //         this.wind_svg.remove();
+                //         var svgElement = this.wing_svg.getElement();
+                //     }
+                //     svgElement.innerHTML = innerHTML;
+                //     const bounds = this.map.getBounds();
+                //     const width = (bounds.getEast()-bounds.getWest())/2*size;
+                //     const height = (bounds.getSouth()-bounds.getNorth())/2*size;
+                //     const svgElementBounds = [[this.boat.location[0]+width, this.boat.location[1]+height],
+                //                               [this.boat.location[0]-width, this.boat.location[1]-height]];
+                //     this.wind_svg = L.svgOverlay(svgElement, svgElementBounds).addTo(this.map);
+                // }
+
                 // Miscellaneous Map Methods
 
                 /**

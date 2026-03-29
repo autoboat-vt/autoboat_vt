@@ -991,6 +991,15 @@ class GroundStationWidget(QWidget):
             fill="#c9140a"
         )
 
+        wind_html = svg.Path(
+            d=[
+                svg.M(1, 1),
+                svg.L(1 + math.cos((heading+wind_direction)*math.pi/180), 1 - math.sin((heading+wind_direction)*math.pi/180))
+            ],
+            stroke="white",
+            stroke_width="0.1"
+        )
+
 
         speed = self.boat_data.get('speed', 0.0001)
         if speed == 0:
@@ -1001,7 +1010,7 @@ class GroundStationWidget(QWidget):
         head = heading
         
         velocity_html = svg.Path(
-            d = [
+            d=[
                 svg.M(2, 2),
                 svg.L(x1, y1)
             ],
