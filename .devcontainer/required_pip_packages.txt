@@ -64,5 +64,6 @@ idna
 charset-normalizer
 jetson-stats
 pynput
+svg.py
 
 
