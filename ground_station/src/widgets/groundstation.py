@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urljoin
 
+import svg
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import (
@@ -971,14 +972,25 @@ class GroundStationWidget(QWidget):
         no_sail_zone_size = constants.SM.read("current_autopilot_parameters").get("no_sail_zone_size", {"default": 180.0})
         no_sail_size = no_sail_zone_size["default"] if "current" not in no_sail_zone_size else no_sail_zone_size["current"]
         wind_direction = self.boat_data.get("true_wind_angle", 0)
-
         head = heading + wind_direction + 180 # opposite the direction of wind
         size = 0.1
+        # don't think about it too hard
         x1 = (1 + math.cos((head - no_sail_size/2)*math.pi/180))
         y1 = (1 - math.sin((head - no_sail_size/2)*math.pi/180))
         x2 = (1 + math.cos((head + no_sail_size/2)*math.pi/180))
         y2 = (1 - math.sin((head + no_sail_size/2)*math.pi/180))
-        self.browser.page().runJavaScript(f"map.update_no_sail_svg({x1}, {y1}, {x2}, {y2}, {size})")
+
+        svg_html = svg.Path(
+            d=[
+                svg.M(1, 1),
+                svg.L(x1, y1),
+                svg.Arc(1, 1, 0, 0, 0, x2, y2),
+                svg.L(1, 1),
+            ],
+            fill="#c9140a"
+        )
+        
+        self.browser.page().runJavaScript(f"map.update_no_sail_svg('{svg_html}', {size})")
 
         if "full_autonomy_maneuver" in self.boat_data:
             telemetry_text = sailboat_mode(boat_data)
