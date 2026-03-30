@@ -637,8 +637,6 @@ class TelemetryNode(Node):
             "desired_rudder_angle": self.desired_rudder_angle,
             "current_rudder_angle": self.current_rudder_angle,
             "rudder_angle_error": self.rudder_angle_error,
-            "current_sail_angle": self.current_sail_angle,
-            "sail_angle_error": self.sail_angle_error,
             "current_waypoint_index": self.current_waypoint_index,
             "autopilot_mode": self.autopilot_mode.value,
         }
@@ -651,7 +649,9 @@ class TelemetryNode(Node):
                 true_wind_angle=self.true_wind_angle,
                 apparent_wind_speed=self.apparent_wind_speed,
                 apparent_wind_angle=self.apparent_wind_angle,
+                current_sail_angle=self.current_sail_angle,
                 desired_sail_angle=self.desired_sail_angle,
+                sail_angle_error=self.sail_angle_error,
             )
 
         elif self.is_motorboat_mode:
