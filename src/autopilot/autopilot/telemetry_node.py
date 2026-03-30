@@ -25,6 +25,7 @@ from autoboat_msgs.msg import VESCTelemetryData, WaypointList
 from .autopilot_library.utils.constants import (
     QOS_AUTOPILOT_PARAM_CONFIG_PATH,
     TELEMETRY_SERVER_URL,
+    DiagnosticMessageIntensity,
     MotorboatAutopilotMode,
     SailboatAutopilotMode,
     SailboatStates,
@@ -52,6 +53,10 @@ class TelemetryNode(Node):
     def __init__(self) -> None:
         super().__init__("telemetry")
 
+        self.diagnostic_info: tuple[DiagnosticMessageIntensity, str] = (
+            DiagnosticMessageIntensity.INFO,
+            "Telemetry node initialized.",
+        )
         self.current_waypoints: list[tuple[float, float]] = []
         self.current_waypoint_index: int = 0
 

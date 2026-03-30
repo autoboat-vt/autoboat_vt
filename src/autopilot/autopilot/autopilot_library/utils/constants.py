@@ -80,6 +80,27 @@ class TelemetryStatus(Enum):
     FAILURE = 1
 
 
+class DiagnosticMessageIntensity(Enum):
+    """
+    Enumeration representing the intensity levels of diagnostic messages.
+
+    Attributes
+    ----------
+    - ```INFO```: Represents informational messages that indicate normal operation or
+        provide general information.
+
+    - ```WARNING```: Represents warning messages that indicate a potential issue or a
+        situation that may require attention but does not necessarily indicate an immediate problem.
+
+    - ```ERROR```: Represents error messages that indicate a significant problem or
+        failure that requires immediate attention and may impact the functionality of the system.
+    """
+
+    INFO = 1
+    WARNING = 2
+    ERROR = 3
+
+
 QOS_AUTOPILOT_PARAM_CONFIG_PATH = QoSProfile(
     reliability=ReliabilityPolicy.RELIABLE,
     durability=DurabilityPolicy.TRANSIENT_LOCAL,
