@@ -134,6 +134,7 @@
                     }).addTo(this.map);
 
                     this.no_sail_svg = null;
+                    this.wind_svg = null;
 
                     // this.map.on("zoomend", () => {
                     //     const newZoom = this.map.getZoom();
@@ -366,6 +367,7 @@
                 // SVG Methods
 
                 /**
+                 * Updates the no_sail svg.
                  * @param {string} innerHTML
                  * @param {number} size
                  */
@@ -388,26 +390,29 @@
                 }
 
                 /**
+                 * Updates the wind compass svg.
                  * @param {string} innerHTML
                  * @param {number} size
                  */
-                // update_wind_svg(innerHTML, size) {
-                //     if (this.wind_svg == null) {
-                //         var svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-                //         svgElement.setAttribute('xmlns', "http://www.w3.org/2000/svg");
-                //         svgElement.setAttribute('viewBox', `0 0 2 2`);
-                //     } else {
-                //         this.wind_svg.remove();
-                //         var svgElement = this.wing_svg.getElement();
-                //     }
-                //     svgElement.innerHTML = innerHTML;
-                //     const bounds = this.map.getBounds();
-                //     const width = (bounds.getEast()-bounds.getWest())/2*size;
-                //     const height = (bounds.getSouth()-bounds.getNorth())/2*size;
-                //     const svgElementBounds = [[this.boat.location[0]+width, this.boat.location[1]+height],
-                //                               [this.boat.location[0]-width, this.boat.location[1]-height]];
-                //     this.wind_svg = L.svgOverlay(svgElement, svgElementBounds).addTo(this.map);
-                // }
+                update_wind_svg(innerHTML, size) {
+                    if (this.wind_svg == null) {
+                        var svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                        svgElement.setAttribute('xmlns', "http://www.w3.org/2000/svg");
+                        svgElement.setAttribute('viewBox', `0 0 2 2`);
+                    } else {
+                        this.wind_svg.remove();
+                        var svgElement = this.wind_svg.getElement();
+                    }
+                    svgElement.innerHTML = innerHTML;
+                    const bounds = this.map.getBounds();
+                    // why is east/west the y and north/south the x? I have literally no idea
+                    const y1 = 39/40*bounds.getWest()+1/40*bounds.getEast();
+                    const x1 = 37/40*bounds.getSouth()+3/40*bounds.getNorth();
+                    const y2 = 37/40*bounds.getWest()+3/40*bounds.getEast();
+                    const x2 = 35/40*bounds.getSouth()+5/40*bounds.getNorth();
+                    const svgElementBounds = [[x1, y1], [x2, y2]];
+                    this.wind_svg = L.svgOverlay(svgElement, svgElementBounds).addTo(this.map);
+                }
 
                 // Miscellaneous Map Methods
 
