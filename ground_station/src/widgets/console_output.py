@@ -5,7 +5,6 @@ import pytz
 from qtpy.QtCore import QThread, Signal
 from qtpy.QtGui import QCloseEvent, QTextCursor
 from qtpy.QtWidgets import QTextEdit, QVBoxLayout, QWidget
-
 from syntax_highlighters import ConsoleHighlighter
 
 
@@ -15,11 +14,11 @@ class EmittingStream(QThread):
 
     Inherits
     --------
-    `QThread`
+    ``QThread``
 
     Attributes
     ----------
-    text_written: `Signal`
+    text_written: ``Signal``
         Signal emitted when text is written to the stream.
     """
 
@@ -58,7 +57,7 @@ class ConsoleOutputWidget(QWidget):
 
     Inherits
     --------
-    `QWidget`
+    ``QWidget``
     """
 
     def __init__(self) -> None:

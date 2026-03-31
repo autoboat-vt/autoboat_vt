@@ -4,7 +4,7 @@ import serial
 import time
 
 # Set your serial port here (either /dev/ttyX or COMX)
-serialport = 'COM3'
+serialport = "COM3"
 
 
 def get_values_example():
@@ -33,9 +33,9 @@ def get_values_example():
                     except:
                         # ToDo: Figure out how to isolate rotor position and other sensor data
                         #       in the incoming datastream
-                        #try:
+                        # try:
                         #    print(response.rotor_pos)
-                        #except:
+                        # except:
                         #    pass
                         pass
 
