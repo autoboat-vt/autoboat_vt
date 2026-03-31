@@ -909,7 +909,11 @@ class GroundStationWidget(QWidget):
                 f"Apparent Wind Angle: {fix_formatting(self.boat_data.get('apparent_wind_angle'))}°\n"
                 f"Desired Heading: {fix_formatting(self.boat_data.get('desired_heading'))}°\n"
                 f"Desired Sail Angle: {fix_formatting(self.boat_data.get('desired_sail_angle'))}°\n"
+                f"Current Sail Angle: {fix_formatting(self.boat_data.get('current_sail_angle'))}°\n"
+                f"Sail Angle Error: {fix_formatting(self.boat_data.get('sail_angle_error'))}°\n"
                 f"Desired Rudder Angle: {fix_formatting(self.boat_data.get('desired_rudder_angle'))}°\n"
+                f"Current Rudder Angle: {fix_formatting(self.boat_data.get('current_rudder_angle'))}°\n"
+                f"Rudder Angle Error: {fix_formatting(self.boat_data.get('rudder_angle_error'))}°\n"
             )
 
 
@@ -928,6 +932,9 @@ class GroundStationWidget(QWidget):
                 f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
                 f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
                 f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
+                f"Desired Rudder Angle: {fix_formatting(self.boat_data.get('desired_rudder_angle'))}°\n"
+                f"Current Rudder Angle: {fix_formatting(self.boat_data.get('current_rudder_angle'))}°\n"
+                f"Rudder Angle Error: {fix_formatting(self.boat_data.get('rudder_angle_error'))}°\n"
                 f"Motor RPM: {fix_formatting(self.boat_data.get('rpm'))} RPM\n"
                 f"Duty Cycle: {fix_formatting(self.boat_data.get('duty_cycle'))}%\n"
                 f"Amp Hours Charged: {fix_formatting(self.boat_data.get('amp_hours_charged'))} Ah\n"

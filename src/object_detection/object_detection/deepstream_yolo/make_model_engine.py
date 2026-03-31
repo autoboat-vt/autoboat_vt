@@ -9,13 +9,19 @@ This was created with AI
 import os
 import sys
 import time
+
 import gi
 
 gi.require_version("Gst", "1.0")
-from gi.repository import GLib, Gst
 import re
 
-if re.search("/home/ws", os.getcwd()) is not None:
+from gi.repository import GLib, Gst
+
+if len(sys.argv) < 2:
+    print("Usage: python make_model_engine.py <yolo_version>")
+    sys.exit(1)
+
+if (re.search("/home/ws", os.getcwd()) is not None):
     IS_DEV_CONTAINER = True
 else:
     IS_DEV_CONTAINER = False
@@ -26,7 +32,7 @@ if IS_DEV_CONTAINER:
 else:
     PATH_TO_SRC_DIR = "/home/sailbot/autoboat_vt/src"
 
-PATH_TO_YOLO_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo11.txt"
+PATH_TO_YOLO_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo{sys.argv[1]}.txt"
 
 # Configuration
 COMPUTE_HW = 1
@@ -35,6 +41,22 @@ INPUT_WIDTH = 640
 INPUT_HEIGHT = 640
 FRAMERATE = "30/1"
 
+with open(PATH_TO_YOLO_CONFIG, 'r') as file:
+    content = file.read()
+    split_content = content.split('\n\n')
+    properties = split_content[4].split('\n')
+    BATCH_SIZE = properties[1].split('=')[1].split(' ')[0]
+    network_mode = int(properties[2].split('=')[-1].split(' ')[0])
+    match network_mode:
+        case 0:
+            QUANTIZE = "fp32"
+        case 1:
+            QUANTIZE = "int8"
+        case 2:
+            QUANTIZE = "fp16"
+        case _:
+            print(f"Unknown network mode {network_mode}, defaulting to fp16")
+            QUANTIZE = "fp16"
 
 class EngineGenerator:
     def __init__(self):
@@ -255,9 +277,9 @@ def main():
     if engine_file:
         target_engine_path = os.path.join(CONFIG_DIRECTORY, engine_file)
         # Default engine filename that DeepStream creates
-        default_engine_file = "model_b1_gpu0_fp16.engine"
+        default_engine_file = f"model_b{BATCH_SIZE}_gpu0_{QUANTIZE}.engine"
         default_engine_path = os.path.join(CONFIG_DIRECTORY, default_engine_file)
-
+        
         if os.path.exists(target_engine_path):
             print(f"⚠ Warning: Target engine file already exists: {engine_file}")
             response = input("Regenerate? (y/n): ")
