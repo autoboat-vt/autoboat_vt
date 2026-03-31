@@ -125,6 +125,16 @@ RUN sudo apt-get update \
    && sudo apt-get install gz-harmonic -y \
    && sudo apt install ros-humble-ros-gzharmonic -y
 
+
+
+RUN sudo apt-get update \
+   && sudo apt install libcurl4-openssl-dev -y \
+   && sudo apt-get install nlohmann-json3-dev -y \
+   && sudo apt install geographiclib-tools -y \
+   && sudo apt install ros-humble-serial-driver \
+   && sudo apt install ros-humble-asio-cmake-module
+
+   
 CMD ["/bin/bash"]
 # TODO and NOTE:
 # this is the docker file used to build the dev container. 

@@ -10,8 +10,15 @@ AUTOBOAT_USER_HOME="/home/autoboat_user"
 # Do not remove unless we are releasing this software as a product
 echo "sudo chmod 777 /var/run/docker.sock" >> $AUTOBOAT_USER_HOME/.bashrc
 echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/build/foil_dynamics/:/home/ws/build/sail_limits/:/home/ws/build/rudder_dynamics/:/home/ws/build/wind_arrow/ >> "/home/autoboat_user/.bashrc"
+
+
 # Make sure that you can just type python and you don't have to type python3 because people will get confused
 echo 'alias python="python3"' >> $AUTOBOAT_USER_HOME/.bashrc
+
+# Make it easy to perform the proper build command
+echo 'alias build="cd /home/ws && colcon build --symlink-install --cmake-args -DCMAKE_UNITY_BUILD=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"' >> /home/autoboat_user/.bashrc
+
+
 # Install all of the pip packages that we may have edited
 # "pip install -e" installs the packages as "editable" which just means that we can make changes in the packages
 # And you don't have to reinstall them, the changes will automatically be visible if you run another script again
@@ -28,7 +35,7 @@ source /opt/ros/humble/setup.bash
 echo "source /opt/ros/humble/setup.bash" >> $AUTOBOAT_USER_HOME/.bashrc
 source $AUTOBOAT_USER_HOME/.bashrc
 
-colcon build --symlink-install
+colcon build --symlink-install --cmake-args -DCMAKE_UNITY_BUILD=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 echo "source /home/ws/install/setup.bash" >> $AUTOBOAT_USER_HOME/.bashrc
 
