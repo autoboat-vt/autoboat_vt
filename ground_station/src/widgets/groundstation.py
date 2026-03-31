@@ -1020,9 +1020,9 @@ class GroundStationWidget(QWidget):
                 svg.Rotate(-head, 2, 2),
             ]
         )
-        
+
         self.browser.page().runJavaScript(f"map.update_no_sail_svg('{no_go_html.as_str() + velocity_html.as_str()}', {size})")
-        self.browser.page().runJavaScript(f"map.update_wind_svg('{wind_html.as_str()}', {size})")
+        self.browser.page().runJavaScript(f"map.update_wind_svg('{wind_html.as_str()}', '{''}', {size})")
 
         if "full_autonomy_maneuver" in self.boat_data:
             telemetry_text = sailboat_mode(boat_data)
