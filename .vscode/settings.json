@@ -147,4 +147,5 @@
         "strstream": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled",
+    "ROS2.distro": "humble"
 }

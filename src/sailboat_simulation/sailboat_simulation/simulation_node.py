@@ -106,6 +106,8 @@ class SimulationNode(Node):
         self.velocity_publisher = self.create_publisher(Twist, "/velocity", qos_profile_sensor_data)
         self.heading_publisher = self.create_publisher(Float32, "/heading", qos_profile_sensor_data)
         self.apparent_wind_vector_publisher = self.create_publisher(Vector3, "/apparent_wind_vector", qos_profile_sensor_data)
+        self.current_rudder_angle_publisher = self.create_publisher(Float32, "/current_rudder_angle", qos_profile_sensor_data)
+        self.current_sail_angle_publisher = self.create_publisher(Float32, "/current_sail_angle", qos_profile_sensor_data)
 
         self.create_subscription(Float32, "/desired_rudder_angle", self.desired_rudder_angle_callback, qos_profile_sensor_data)
         self.create_subscription(Float32, "/desired_sail_angle", self.desired_sail_angle_callback, qos_profile_sensor_data)
@@ -212,6 +214,10 @@ class SimulationNode(Node):
 
         action = {"theta_rudder": np.deg2rad(desired_rudder_angle), "theta_sail": np.deg2rad(desired_sail_angle)}
         observation, reward, terminated, truncated, info = self.env.step(action)
+
+        # publish current angle state
+        self.current_rudder_angle_publisher.publish(Float32(data=float(desired_rudder_angle)))
+        self.current_sail_angle_publisher.publish(Float32(data=float(desired_sail_angle)))
 
         sim_time += 1
 
