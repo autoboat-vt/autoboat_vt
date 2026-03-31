@@ -9,14 +9,14 @@ AUTOBOAT_USER_HOME="/home/autoboat_user"
 # This is very unsafe lol but I need this to be able to access docker from inside of the dev container for the sim. 
 # Do not remove unless we are releasing this software as a product
 echo "sudo chmod 777 /var/run/docker.sock" >> $AUTOBOAT_USER_HOME/.bashrc
-echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/build/foil_dynamics/:/home/ws/build/sail_limits/:/home/ws/build/rudder_dynamics/:/home/ws/build/wind_arrow/ >> "/home/autoboat_user/.bashrc"
+echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/build/foil_dynamics/:/home/ws/build/sail_limits/:/home/ws/build/rudder_dynamics/:/home/ws/build/wind_arrow/ >> $AUTOBOAT_USER_HOME/.bashrc
 
 
 # Make sure that you can just type python and you don't have to type python3 because people will get confused
 echo 'alias python="python3"' >> $AUTOBOAT_USER_HOME/.bashrc
 
 # Make it easy to perform the proper build command
-echo 'alias build="cd /home/ws && colcon build --symlink-install --cmake-args -DCMAKE_UNITY_BUILD=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"' >> /home/autoboat_user/.bashrc
+echo 'alias build="cd /home/ws && colcon build --symlink-install --cmake-args -DCMAKE_UNITY_BUILD=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"' >> $AUTOBOAT_USER_HOME/.bashrc
 
 
 # Install all of the pip packages that we may have edited
