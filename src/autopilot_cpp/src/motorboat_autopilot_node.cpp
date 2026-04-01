@@ -83,7 +83,7 @@ public:
         should_propeller_motor_be_powered_publisher = create_publisher<std_msgs::msg::Bool>("/should_propeller_motor_be_powered", 10);
         propeller_motor_control_struct_publisher = create_publisher<autoboat_msgs::msg::VESCControlData>("/propeller_motor_control_struct", sensor_qos);
 
-        desired_rudder_angle_publisher = create_publisher<std_msgs::msg::Float32>("/desired_rudder_angle", sensor_qos);
+        desired_rudder_angle_publisher = create_publisher<std_msgs::msg::Float32>("/desired_rudder_angle", 10);
         zero_rudder_encoder_publisher = create_publisher<std_msgs::msg::Bool>("/zero_rudder_encoder", 10);
         desired_heading_publisher = this->create_publisher<std_msgs::msg::Float32>("/desired_heading", 10); // this is not really for actually controlling the boat but more for debugging
     }
@@ -119,7 +119,7 @@ private:
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr zero_rudder_encoder_publisher;
 
     rclcpp::TimerBase::SharedPtr autopilot_refresh_timer;
-    rclcpp::Time last_rc_data_time;
+    rclcpp::Time last_rc_data_time = rclcpp::Time(0, 0, RCL_ROS_TIME);
 
     
     double current_latitude = 0.0, current_longitude = 0.0;

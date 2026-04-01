@@ -16,8 +16,7 @@ echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/build/foil_dynamics/:/home/ws/bui
 echo 'alias python="python3"' >> $AUTOBOAT_USER_HOME/.bashrc
 
 # Make it easy to perform the proper build command
-echo 'alias build="cd /home/ws && colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"' >> $AUTOBOAT_USER_HOME/.bashrc
-
+echo 'alias build="cd /home/ws && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"' >> ~/.bashrc
 
 # Install all of the pip packages that we may have edited
 # "pip install -e" installs the packages as "editable" which just means that we can make changes in the packages
@@ -35,7 +34,7 @@ source /opt/ros/humble/setup.bash
 echo "source /opt/ros/humble/setup.bash" >> $AUTOBOAT_USER_HOME/.bashrc
 source $AUTOBOAT_USER_HOME/.bashrc
 
-colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
 
 echo "source /home/ws/install/setup.bash" >> $AUTOBOAT_USER_HOME/.bashrc
 

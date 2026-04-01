@@ -63,8 +63,8 @@ public:
         waypoints_list_listener = create_subscription<autoboat_msgs::msg::WaypointList>("/waypoints_list", 10, std::bind(&SailboatAutopilotNode::waypoints_list_callback, this, std::placeholders::_1));
 
         // Publishers
-        desired_sail_angle_publisher = create_publisher<std_msgs::msg::Float32>("/desired_sail_angle", sensor_qos);
-        desired_rudder_angle_publisher = create_publisher<std_msgs::msg::Float32>("/desired_rudder_angle", sensor_qos);
+        desired_sail_angle_publisher = create_publisher<std_msgs::msg::Float32>("/desired_sail_angle", 10);
+        desired_rudder_angle_publisher = create_publisher<std_msgs::msg::Float32>("/desired_rudder_angle", 10);
         autopilot_mode_publisher = create_publisher<std_msgs::msg::String>("/autopilot_mode", sensor_qos);
         full_autonomy_maneuver_publisher = create_publisher<std_msgs::msg::String>("/full_autonomy_maneuver", sensor_qos);
         waypoint_index_publisher = create_publisher<std_msgs::msg::Int32>("/current_waypoint_index", 10);

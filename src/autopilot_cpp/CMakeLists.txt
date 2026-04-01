@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.16)
 project(autopilot_cpp)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
 
-add_compile_options(-O3)
+
 add_compile_options(-Wall -Wextra -Wpedantic)
 add_compile_options(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
 
@@ -37,6 +37,7 @@ find_package(sensor_msgs REQUIRED)
 # find_package(OpenCV REQUIRED)         # TODO try to remove this dependency
 # find_package(CURL REQUIRED)           # TODO try to remove this dependency
 find_package(nlohmann_json REQUIRED)
+find_package(OpenSSL REQUIRED)
 find_package(autoboat_msgs REQUIRED)
 find_package(cpr REQUIRED)
 find_package(yaml-cpp REQUIRED)
@@ -46,7 +47,8 @@ find_package(yaml-cpp REQUIRED)
 # create telemetry node executable
 add_executable(telemetry src/telemetry_node.cpp)
 ament_target_dependencies(telemetry rclcpp std_msgs geometry_msgs sensor_msgs autoboat_msgs)
-target_link_libraries(telemetry nlohmann_json::nlohmann_json cpr::cpr)
+target_link_libraries(telemetry nlohmann_json::nlohmann_json cpr::cpr OpenSSL::SSL OpenSSL::Crypto)
+target_precompile_headers(telemetry PRIVATE <rclcpp/rclcpp.hpp> <nlohmann/json.hpp> <cpr/cpr.h>)
 install(TARGETS telemetry DESTINATION lib/${PROJECT_NAME})
 
 
@@ -56,6 +58,7 @@ add_executable(motorboat_autopilot src/motorboat_autopilot_node.cpp)
 target_include_directories(motorboat_autopilot PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> ${CMAKE_CURRENT_SOURCE_DIR})
 ament_target_dependencies(motorboat_autopilot rclcpp std_msgs geometry_msgs sensor_msgs autoboat_msgs)
 target_link_libraries(motorboat_autopilot nlohmann_json::nlohmann_json yaml-cpp)
+target_precompile_headers(motorboat_autopilot PRIVATE <rclcpp/rclcpp.hpp> <nlohmann/json.hpp> <yaml-cpp/yaml.h>)
 install(TARGETS motorboat_autopilot DESTINATION lib/${PROJECT_NAME})
 
 
@@ -65,6 +68,7 @@ add_executable(sailboat_autopilot src/sailboat_autopilot_node.cpp)
 target_include_directories(sailboat_autopilot PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> ${CMAKE_CURRENT_SOURCE_DIR})
 ament_target_dependencies(sailboat_autopilot rclcpp std_msgs geometry_msgs sensor_msgs autoboat_msgs)
 target_link_libraries(sailboat_autopilot nlohmann_json::nlohmann_json yaml-cpp)
+target_precompile_headers(sailboat_autopilot PRIVATE <rclcpp/rclcpp.hpp> <nlohmann/json.hpp> <yaml-cpp/yaml.h>)
 install(TARGETS sailboat_autopilot DESTINATION lib/${PROJECT_NAME})
 
 

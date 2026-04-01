@@ -32,7 +32,7 @@ def generate_launch_description():
 
 
         Node(
-            package='autopilot',
+            package='autopilot_cpp',
             executable='telemetry',
             name='telemetry',
 
@@ -42,7 +42,7 @@ def generate_launch_description():
         ),
          
          Node(
-            package='autopilot',
+            package='autopilot_cpp',
             executable='motorboat_autopilot',
             name='motorboat_autopilot',
 
