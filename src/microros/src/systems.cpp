@@ -42,7 +42,7 @@ void Systems::initialize_hal(){
     HAL::init_spi();
     gpio_init(RUDDER_MOTOR_CS_PIN);
     gpio_set_dir(RUDDER_MOTOR_CS_PIN, GPIO_OUT);
-    // gpio_pull_down(RUDDER_MOTOR_CS_PIN);
+    gpio_pull_down(RUDDER_MOTOR_CS_PIN);
     HAL::init_rudder_stepper(&rudderStepperMotorDriver);
 }
 
@@ -114,9 +114,13 @@ void Systems::application_loop(rcl_timer_t * timer, int64_t last_call_time)
 
 
     //----------------debug--------------------------
-    u_int16_t register_return = HAL::debug(&rudderStepperMotorDriver);
-    rudder_debug::current_register_value_msg.data = register_return;
-    rcl_publish(&rudder_debug::rudder_debug_publisher, &rudder_debug::current_register_value_msg, NULL);
+    // u_int16_t register_return = HAL::debug(&rudderStepperMotorDriver);
+    // rudder_debug::current_register_value_msg.data = register_return;
+    // rcl_publish(&rudder_debug::rudder_debug_publisher, &rudder_debug::current_register_value_msg, NULL);
+
+
+
+
     //Ending the look here
 // #if BOAT_MODE == Lumpy
 //     float current_winch_angle = get_motor_angle(&winchEncoder) + WINCH_ANGLE_OFFSET + 360 * get_turn_count(&winchEncoder);
@@ -187,8 +191,23 @@ void Systems::application_loop(rcl_timer_t * timer, int64_t last_call_time)
 //     rcl_publish(&test_publisher, &test_msg, NULL);
 //     rcl_publish(&current_rudder_motor_angle_publisher, &current_rudder_motor_angle_msg, NULL);
 //     rcl_publish(&current_rudder_angle_publisher, &current_rudder_angle_msg, NULL);
-        current_heading::heading_msg.data = fmod((-compass.getBearing() / 10.0 + COMPASS_OFFSET + 360), 360.0);
 
-        rcl_publish(&current_heading::compass_angle_publisher,    &current_heading::heading_msg,NULL);
+
+    static bool done = false;
+
+    if (!done) {
+        drv8711_setDirection(&rudderStepperMotorDriver, CLOCKWISE);
+
+    for (int i = 0; i < 200; i++) {
+        drv8711_step(&rudderStepperMotorDriver);
+        sleep_us(3000);
+    }
+
+    done = true;
+    }
+
+        // current_heading::heading_msg.data = fmod((-compass.getBearing() / 10.0 + COMPASS_OFFSET + 360), 360.0);
+
+        // rcl_publish(&current_heading::compass_angle_publisher,    &current_heading::heading_msg,NULL);
 // #endif
 }

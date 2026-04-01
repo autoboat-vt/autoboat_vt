@@ -28,9 +28,12 @@ PCB SPECIFIC CONFIGURATIONS
 #define SCL_PIN 7
 
 // SPI
-#define SCLK_PIN 2
-#define MOSI_PIN 3
-#define MISO_PIN 4
+// #define SCLK_PIN 2
+// #define MOSI_PIN 3
+// #define MISO_PIN 4
+#define SCLK_PIN 10
+#define MISO_PIN 12
+#define MOSI_PIN 11
 
 // RC Channels
 #define RC_CHANNEL1_PIN 28
@@ -45,13 +48,13 @@ PCB SPECIFIC CONFIGURATIONS
 #define SPI_MUX_S1 15
 #define SPI_MUX_S2 16
 
-#define RUDDER_MOTOR_CS_PIN 12
+#define RUDDER_MOTOR_CS_PIN 13
 #define WINCH_MOTOR_CS_PIN 5
 #define RUDDER_ENCODER_CS_PIN 0
 #define WINCH_ENCODER_CS_PIN 1
 
 // Miscellaneous
-#define RUDDER_MOTOR_SLEEP_PIN 5
+#define RUDDER_MOTOR_SLEEP_PIN 17
 #define WINCH_MOTOR_SLEEP_PIN 5
 #define RELAY_PIN 22 // NOTE: UNUSED BECAUSE OUR CURRENT BJT DRIVER DOESN'T WORK
 
@@ -63,7 +66,7 @@ PCB SPECIFIC CONFIGURATIONS
 
 // Port declarations
 #define I2C_PORT i2c1
-#define SPI_PORT spi0
+#define SPI_PORT spi1
 
 
 //Magnetometer
@@ -71,5 +74,5 @@ PCB SPECIFIC CONFIGURATIONS
 
 
 //Motor Controllers
-#define RUDDER_MICROSTEP (DRV8711_stepMode)32
+#define RUDDER_MICROSTEP (DRV8711_stepMode)1
 #define MAX_RUDDER_CURRENT 2000

@@ -275,7 +275,7 @@ static  bool drv8711_getDirection(drv8711 *driver) {
 
 
 
-static  void drv8711_init(
+static void drv8711_init(
     drv8711 *driver, 
     spi_inst_t *spi_port, 
     uint8_t cs_pin,
@@ -284,23 +284,20 @@ static  void drv8711_init(
     DRV8711_stepMode step_mode,
     uint16_t max_winch_current
 ) {
+    // driver->spi_port = spi_port;
+    set_cs_pin(driver, cs_pin);
+    set_slp_pin(driver, slp_pin);
+    drv8711_setAwake(driver);
+    sleep_ms(1000);
 
+    drv8711_resetSettings(driver);
+    drv8711_clearStatus(driver);
+    drv8711_setDecayMode(driver, decay_mode);
+    drv8711_setCurrent(driver, max_winch_current);
+    drv8711_setStepMode(driver, step_mode);
+    drv8711_enableDriver(driver);
 
-driver->spi_port = spi_port;
-// set_cs_pin(driver, cs_pin);     // Pulled low by default
-set_slp_pin(driver, slp_pin);   // Pulled low by default
-drv8711_setAwake(driver);
-sleep_ms(1000);
-
-drv8711_resetSettings(driver);
-drv8711_clearStatus(driver);
-drv8711_setDecayMode(driver, decay_mode);
-drv8711_setCurrent(driver, max_winch_current);
-drv8711_setStepMode(driver, step_mode);
-drv8711_enableDriver(driver);
-
-sleep_ms(50);
-// drv8711_resetSettings(driver); // Disables DRV8711 by default
+    sleep_ms(50);
 }
 
 #endif
