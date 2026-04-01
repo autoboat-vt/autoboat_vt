@@ -4,7 +4,7 @@
 //TODO: include all driver libraries here
 #include "spi_device.hpp"
 #include "common_libraries.h"
-#include "drv8711_stepper_motor_driver_library.h"
+#include "drv8711_stepper_motor_driver_library.hpp"
 #include "i2c_device.hpp"
 #ifdef __cplusplus
 extern "C" {

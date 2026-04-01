@@ -1,5 +1,5 @@
 #ifndef DRV8711_STEPPER_MOTOR_DRIVER_LIBRARY_H
-#define DRV8771_STEPPER_MOTOR_DRIVER_LIBRARY_H
+#define DRV8711_STEPPER_MOTOR_DRIVER_LIBRARY_H
 
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
@@ -61,17 +61,19 @@ static  void select_chip(drv8711 *driver) {
     // I sentence the TI engineer who wrote the datasheet
     // To two semesters of Coopr for being unclear about this
     asm volatile("nop \n nop \n nop");
-    gpio_put(SPI_MUX_S0, driver->cs_pin & 0x01);  // Active High
-    gpio_put(SPI_MUX_S1, (driver->cs_pin >> 1) & 0x01);  // Active High
-    gpio_put(SPI_MUX_S2, (driver->cs_pin >> 2) & 0x01);  // Active High
+    // gpio_put(SPI_MUX_S0, driver->cs_pin & 0x01);  // Active High
+    // gpio_put(SPI_MUX_S1, (driver->cs_pin >> 1) & 0x01);  // Active High
+    // gpio_put(SPI_MUX_S2, (driver->cs_pin >> 2) & 0x01);  // Active High
+    gpio_put(RUDDER_MOTOR_CS_PIN,1);
     asm volatile("nop \n nop \n nop");
 }
 static  void deselect_chip(drv8711 *driver) {
     asm volatile("nop \n nop \n nop");
     //Corresponds to multiplexer pin 7 -- Unused
-    gpio_put(SPI_MUX_S0,1);  // Active High
-    gpio_put(SPI_MUX_S1, 1);  // Active High
-    gpio_put(SPI_MUX_S2, 1);  // Active High
+    // gpio_put(SPI_MUX_S0,1);  // Active High
+    // gpio_put(SPI_MUX_S1, 1);  // Active High
+    // gpio_put(SPI_MUX_S2, 1);  // Active High
+        gpio_put(RUDDER_MOTOR_CS_PIN,0);
     asm volatile("nop \n nop \n nop");
 }
 static  void set_cs_pin(drv8711 *driver, uint8_t pin) {
@@ -90,7 +92,7 @@ static  void set_slp_pin(drv8711 *driver, uint8_t pin) {
 
 // PUBLIC METHODS
 static  uint16_t drv8711_readReg(drv8711 *driver, DRV8711_registerAddress address) {
-    // Bit  0    - Read
+// Bit  0    - Read
     // Bits 1:3  - Register address
     // Bits 4:15 - Irrelevant
     uint16_t send = (0x8 | (address & 0b111)) << 12;
@@ -287,14 +289,15 @@ static  void drv8711_init(
 driver->spi_port = spi_port;
 // set_cs_pin(driver, cs_pin);     // Pulled low by default
 set_slp_pin(driver, slp_pin);   // Pulled low by default
+drv8711_setAwake(driver);
 sleep_ms(1000);
 
+drv8711_resetSettings(driver);
 drv8711_clearStatus(driver);
 drv8711_setDecayMode(driver, decay_mode);
 drv8711_setCurrent(driver, max_winch_current);
 drv8711_setStepMode(driver, step_mode);
 drv8711_enableDriver(driver);
-drv8711_setAwake(driver);
 
 sleep_ms(50);
 // drv8711_resetSettings(driver); // Disables DRV8711 by default
