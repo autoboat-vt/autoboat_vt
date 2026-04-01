@@ -40,6 +40,9 @@ void Systems::initialize_hal(){
     //write boat specific intialization later 
     HAL::init_i2c();
     HAL::init_spi();
+    gpio_init(RUDDER_MOTOR_CS_PIN);
+    gpio_set_dir(RUDDER_MOTOR_CS_PIN, GPIO_OUT);
+    // gpio_pull_down(RUDDER_MOTOR_CS_PIN);
     HAL::init_rudder_stepper(&rudderStepperMotorDriver);
 }
 
@@ -101,13 +104,13 @@ void Systems::application_loop(rcl_timer_t * timer, int64_t last_call_time)
     // bool winch_step_enabled = false;
 
 //Looking at here rn
-    float angle = rudderEncoder.get_motor_angle();
-    // rudderEncoder.putLow();
+    // float angle = rudderEncoder.get_motor_angle();
+    // // rudderEncoder.cs_low();
 
-    current_rudder::current_angle_msg.data = angle;
-    // select_chip(&rudderStepperMotorDriver);
+    // current_rudder::current_angle_msg.data = angle;
+    // // select_chip(&rudderStepperMotorDriver);
 
-    RCCHECK(rcl_publish(&current_rudder::current_rudder_angle_publisher, &current_rudder::current_angle_msg, NULL));
+    // RCCHECK(rcl_publish(&current_rudder::current_rudder_angle_publisher, &current_rudder::current_angle_msg, NULL));
 
 
     //----------------debug--------------------------
