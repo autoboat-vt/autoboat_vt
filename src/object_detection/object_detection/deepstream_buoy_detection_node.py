@@ -1,41 +1,38 @@
+# ruff: noqa:I001 E402
+
+# The order of imports matters. Moving some of the imports like ROS2 causes a segfault.
+# Some rearranging has been found to work, but for now, just keep it this way.
+# Linter rules regarding import statements have been disabled.
 import os
 import sys
 
 import gi
+gi.require_version('Gst', '1.0') # this line may not be required, but Gst gives a warning when imported without it.
+from gi.repository import GLib, Gst
 
-gi.require_version("Gst", "1.0")
-import json
-import re
-import subprocess
+import pyds
 import threading
 import time
-from math import pi, tan
-from random import random
-
-import matplotlib.pyplot as plt
+import subprocess
+import re
+from math import tan, pi
 import numpy as np
-import pyds
-import rclpy
-from geopy.distance import geodesic
-from geopy.point import Point
-from gi.repository import GLib, Gst
 from jsonc_parser.parser import JsoncParser
+import json
+
+import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import Image, NavSatFix
 
 # from realsense2_camera_msgs.msg import RGBD
-from std_msgs.msg import Float32, Int32, String
-
-from autoboat_msgs.msg import ObjectDetectionResult, ObjectDetectionResultsList, TriangulationResult, TriangulationResultsList
+from std_msgs.msg import Float32, String
+from sensor_msgs.msg import NavSatFix
+from autoboat_msgs.msg import ObjectDetectionResultsList, ObjectDetectionResult, TriangulationResultsList, TriangulationResult
 
 os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
 # os.environ['GST_DEBUG'] = "3"
 
-if re.search("/home/ws", os.getcwd()) is not None:
-    IS_DEV_CONTAINER = True
-else:
-    IS_DEV_CONTAINER = False
+IS_DEV_CONTAINER = re.search("/home/ws", os.getcwd()) is not None
 
 SHOULD_SAVE_IMAGES = True
 # NUM_IMAGES_TO_SAVE = 10000
@@ -44,12 +41,8 @@ SHOULD_SAVE_IMAGES = True
 COMPUTE_HW = 1
 MEMORY_TYPE = 0
 
-if IS_DEV_CONTAINER:
-    PATH_TO_SRC_DIR = "/home/ws/src"
-else:
-    PATH_TO_SRC_DIR = "/home/sailbot/autoboat_vt/src"
+PATH_TO_SRC_DIR = "/home/ws/src" if IS_DEV_CONTAINER else f"{os.path.expanduser('~')}/autoboat_vt/src"
 
-# YOLO_VER = 11
 YOLO_VER = 26
 if "YOLO_VER" in os.environ and os.environ["YOLO_VER"] in ["11", "26"]:
     YOLO_VER = int(os.environ["YOLO_VER"])
@@ -198,7 +191,8 @@ class BuoyDetectionNode(Node):
     DeepStream Python Examples (https://github.com/NVIDIA-AI-IOT/deepstream_python_apps)<br>
     Ultralytics https://www.ultralytics.com/
     """
-    def __init__(self):
+
+    def __init__(self) -> None:
         super().__init__("buoy_detection")
         self.CAM_LIST = {
             0: {
@@ -257,7 +251,7 @@ class BuoyDetectionNode(Node):
         }
         self.current_heading = 0 # default to true east
 
-        # TODO: add subscriber for image topics
+        # Maybe add subscriber for image topics?
 
         # DeepStream Initialization
         Gst.init(None)
@@ -276,14 +270,10 @@ class BuoyDetectionNode(Node):
         vs = threading.Thread(target=self.run, daemon=True)
         vs.start()
 
-        # TODO: Remove this when done testing
-        t = threading.Thread(target=self._test, daemon=True)
-        t.start()
-
         if INFERENCE:
             self.timer = self.create_timer(timer_period_sec=self.parameters["update_rate"], callback=self._iterate_results)
 
-    def _init_pipeline(self):
+    def _init_pipeline(self) -> None:
         self.pipeline = Gst.Pipeline()
 
         streammux = Gst.ElementFactory.make("nvstreammux", "muxer")
@@ -446,23 +436,21 @@ class BuoyDetectionNode(Node):
         infer_probe_pad = queue_multifilesink_valve.get_static_pad('sink')
         infer_probe_pad.add_probe(Gst.PadProbeType.BUFFER, self._infer_probe, 0)
 
-    def _bus_call(self, bus, message, loop):
+    def _bus_call(self, bus, message, loop) -> None:
         t = message.type
         if t == Gst.MessageType.EOS:
             # sys.stdout.write("End-of-stream\n")
             self.get_logger().info("End-of-stream\n")
         elif t == Gst.MessageType.WARNING:
             err, debug = message.parse_warning()
-            # sys.stderr.write("Warning: %s: %s\n" % (err, debug))
-            self.get_logger().warn("Warning: %s: %s\n" % (err, debug))
+            self.get_logger().warn(f"Warning: {err}: {debug}\n")
         elif t == Gst.MessageType.ERROR:
             err, debug = message.parse_error()
-            # sys.stderr.write("Error: %s: %s\n" % (err, debug))
-            self.get_logger().error("Error: %s: %s\n" % (err, debug))
+            self.get_logger().error(f"Error: {err}: {debug}\n")
             self.close_pipeline()
         return True
 
-    def run(self):
+    def run(self) -> None:
         self.get_logger().info("Starting pipeline\n")
         self.pipeline.set_state(Gst.State.PLAYING)
         try:
@@ -473,7 +461,7 @@ class BuoyDetectionNode(Node):
         self.pipeline.set_state(Gst.State.NULL)
         self.get_logger().info("Closed pipeline\n")
     
-    def close_pipeline(self):
+    def close_pipeline(self) -> None:
         self.get_logger().info("Quitting pipeline\n")
         self.pipeline.set_state(Gst.State.NULL)
         if hasattr(self, 'timer'):
@@ -481,6 +469,7 @@ class BuoyDetectionNode(Node):
         self.loop.quit()
         # Trigger ROS2 node shutdown to exit the process
         self.get_logger().info("Shutting down ROS2 node\n")
+        self.destroy_node()
         rclpy.shutdown()
 
     def _sahi_probe(self, pad, info, u_data):
@@ -814,14 +803,14 @@ class BuoyDetectionNode(Node):
         Returns:
             str: The /dev/video* device path
         """
-
+        
         camera_devices_output = subprocess.run(['ls', '/sys/class/video4linux/'], capture_output=True, text=True).stdout
         for device in camera_devices_output.splitlines():
             if (re.search("RealSense", subprocess.run(['cat', f'/sys/class/video4linux/{device}/name'], capture_output=True, text=True).stdout) is not None):
                 if (re.search(format, subprocess.run(['v4l2-ctl', '--device', f'/dev/{device}', '--list-formats'], capture_output=True, text=True).stdout) is not None):
                     return f"/dev/{device}"
         self.get_logger().error(f"Could not find RealSense camera device with {format} format")
-        sys.exit(1)
+        raise OSError("Camera device not found")
 
     def _read_file(self, file_name=YOLO_CONFIG[YOLO_VER]):
         # Open file
@@ -844,7 +833,7 @@ class BuoyDetectionNode(Node):
         threshold = float(attributes_lines[1].split('=')[-1])
         return (config_file_split, model, threshold)
 
-    def _read_default_parameters(self):
+    def _read_default_parameters(self) -> None:
         try:
             parameters = JsoncParser.parse_file(PATH_TO_PARAMETERS_FILE)
             for key in parameters.keys():
@@ -855,7 +844,7 @@ class BuoyDetectionNode(Node):
         except Exception as e:
             self.get_logger().error(f"Error reading parameters file: {e}")
 
-    def cv_parameters_callback(self, msg):
+    def cv_parameters_callback(self, msg: str) -> None:
         new_parameters_json: dict = json.loads(msg.data)
         updated_file = False
         for key in new_parameters_json.keys():
@@ -876,17 +865,17 @@ class BuoyDetectionNode(Node):
             with self.file_lock:
                 self.update_config_file(YOLO_CONFIG[YOLO_VER])
 
-    def position_callback(self, msg):
+    def position_callback(self, msg: NavSatFix) -> None:
         self.current_position["latitude"] = msg.latitude
         self.current_position["longitude"] = msg.longitude
         if self.origin_position["latitude"] == 0 and self.origin_position["longitude"] == 0:
             self.origin_position["latitude"] = msg.latitude
             self.origin_position["longitude"] = msg.longitude
 
-    def heading_callback(self, msg):
+    def heading_callback(self, msg: Float32) -> None:
         self.current_heading = msg.data
     
-    def update_model(self, new_model):
+    def update_model(self, new_model: str) -> bool | None:
         global YOLO_VER
         updated_value = False
         # TODO: check if config file was modified externally and reload if so
@@ -897,10 +886,7 @@ class BuoyDetectionNode(Node):
             # Should we add the new model if not found?
             self.get_logger().info(f"Model entry found in current config: {found_model_entry}")
             if not found_model_entry:
-                if YOLO_VER == 11:
-                    split_lines = self._read_file(YOLO_CONFIG[26])[0]
-                else:
-                    split_lines = self._read_file(YOLO_CONFIG[11])[0]
+                split_lines = self._read_file(YOLO_CONFIG[26 if YOLO_VER == 11 else 11])[0]
                 onnx_lines, engine_lines, labels_lines, found_model_entry = self._modify_config_lines(split_lines, new_model)
                 if found_model_entry:
                     YOLO_VER = 26 if YOLO_VER == 11 else 11
@@ -912,7 +898,7 @@ class BuoyDetectionNode(Node):
                 else:
                     self.get_logger().info(f"Model {new_model}.pt.onnx not found, not updating model")
                     self.file_lock.release()
-                    return
+                    return None
             
             onnx_content = "\n".join(onnx_lines)
             engine_content = "\n".join(engine_lines)
@@ -929,7 +915,7 @@ class BuoyDetectionNode(Node):
         self.file_lock.release()
         return updated_value
 
-    def _modify_config_lines(self, lines_split, new_model):
+    def _modify_config_lines(self, lines_split: list, new_model: str) -> tuple[list, list, list, bool]:
         onnx_lines = lines_split[1].split('\n')
         engine_lines = lines_split[2].split('\n')
         labels_lines = lines_split[3].split('\n')
@@ -969,7 +955,7 @@ class BuoyDetectionNode(Node):
         
         return (onnx_lines, engine_lines, labels_lines, found_model_entry)
 
-    def update_threshold(self, new_threshold):
+    def update_threshold(self, new_threshold: float) -> bool | None:
         updated_value = False
         self.file_lock.acquire() # Don't want multiple threads writing to the file at once
         if new_threshold != self.parameters["threshold"]:
@@ -988,14 +974,14 @@ class BuoyDetectionNode(Node):
         self.file_lock.release()
         return updated_value
     
-    def update_iou_threshold(self, new_iou_threshold):
+    def update_iou_threshold(self, new_iou_threshold: float) -> None:
         if new_iou_threshold >= 0:
             self.parameters["iou_threshold"] = new_iou_threshold
             self.get_logger().info(f"Updated iou threshold to {new_iou_threshold}")
         else:
             self.get_logger().info(f"Bad iou threshold {new_iou_threshold}, must be >= 0, not updating")
 
-    def update_publish_frequency(self, new_update_frequency):
+    def update_publish_frequency(self, new_update_frequency: float) -> None:
         if hasattr(self, 'timer'):
             if new_update_frequency > 0:
                 self.update_frequency = new_update_frequency
@@ -1007,14 +993,14 @@ class BuoyDetectionNode(Node):
         else:
             self.get_logger().warn("Inference is disabled, not updating update frequency")
     
-    def update_buffer_window(self, new_buffer_window):
+    def update_buffer_window(self, new_buffer_window: int) -> None:
         if new_buffer_window != self.triangulator.buffer_window:
             self.triangulator.buffer_window = new_buffer_window
             self.get_logger().info(f"Updated buffer window to {new_buffer_window}")
         else:
             self.get_logger().info(f"Buffer window is already {new_buffer_window}, not updating")
 
-    def update_config_file(self, file_name=YOLO_CONFIG[YOLO_VER]):
+    def update_config_file(self, file_name: str=YOLO_CONFIG[YOLO_VER]) -> None:
         # This doesn't need the file_lock because the caller already has it
         with open(file_name, 'w') as file:
             file.write("\n\n".join(self.config_file_split))
@@ -1024,72 +1010,16 @@ class BuoyDetectionNode(Node):
         else:
             self.get_logger().info("Not reloading config file in nvinfer since INFERENCE is disabled")
 
-    def _compass_angle(self, theta):
-        # Used to convert from a mathematical angle in degrees where 0 is facing right and increases counterclockwise,
-        #  to a compass angle where 0 is facing up and increases clockwise
-        theta = theta % 360
-        if theta <= 90:
-            return 90 - theta
-        else:
-            return 450 - theta
 
-    def _test(self):
-        time.sleep(2)
-        self.get_logger().info("Starting test trajectory")
-        current_angle = 0
-        steps = 300
-        count = 0
-        degrees = 1
-        buoy_location = Point(1.0, 1.0)
-        radius = 200 # radius of the circle around the buoy that the boat will be traveling, in meters
-        xpoints = np.array([])
-        ypoints = np.array([])
-        self.get_logger().info(f"Buoy location: {buoy_location.latitude}, {buoy_location.longitude}")
-        np.append(xpoints, buoy_location.longitude)
-        np.append(ypoints, buoy_location.latitude)
-        while count < steps:
-            heading = current_angle + 180 if current_angle < 180 else current_angle - 180
-            self.heading_callback(Float32(data=float(heading)))
-            current_point = geodesic(meters=radius).destination(buoy_location, bearing=self._compass_angle(current_angle))
-            xpoints = np.append(xpoints, current_point.longitude)
-            ypoints = np.append(ypoints, current_point.latitude)
-            # self.get_logger().info(f"Current position: {current_point.latitude}, {current_point.longitude}, heading: {heading}")
-            self.position_callback(NavSatFix(latitude=current_point.latitude, longitude=current_point.longitude))
-
-            pixel_x = 640
-            pixel_y = 400
-
-            with self.triangulation_lock:
-                if (self.origin_position["latitude"] != 0 and self.origin_position["longitude"] != 0):
-                    self.triangulator.add_observation(ObjectDetection(
-                                                        frame_number = count,
-                                                        detector_confidence = 0.5,
-                                                        tracker_confidence = 0.5,
-                                                        x_position = pixel_x,
-                                                        y_position = pixel_y,
-                                                        width = 20,
-                                                        height = 20,
-                                                        object_id = 999,
-                                                        class_id = 2,
-                                                        obj_label = "fake",
-                                                        pose_matrix = self._get_current_pose(current_point.latitude, current_point.longitude, heading),
-                                                        camera_matrix_inv = self.camera_K_inv
-                    ))
-
-            current_angle += degrees / steps
-            current_angle = current_angle % 360
-            # radius = random() * 150 + 50 # Randomize radius between 50 and 200 meters
-            # current_angle = random() * 360 # Randomize angle
-            count += 1
-        self.get_logger().info("Test trajectory completed")
-        # plt.plot(xpoints, ypoints, 'o')
-        # plt.show()
-
-
-def main():
+def main() -> None:
     rclpy.init()
     buoy_detection_node = BuoyDetectionNode()
-    rclpy.spin(buoy_detection_node)
+    try:
+        rclpy.spin(buoy_detection_node)
+    finally:
+        buoy_detection_node.close_pipeline()
+        # buoy_detection_node.destroy_node()
+        # rclpy.shutdown()
 
 
 if __name__ == "__main__":
