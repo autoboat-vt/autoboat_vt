@@ -55,6 +55,37 @@ enum class MotorboatControls {
 };
 
 
+inline std::string to_string(MotorboatAutopilotMode mode) {
+    switch(mode) {
+        case MotorboatAutopilotMode::Disabled: return "DISABLED";
+        case MotorboatAutopilotMode::Full_RC: return "FULL_RC";
+        case MotorboatAutopilotMode::Hold_Heading: return "HOLD_HEADING";
+        case MotorboatAutopilotMode::Waypoint_Mission: return "WAYPOINT_MISSION";
+    }
+    return "DISABLED";
+}
+
+inline std::string to_string(SailboatAutopilotModes mode) {
+    switch(mode) {
+        case SailboatAutopilotModes::Disabled: return "DISABLED";
+        case SailboatAutopilotModes::Full_RC: return "FULL_RC";
+        case SailboatAutopilotModes::Hold_Best_Sail: return "HOLD_BEST_SAIL";
+        case SailboatAutopilotModes::Hold_Heading: return "HOLD_HEADING";
+        case SailboatAutopilotModes::Hold_Heading_And_Best_Sail: return "HOLD_HEADING_AND_BEST_SAIL";
+        case SailboatAutopilotModes::Waypoint_Mission: return "WAYPOINT_MISSION";
+    }
+    return "DISABLED";
+}
+
+inline std::string to_string(SailboatStates state) {
+    switch(state) {
+        case SailboatStates::NORMAL: return "NORMAL";
+        case SailboatStates::CW_TACKING: return "CW_TACKING";
+        case SailboatStates::CCW_TACKING: return "CCW_TACKING";
+        case SailboatStates::STALL: return "STALL";
+    }
+    return "NORMAL";
+}
 
 
 

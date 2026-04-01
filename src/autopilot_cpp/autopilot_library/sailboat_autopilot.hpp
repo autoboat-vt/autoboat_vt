@@ -71,6 +71,10 @@ public:
         return waypoints;
     }
 
+    SailboatStates get_current_waypoint_mission_state() {
+        return current_waypoint_mission_state;
+    }
+
 
 
     // Returns the {desired_rudder_angle, desired_sail_angle} of the autopilot at the current timestep
@@ -220,7 +224,7 @@ public:
         float distance_to_waypoint = get_distance_between_positions(current_position, current_waypoint);
 
         if (distance_to_waypoint < autopilot_parameters["waypoint_accuracy"].get<float>()) {
-            if (current_waypoint_index + 1 < waypoints.size()) {
+            if (current_waypoint_index + 1 < (int)waypoints.size()) {
                 current_waypoint_index++;
             } 
             

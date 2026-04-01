@@ -46,9 +46,10 @@ find_package(yaml-cpp REQUIRED)
 
 # create telemetry node executable
 add_executable(telemetry src/telemetry_node.cpp)
+target_include_directories(telemetry PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> ${CMAKE_CURRENT_SOURCE_DIR})
 ament_target_dependencies(telemetry rclcpp std_msgs geometry_msgs sensor_msgs autoboat_msgs)
-target_link_libraries(telemetry nlohmann_json::nlohmann_json cpr::cpr OpenSSL::SSL OpenSSL::Crypto)
-target_precompile_headers(telemetry PRIVATE <rclcpp/rclcpp.hpp> <nlohmann/json.hpp> <cpr/cpr.h>)
+target_link_libraries(telemetry nlohmann_json::nlohmann_json cpr::cpr OpenSSL::SSL OpenSSL::Crypto yaml-cpp)
+target_precompile_headers(telemetry PRIVATE <rclcpp/rclcpp.hpp> <nlohmann/json.hpp> <cpr/cpr.h> <yaml-cpp/yaml.h>)
 install(TARGETS telemetry DESTINATION lib/${PROJECT_NAME})
 
 

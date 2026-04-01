@@ -32,7 +32,7 @@ def generate_launch_description():
 
 
         Node(
-            package='autopilot_cpp',
+            package='autopilot',
             executable='telemetry',
             name='telemetry',
 
@@ -42,13 +42,13 @@ def generate_launch_description():
         ),
          
          Node(
-            package='autopilot_cpp',
+            package='autopilot',
             executable='motorboat_autopilot',
             name='motorboat_autopilot',
 
             respawn=True,
             respawn_delay=2.0,
-            output="log"
+            output="screen"
         ),
         Node(
             package='ros_gz_bridge',

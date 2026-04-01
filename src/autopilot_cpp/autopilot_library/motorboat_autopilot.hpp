@@ -89,6 +89,52 @@ public:
         return {sail_angle, rudder_angle};
     }
 
+    int get_current_waypoint_index() const {
+        return current_waypoint_index;
+    }
+
+    std::vector<Position> get_current_waypoints_list() const {
+        return waypoints;
+    }
+
+    float get_optimal_rpm(float rudder_angle) {
+        float error = std::abs(rudder_angle);
+        float max_rpm = autopilot_parameters["max_rpm"].get<float>();
+        float min_rpm = autopilot_parameters["min_rpm"].get<float>();
+        
+        float rpm_output = min_rpm + (max_rpm - min_rpm) * std::exp(-autopilot_parameters["rpm_decay_rate"].get<float>() * error);
+        return std::clamp(rpm_output, min_rpm, max_rpm);
+    }
+
+    std::pair<float, float> run_waypoint_mission_step(Position current_position, float heading) {
+        if (waypoints.empty()) {
+            return {0.0f, 0.0f};
+        }
+
+        Position desired_position = waypoints[current_waypoint_index];
+        float distance_to_desired_position = get_distance_between_positions(current_position, desired_position);
+        float desired_heading = get_bearing(current_position, desired_position);
+
+        float rudder_angle = get_optimal_rudder_angle(heading, desired_heading);
+        float propeller_rpm = get_optimal_rpm(rudder_angle);
+
+        if (distance_to_desired_position < autopilot_parameters["waypoint_accuracy"].get<float>()) {
+            rudder_angle = 0.0f;
+            propeller_rpm = 0.0f;
+            
+            if (waypoints.size() <= (size_t)(current_waypoint_index + 1)) {
+                reset();
+                return {0.0f, 0.0f};
+            }
+            
+            current_waypoint_index++;
+            desired_position = waypoints[current_waypoint_index];
+        }
+
+        return {propeller_rpm, rudder_angle};
+    }
+
+
 
 
 

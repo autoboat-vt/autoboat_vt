@@ -5,7 +5,8 @@
 #include <memory>
 #include <map>
 #include <string>
-#include <yaml-cpp/yaml.h>
+#include <fstream>
+#include <nlohmann/json.hpp>
 
 
 #include "rclcpp/rclcpp.hpp"
@@ -39,14 +40,21 @@ public:
 
 
         std::string package_share_directory = ament_index_cpp::get_package_share_directory("autopilot_cpp");
-        std::string yaml_file_path = package_share_directory + "/config/sailboat_default_parameters.yaml";
+        std::string json_file_path = package_share_directory + "/config/sailboat_default_parameters.json";
     
-        YAML::Node config = YAML::LoadFile(yaml_file_path);
+        std::ifstream file(json_file_path);
+        json config = json::parse(file);
 
         for (auto it = config.begin(); it != config.end(); ++it) {
-            std::string key = it->first.as<std::string>();
-            autopilot_parameters[key] = yaml_to_json(it->second);
+            autopilot_parameters[it.key()] = it.value()["default"];
         }
+
+        auto trans_qos = rclcpp::QoS(1).reliable().transient_local();
+        config_path_publisher = this->create_publisher<std_msgs::msg::String>("/autopilot_param_config_path", trans_qos);
+        
+        std_msgs::msg::String msg;
+        msg.data = json_file_path;
+        config_path_publisher->publish(msg);
 
 
 
@@ -55,12 +63,12 @@ public:
 
 
         // Subscriptions
-        rc_data_listener = create_subscription<autoboat_msgs::msg::RCData>("/rc_data", sensor_qos, std::bind(&SailboatAutopilotNode::rc_data_callback, this, std::placeholders::_1));
-        position_listener = create_subscription<sensor_msgs::msg::NavSatFix>("/position", sensor_qos, std::bind(&SailboatAutopilotNode::position_callback, this, std::placeholders::_1));
-        velocity_listener = create_subscription<geometry_msgs::msg::Twist>("/velocity", sensor_qos, std::bind(&SailboatAutopilotNode::velocity_callback, this, std::placeholders::_1));
-        heading_listener = create_subscription<std_msgs::msg::Float32>("/heading", sensor_qos, std::bind(&SailboatAutopilotNode::heading_callback, this, std::placeholders::_1));
-        apparent_wind_vector_listener = create_subscription<geometry_msgs::msg::Vector3>("/apparent_wind_vector", sensor_qos, std::bind(&SailboatAutopilotNode::apparent_wind_vector_callback, this, std::placeholders::_1));
-        waypoints_list_listener = create_subscription<autoboat_msgs::msg::WaypointList>("/waypoints_list", 10, std::bind(&SailboatAutopilotNode::waypoints_list_callback, this, std::placeholders::_1));
+        subscriptions.push_back(create_subscription<autoboat_msgs::msg::RCData>("/rc_data", sensor_qos, std::bind(&SailboatAutopilotNode::rc_data_callback, this, std::placeholders::_1)));
+        subscriptions.push_back(create_subscription<sensor_msgs::msg::NavSatFix>("/position", sensor_qos, std::bind(&SailboatAutopilotNode::position_callback, this, std::placeholders::_1)));
+        subscriptions.push_back(create_subscription<geometry_msgs::msg::Twist>("/velocity", sensor_qos, std::bind(&SailboatAutopilotNode::velocity_callback, this, std::placeholders::_1)));
+        subscriptions.push_back(create_subscription<std_msgs::msg::Float32>("/heading", sensor_qos, std::bind(&SailboatAutopilotNode::heading_callback, this, std::placeholders::_1)));
+        subscriptions.push_back(create_subscription<geometry_msgs::msg::Vector3>("/apparent_wind_vector", sensor_qos, std::bind(&SailboatAutopilotNode::apparent_wind_vector_callback, this, std::placeholders::_1)));
+        subscriptions.push_back(create_subscription<autoboat_msgs::msg::WaypointList>("/waypoints_list", 10, std::bind(&SailboatAutopilotNode::waypoints_list_callback, this, std::placeholders::_1)));
 
         // Publishers
         desired_sail_angle_publisher = create_publisher<std_msgs::msg::Float32>("/desired_sail_angle", 10);
@@ -103,18 +111,13 @@ private:
 
     rclcpp::TimerBase::SharedPtr autopilot_refresh_timer;
 
-    rclcpp::Subscription<autoboat_msgs::msg::RCData>::SharedPtr rc_data_listener;
-    rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr position_listener;
-    rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr velocity_listener;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr heading_listener;
-    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr apparent_wind_vector_listener;
-    rclcpp::Subscription<autoboat_msgs::msg::WaypointList>::SharedPtr waypoints_list_listener;
-
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr desired_sail_angle_publisher, desired_rudder_angle_publisher, desired_heading_publisher;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr zero_rudder_encoder_publisher, zero_winch_encoder_publisher;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr autopilot_mode_publisher;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr full_autonomy_maneuver_publisher;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr config_path_publisher;
     rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr waypoint_index_publisher;
+    std::vector<rclcpp::SubscriptionBase::SharedPtr> subscriptions;
 
 
 
@@ -191,11 +194,11 @@ private:
     }
     
     void apparent_wind_vector_callback(const geometry_msgs::msg::Vector3::SharedPtr msg) { 
-        current_apparent_wind_vector = {msg->x, msg->y}; 
+        current_apparent_wind_vector = {static_cast<float>(msg->x), static_cast<float>(msg->y)}; 
     }
     
     void velocity_callback(const geometry_msgs::msg::Twist::SharedPtr msg) { 
-        current_global_velocity_vector = {msg->linear.x, msg->linear.y}; 
+        current_global_velocity_vector = {static_cast<float>(msg->linear.x), static_cast<float>(msg->linear.y)}; 
     }
     
 
@@ -224,7 +227,11 @@ private:
                 RCLCPP_WARN(this->get_logger(), "New parameter received: %s", key.c_str());
             }
 
-            autopilot_parameters[key] = it.value();
+            if (it.value().is_object() && it.value().contains("default")) {
+                autopilot_parameters[key] = it.value()["default"];
+            } else {
+                autopilot_parameters[key] = it.value();
+            }
         }
 
 
@@ -246,6 +253,13 @@ private:
 
 
     void update_ros_topics() {
+        // Publish config path to guarantee delivery
+        if (config_path_publisher) {
+            std_msgs::msg::String msg;
+            std::string package_share_directory = ament_index_cpp::get_package_share_directory("autopilot_cpp");
+            msg.data = package_share_directory + "/config/sailboat_default_parameters.json";
+            config_path_publisher->publish(msg);
+        }
 
         if (sailboat_autopilot.get_current_waypoints_list().size() == 0) {
             return;
@@ -269,14 +283,15 @@ private:
 
 
 
-        // autopilot_mode_publisher->publish(std_msgs::msg::String().set__data(autopilot_mode.name))
+        autopilot_mode_publisher->publish(std_msgs::msg::String().set__data(to_string(sailboat_autopilot.current_autopilot_mode)));
         if (sailboat_autopilot.current_autopilot_mode == SailboatAutopilotModes::Waypoint_Mission) {
-            // full_autonomy_maneuver_publisher->publish(std_msgs::msg::String().set__data(sailboat_autopilot.current_state.name));
+            full_autonomy_maneuver_publisher->publish(std_msgs::msg::String().set__data(to_string(sailboat_autopilot.get_current_waypoint_mission_state())));
         }
-
         else {
             full_autonomy_maneuver_publisher->publish(std_msgs::msg::String().set__data("N/A"));
         }
+
+        waypoint_index_publisher->publish(std_msgs::msg::Int32().set__data(sailboat_autopilot.get_current_waypoint_index()));
 
 
 
