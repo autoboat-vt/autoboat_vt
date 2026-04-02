@@ -29,8 +29,7 @@
 
 using namespace std::chrono_literals;
 using json = nlohmann::json;
-
-
+using std::placeholders::_1;
 
 
 class SailboatAutopilotNode : public rclcpp::Node {
@@ -63,13 +62,13 @@ public:
 
 
         // Subscriptions
-        subscriptions.push_back(create_subscription<autoboat_msgs::msg::RCData>("/rc_data", sensor_qos, std::bind(&SailboatAutopilotNode::rc_data_callback, this, std::placeholders::_1)));
-        subscriptions.push_back(create_subscription<sensor_msgs::msg::NavSatFix>("/position", sensor_qos, std::bind(&SailboatAutopilotNode::position_callback, this, std::placeholders::_1)));
-        subscriptions.push_back(create_subscription<geometry_msgs::msg::Twist>("/velocity", sensor_qos, std::bind(&SailboatAutopilotNode::velocity_callback, this, std::placeholders::_1)));
-        subscriptions.push_back(create_subscription<std_msgs::msg::Float32>("/heading", sensor_qos, std::bind(&SailboatAutopilotNode::heading_callback, this, std::placeholders::_1)));
-        subscriptions.push_back(create_subscription<geometry_msgs::msg::Vector3>("/apparent_wind_vector", sensor_qos, std::bind(&SailboatAutopilotNode::apparent_wind_vector_callback, this, std::placeholders::_1)));
-        subscriptions.push_back(create_subscription<autoboat_msgs::msg::WaypointList>("/waypoints_list", 10, std::bind(&SailboatAutopilotNode::waypoints_list_callback, this, std::placeholders::_1)));
-        subscriptions.push_back(create_subscription<std_msgs::msg::String>("/autopilot_parameters", 10, std::bind(&SailboatAutopilotNode::autopilot_parameters_callback, this, std::placeholders::_1)));
+        subs.push_back(create_subscription<autoboat_msgs::msg::RCData>("/rc_data", sensor_qos, std::bind(&SailboatAutopilotNode::rc_data_callback, this, _1)));
+        subs.push_back(create_subscription<sensor_msgs::msg::NavSatFix>("/position", sensor_qos, std::bind(&SailboatAutopilotNode::position_callback, this, _1)));
+        subs.push_back(create_subscription<geometry_msgs::msg::Twist>("/velocity", sensor_qos, std::bind(&SailboatAutopilotNode::velocity_callback, this, _1)));
+        subs.push_back(create_subscription<std_msgs::msg::Float32>("/heading", sensor_qos, std::bind(&SailboatAutopilotNode::heading_callback, this, _1)));
+        subs.push_back(create_subscription<geometry_msgs::msg::Vector3>("/apparent_wind_vector", sensor_qos, std::bind(&SailboatAutopilotNode::apparent_wind_vector_callback, this, _1)));
+        subs.push_back(create_subscription<autoboat_msgs::msg::WaypointList>("/waypoints_list", 10, std::bind(&SailboatAutopilotNode::waypoints_list_callback, this, _1)));
+        subs.push_back(create_subscription<std_msgs::msg::String>("/autopilot_parameters", 10, std::bind(&SailboatAutopilotNode::autopilot_parameters_callback, this, _1)));
 
         // Publishers
         desired_sail_angle_publisher = create_publisher<std_msgs::msg::Float32>("/desired_sail_angle", 10);
@@ -118,7 +117,7 @@ private:
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr full_autonomy_maneuver_publisher;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr config_path_publisher;
     rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr waypoint_index_publisher;
-    std::vector<rclcpp::SubscriptionBase::SharedPtr> subscriptions;
+    std::vector<rclcpp::SubscriptionBase::SharedPtr> subs;
 
 
 

@@ -127,6 +127,7 @@ RUN sudo apt-get update \
 
 
 
+# Install c++ curl, json, serial driver, asyncio, udev, libboost, ninja build system, ccache, and mold 
 RUN sudo apt-get update \
    && sudo apt install libcurl4-openssl-dev -y \
    && sudo apt-get install nlohmann-json3-dev -y \
@@ -135,6 +136,7 @@ RUN sudo apt-get update \
    && sudo apt install libudev-dev -y \
    && sudo apt install libboost-system-dev libboost-thread-dev -y \
    && sudo apt install ninja-build \
+   && sudo apt-get install -y ccache mold \
    && sudo rm -rf /var/lib/apt/lists/*
 
 

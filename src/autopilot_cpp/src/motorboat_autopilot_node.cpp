@@ -35,6 +35,7 @@
 
 using namespace std::chrono_literals;
 using json = nlohmann::json;
+using std::placeholders::_1;
 
 
 
@@ -70,14 +71,14 @@ public:
 
 
         // Subscriptions
-        subscriptions.push_back(create_subscription<std_msgs::msg::String>("/autopilot_parameters", 10, std::bind(&MotorboatAutopilotNode::autopilot_parameters_callback, this, std::placeholders::_1)));
-        subscriptions.push_back(create_subscription<autoboat_msgs::msg::WaypointList>("/waypoints_list", 10, std::bind(&MotorboatAutopilotNode::waypoints_list_callback, this, std::placeholders::_1)));
+        subscriptions.push_back(create_subscription<std_msgs::msg::String>("/autopilot_parameters", 10, std::bind(&MotorboatAutopilotNode::autopilot_parameters_callback, this, _1)));
+        subscriptions.push_back(create_subscription<autoboat_msgs::msg::WaypointList>("/waypoints_list", 10, std::bind(&MotorboatAutopilotNode::waypoints_list_callback, this, _1)));
 
-        subscriptions.push_back(create_subscription<sensor_msgs::msg::NavSatFix>("/position", 10, std::bind(&MotorboatAutopilotNode::position_callback, this, std::placeholders::_1)));
-        subscriptions.push_back(create_subscription<std_msgs::msg::Float32>("/heading", 10, std::bind(&MotorboatAutopilotNode::heading_callback, this, std::placeholders::_1)));
+        subscriptions.push_back(create_subscription<sensor_msgs::msg::NavSatFix>("/position", 10, std::bind(&MotorboatAutopilotNode::position_callback, this, _1)));
+        subscriptions.push_back(create_subscription<std_msgs::msg::Float32>("/heading", 10, std::bind(&MotorboatAutopilotNode::heading_callback, this, _1)));
 
-        subscriptions.push_back(create_subscription<geometry_msgs::msg::Twist>("/velocity", 10, std::bind(&MotorboatAutopilotNode::velocity_callback, this, std::placeholders::_1)));
-        subscriptions.push_back(create_subscription<autoboat_msgs::msg::RCData>("/rc_data", sensor_qos, std::bind(&MotorboatAutopilotNode::rc_data_callback, this, std::placeholders::_1)));
+        subscriptions.push_back(create_subscription<geometry_msgs::msg::Twist>("/velocity", 10, std::bind(&MotorboatAutopilotNode::velocity_callback, this, _1)));
+        subscriptions.push_back(create_subscription<autoboat_msgs::msg::RCData>("/rc_data", sensor_qos, std::bind(&MotorboatAutopilotNode::rc_data_callback, this, _1)));
 
 
 
@@ -91,7 +92,9 @@ public:
 
         desired_rudder_angle_publisher = create_publisher<std_msgs::msg::Float32>("/desired_rudder_angle", 10);
         zero_rudder_encoder_publisher = create_publisher<std_msgs::msg::Bool>("/zero_rudder_encoder", 10);
-        desired_heading_publisher = this->create_publisher<std_msgs::msg::Float32>("/desired_heading", 10); // this is not really for actually controlling the boat but more for debugging
+        
+        // this is not really for actually controlling the boat but more for debugging
+        desired_heading_publisher = this->create_publisher<std_msgs::msg::Float32>("/desired_heading", 10);
     }
 
 
