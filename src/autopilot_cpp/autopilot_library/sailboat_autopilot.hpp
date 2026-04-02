@@ -21,6 +21,94 @@ using json = nlohmann::json;
 
 class SailboatAutopilot {
 
+
+private:
+
+    std::map<std::string, json> autopilot_parameters;
+    std::vector<Position> waypoints;
+    int current_waypoint_index;
+    
+    float desired_tacking_angle;
+    
+    SailboatStates current_waypoint_mission_state = SailboatStates::NORMAL;
+
+
+
+
+    float get_decision_zone_size(float distance_to_waypoint) {
+        float tack_distance = autopilot_parameters["tack_distance"].get<float>();
+        float no_sail_zone_half = autopilot_parameters["no_sail_zone_size"].get<float>() / 2.0;
+        float arg = (tack_distance / distance_to_waypoint) * std::sin(no_sail_zone_half * M_PI / 180.0);
+        arg = std::clamp(arg, (float) -1.0, (float) 1.0);
+        float decision_zone_size = std::asin(arg) * 180.0 / M_PI;
+
+        return std::clamp(decision_zone_size, (float) 0.0, autopilot_parameters["no_sail_zone_size"].get<float>());
+    }
+
+
+
+    SailboatManeuvers get_maneuver_from_desired_heading(float heading, float desired_heading, float true_wind_angle) {
+        float global_wind = std::fmod(true_wind_angle + heading, 360.0);
+        float global_upwind = std::fmod(global_wind + 180.0, 360.0);
+        
+        if (is_angle_between_boundaries(global_wind, heading, desired_heading)) {
+            return SailboatManeuvers::JIBE;
+        }
+        
+        if (is_angle_between_boundaries(global_upwind, heading, desired_heading)) { 
+            return SailboatManeuvers::TACK;
+        }
+        
+        return SailboatManeuvers::STANDARD;
+    }
+
+
+
+
+    std::pair<float, bool> apply_decision_zone_tacking_logic(
+        float current_heading, float desired_heading, 
+        float true_wind_angle, float apparent_wind_angle, float distance
+    ) {
+        
+        float global_true_wind = std::fmod(current_heading + true_wind_angle, 360.0);
+        float global_true_upwind = std::fmod(global_true_wind + 180.0, 360.0);
+        float global_app_upwind = std::fmod(current_heading + apparent_wind_angle + 180.0, 360.0);
+
+        float no_sail_zone_half = autopilot_parameters["no_sail_zone_size"].get<float>() / 2.0;
+        float no_sail_zone_lower = std::fmod(global_app_upwind - no_sail_zone_half + 360.0, 360.0);
+        float no_sail_zone_upper = std::fmod(global_app_upwind + no_sail_zone_half, 360.0);
+
+        float decision_zone_size_half = get_decision_zone_size(distance) / 2.0;
+        float decision_zone_lower = std::fmod(global_true_upwind - decision_zone_size_half + 360.0, 360.0);
+        float decision_zone_upper = std::fmod(global_true_upwind + decision_zone_size_half, 360.0);
+
+
+        if (!is_angle_between_boundaries(desired_heading, no_sail_zone_lower, no_sail_zone_upper)) {
+            bool tack = (get_maneuver_from_desired_heading(current_heading, desired_heading, true_wind_angle) == SailboatManeuvers::TACK);
+            return {desired_heading, tack};
+        }
+
+        if (is_angle_between_boundaries(desired_heading, decision_zone_upper, no_sail_zone_upper)) {
+            bool port_side = (std::fmod(current_heading - global_true_upwind + 360.0, 360.0) >= 180.0);
+            return {no_sail_zone_upper, port_side};
+        }
+
+        if (is_angle_between_boundaries(desired_heading, decision_zone_lower, no_sail_zone_lower)) {
+            bool star_side = (std::fmod(current_heading - global_true_upwind + 360.0, 360.0) < 180.0);
+            return {no_sail_zone_lower, star_side};
+        }
+
+
+        float d_low = std::abs(get_distance_between_angles(no_sail_zone_lower, current_heading));
+        float d_high = std::abs(get_distance_between_angles(no_sail_zone_upper, current_heading));
+
+
+        return (d_low < d_high) ? std::make_pair(no_sail_zone_lower, false) : std::make_pair(no_sail_zone_upper, false);
+    }
+
+
+
+
 public:
 
     DiscretePID rudder_pid_controller;
@@ -173,7 +261,11 @@ public:
         float error = get_distance_between_angles(desired_heading, heading);
         float rudder_angle = rudder_pid_controller.step(error);
         
-        return std::clamp((float)rudder_angle, autopilot_parameters["min_rudder_angle"].get<float>(), autopilot_parameters["max_rudder_angle"].get<float>());
+        return std::clamp(
+            rudder_angle, 
+            autopilot_parameters["min_rudder_angle"].get<float>(), 
+            autopilot_parameters["max_rudder_angle"].get<float>()
+        );
     }
 
 
@@ -185,8 +277,17 @@ public:
             return (value - (-100.0)) * (out_max - out_min) / (100.0 - (-100.0)) + out_min;
         };
 
-        float rudder_angle = map_range(rc_rudder_control, autopilot_parameters["min_rudder_angle"].get<float>(), autopilot_parameters["max_rudder_angle"].get<float>());
-        float sail_angle = map_range(rc_sail_control, autopilot_parameters["min_sail_angle"].get<float>(), autopilot_parameters["max_sail_angle"].get<float>());
+        float rudder_angle = map_range(
+            rc_rudder_control, 
+            autopilot_parameters["min_rudder_angle"].get<float>(), 
+            autopilot_parameters["max_rudder_angle"].get<float>()
+        );
+        
+        float sail_angle = map_range(
+            rc_sail_control, 
+            autopilot_parameters["min_sail_angle"].get<float>(), 
+            autopilot_parameters["max_sail_angle"].get<float>()
+        );
 
         return {rudder_angle, sail_angle};
     }
@@ -275,91 +376,4 @@ public:
 
         return {desired_rudder_angle, desired_sail_angle};
     }
-
-
-
-
-
-
-private:
-
-    std::map<std::string, json> autopilot_parameters;
-    std::vector<Position> waypoints;
-    int current_waypoint_index;
-    
-    float desired_tacking_angle;
-    
-    SailboatStates current_waypoint_mission_state = SailboatStates::NORMAL;
-
-
-
-
-    float get_decision_zone_size(float distance_to_waypoint) {
-        float tack_distance = autopilot_parameters["tack_distance"].get<float>();
-        float no_sail_zone_half = autopilot_parameters["no_sail_zone_size"].get<float>() / 2.0;
-        float arg = (tack_distance / distance_to_waypoint) * std::sin(no_sail_zone_half * M_PI / 180.0);
-        arg = std::clamp(arg, (float) -1.0, (float) 1.0);
-        float decision_zone_size = std::asin(arg) * 180.0 / M_PI;
-
-        return std::clamp(decision_zone_size, (float) 0.0, autopilot_parameters["no_sail_zone_size"].get<float>());
-    }
-
-
-
-    SailboatManeuvers get_maneuver_from_desired_heading(float heading, float desired_heading, float true_wind_angle) {
-        float global_wind = std::fmod(true_wind_angle + heading, 360.0);
-        float global_upwind = std::fmod(global_wind + 180.0, 360.0);
-        
-        if (is_angle_between_boundaries(global_wind, heading, desired_heading)) {
-            return SailboatManeuvers::JIBE;
-        }
-        
-        if (is_angle_between_boundaries(global_upwind, heading, desired_heading)) { 
-            return SailboatManeuvers::TACK;
-        }
-        
-        return SailboatManeuvers::STANDARD;
-    }
-
-
-
-
-    std::pair<float, bool> apply_decision_zone_tacking_logic(float current_heading, float desired_heading, float true_wind_angle, float apparent_wind_angle, float distance) {
-        
-        float global_true_wind = std::fmod(current_heading + true_wind_angle, 360.0);
-        float global_true_upwind = std::fmod(global_true_wind + 180.0, 360.0);
-        float global_app_upwind = std::fmod(current_heading + apparent_wind_angle + 180.0, 360.0);
-
-        float no_sail_zone_half = autopilot_parameters["no_sail_zone_size"].get<float>() / 2.0;
-        float no_sail_zone_lower = std::fmod(global_app_upwind - no_sail_zone_half + 360.0, 360.0);
-        float no_sail_zone_upper = std::fmod(global_app_upwind + no_sail_zone_half, 360.0);
-
-        float decision_zone_size_half = get_decision_zone_size(distance) / 2.0;
-        float decision_zone_lower = std::fmod(global_true_upwind - decision_zone_size_half + 360.0, 360.0);
-        float decision_zone_upper = std::fmod(global_true_upwind + decision_zone_size_half, 360.0);
-
-
-        if (!is_angle_between_boundaries(desired_heading, no_sail_zone_lower, no_sail_zone_upper)) {
-            bool tack = (get_maneuver_from_desired_heading(current_heading, desired_heading, true_wind_angle) == SailboatManeuvers::TACK);
-            return {desired_heading, tack};
-        }
-
-        if (is_angle_between_boundaries(desired_heading, decision_zone_upper, no_sail_zone_upper)) {
-            bool port_side = (std::fmod(current_heading - global_true_upwind + 360.0, 360.0) >= 180.0);
-            return {no_sail_zone_upper, port_side};
-        }
-
-        if (is_angle_between_boundaries(desired_heading, decision_zone_lower, no_sail_zone_lower)) {
-            bool star_side = (std::fmod(current_heading - global_true_upwind + 360.0, 360.0) < 180.0);
-            return {no_sail_zone_lower, star_side};
-        }
-
-
-        float d_low = std::abs(get_distance_between_angles(no_sail_zone_lower, current_heading));
-        float d_high = std::abs(get_distance_between_angles(no_sail_zone_upper, current_heading));
-
-
-        return (d_low < d_high) ? std::make_pair(no_sail_zone_lower, false) : std::make_pair(no_sail_zone_upper, false);
-    }
-
 };

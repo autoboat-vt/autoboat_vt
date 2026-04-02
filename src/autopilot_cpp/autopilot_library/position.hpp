@@ -53,16 +53,6 @@ public:
     }
 
 
-    // def set_local_coordinates(self, local_x, local_y, reference_longitude, reference_latitude):
-    //     self.latitude, self.longitude, _ = navpy.ned2lla([local_y, local_x, 0], reference_latitude, reference_longitude, 0)
-        
-    // def get_local_coordinates(self, reference_longitude_latitude: np.ndarray) -> np.ndarray[float]:
-    //     reference_latitude = reference_longitude_latitude[1]
-    //     reference_longitude = reference_longitude_latitude[0]
-    //     local_y, local_x, _ = navpy.lla2ned(self.latitude, self.longitude, 0, reference_latitude, reference_longitude, 0)
-    //     return np.array([local_x, local_y])
-
-
     double longitude, latitude;
 
 };

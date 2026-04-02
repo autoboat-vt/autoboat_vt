@@ -411,7 +411,7 @@ private:
     double desired_sail_angle = 0, desired_rudder_angle = 0;
     double current_sail_angle = 0, current_rudder_angle = 0;
     int current_waypoint_index = 0;
-    std::string autopilot_mode = "DISABLED", full_autonomy_maneuver = "NA";
+    std::string autopilot_mode = "DISABLED", full_autonomy_maneuver = "NORMAL";
     std::vector<std::pair<double,double>> current_waypoints_list;
 
     float vesc_rpm = 0, vesc_duty_cycle = 0, vesc_amp_hours = 0, vesc_amp_hours_charged = 0;

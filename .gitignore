@@ -40,3 +40,7 @@ src/object_detection/object_detection/hard_images/**
 
 # frames generated from camera recorder
 frame_logs
+
+
+# c++ compiler profiling traces using ninjatracing
+trace.json
