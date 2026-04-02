@@ -1,0 +1,1 @@
+I need to make sure that the autopilot nodes actually have callbacks for the autopilot parameters so that the cpp autopilots can accept autopilot parameters

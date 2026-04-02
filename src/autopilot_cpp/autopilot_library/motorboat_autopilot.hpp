@@ -22,7 +22,7 @@ private:
     
     DiscretePID rudder_angle_to_heading_pid_controller;
     
-    std::map<std::string, json> autopilot_parameters;
+    std::map<std::string, json> *autopilot_parameters;
 
     std::vector<Position> waypoints;
     int current_waypoint_index = 0;
@@ -33,16 +33,16 @@ public:
     MotorboatAutopilot() {}
 
 
-    MotorboatAutopilot(std::map<std::string, json> autopilot_parameters_) {
+    MotorboatAutopilot(std::map<std::string, json> *autopilot_parameters_) {
 
         autopilot_parameters = autopilot_parameters_;
         
         rudder_angle_to_heading_pid_controller = DiscretePID(
-            1/ autopilot_parameters["autopilot_refresh_rate"].get<float>(), 
-            autopilot_parameters["heading_p_gain"].get<float>(), 
-            autopilot_parameters["heading_i_gain"].get<float>(), 
-            autopilot_parameters["heading_d_gain"].get<float>(), 
-            autopilot_parameters["heading_n_gain"].get<float>()
+            1/ (*autopilot_parameters)["autopilot_refresh_rate"].get<float>(), 
+            (*autopilot_parameters)["heading_p_gain"].get<float>(), 
+            (*autopilot_parameters)["heading_i_gain"].get<float>(), 
+            (*autopilot_parameters)["heading_d_gain"].get<float>(), 
+            (*autopilot_parameters)["heading_n_gain"].get<float>()
         );
 
         waypoints.clear();
@@ -79,19 +79,19 @@ public:
 
         // Update PID gains in case they were changed via YAML/JSON
         rudder_angle_to_heading_pid_controller.set_gains(
-            1.0 / autopilot_parameters["autopilot_refresh_rate"].get<float>(), // sample_period
-            autopilot_parameters["heading_p_gain"].get<float>(),
-            autopilot_parameters["heading_i_gain"].get<float>(),
-            autopilot_parameters["heading_d_gain"].get<float>(),
-            autopilot_parameters["heading_n_gain"].get<float>()
+            1.0 / (*autopilot_parameters)["autopilot_refresh_rate"].get<float>(), // sample_period
+            (*autopilot_parameters)["heading_p_gain"].get<float>(),
+            (*autopilot_parameters)["heading_i_gain"].get<float>(),
+            (*autopilot_parameters)["heading_d_gain"].get<float>(),
+            (*autopilot_parameters)["heading_n_gain"].get<float>()
         );
 
         float rudder_angle = rudder_angle_to_heading_pid_controller.step(error);
         
         return std::clamp(
             rudder_angle, 
-            autopilot_parameters["min_rudder_angle"].get<float>(), 
-            autopilot_parameters["max_rudder_angle"].get<float>()
+            (*autopilot_parameters)["min_rudder_angle"].get<float>(), 
+            (*autopilot_parameters)["max_rudder_angle"].get<float>()
         );
     }
 
@@ -104,14 +104,14 @@ public:
 
         float sail_angle = map_range(
             joystick_left_y, 
-            autopilot_parameters["min_sail_angle"].get<float>(), 
-            autopilot_parameters["max_sail_angle"].get<float>()
+            (*autopilot_parameters)["min_sail_angle"].get<float>(), 
+            (*autopilot_parameters)["max_sail_angle"].get<float>()
         );
         
         float rudder_angle = map_range(
             joystick_right_x, 
-            autopilot_parameters["min_rudder_angle"].get<float>(), 
-            autopilot_parameters["max_rudder_angle"].get<float>()
+            (*autopilot_parameters)["min_rudder_angle"].get<float>(), 
+            (*autopilot_parameters)["max_rudder_angle"].get<float>()
         );
 
         return {sail_angle, rudder_angle};
@@ -119,10 +119,10 @@ public:
 
     float get_optimal_rpm(float rudder_angle) {
         float error = std::abs(rudder_angle);
-        float max_rpm = autopilot_parameters["max_rpm"].get<float>();
-        float min_rpm = autopilot_parameters["min_rpm"].get<float>();
+        float max_rpm = (*autopilot_parameters)["max_rpm"].get<float>();
+        float min_rpm = (*autopilot_parameters)["min_rpm"].get<float>();
         
-        float rpm_output = min_rpm + (max_rpm - min_rpm) * std::exp(-autopilot_parameters["rpm_decay_rate"].get<float>() * error);
+        float rpm_output = min_rpm + (max_rpm - min_rpm) * std::exp(-(*autopilot_parameters)["rpm_decay_rate"].get<float>() * error);
         return std::clamp(rpm_output, min_rpm, max_rpm);
     }
 
@@ -138,7 +138,7 @@ public:
         float rudder_angle = get_optimal_rudder_angle(heading, desired_heading);
         float propeller_rpm = get_optimal_rpm(rudder_angle);
 
-        if (distance_to_desired_position < autopilot_parameters["waypoint_accuracy"].get<float>()) {
+        if (distance_to_desired_position < (*autopilot_parameters)["waypoint_accuracy"].get<float>()) {
             rudder_angle = 0.0f;
             propeller_rpm = 0.0f;
             

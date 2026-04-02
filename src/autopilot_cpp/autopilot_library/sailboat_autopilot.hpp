@@ -24,7 +24,7 @@ class SailboatAutopilot {
 
 private:
 
-    std::map<std::string, json> autopilot_parameters;
+    std::map<std::string, json> *autopilot_parameters;
     std::vector<Position> waypoints;
     int current_waypoint_index;
     
@@ -36,13 +36,13 @@ private:
 
 
     float get_decision_zone_size(float distance_to_waypoint) {
-        float tack_distance = autopilot_parameters["tack_distance"].get<float>();
-        float no_sail_zone_half = autopilot_parameters["no_sail_zone_size"].get<float>() / 2.0;
+        float tack_distance = (*autopilot_parameters)["tack_distance"].get<float>();
+        float no_sail_zone_half = (*autopilot_parameters)["no_sail_zone_size"].get<float>() / 2.0;
         float arg = (tack_distance / distance_to_waypoint) * std::sin(no_sail_zone_half * M_PI / 180.0);
         arg = std::clamp(arg, (float) -1.0, (float) 1.0);
         float decision_zone_size = std::asin(arg) * 180.0 / M_PI;
 
-        return std::clamp(decision_zone_size, (float) 0.0, autopilot_parameters["no_sail_zone_size"].get<float>());
+        return std::clamp(decision_zone_size, (float) 0.0, (*autopilot_parameters)["no_sail_zone_size"].get<float>());
     }
 
 
@@ -74,7 +74,7 @@ private:
         float global_true_upwind = std::fmod(global_true_wind + 180.0, 360.0);
         float global_app_upwind = std::fmod(current_heading + apparent_wind_angle + 180.0, 360.0);
 
-        float no_sail_zone_half = autopilot_parameters["no_sail_zone_size"].get<float>() / 2.0;
+        float no_sail_zone_half = (*autopilot_parameters)["no_sail_zone_size"].get<float>() / 2.0;
         float no_sail_zone_lower = std::fmod(global_app_upwind - no_sail_zone_half + 360.0, 360.0);
         float no_sail_zone_upper = std::fmod(global_app_upwind + no_sail_zone_half, 360.0);
 
@@ -115,24 +115,23 @@ public:
     SailboatAutopilotModes current_autopilot_mode = SailboatAutopilotModes::Waypoint_Mission;
     float heading_to_hold;
 
+    // TODO: INITIALIZE AUTOPILOT PARAMETERS TO ZEROES HERE SO THIS ISN'T A USELESS CONSTRUCTOR
     SailboatAutopilot() {}
 
 
-    SailboatAutopilot(std::map<std::string, json>& autopilot_parameters_) {
-
+    SailboatAutopilot(std::map<std::string, json> *autopilot_parameters_) {
         autopilot_parameters = autopilot_parameters_;
-
         reset();
     }
 
 
     void reset() {
         rudder_pid_controller = DiscretePID(
-            1.0 / autopilot_parameters["autopilot_refresh_rate"].get<float>(),
-            autopilot_parameters["heading_p_gain"].get<float>(),
-            autopilot_parameters["heading_i_gain"].get<float>(),
-            autopilot_parameters["heading_d_gain"].get<float>(),
-            autopilot_parameters["heading_n_gain"].get<float>()
+            1.0 / (*autopilot_parameters)["autopilot_refresh_rate"].get<float>(),
+            (*autopilot_parameters)["heading_p_gain"].get<float>(),
+            (*autopilot_parameters)["heading_i_gain"].get<float>(),
+            (*autopilot_parameters)["heading_d_gain"].get<float>(),
+            (*autopilot_parameters)["heading_n_gain"].get<float>()
         );
 
 
@@ -224,8 +223,8 @@ public:
     // TODO: I DON'T TRUST THIS
     float get_optimal_sail_angle(float apparent_wind_angle) {
 
-        std::vector<float> wind_angles = autopilot_parameters["sail_lookup_table_wind_angles"].get<std::vector<float>>();
-        std::vector<float> sail_angles = autopilot_parameters["sail_lookup_table_sail_positions"].get<std::vector<float>>();
+        std::vector<float> wind_angles = (*autopilot_parameters)["sail_lookup_table_wind_angles"].get<std::vector<float>>();
+        std::vector<float> sail_angles = (*autopilot_parameters)["sail_lookup_table_sail_positions"].get<std::vector<float>>();
 
         float abs_awa = std::abs(get_distance_between_angles(apparent_wind_angle, 0.0));
         
@@ -245,17 +244,17 @@ public:
             }
         }
 
-        return autopilot_parameters["min_sail_angle"].get<float>();
+        return (*autopilot_parameters)["min_sail_angle"].get<float>();
     }
 
     
     float get_optimal_rudder_angle(float heading, float desired_heading) {
         rudder_pid_controller.set_gains(
-            1.0 / autopilot_parameters["autopilot_refresh_rate"].get<float>(),
-            autopilot_parameters["heading_p_gain"].get<float>(),
-            autopilot_parameters["heading_i_gain"].get<float>(),
-            autopilot_parameters["heading_d_gain"].get<float>(),
-            autopilot_parameters["heading_n_gain"].get<float>()
+            1.0 / (*autopilot_parameters)["autopilot_refresh_rate"].get<float>(),
+            (*autopilot_parameters)["heading_p_gain"].get<float>(),
+            (*autopilot_parameters)["heading_i_gain"].get<float>(),
+            (*autopilot_parameters)["heading_d_gain"].get<float>(),
+            (*autopilot_parameters)["heading_n_gain"].get<float>()
         );
 
         float error = get_distance_between_angles(desired_heading, heading);
@@ -263,8 +262,8 @@ public:
         
         return std::clamp(
             rudder_angle, 
-            autopilot_parameters["min_rudder_angle"].get<float>(), 
-            autopilot_parameters["max_rudder_angle"].get<float>()
+            (*autopilot_parameters)["min_rudder_angle"].get<float>(), 
+            (*autopilot_parameters)["max_rudder_angle"].get<float>()
         );
     }
 
@@ -279,14 +278,14 @@ public:
 
         float rudder_angle = map_range(
             rc_rudder_control, 
-            autopilot_parameters["min_rudder_angle"].get<float>(), 
-            autopilot_parameters["max_rudder_angle"].get<float>()
+            (*autopilot_parameters)["min_rudder_angle"].get<float>(), 
+            (*autopilot_parameters)["max_rudder_angle"].get<float>()
         );
         
         float sail_angle = map_range(
             rc_sail_control, 
-            autopilot_parameters["min_sail_angle"].get<float>(), 
-            autopilot_parameters["max_sail_angle"].get<float>()
+            (*autopilot_parameters)["min_sail_angle"].get<float>(), 
+            (*autopilot_parameters)["max_sail_angle"].get<float>()
         );
 
         return {rudder_angle, sail_angle};
@@ -324,7 +323,7 @@ public:
         Position current_waypoint = waypoints[current_waypoint_index];
         float distance_to_waypoint = get_distance_between_positions(current_position, current_waypoint);
 
-        if (distance_to_waypoint < autopilot_parameters["waypoint_accuracy"].get<float>()) {
+        if (distance_to_waypoint < (*autopilot_parameters)["waypoint_accuracy"].get<float>()) {
             if (current_waypoint_index + 1 < (int)waypoints.size()) {
                 current_waypoint_index++;
             } 
@@ -362,13 +361,13 @@ public:
         else if (current_waypoint_mission_state == SailboatStates::CW_TACKING || current_waypoint_mission_state == SailboatStates::CCW_TACKING) {
             desired_sail_angle = get_optimal_sail_angle(apparent_wind_angle);
             float tack_direction = (current_waypoint_mission_state == SailboatStates::CW_TACKING) ? 1.0 : -1.0;
-            desired_rudder_angle = autopilot_parameters["rudder_hard_over"].get<float>() * tack_direction;
+            desired_rudder_angle = (*autopilot_parameters)["rudder_hard_over"].get<float>() * tack_direction;
 
-            if (autopilot_parameters["perform_forced_jibe_instead_of_tack"].get<float>() > 0) {
+            if ((*autopilot_parameters)["perform_forced_jibe_instead_of_tack"].get<float>() > 0) {
                 desired_rudder_angle *= -1.0;
             }
 
-            if (std::abs(get_distance_between_angles(heading, desired_tacking_angle)) < autopilot_parameters["tack_tolerance"].get<float>()) {
+            if (std::abs(get_distance_between_angles(heading, desired_tacking_angle)) < (*autopilot_parameters)["tack_tolerance"].get<float>()) {
                 current_waypoint_mission_state = SailboatStates::NORMAL;
             }
 

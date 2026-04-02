@@ -58,7 +58,7 @@ public:
 
 
 
-        sailboat_autopilot = SailboatAutopilot(autopilot_parameters);
+        sailboat_autopilot = SailboatAutopilot(&autopilot_parameters);
         auto sensor_qos = rclcpp::SensorDataQoS();
 
 
@@ -69,6 +69,7 @@ public:
         subscriptions.push_back(create_subscription<std_msgs::msg::Float32>("/heading", sensor_qos, std::bind(&SailboatAutopilotNode::heading_callback, this, std::placeholders::_1)));
         subscriptions.push_back(create_subscription<geometry_msgs::msg::Vector3>("/apparent_wind_vector", sensor_qos, std::bind(&SailboatAutopilotNode::apparent_wind_vector_callback, this, std::placeholders::_1)));
         subscriptions.push_back(create_subscription<autoboat_msgs::msg::WaypointList>("/waypoints_list", 10, std::bind(&SailboatAutopilotNode::waypoints_list_callback, this, std::placeholders::_1)));
+        subscriptions.push_back(create_subscription<std_msgs::msg::String>("/autopilot_parameters", 10, std::bind(&SailboatAutopilotNode::autopilot_parameters_callback, this, std::placeholders::_1)));
 
         // Publishers
         desired_sail_angle_publisher = create_publisher<std_msgs::msg::Float32>("/desired_sail_angle", 10);
@@ -227,9 +228,13 @@ private:
                 RCLCPP_WARN(this->get_logger(), "New parameter received: %s", key.c_str());
             }
 
-            if (it.value().is_object() && it.value().contains("default")) {
+            else if (it.value().is_object() && it.value().contains("default")) {
+                RCLCPP_INFO(this->get_logger(), "TEST: %s", key.c_str());
                 autopilot_parameters[key] = it.value()["default"];
-            } else {
+            } 
+            
+            else {
+                RCLCPP_INFO(this->get_logger(), "TEST2: %s", key.c_str());
                 autopilot_parameters[key] = it.value();
             }
         }

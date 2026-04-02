@@ -61,7 +61,7 @@ public:
         config_path_publisher->publish(msg);
 
         
-        motorboat_autopilot = MotorboatAutopilot(autopilot_parameters);
+        motorboat_autopilot = MotorboatAutopilot(&autopilot_parameters);
         
         rclcpp::SensorDataQoS sensor_qos = rclcpp::SensorDataQoS();
         
@@ -198,12 +198,12 @@ private:
     void autopilot_parameters_callback(const std_msgs::msg::String::SharedPtr new_parameters) {
 
         json new_parameters_json = json::parse(new_parameters->data);
-
+        
         for (auto it = new_parameters_json.begin(); it != new_parameters_json.end(); ++it) {
             std::string key = it.key();
 
             if (autopilot_parameters.find(key) == autopilot_parameters.end()) {
-                RCLCPP_WARN(this->get_logger(), "New parameter received: %s", key.c_str());
+                RCLCPP_INFO(this->get_logger(), "New parameter received: %s", key.c_str());
             }
 
             if (it.value().is_object() && it.value().contains("default")) {
