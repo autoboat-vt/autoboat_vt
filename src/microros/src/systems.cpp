@@ -183,31 +183,31 @@ void Systems::application_loop(rcl_timer_t * timer, int64_t last_call_time)
 //     rcl_publish(&current_sail_angle_publisher, &current_sail_angle_msg, NULL);
 
 //     // counter clockwise from true east
-//     current_rudder_angle_msg.data = current_rudder_angle;
-//     current_rudder_motor_angle_msg.data = current_rudder_motor_angle;
+// current_rudder_motor_angle_msg.data = current_rudder_motor_angle;
 
 //     test_msg.data = rudder_error;
 
 //     rcl_publish(&test_publisher, &test_msg, NULL);
-//     rcl_publish(&current_rudder_motor_angle_publisher, &current_rudder_motor_angle_msg, NULL);
-//     rcl_publish(&current_rudder_angle_publisher, &current_rudder_angle_msg, NULL);
+// rcl_publish(&current_rudder_motor_angle_publisher, &current_rudder_motor_angle_msg, NULL);
 
 
-    static bool done = false;
+        current_rudder::current_angle_msg.data =  rudderEncoder.get_motor_angle();
+        current_heading::heading_msg.data = fmod((-compass.getBearing() / 10.0 + COMPASS_OFFSET + 360), 360.0);
 
-    if (!done) {
-        drv8711_setDirection(&rudderStepperMotorDriver, CLOCKWISE);
+        rcl_publish(&current_heading::compass_angle_publisher,    &current_heading::heading_msg,NULL);
+        rcl_publish(&current_rudder::current_rudder_angle_publisher, &current_rudder::current_angle_msg, NULL);
 
+static bool done = false;
+
+if (!done) {
+    drv8711_setDirection(&rudderStepperMotorDriver, CLOCKWISE);
+    
     for (int i = 0; i < 200; i++) {
         drv8711_step(&rudderStepperMotorDriver);
         sleep_us(3000);
     }
-
+    
     done = true;
-    }
-
-        // current_heading::heading_msg.data = fmod((-compass.getBearing() / 10.0 + COMPASS_OFFSET + 360), 360.0);
-
-        // rcl_publish(&current_heading::compass_angle_publisher,    &current_heading::heading_msg,NULL);
+}
 // #endif
 }

@@ -284,7 +284,7 @@ static void drv8711_init(
     DRV8711_stepMode step_mode,
     uint16_t max_winch_current
 ) {
-    // driver->spi_port = spi_port;
+    driver->spi_port = spi_port;
     set_cs_pin(driver, cs_pin);
     set_slp_pin(driver, slp_pin);
     drv8711_setAwake(driver);
