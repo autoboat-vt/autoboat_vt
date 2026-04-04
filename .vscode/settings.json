@@ -8,6 +8,7 @@
     "evenBetterToml.schema.links": true,
     "evenBetterToml.semanticTokens": true,
     "cmake.ignoreCMakeListsMissing": true,
+    "search.followSymlinks": true,
     "[python]": {
         "editor.formatOnSave": false,
         "editor.codeActionsOnSave": {
