@@ -77,8 +77,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           load: true
           tags: autoboat-base:latest
-          cache-from: type=gha,scope=ci-base-${{ matrix.architecture }}
-          cache-to: type=gha,mode=max,scope=ci-base-${{ matrix.architecture }}
+          cache-from: type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}
 
       - name: Build Micro-ROS Docker Image
         uses: docker/build-push-action@v5
@@ -90,8 +89,7 @@ jobs:
           build-args: |
             BASE_IMAGE=autoboat-base:latest
           tags: autoboat-microros:latest
-          cache-from: type=gha,scope=ci-microros-${{ matrix.architecture }}
-          cache-to: type=gha,mode=max,scope=ci-microros-${{ matrix.architecture }}
+          cache-from: type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}
 
       # -----------------------------------------------------------------------
       # Run colcon build AND package everything inside the container.
