@@ -25,7 +25,7 @@ MotorboatAutopilotNode::MotorboatAutopilotNode() : Node("motorboat_autopilot_cpp
     msg.data = json_file_path;
     config_path_publisher->publish(msg);
 
-    
+
     motorboat_autopilot = MotorboatAutopilot(&autopilot_parameters);
     
     rclcpp::SensorDataQoS sensor_qos = rclcpp::SensorDataQoS();

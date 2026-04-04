@@ -64,6 +64,8 @@ private:
     void current_sail_angle_callback(const std_msgs::msg::Float32::SharedPtr msg);
     void current_rudder_angle_callback(const std_msgs::msg::Float32::SharedPtr msg);
 
+
+    
     // State
     bool params_loaded = false;
     bool is_sailboat_mode = false;
