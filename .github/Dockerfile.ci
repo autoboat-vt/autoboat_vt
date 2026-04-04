@@ -1,0 +1,65 @@
+# TODO: MAKE SURE THAT THIS SYMLINKS TO THE DEVCONTAINER SO THAT IF YOU WANT TO EDIT THE C++ 
+# DEPENDENCIES YOU CAN JUST EDIT THE DEVCONTAINER
+
+# ALSO MAKE IT SO THAT -DBUILD_SHARED_LIBS=OFF IS CONSISTENT BETWEEN THE DEVCONTAINER DOCKERFILE 
+#AND THIS DOCKERFILE
+
+FROM ros:humble
+
+USER root
+
+ENV SHELL=/bin/bash
+ENV DEBIAN_FRONTEND=noninteractive
+
+
+
+RUN apt-get update \
+   && apt-get install -y --no-install-recommends \
+      python3-pip \
+      git \
+      curl \
+      lsb-release \
+      build-essential \
+      cmake \
+      ros-dev-tools \
+   && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+   && apt-get install -y --no-install-recommends \
+      ros-humble-std-msgs \
+      ros-humble-geometry-msgs \
+      ros-humble-sensor-msgs \
+      ros-humble-rosidl-default-generators \
+      ros-humble-rosidl-default-runtime \
+   && rm -rf /var/lib/apt/lists/*
+
+
+RUN apt-get update \
+   && apt-get install -y --no-install-recommends \
+      libcurl4-openssl-dev \
+      libssl-dev \
+      nlohmann-json3-dev \
+      ros-humble-serial-driver \
+      ros-humble-asio-cmake-module \
+      libudev-dev \
+      libboost-system-dev \
+      libboost-thread-dev \
+      libyaml-cpp-dev \
+      ninja-build \
+      ccache \
+      mold \
+   && rm -rf /var/lib/apt/lists/*
+
+
+RUN git clone --depth 1 https://github.com/libcpr/cpr.git /tmp/cpr \
+   && cd /tmp/cpr && mkdir build && cd build \
+   && cmake .. -DCPR_USE_SYSTEM_CURL=ON -DBUILD_SHARED_LIBS=OFF \
+   && cmake --build . --parallel $(nproc) \
+   && cmake --install . \
+   && rm -rf /tmp/cpr
+
+
+RUN mkdir -p /home/ws
+WORKDIR /home/ws
+
+CMD ["/bin/bash"]

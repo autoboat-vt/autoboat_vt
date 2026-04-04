@@ -1,0 +1,196 @@
+name: ROS2 Cross-Architecture Build & Release
+
+# ============================================================================
+# CONFIGURABLE PACKAGES
+# Edit the list below to change which packages get built and distributed.
+# These are passed directly to `colcon build --packages-select`.
+# autoboat_msgs must always be included (autopilot_cpp + sensors_cpp depend on it).
+# ============================================================================
+env:
+  COLCON_PACKAGES: "autoboat_msgs autopilot_cpp sensors_cpp"
+
+on:
+  push:
+    branches: [ "main" ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Build (${{ matrix.architecture }})
+    # Public repos get free native arm64 runners — no slow QEMU emulation.
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-22.04
+            platform: linux/amd64
+          - architecture: arm64
+            runner: ubuntu-22.04-arm
+            platform: linux/arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # Compute the package version from the git tag (e.g. v1.2.3 → 1.2.3)
+      # or fall back to 0.0.0+git<sha> for non-tag builds.
+      # The version is passed into the container via an environment variable.
+      # -----------------------------------------------------------------------
+      - name: Compute package version
+        id: meta
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="0.0.0+git$(git rev-parse --short HEAD)"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Package version: ${VERSION}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # -----------------------------------------------------------------------
+      # Build the CI Docker image, cached between runs via GitHub Actions Cache.
+      # The image contains all C++ build dependencies (see .github/Dockerfile.ci).
+      # -----------------------------------------------------------------------
+      - name: Build CI Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: .github/Dockerfile.ci
+          platforms: ${{ matrix.platform }}
+          load: true
+          tags: autoboat-ci-image:latest
+          cache-from: type=gha,scope=ci-image-${{ matrix.architecture }}
+          cache-to: type=gha,mode=max,scope=ci-image-${{ matrix.architecture }}
+
+      # -----------------------------------------------------------------------
+      # Run colcon build AND package everything inside the container.
+      # All disk work happens inside the container (root) to avoid:
+      #   - Cross-filesystem mv failures (/tmp vs bind-mount are diff filesystems)
+      #   - Host runner (non-root) being unable to read/tar root-owned build output
+      # We pass DEB_VERSION + DEB_ARCH as env vars so the inner shell can use them.
+      #
+      # Outputs (all chmod'd readable for the host runner to upload):
+      #   output_artifacts/autoboat-prebuilt-<arch>.tar.gz  (build/ + install/)
+      #   output_artifacts/autoboat-vt-<arch>.deb            (install/ only, with deps)
+      # -----------------------------------------------------------------------
+      - name: Build ROS2 Packages, Tarball, and Debian Package
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/home/ws \
+            -w /home/ws \
+            -e DEB_VERSION="${{ steps.meta.outputs.version }}" \
+            -e DEB_ARCH="${{ matrix.architecture }}" \
+            autoboat-ci-image:latest \
+            bash -c '
+              set -e
+              source /opt/ros/humble/setup.bash
+
+              # ── 1. Build ────────────────────────────────────────────────────
+              echo "==> colcon build: ${{ env.COLCON_PACKAGES }}"
+              colcon build \
+                --packages-select ${{ env.COLCON_PACKAGES }} \
+                --symlink-install \
+                --cmake-args \
+                  -DCMAKE_BUILD_TYPE=Debug \
+                  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+              # ── 2. Resolve symlinks ─────────────────────────────────────────
+              # --symlink-install creates symlinks in install/ pointing into src/.
+              # We copy with cp -rL to produce real files, so the tarball/deb
+              # works on machines that have no src/ directory.
+              # IMPORTANT: use install_resolved (same bind-mount filesystem) not
+              # /tmp (different filesystem) — mv across filesystems fails.
+              echo "==> Resolving symlinks in install/..."
+              cp -rL install install_resolved
+              rm -rf install
+              mv install_resolved install
+
+              mkdir -p output_artifacts
+
+              # ── 3. Tarball (build/ + install/) ──────────────────────────────
+              echo "==> Creating tarball..."
+              tar -czf "output_artifacts/autoboat-prebuilt-${DEB_ARCH}.tar.gz" \
+                build/ install/
+
+              # ── 4. Debian package (install/ only) ───────────────────────────
+              echo "==> Building .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
+              PKG_DIR=/home/ws/deb_pkg
+              mkdir -p "${PKG_DIR}/DEBIAN"
+              mkdir -p "${PKG_DIR}/opt/autoboat"
+
+              # Copy install overlay into package tree
+              cp -r install "${PKG_DIR}/opt/autoboat/"
+
+              # Fill in version + arch placeholders in the control file template
+              sed \
+                -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" \
+                -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
+                .github/deb/control.template > "${PKG_DIR}/DEBIAN/control"
+
+              # Maintainer scripts
+              cp .github/deb/postinst "${PKG_DIR}/DEBIAN/postinst"
+              cp .github/deb/prerm    "${PKG_DIR}/DEBIAN/prerm"
+              chmod 0755 "${PKG_DIR}/DEBIAN/postinst" "${PKG_DIR}/DEBIAN/prerm"
+
+              dpkg-deb --build "${PKG_DIR}" \
+                "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
+
+              # ── 5. Fix permissions for host runner upload ───────────────────
+              chmod a+r output_artifacts/autoboat-prebuilt-${DEB_ARCH}.tar.gz
+              chmod a+r output_artifacts/autoboat-vt-${DEB_ARCH}.deb
+
+              echo "==> Output artifacts:"
+              du -sh output_artifacts/*
+            '
+
+      # Upload both the .tar.gz and .deb as workflow artifacts.
+      # On every push/PR these are downloadable from the Actions tab for 5 days.
+      # On tag pushes the release job picks them up too.
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: autoboat-prebuilt-${{ matrix.architecture }}
+          path: output_artifacts/
+          retention-days: 5
+
+  # ============================================================================
+  # Release job — only runs on version tag pushes (v*).
+  # Attaches both the .tar.gz and .deb for all architectures to a GitHub Release.
+  # To publish: git tag v1.0.0 && git push origin v1.0.0
+  # ============================================================================
+  release:
+    name: Create GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all arch artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: output_artifacts
+          merge-multiple: true
+
+      - name: List release assets
+        run: ls -lh output_artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            output_artifacts/autoboat-prebuilt-*.tar.gz
+            output_artifacts/autoboat-vt-*.deb
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref, '-') }}

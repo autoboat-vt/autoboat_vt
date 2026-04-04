@@ -14,6 +14,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "std_msgs/msg/string.hpp"
+#include "std_msgs/msg/u_int8.hpp"
 #include "std_msgs/msg/int32.hpp"
 #include "std_msgs/msg/bool.hpp"
 #include "sensor_msgs/msg/nav_sat_fix.hpp"
@@ -67,8 +68,8 @@ private:
 
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr desired_sail_angle_publisher, desired_rudder_angle_publisher, desired_heading_publisher;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr zero_rudder_encoder_publisher, zero_winch_encoder_publisher;
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr autopilot_mode_publisher;
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr full_autonomy_maneuver_publisher;
+    rclcpp::Publisher<std_msgs::msg::UInt8>::SharedPtr autopilot_mode_publisher;
+    rclcpp::Publisher<std_msgs::msg::UInt8>::SharedPtr full_autonomy_maneuver_publisher;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr config_path_publisher;
     rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr waypoint_index_publisher;
     std::vector<rclcpp::SubscriptionBase::SharedPtr> subs;

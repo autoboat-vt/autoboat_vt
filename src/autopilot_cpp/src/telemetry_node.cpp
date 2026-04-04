@@ -21,8 +21,8 @@ TelemetryNode::TelemetryNode() : Node("telemetry_cpp"), telemetry_server_url_str
 
     subs.push_back(create_subscription<std_msgs::msg::Float32>("/desired_heading", 10, std::bind(&TelemetryNode::desired_heading_callback, this, _1)));
     subs.push_back(create_subscription<std_msgs::msg::Int32>("/current_waypoint_index", 10, std::bind(&TelemetryNode::waypoint_index_callback, this, _1)));
-    subs.push_back(create_subscription<std_msgs::msg::String>("/full_autonomy_maneuver", sensor_qos, std::bind(&TelemetryNode::full_autonomy_maneuver_callback, this, _1)));
-    subs.push_back(create_subscription<std_msgs::msg::String>("/autopilot_mode", sensor_qos, std::bind(&TelemetryNode::autopilot_mode_callback, this, _1)));
+    subs.push_back(create_subscription<std_msgs::msg::UInt8>("/full_autonomy_maneuver", sensor_qos, std::bind(&TelemetryNode::full_autonomy_maneuver_callback, this, _1)));
+    subs.push_back(create_subscription<std_msgs::msg::UInt8>("/autopilot_mode", sensor_qos, std::bind(&TelemetryNode::autopilot_mode_callback, this, _1)));
     
     subs.push_back(create_subscription<std_msgs::msg::Float32>("/desired_sail_angle", sensor_qos, std::bind(&TelemetryNode::desired_sail_angle_callback, this, _1)));
     subs.push_back(create_subscription<std_msgs::msg::Float32>("/desired_rudder_angle", sensor_qos, std::bind(&TelemetryNode::desired_rudder_angle_callback, this, _1)));
@@ -146,66 +146,67 @@ void TelemetryNode::send_boat_status() {
     if (!current_waypoints_list.empty() && current_waypoint_index >= 0 && current_waypoint_index < (int)current_waypoints_list.size()) {
         double lat2 = current_waypoints_list[current_waypoint_index].first;
         double lon2 = current_waypoints_list[current_waypoint_index].second;
-        dist_wp = calculate_distance(position_latitude, position_longitude, lat2, lon2);
+        dist_wp = get_distance(position_latitude, position_longitude, lat2, lon2);
     }
 
     std::string route = "boat_status/set_fast/" + std::to_string(instance_id);
 
     if (is_sailboat_mode) {
-        SailboatStatusPayload p;
-        p.latitude = position_latitude;
-        p.longitude = position_longitude;
-        p.distance_to_next_waypoint = dist_wp;
-        p.speed = std::hypot(velocity_vector_x, velocity_vector_y);
-        p.velocity_x = velocity_vector_x;
-        p.velocity_y = velocity_vector_y;
-        p.desired_heading = desired_heading;
-        p.heading = heading;
-        p.desired_rudder_angle = desired_rudder_angle;
-        p.current_rudder_angle = current_rudder_angle;
-        p.rudder_angle_error = desired_rudder_angle - current_rudder_angle;
-        p.current_waypoint_index = current_waypoint_index;
-        p.autopilot_mode = get_sailboat_mode(autopilot_mode);
+        SailboatStatusPayload payload;
+        payload.latitude = position_latitude;
+        payload.longitude = position_longitude;
+        payload.distance_to_next_waypoint = dist_wp;
+        payload.speed = std::hypot(velocity_vector_x, velocity_vector_y);
+        payload.velocity_x = velocity_vector_x;
+        payload.velocity_y = velocity_vector_y;
+        payload.desired_heading = desired_heading;
+        payload.heading = heading;
+        payload.desired_rudder_angle = desired_rudder_angle;
+        payload.current_rudder_angle = current_rudder_angle;
+        payload.rudder_angle_error = desired_rudder_angle - current_rudder_angle;
+        payload.current_waypoint_index = current_waypoint_index;
+        payload.autopilot_mode = autopilot_mode;
 
-        p.true_wind_speed = r;
-        p.true_wind_angle = th;
-        p.apparent_wind_speed = apparent_wind_speed;
-        p.apparent_wind_angle = apparent_wind_angle;
-        p.current_sail_angle = current_sail_angle;
-        p.desired_sail_angle = desired_sail_angle;
-        p.sail_angle_error = desired_sail_angle - current_sail_angle;
-        p.full_autonomy_maneuver = get_sailboat_state(full_autonomy_maneuver);
+        payload.true_wind_speed = r;
+        payload.true_wind_angle = th;
+        payload.apparent_wind_speed = apparent_wind_speed;
+        payload.apparent_wind_angle = apparent_wind_angle;
+        payload.current_sail_angle = current_sail_angle;
+        payload.desired_sail_angle = desired_sail_angle;
+        payload.sail_angle_error = desired_sail_angle - current_sail_angle;
+        payload.full_autonomy_maneuver = full_autonomy_maneuver;
 
-        post_bytes(route, (const char*)&p, sizeof(p), &write_boat_status_session);
-    } else if (is_motorboat_mode) {
-        MotorboatStatusPayload p;
-        p.latitude = position_latitude;
-        p.longitude = position_longitude;
-        p.distance_to_next_waypoint = dist_wp;
-        p.speed = std::hypot(velocity_vector_x, velocity_vector_y);
-        p.velocity_x = velocity_vector_x;
-        p.velocity_y = velocity_vector_y;
-        p.desired_heading = desired_heading;
-        p.heading = heading;
-        p.desired_rudder_angle = desired_rudder_angle;
-        p.current_rudder_angle = current_rudder_angle;
-        p.rudder_angle_error = desired_rudder_angle - current_rudder_angle;
-        p.current_waypoint_index = current_waypoint_index;
-        p.autopilot_mode = get_motorboat_mode(autopilot_mode);
+        post_bytes(route, (const char*)&payload, sizeof(payload), &write_boat_status_session);
+    } 
+    else if (is_motorboat_mode) {
+        MotorboatStatusPayload payload;
+        payload.latitude = position_latitude;
+        payload.longitude = position_longitude;
+        payload.distance_to_next_waypoint = dist_wp;
+        payload.speed = std::hypot(velocity_vector_x, velocity_vector_y);
+        payload.velocity_x = velocity_vector_x;
+        payload.velocity_y = velocity_vector_y;
+        payload.desired_heading = desired_heading;
+        payload.heading = heading;
+        payload.desired_rudder_angle = desired_rudder_angle;
+        payload.current_rudder_angle = current_rudder_angle;
+        payload.rudder_angle_error = desired_rudder_angle - current_rudder_angle;
+        payload.current_waypoint_index = current_waypoint_index;
+        payload.autopilot_mode = autopilot_mode;
 
-        p.rpm = vesc_rpm;
-        p.duty_cycle = vesc_duty_cycle;
-        p.amp_hours = vesc_amp_hours;
-        p.amp_hours_charged = vesc_amp_hours_charged;
-        p.current_to_vesc = vesc_current_to_vesc;
-        p.voltage_to_motor = vesc_voltage_to_motor;
-        p.voltage_to_vesc = vesc_voltage_to_vesc;
-        p.wattage_to_motor = vesc_wattage_to_motor;
-        p.motor_temperature = vesc_motor_temperature;
-        p.vesc_temperature = vesc_vesc_temperature;
-        p.time_since_vesc_startup_in_ms = vesc_time_ms;
+        payload.rpm = vesc_rpm;
+        payload.duty_cycle = vesc_duty_cycle;
+        payload.amp_hours = vesc_amp_hours;
+        payload.amp_hours_charged = vesc_amp_hours_charged;
+        payload.current_to_vesc = vesc_current_to_vesc;
+        payload.voltage_to_motor = vesc_voltage_to_motor;
+        payload.voltage_to_vesc = vesc_voltage_to_vesc;
+        payload.wattage_to_motor = vesc_wattage_to_motor;
+        payload.motor_temperature = vesc_motor_temperature;
+        payload.vesc_temperature = vesc_vesc_temperature;
+        payload.time_since_vesc_startup_in_ms = vesc_time_ms;
 
-        post_bytes(route, (const char*)&p, sizeof(p), &write_boat_status_session);
+        post_bytes(route, (const char*)&payload, sizeof(payload), &write_boat_status_session);
     }
 }
 
@@ -214,34 +215,35 @@ void TelemetryNode::post_bytes(const std::string& route, const char* data, size_
     std::string body_str = std::string(data, size);
 
     while (rclcpp::ok()) {
-        cpr::Response r;
+        cpr::Response response;
         if (session) {
             session->SetUrl(cpr::Url{url});
             session->SetBody(cpr::Body{body_str});
             session->SetHeader(cpr::Header{{"Content-Type", "application/octet-stream"}});
             session->SetTimeout(cpr::Timeout{10000});
-            r = session->Post();
-        } else {
-            r = cpr::Post(
+            response = session->Post();
+        } 
+        else {
+            response = cpr::Post(
                 cpr::Url{url},
                 cpr::Body{body_str},
                 cpr::Header{{"Content-Type", "application/octet-stream"}},
                 cpr::Timeout{10000}
             );
         }
-        if (r.status_code == 200 || r.status_code == 201) return;
+        if (response.status_code == 200 || response.status_code == 201) return;
         RCLCPP_WARN(this->get_logger(), "Failed to send payload bytes to %s, retrying...", route.c_str());
         std::this_thread::sleep_for(1s);
     }
 }
 
 void TelemetryNode::update_waypoints() {
-    json resp = get_response_from_telemetry_server("waypoints/get_new/" + std::to_string(instance_id), &read_waypoints_session);
-    if (!resp.is_array() || resp.empty()) return;
+    json response = get_response_from_telemetry_server("waypoints/get_new/" + std::to_string(instance_id), &read_waypoints_session);
+    if (!response.is_array() || response.empty()) return;
 
     autoboat_msgs::msg::WaypointList wp_list;
     current_waypoints_list.clear();
-    for (const auto& w : resp) {
+    for (const auto& w : response) {
         if (w.is_array() && w.size() >= 2) {
             double lat = w[0].get<double>();
             double lon = w[1].get<double>();
@@ -256,9 +258,9 @@ void TelemetryNode::update_waypoints() {
 }
 
 void TelemetryNode::update_autopilot_params() {
-    json resp = get_response_from_telemetry_server("autopilot_parameters/get_new/" + std::to_string(instance_id), &read_autopilot_parameters_session);
-    if (resp.is_object() && !resp.empty()) {
-        autopilot_parameters = resp;
+    json response = get_response_from_telemetry_server("autopilot_parameters/get_new/" + std::to_string(instance_id), &read_autopilot_parameters_session);
+    if (response.is_object() && !response.empty()) {
+        autopilot_parameters = response;
         std_msgs::msg::String msg;
         msg.data = autopilot_parameters.dump();
         autopilot_parameters_publisher->publish(msg);
@@ -268,19 +270,26 @@ void TelemetryNode::update_autopilot_params() {
 json TelemetryNode::get_response_from_telemetry_server(const std::string& route, cpr::Session* session) {
     std::string url = telemetry_server_url_string + "/" + route;
     while (rclcpp::ok()) {
-        cpr::Response r;
+        cpr::Response response;
         if (session) {
             session->SetUrl(cpr::Url{url});
             session->SetTimeout(cpr::Timeout{10000});
-            r = session->Get();
-        } else {
-            r = cpr::Get(cpr::Url{url}, cpr::Timeout{10000});
+            response = session->Get();
+        } 
+        else {
+            response = cpr::Get(cpr::Url{url}, cpr::Timeout{10000});
         }
-        if (r.status_code == 200) {
-            try { return json::parse(r.text); } catch(...) {}
+        if (response.status_code == 200) {
+            try { 
+                return json::parse(response.text); 
+            } 
+            catch(...) {
+
+            }
+
             return json();
         }
-        RCLCPP_WARN(this->get_logger(), "Could not receive data %s, retrying... (Status: %ld)", route.c_str(), r.status_code);
+        RCLCPP_WARN(this->get_logger(), "Could not receive data %s, retrying... (Status: %ld)", route.c_str(), response.status_code);
         std::this_thread::sleep_for(1s);
     }
     return json();
@@ -289,24 +298,30 @@ json TelemetryNode::get_response_from_telemetry_server(const std::string& route,
 void TelemetryNode::post_json_to_telemetry_server(const std::string& route, const json& j, cpr::Session* session) {
     std::string url = telemetry_server_url_string + "/" + route;
     std::string body_str = j.dump(-1, ',', false, nlohmann::detail::error_handler_t::replace);
+
     while (rclcpp::ok()) {
-        cpr::Response r;
+        cpr::Response response;
         if (session) {
             session->SetUrl(cpr::Url{url});
             session->SetBody(cpr::Body{body_str});
             session->SetHeader(cpr::Header{{"Content-Type", "application/json"}});
             session->SetTimeout(cpr::Timeout{10000});
-            r = session->Post();
-        } else {
-            r = cpr::Post(
+            response = session->Post();
+        } 
+        else {
+            response = cpr::Post(
                 cpr::Url{url},
                 cpr::Body{body_str},
                 cpr::Header{{"Content-Type", "application/json"}},
                 cpr::Timeout{10000}
             );
         }
-        if (r.status_code == 200 || r.status_code == 201) return;
-        RCLCPP_WARN(this->get_logger(), "Could not post JSON to %s, retrying... Status: %ld, Error: %s, Response: %s", route.c_str(), r.status_code, r.error.message.c_str(), r.text.c_str());
+        if (response.status_code == 200 || response.status_code == 201) return;
+        RCLCPP_WARN(
+            this->get_logger(), 
+            "Could not post JSON to %s, retrying... Status: %ld, Error: %s, Response: %s", 
+            route.c_str(), response.status_code, response.error.message.c_str(), response.text.c_str()
+        );
         std::this_thread::sleep_for(1s);
     }
 }
@@ -314,39 +329,50 @@ void TelemetryNode::post_json_to_telemetry_server(const std::string& route, cons
 void TelemetryNode::post_empty_to_telemetry_server(const std::string& route, cpr::Session* session) {
     std::string url = telemetry_server_url_string + "/" + route;
     while (rclcpp::ok()) {
-        cpr::Response r;
+        cpr::Response response;
         if (session) {
             session->SetUrl(cpr::Url{url});
             session->SetBody(cpr::Body{""});
             session->SetHeader(cpr::Header{{"Content-Type", "application/json"}});
             session->SetTimeout(cpr::Timeout{10000});
-            r = session->Post();
-        } else {
-            r = cpr::Post(cpr::Url{url}, cpr::Header{{"Content-Type", "application/json"}}, cpr::Timeout{10000});
+            response = session->Post();
+        } 
+        else {
+            response = cpr::Post(cpr::Url{url}, cpr::Header{{"Content-Type", "application/json"}}, cpr::Timeout{10000});
         }
-        if (r.status_code == 200 || r.status_code == 201) return;
+        if (response.status_code == 200 || response.status_code == 201) return;
         RCLCPP_WARN(this->get_logger(), "Could not post empty to %s, retrying...", route.c_str());
         std::this_thread::sleep_for(1s);
     }
 }
 
-double TelemetryNode::calculate_distance(double lat1, double lon1, double lat2, double lon2) {
-    const double R = 6371000.0;
-    double dlat = (lat2 - lat1) * M_PI / 180.0;
-    double dlon = (lon2 - lon1) * M_PI / 180.0;
-    double a = sin(dlat/2)*sin(dlat/2) + cos(lat1*M_PI/180.0)*cos(lat2*M_PI/180.0)*sin(dlon/2)*sin(dlon/2);
-    return R * 2 * atan2(sqrt(a), sqrt(1-a));
-}
+
+
+
+
+
 
 // Callbacks
-void TelemetryNode::position_callback(const sensor_msgs::msg::NavSatFix::SharedPtr msg) { position_latitude = msg->latitude; position_longitude = msg->longitude; }
-void TelemetryNode::velocity_callback(const geometry_msgs::msg::Twist::SharedPtr msg) { velocity_vector_x = msg->linear.x; velocity_vector_y = msg->linear.y; }
-void TelemetryNode::heading_callback(const std_msgs::msg::Float32::SharedPtr msg) { heading = msg->data; }
+void TelemetryNode::position_callback(const sensor_msgs::msg::NavSatFix::SharedPtr msg) { 
+    position_latitude = msg->latitude; 
+    position_longitude = msg->longitude; 
+}
+
+void TelemetryNode::velocity_callback(const geometry_msgs::msg::Twist::SharedPtr msg) { 
+    velocity_vector_x = msg->linear.x; 
+    velocity_vector_y = msg->linear.y; 
+}
+
+void TelemetryNode::heading_callback(const std_msgs::msg::Float32::SharedPtr msg) { 
+    heading = msg->data; 
+}
+
 void TelemetryNode::apparent_wind_callback(const geometry_msgs::msg::Vector3::SharedPtr msg) {
     apparent_wind_x = msg->x; apparent_wind_y = msg->y;
     apparent_wind_speed = std::hypot(msg->x, msg->y);
     apparent_wind_angle = std::atan2(msg->y, msg->x) * 180.0 / M_PI;
 }
+
 void TelemetryNode::vesc_data_callback(const autoboat_msgs::msg::VESCTelemetryData::SharedPtr msg) {
     vesc_rpm = msg->rpm;
     vesc_duty_cycle = msg->duty_cycle;
@@ -360,14 +386,40 @@ void TelemetryNode::vesc_data_callback(const autoboat_msgs::msg::VESCTelemetryDa
     vesc_vesc_temperature = msg->vesc_temperature;
     vesc_time_ms = msg->time_since_vesc_startup_in_ms;
 }
-void TelemetryNode::desired_heading_callback(const std_msgs::msg::Float32::SharedPtr msg) { desired_heading = msg->data; }
-void TelemetryNode::waypoint_index_callback(const std_msgs::msg::Int32::SharedPtr msg) { current_waypoint_index = msg->data; }
-void TelemetryNode::full_autonomy_maneuver_callback(const std_msgs::msg::String::SharedPtr msg) { full_autonomy_maneuver = msg->data; }
-void TelemetryNode::autopilot_mode_callback(const std_msgs::msg::String::SharedPtr msg) { autopilot_mode = msg->data; }
-void TelemetryNode::desired_sail_angle_callback(const std_msgs::msg::Float32::SharedPtr msg) { desired_sail_angle = msg->data; }
-void TelemetryNode::desired_rudder_angle_callback(const std_msgs::msg::Float32::SharedPtr msg) { desired_rudder_angle = msg->data; }
-void TelemetryNode::current_sail_angle_callback(const std_msgs::msg::Float32::SharedPtr msg) { current_sail_angle = msg->data; }
-void TelemetryNode::current_rudder_angle_callback(const std_msgs::msg::Float32::SharedPtr msg) { current_rudder_angle = msg->data; }
+
+void TelemetryNode::desired_heading_callback(const std_msgs::msg::Float32::SharedPtr msg) { 
+    desired_heading = msg->data; 
+}
+
+void TelemetryNode::waypoint_index_callback(const std_msgs::msg::Int32::SharedPtr msg) { 
+    current_waypoint_index = msg->data;
+}
+
+void TelemetryNode::full_autonomy_maneuver_callback(const std_msgs::msg::UInt8::SharedPtr msg) { 
+    full_autonomy_maneuver = msg->data; 
+}
+
+void TelemetryNode::autopilot_mode_callback(const std_msgs::msg::UInt8::SharedPtr msg) { 
+    autopilot_mode = msg->data; 
+}
+
+void TelemetryNode::desired_sail_angle_callback(const std_msgs::msg::Float32::SharedPtr msg) { 
+    desired_sail_angle = msg->data; 
+}
+
+void TelemetryNode::desired_rudder_angle_callback(const std_msgs::msg::Float32::SharedPtr msg) { 
+    desired_rudder_angle = msg->data; 
+}
+
+void TelemetryNode::current_sail_angle_callback(const std_msgs::msg::Float32::SharedPtr msg) { 
+    current_sail_angle = msg->data; 
+}
+
+void TelemetryNode::current_rudder_angle_callback(const std_msgs::msg::Float32::SharedPtr msg) { 
+    current_rudder_angle = msg->data; 
+}
+
+
 
 
 int main(int argc, char** argv) {

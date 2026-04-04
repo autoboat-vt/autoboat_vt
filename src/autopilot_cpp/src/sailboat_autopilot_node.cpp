@@ -43,8 +43,8 @@ SailboatAutopilotNode::SailboatAutopilotNode() : Node("sailboat_autopilot") {
     // Publishers
     desired_sail_angle_publisher = create_publisher<std_msgs::msg::Float32>("/desired_sail_angle", 10);
     desired_rudder_angle_publisher = create_publisher<std_msgs::msg::Float32>("/desired_rudder_angle", 10);
-    autopilot_mode_publisher = create_publisher<std_msgs::msg::String>("/autopilot_mode", sensor_qos);
-    full_autonomy_maneuver_publisher = create_publisher<std_msgs::msg::String>("/full_autonomy_maneuver", sensor_qos);
+    autopilot_mode_publisher = create_publisher<std_msgs::msg::UInt8>("/autopilot_mode", sensor_qos);
+    full_autonomy_maneuver_publisher = create_publisher<std_msgs::msg::UInt8>("/full_autonomy_maneuver", sensor_qos);
     waypoint_index_publisher = create_publisher<std_msgs::msg::Int32>("/current_waypoint_index", 10);
     desired_heading_publisher = create_publisher<std_msgs::msg::Float32>("/desired_heading", 10);
     autopilot_refresh_timer = create_wall_timer(std::chrono::duration<double>(1.0 / autopilot_parameters["autopilot_refresh_rate"].get<float>()), std::bind(&SailboatAutopilotNode::update_ros_topics, this));
@@ -217,12 +217,12 @@ void SailboatAutopilotNode::update_ros_topics() {
 
 
 
-    autopilot_mode_publisher->publish(std_msgs::msg::String().set__data(to_string(sailboat_autopilot.current_autopilot_mode)));
+    autopilot_mode_publisher->publish(std_msgs::msg::UInt8().set__data(static_cast<uint8_t>(sailboat_autopilot.current_autopilot_mode)));
     if (sailboat_autopilot.current_autopilot_mode == SailboatAutopilotModes::Waypoint_Mission) {
-        full_autonomy_maneuver_publisher->publish(std_msgs::msg::String().set__data(to_string(sailboat_autopilot.get_current_waypoint_mission_state())));
+        full_autonomy_maneuver_publisher->publish(std_msgs::msg::UInt8().set__data(static_cast<uint8_t>(sailboat_autopilot.get_current_waypoint_mission_state())));
     }
     else {
-        full_autonomy_maneuver_publisher->publish(std_msgs::msg::String().set__data("N/A"));
+        full_autonomy_maneuver_publisher->publish(std_msgs::msg::UInt8().set__data(255));
     }
 
     waypoint_index_publisher->publish(std_msgs::msg::Int32().set__data(sailboat_autopilot.get_current_waypoint_index()));

@@ -48,8 +48,8 @@ MotorboatAutopilotNode::MotorboatAutopilotNode() : Node("motorboat_autopilot_cpp
 
     // Publishers
     current_waypoint_index_publisher = this->create_publisher<std_msgs::msg::Int32>("/current_waypoint_index", 10);
-    autopilot_mode_publisher = this->create_publisher<std_msgs::msg::String>("/autopilot_mode", sensor_qos);
-    full_autonomy_maneuver_publisher = this->create_publisher<std_msgs::msg::String>("/full_autonomy_maneuver", sensor_qos);
+    autopilot_mode_publisher = this->create_publisher<std_msgs::msg::UInt8>("/autopilot_mode", sensor_qos);
+    full_autonomy_maneuver_publisher = this->create_publisher<std_msgs::msg::UInt8>("/full_autonomy_maneuver", sensor_qos);
 
     should_propeller_motor_be_powered_publisher = create_publisher<std_msgs::msg::Bool>("/should_propeller_motor_be_powered", 10);
     propeller_motor_control_struct_publisher = create_publisher<autoboat_msgs::msg::VESCControlData>("/propeller_motor_control_struct", 10);
@@ -213,12 +213,12 @@ void MotorboatAutopilotNode::update_ros_topics() {
     index_msg.data = motorboat_autopilot.get_current_waypoint_index();
     current_waypoint_index_publisher->publish(index_msg);
 
-    std_msgs::msg::String mode_msg;
-    mode_msg.data = to_string(autopilot_mode);
+    std_msgs::msg::UInt8 mode_msg;
+    mode_msg.data = static_cast<uint8_t>(autopilot_mode);
     autopilot_mode_publisher->publish(mode_msg);
 
-    std_msgs::msg::String maneuver_msg;
-    maneuver_msg.data = "N/A";
+    std_msgs::msg::UInt8 maneuver_msg;
+    maneuver_msg.data = 255;
     full_autonomy_maneuver_publisher->publish(maneuver_msg);
 
     // Calculate and Publish Rudder Angle

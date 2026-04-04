@@ -47,6 +47,7 @@ add_library(autopilot_lib STATIC
   autopilot_library/position.cpp
   autopilot_library/motorboat_autopilot.cpp
   autopilot_library/sailboat_autopilot.cpp
+  autopilot_library/telemetry_payloads.cpp
 )
 target_include_directories(autopilot_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -85,10 +86,10 @@ install(TARGETS sailboat_autopilot DESTINATION lib/${PROJECT_NAME})
 
 
 # create telemetry node executable
-add_executable(telemetry src/telemetry_node.cpp src/telemetry_payloads.cpp)
+add_executable(telemetry src/telemetry_node.cpp)
 target_include_directories(telemetry PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> ${CMAKE_CURRENT_SOURCE_DIR})
 ament_target_dependencies(telemetry rclcpp std_msgs geometry_msgs sensor_msgs autoboat_msgs)
-target_link_libraries(telemetry nlohmann_json::nlohmann_json cpr::cpr OpenSSL::SSL OpenSSL::Crypto yaml-cpp)
+target_link_libraries(telemetry autopilot_lib nlohmann_json::nlohmann_json cpr::cpr OpenSSL::SSL OpenSSL::Crypto yaml-cpp)
 target_precompile_headers(telemetry REUSE_FROM autopilot_lib)
 install(TARGETS telemetry DESTINATION lib/${PROJECT_NAME})
 

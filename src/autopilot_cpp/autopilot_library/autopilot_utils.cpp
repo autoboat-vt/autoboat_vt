@@ -77,8 +77,8 @@ double get_bearing(const Position& current, const Position& dest) {
     return bearing;
 }
 
-double get_distance_between_positions(const Position& p1, const Position& p2) {
-    return get_distance(p1.latitude, p1.longitude, p2.latitude, p2.longitude);
+double get_distance_between_positions(const Position& position1, const Position& position2) {
+    return get_distance(position1.latitude, position1.longitude, position2.latitude, position2.longitude);
 }
 
 bool is_angle_between_boundaries(double angle, double b1, double b2) {

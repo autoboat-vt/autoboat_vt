@@ -3,6 +3,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/float32.hpp>
+#include <std_msgs/msg/u_int8.hpp>
 #include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/int32.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
@@ -23,8 +24,8 @@
 #include <iomanip>
 #include <sstream>
 
-#include "telemetry_payloads.hpp"
-
+#include "autopilot_library/telemetry_payloads.hpp"
+#include "autopilot_library/geographic_function_library.hpp"
 
 using json = nlohmann::json;
 
@@ -46,8 +47,8 @@ private:
     json get_response_from_telemetry_server(const std::string& route, cpr::Session* session = nullptr);
     void post_json_to_telemetry_server(const std::string& route, const json& j, cpr::Session* session = nullptr);
     void post_empty_to_telemetry_server(const std::string& route, cpr::Session* session = nullptr);
-    double calculate_distance(double lat1, double lon1, double lat2, double lon2);
 
+    
     // Callbacks
     void position_callback(const sensor_msgs::msg::NavSatFix::SharedPtr msg);
     void velocity_callback(const geometry_msgs::msg::Twist::SharedPtr msg);
@@ -56,8 +57,8 @@ private:
     void vesc_data_callback(const autoboat_msgs::msg::VESCTelemetryData::SharedPtr msg);
     void desired_heading_callback(const std_msgs::msg::Float32::SharedPtr msg);
     void waypoint_index_callback(const std_msgs::msg::Int32::SharedPtr msg);
-    void full_autonomy_maneuver_callback(const std_msgs::msg::String::SharedPtr msg);
-    void autopilot_mode_callback(const std_msgs::msg::String::SharedPtr msg);
+    void full_autonomy_maneuver_callback(const std_msgs::msg::UInt8::SharedPtr msg);
+    void autopilot_mode_callback(const std_msgs::msg::UInt8::SharedPtr msg);
     void desired_sail_angle_callback(const std_msgs::msg::Float32::SharedPtr msg);
     void desired_rudder_angle_callback(const std_msgs::msg::Float32::SharedPtr msg);
     void current_sail_angle_callback(const std_msgs::msg::Float32::SharedPtr msg);
@@ -82,7 +83,7 @@ private:
     double desired_sail_angle = 0, desired_rudder_angle = 0;
     double current_sail_angle = 0, current_rudder_angle = 0;
     int current_waypoint_index = 0;
-    std::string autopilot_mode = "DISABLED", full_autonomy_maneuver = "NORMAL";
+    uint8_t autopilot_mode = 0, full_autonomy_maneuver = 0;
     std::vector<std::pair<double,double>> current_waypoints_list;
 
     float vesc_rpm = 0, vesc_duty_cycle = 0, vesc_amp_hours = 0, vesc_amp_hours_charged = 0;

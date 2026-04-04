@@ -53,9 +53,7 @@ struct MotorboatStatusPayload : public BoatStatusPayloadBase {
 #pragma pack(pop)
 
 
-uint8_t get_sailboat_mode(const std::string& mode);
-uint8_t get_sailboat_state(const std::string& state);
-uint8_t get_motorboat_mode(const std::string& mode);
+
 json get_sailboat_mapping_raw();
 json get_motorboat_mapping_raw();
 

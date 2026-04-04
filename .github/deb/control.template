@@ -1,0 +1,18 @@
+Package: autoboatvt
+Version: VERSION_PLACEHOLDER
+Architecture: ARCH_PLACEHOLDER
+Maintainer: autoboatvt <autoboat@vt.edu>
+Depends: ros-humble-ros-base,
+         ros-humble-serial-driver,
+         libyaml-cpp0.7,
+         libcurl4,
+         libssl3,
+         libudev1,
+         libboost-system1.74.0,
+         libboost-thread1.74.0
+Description: Prebuilt ROS2 packages for the VT AutoBoat system
+ Includes autopilot_cpp, sensors_cpp, and autoboat_msgs.
+ Built for ROS2 Humble on Ubuntu 22.04.
+ .
+ After installation, open a new terminal (or run: source /etc/profile.d/autoboat-vt.sh)
+ then use: ros2 run autopilot_cpp motorboat_autopilot

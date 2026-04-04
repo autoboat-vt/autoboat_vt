@@ -1,29 +1,8 @@
 #include "telemetry_payloads.hpp"
+#include "autopilot_utils.hpp"
 
 
-uint8_t get_sailboat_mode(const std::string& mode) {
-    if (mode == "FULL_RC") return 1;
-    if (mode == "HOLD_BEST_SAIL") return 2;
-    if (mode == "HOLD_HEADING") return 3;
-    if (mode == "HOLD_HEADING_AND_BEST_SAIL") return 4;
-    if (mode == "WAYPOINT_MISSION") return 5;
-    return 0; // DISABLED
-}
 
-uint8_t get_sailboat_state(const std::string& state) {
-    if (state == "NORMAL") return 0;
-    if (state == "CW_TACKING") return 1;
-    if (state == "CCW_TACKING") return 2;
-    if (state == "STALL") return 3;
-    return 255; // NA
-}
-
-uint8_t get_motorboat_mode(const std::string& mode) {
-    if (mode == "FULL_RC") return 1;
-    if (mode == "HOLD_HEADING") return 2;
-    if (mode == "WAYPOINT_MISSION") return 3;
-    return 0; // DISABLED
-}
 
 json get_sailboat_mapping_raw() {
     return json::array({

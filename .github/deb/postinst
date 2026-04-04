@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+
+# Drop a profile.d script so the ROS2 overlay is sourced automatically
+# for every user on every login (interactive + non-interactive shells that
+# source /etc/profile.d/).
+cat > /etc/profile.d/autoboat-vt.sh << 'EOF'
+# Sourced automatically by /etc/profile.d — do not edit manually.
+# Installed by the autoboat-vt Debian package.
+if [ -f /opt/ros/humble/setup.bash ]; then
+    source /opt/ros/humble/setup.bash
+fi
+if [ -f /opt/autoboat/install/setup.bash ]; then
+    source /opt/autoboat/install/setup.bash
+fi
+EOF
+
+chmod +x /etc/profile.d/autoboat-vt.sh
+
+echo "autoboat-vt: installed. Open a new terminal or run:"
+echo "  source /etc/profile.d/autoboat-vt.sh"
+echo "Then use: ros2 run autopilot_cpp motorboat_autopilot"
