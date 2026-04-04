@@ -60,7 +60,7 @@ StrEnum
 python-dateutil
 idna
 charset-normalizer
-jetson-stats
+#jetson-stats
 pynput
 
 
