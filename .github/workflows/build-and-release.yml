@@ -6,7 +6,7 @@ name: ROS2 Cross-Architecture Build & Release
 # These are passed directly to `colcon build --packages-ignore`.
 # ============================================================================
 env:
-  COLCON_IGNORE_PACKAGES: ""
+  COLCON_IGNORE_PACKAGES: "foil_dynamics rudder_dynamics sail_limits sailboat_simulation autopilot_transform wind_arrow"
 
 on:
   push:
