@@ -33,8 +33,6 @@ int main()
         gpio_init(LED_PIN);
         gpio_set_dir(LED_PIN, 1);
 
-        gpio_put(LED_PIN, 1);
-
         const int timeout_ms = 1000;
         const uint8_t attempts = 120;
         rmw_uros_ping_agent(timeout_ms, attempts);
