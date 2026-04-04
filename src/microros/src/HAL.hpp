@@ -1,6 +1,8 @@
 #ifndef HAL_H
 #define HAL_H
 
+//hardware abstraction layer: acts as interface between physical hardware and software
+
 // TODO: include all driver libraries here
 #include "spi_device.hpp"
 #include "common_libraries.h"

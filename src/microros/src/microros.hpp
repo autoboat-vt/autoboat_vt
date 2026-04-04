@@ -91,6 +91,9 @@ static amt22 rudderEncoder(RUDDER_ENCODER_CS_PIN, SPI_PORT);
 static amt22 winchEncoder(WINCH_ENCODER_CS_PIN, SPI_PORT);
 static cmps14 compass(I2C_PORT,MAGNETOMETER_ADDRESS);
 
+// static drv8711 rudderStepperMotorDriver(SPI_PORT, RUDDER_MOTOR_CS_PIN, RUDDER_MOTOR_SLEEP_PIN, AutoMixed, RUDDER_MICROSTEP, MAX_RUDDER_CURRENT);
+// static drv8711 winchStepperMotorDriver(SPI_PORT, WINCH_MOTOR_CS_PIN, WINCH_MOTOR_SLEEP_PIN, AutoMixed, WINCH_MICROSTEP, MAX_WINCH_CURRENT);
+
 static float desired_rudder_angle = 0;
 static float desired_rudder_motor_angle = 0;
 
