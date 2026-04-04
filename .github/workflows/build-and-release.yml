@@ -58,7 +58,7 @@ jobs:
 
       # -----------------------------------------------------------------------
       # Build the CI Docker image, cached between runs via GitHub Actions Cache.
-      # The image contains all C++ build dependencies (see .github/Dockerfile.ci).
+      # The image contains all C++ build dependencies.
       # -----------------------------------------------------------------------
       - name: Build CI Docker Image
         uses: docker/build-push-action@v5
@@ -85,6 +85,7 @@ jobs:
       - name: Build ROS2 Packages, Tarball, and Debian Package
         run: |
           docker run --rm \
+            --user root \
             -v ${{ github.workspace }}:/home/ws \
             -w /home/ws \
             -e DEB_VERSION="${{ steps.meta.outputs.version }}" \
@@ -145,9 +146,10 @@ jobs:
                 "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
 
               # ── 5. Fix permissions for host runner upload ───────────────────
-              chmod a+r output_artifacts/autoboat-prebuilt-${DEB_ARCH}.tar.gz
-              chmod a+r output_artifacts/autoboat-vt-${DEB_ARCH}.deb
-
+              echo "==> Fixing permissions for host runner..."
+              # Ensure the host runner can read everything in output_artifacts
+              chmod -R a+rX output_artifacts/
+              
               echo "==> Output artifacts:"
               du -sh output_artifacts/*
             '
