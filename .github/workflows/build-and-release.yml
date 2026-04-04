@@ -2,12 +2,11 @@ name: ROS2 Cross-Architecture Build & Release
 
 # ============================================================================
 # CONFIGURABLE PACKAGES
-# Edit the list below to change which packages get built and distributed.
-# These are passed directly to `colcon build --packages-select`.
-# autoboat_msgs must always be included (autopilot_cpp + sensors_cpp depend on it).
+# Edit the list below to change which packages don't get built and distributed.
+# These are passed directly to `colcon build --packages-ignore`.
 # ============================================================================
 env:
-  COLCON_PACKAGES: "autoboat_msgs autopilot_cpp sensors_cpp"
+  COLCON_IGNORE_PACKAGES: "foil_dynamics rudder_dynamics sail_limits sailboat_simulation autopilot_transform wind_arrow"
 
 on:
   push:
@@ -63,6 +62,8 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
 
       # -----------------------------------------------------------------------
       # Build the CI Docker images, cached between runs via GitHub Actions Cache.
@@ -117,9 +118,9 @@ jobs:
               source /opt/ros/humble/setup.bash
 
               # ── 1. Build ────────────────────────────────────────────────────
-              echo "==> colcon build: ${{ env.COLCON_PACKAGES }}"
+              echo "==> colcon build ignore: ${{ env.COLCON_IGNORE_PACKAGES }}"
               colcon build \
-                --packages-select ${{ env.COLCON_PACKAGES }} \
+                --packages-ignore ${{ env.COLCON_IGNORE_PACKAGES }} \
                 --symlink-install \
                 --cmake-args \
                   -DCMAKE_BUILD_TYPE=Debug \
