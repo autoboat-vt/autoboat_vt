@@ -26,12 +26,12 @@ class Position:
     The constructor supports two mutually exclusive initialization schemes:
     1. **Global:** Provide `longitude` and `latitude` only.
     
-    - Position(longitude=longitude, latitude=latitude)
+    >>> Position(longitude=longitude, latitude=latitude)
     
     2. **Local:** Provide `local_x`, `local_y`, and a reference global point
     (`reference_longitude`, `reference_latitude`) to calculate the position.
     
-    - Position(local_x=local_x, local_y=local_y, reference_longitude=reference_longitude, reference_latitude=reference_latitude)
+    >>> Position(local_x=local_x, local_y=local_y, reference_longitude=reference_longitude, reference_latitude=reference_latitude)
 
 
     Parameters
