@@ -38,7 +38,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Log in to Docker Hub
-        if: github.event_name != 'pull_request'
+        # Only push images to the registry when pushing to the main branch.
+        if: github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -185,11 +186,8 @@ jobs:
           retention-days: 5
 
       # -----------------------------------------------------------------------
-      # Push the built environment to Docker Hub if the code build succeeded.
-      # This provides a pre-built platform image for others to use.
-      # -----------------------------------------------------------------------
       - name: Push Architecture-Specific Dev Images
-        if: success() && github.event_name != 'pull_request'
+        if: success() && github.ref == 'refs/heads/main'
         run: |
           # Base image
           TAG_BASE="vtautoboat/development_image:${{ matrix.architecture }}"
@@ -244,7 +242,7 @@ jobs:
   publish-dev-image:
     name: Publish Multi-Arch Dev Image (${{ matrix.variant }})
     needs: build
-    if: success() && github.event_name != 'pull_request'
+    if: success() && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     strategy:
       matrix:
