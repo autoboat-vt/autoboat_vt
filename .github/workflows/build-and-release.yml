@@ -25,6 +25,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        variant: [ standard, microros ]
+        architecture: [ amd64, arm64 ]
         include:
           - architecture: amd64
             runner: ubuntu-22.04
@@ -32,10 +34,24 @@ jobs:
           - architecture: arm64
             runner: ubuntu-22.04-arm
             platform: linux/arm64
+          - variant: standard
+            dockerfile: .devcontainer/Dockerfile
+            image_repo: vtautoboat/development_image
+          # Micro-ROS variant: uses specialized Dockerfile from variants/ folder
+          - variant: microros
+            dockerfile: .devcontainer/devcontainer_variants/Dockerfile.microros
+            image_repo: vtautoboat/development_image_microros
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # -----------------------------------------------------------------------
       # Compute the package version from the git tag (e.g. v1.2.3 → 1.2.3)
@@ -64,12 +80,12 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: .devcontainer/Dockerfile
+          file: ${{ matrix.dockerfile }}
           platforms: ${{ matrix.platform }}
           load: true
           tags: autoboat-ci-image:latest
-          cache-from: type=gha,scope=ci-image-${{ matrix.architecture }}
-          cache-to: type=gha,mode=max,scope=ci-image-${{ matrix.architecture }}
+          cache-from: type=gha,scope=ci-image-${{ matrix.variant }}-${{ matrix.architecture }}
+          cache-to: type=gha,mode=max,scope=ci-image-${{ matrix.variant }}-${{ matrix.architecture }}
 
       # -----------------------------------------------------------------------
       # Run colcon build AND package everything inside the container.
@@ -83,6 +99,7 @@ jobs:
       #   output_artifacts/autoboat-vt-<arch>.deb            (install/ only, with deps)
       # -----------------------------------------------------------------------
       - name: Build ROS2 Packages, Tarball, and Debian Package
+        if: matrix.variant == 'standard'
         run: |
           docker run --rm \
             --user root \
@@ -158,11 +175,24 @@ jobs:
       # On every push/PR these are downloadable from the Actions tab for 5 days.
       # On tag pushes the release job picks them up too.
       - name: Upload Build Artifacts
+        if: matrix.variant == 'standard'
         uses: actions/upload-artifact@v4
         with:
-          name: autoboat-prebuilt-${{ matrix.architecture }}
+          name: autoboat-prebuilt-${{ matrix.variant }}-${{ matrix.architecture }}
           path: output_artifacts/
           retention-days: 5
+
+      # -----------------------------------------------------------------------
+      # Push the built environment to Docker Hub if the code build succeeded.
+      # This provides a pre-built platform image for others to use.
+      # -----------------------------------------------------------------------
+      - name: Push Architecture-Specific Dev Image
+        if: success() && github.event_name != 'pull_request'
+        run: |
+          TAG="${{ matrix.image_repo }}:${{ matrix.architecture }}"
+          echo "==> Tagging and pushing ${TAG}..."
+          docker tag autoboat-ci-image:latest $TAG
+          docker push $TAG
 
   # ============================================================================
   # Release job — only runs on version tag pushes (v*).
@@ -178,9 +208,10 @@ jobs:
       contents: write
 
     steps:
-      - name: Download all arch artifacts
+      - name: Download all standard variant artifacts
         uses: actions/download-artifact@v4
         with:
+          pattern: autoboat-prebuilt-standard-*
           path: output_artifacts
           merge-multiple: true
 
@@ -196,3 +227,34 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref, '-') }}
+
+  # ============================================================================
+  # Publish Multi-Arch Dev Image — runs after successful build.
+  # Combines the amd64 and arm64 images into a single multi-arch manifest.
+  # ============================================================================
+  publish-dev-image:
+    name: Publish Multi-Arch Dev Image (${{ matrix.variant }})
+    needs: build
+    if: success() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        variant: [ standard, microros ]
+        include:
+          - variant: standard
+            image_repo: vtautoboat/development_image
+          - variant: microros
+            image_repo: vtautoboat/development_image_microros
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create and Push Multi-Arch Manifest
+        run: |
+          echo "==> Creating multi-arch manifest for ${{ matrix.image_repo }}:latest..."
+          docker buildx imagetools create -t ${{ matrix.image_repo }}:latest \
+            ${{ matrix.image_repo }}:amd64 \
+            ${{ matrix.image_repo }}:arm64
