@@ -48,7 +48,6 @@ void HAL::init_i2c(){
 
 void HAL::init_rudder_stepper(drv8711* rudderStepperMotorDriver){
       drv8711_init(rudderStepperMotorDriver, SPI_PORT, RUDDER_MOTOR_CS_PIN, RUDDER_MOTOR_SLEEP_PIN, AutoMixed, RUDDER_MICROSTEP, MAX_RUDDER_CURRENT);
-
 }
 
 u_int16_t HAL::debug(drv8711* rudderStepperMotorDriver){

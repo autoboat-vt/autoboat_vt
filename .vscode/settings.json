@@ -6,7 +6,7 @@
     "ruff.configurationPreference": "filesystemFirst",
     "ruff.organizeImports": false,
     "ruff.importStrategy": "useBundled",
-    "editor.formatOnSave": true,
+    "editor.formatOnSave": false,
     "python.autoComplete.extraPaths": [
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages",

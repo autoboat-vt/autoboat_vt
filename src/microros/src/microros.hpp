@@ -184,6 +184,7 @@ struct current_rudder
     inline static std_msgs__msg__Float32 desired_rudder_angle_msg;
     inline static std_msgs__msg__Float32 current_angle_msg;       // for publishing
     inline static std_msgs__msg__Float32 current_motor_angle_msg; // for publishing
+    inline static std_msgs__msg__Float32 current_rudder_motor_angle_msg;
 
     inline static string angle_publisher_topic = "/current_rudder_angle";
     inline static string motor_angle_publisher_topic = "/current_rudder_motor_angle";
