@@ -64,7 +64,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: .github/Dockerfile.ci
+          file: .devcontainer/Dockerfile
           platforms: ${{ matrix.platform }}
           load: true
           tags: autoboat-ci-image:latest
