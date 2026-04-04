@@ -21,6 +21,37 @@ class Position:
 
     This class mainly just calls on python libraries such as ```navpy```, ```utm```, and ```pygeodesy``` to convert to
     other position measurement systems.
+    
+    
+    The constructor supports two mutually exclusive initialization schemes:
+    1. **Global:** Provide `longitude` and `latitude` only.
+    
+    - Position(longitude=longitude, latitude=latitude)
+    
+    2. **Local:** Provide `local_x`, `local_y`, and a reference global point
+    (`reference_longitude`, `reference_latitude`) to calculate the position.
+    
+    - Position(local_x=local_x, local_y=local_y, reference_longitude=reference_longitude, reference_latitude=reference_latitude)
+
+
+    Parameters
+    ----------
+        longitude: float
+            The global longitude in degrees.
+        latitude: float
+            The global latitude in degrees.
+        local_x: float
+            The Cartesian x-coordinate (e.g., Easting or NED North) relative to the reference point.
+        local_y: float
+            The Cartesian y-coordinate (e.g., Northing or NED East) relative to the reference point.
+        reference_longitude: float
+            The longitude of the origin for local coordinates.
+        reference_latitude: float
+            The latitude of the origin for local coordinates.
+    
+    Raises
+    ------
+        Exception: If the provided arguments do not match one of the two supported initialization schemes.
     """
 
     def __init__(
@@ -28,26 +59,6 @@ class Position:
         local_x: Optional[float] = None, local_y: Optional[float] = None,
         reference_longitude: Optional[float] = None, reference_latitude: Optional[float] = None
     ) -> None:
-        """Initializes a Position object using either global or local coordinates.
-
-        The constructor supports two mutually exclusive initialization schemes:
-        1. **Global:** Provide `longitude` and `latitude` only.
-        2. **Local:** Provide `local_x`, `local_y`, and a reference global point
-        (`reference_longitude`, `reference_latitude`) to calculate the position.
-
-        Args:
-            longitude: The global longitude in degrees.
-            latitude: The global latitude in degrees.
-            local_x: The Cartesian x-coordinate (e.g., Easting or NED North) relative to the reference point.
-            local_y: The Cartesian y-coordinate (e.g., Northing or NED East) relative to the reference point.
-            reference_longitude: The longitude of the origin for local coordinates.
-            reference_latitude: The latitude of the origin for local coordinates.
-        
-        Raises
-        ------
-            Exception: If the provided arguments do not match one of the two supported initialization schemes.
-        """
-        
         
         is_using_longitude_latitude_coordinates = (
             longitude is not None and latitude is not None and
