@@ -5,10 +5,23 @@ import pyproj
 
 from .position import Position
 
+# used to specify what is available to import from this file
+__all__ = [
+    "cartesian_vector_to_polar",
+    "check_float_equivalence",
+    "does_line_segment_intersect_circle",
+    "does_line_violate_no_sail_zone",
+    "get_angle_between_vectors",
+    "get_bearing",
+    "get_distance_between_angles",
+    "get_distance_between_positions",
+    "is_angle_between_boundaries",
+]
+
 
 def check_float_equivalence(float1: float, float2: float) -> bool:
     """
-    Checks if two floats are equivalent to within 0.001.
+    Checks if two floats are equivalent to within ```0.001```.
 
     Parameters
     ----------
@@ -20,7 +33,7 @@ def check_float_equivalence(float1: float, float2: float) -> bool:
     Returns
     -------
     bool
-        `True` if the two floats are equivalent to within 0.001, `False` otherwise.
+        ``True`` if the two floats are equivalent to within ``0.001``, ``False`` otherwise.
     """
 
     return abs(float1 - float2) <= 0.001
@@ -41,7 +54,7 @@ def cartesian_vector_to_polar(x: float, y: float) -> tuple[float, float]:
     -------
     tuple
         Outputs a tuple of magnitude and direction (counter-clockwise from the x axis) of the inputted vector.
-        Output direction is between 0 and 360 degrees.
+        Output direction is between ```0``` and ```360``` degrees.
     """
 
     if x == 0.0 and y == 0.0:
@@ -121,7 +134,7 @@ def get_bearing(current_position: Position, destination_position: Position) -> f
     Returns
     -------
     float
-        The bearing as an angle between ``0`` to ``360``, counter clockwise, measured from east.
+        The bearing as an angle between ```0``` to ```360```, counter clockwise, measured from east.
         This value tells you which direction you need to travel in to get to your destination.
     """
 
@@ -137,7 +150,7 @@ def get_bearing(current_position: Position, destination_position: Position) -> f
 
 def get_distance_between_positions(position1: Position, position2: Position) -> float:
     """
-    Gets the distance between two ``Position`` objects in meters.
+    Gets the distance between two ```Position``` objects in meters.
 
     Parameters
     ----------
@@ -171,7 +184,7 @@ def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float
     Returns
     -------
     bool
-        If "angle" is between ``boundary1`` and ``boundary2``, then return ``True`` and if not, return ``False``.
+        If "angle" is between ```boundary1``` and ```boundary2```, then return ```True``` and if not, return ```False```.
     """
 
     angle_rad, b1_rad, b2_rad = np.deg2rad([angle, boundary1, boundary2])
@@ -208,11 +221,11 @@ def does_line_violate_no_sail_zone(
     ----------
     current_position
         A tuple that represents the current position in cartesian coordinates.
-        For example: ``[x_coordinate, y_coordinate]`` is the form that you should use.
+        For example: ```[x_coordinate, y_coordinate]``` is the form that you should use.
 
     destination_position
         A tuple that represents the position you want to directly travel to in cartesian coordinates.
-        For example: ``[x_coordinate, y_coordinate]`` is the form that you should use.
+        For example: ```[x_coordinate, y_coordinate]``` is the form that you should use.
 
     global_true_wind_angle
         The global true wind angle measured counter-clockwise from true east as an angle in degrees.
@@ -261,11 +274,11 @@ def does_line_segment_intersect_circle(
     Parameters
     ----------
     line_segment_start_position
-        The starting point of the line segment as a tuple of the form ``[x_coordinate, y_coordinate]``.
+        The starting point of the line segment as a tuple of the form ```[x_coordinate, y_coordinate]```.
     line_segment_end_position
-        The end point of the line segment as a tuple of the form ``[x_coordinate, y_coordinate]``.
+        The end point of the line segment as a tuple of the form ```[x_coordinate, y_coordinate]```.
     circle_position
-        The position of the circle as a tuple of the form ``[x_coordinate, y_coordinate]``.
+        The position of the circle as a tuple of the form ```[x_coordinate, y_coordinate]```.
     circle_radius
         The radius of the circle.
 

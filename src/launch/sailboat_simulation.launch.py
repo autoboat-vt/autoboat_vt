@@ -17,21 +17,12 @@ def generate_launch_description():
             ),
             Node(
                 package="autopilot",
-                executable="pathfinding",
-                name="sailboat_pathfinding",
+                executable="telemetry",
+                name="telemetry",
                 respawn=True,
                 respawn_delay=2.0,
-                output="screen",
+                output="log"
             ),
-            Node(
-                package="autopilot",
-                executable="pathfinding",
-                name="sailboat_obstacles",
-                respawn=True,
-                respawn_delay=2.0,
-                output="screen",
-            ),
-            Node(package="autopilot", executable="telemetry", name="telemetry", respawn=True, respawn_delay=2.0, output="log"),
             Node(
                 package="sailboat_simulation",
                 executable="simulation",

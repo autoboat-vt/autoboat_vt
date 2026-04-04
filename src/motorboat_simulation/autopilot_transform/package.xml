@@ -2,10 +2,10 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autopilot_transform</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="ashear@vt.edu">ganno</maintainer>
-  <license>TODO: License declaration</license>
+  <version>1.0.0</version>
+  <description>Transforms the data that the simulation natively outputs into formats/ units/ standards the autopilot can easily understand</description>
+  <maintainer email="autoboat@vt.edu">autoboatvt</maintainer>
+  <license>http://www.apache.org/licenses/LICENSE-2.0</license>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

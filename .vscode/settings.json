@@ -70,6 +70,6 @@
         "*.def": "c"
     },
     "C_Cpp.errorSquiggles": "disabled",
-    "ros.distro": "humble",
+    "ROS2.distro": "humble",
     "python-envs.defaultEnvManager": "ms-python.python:system"
 }

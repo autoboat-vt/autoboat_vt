@@ -1,1 +1,0 @@
-If you would like to add a custom message then just create your own message file, add it to the CMakeLists.txt, compile, and you are good to go!

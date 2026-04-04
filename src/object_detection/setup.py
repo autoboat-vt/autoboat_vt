@@ -4,7 +4,7 @@ package_name = "object_detection"
 
 setup(
     name=package_name,
-    version="0.0.0",
+    version="1.0.0",
     packages=find_packages(exclude=["test"]),
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
@@ -12,15 +12,15 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer="animated",
-    maintainer_email="chrisjnassif@gmail.com",
-    description="TODO: Package description",
-    license="TODO: License declaration",
-    tests_require=["pytest"],
+    maintainer="autoboatvt",
+    maintainer_email="autoboat@vt.edu",
+    description="Contains nodes that perform object detection/ localization on marine objects such as boats and buoys",
+    license="http://www.apache.org/licenses/LICENSE-2.0",
     entry_points={
         "console_scripts": [
             # 'object_detection = object_detection.buoy_detection_node:main'
-            "object_detection = object_detection.deepstream_buoy_detection_node:main"
+            "object_detection = object_detection.deepstream_buoy_detection_node:main",
+            'cam_corder = object_detection.camera_recorder_node:main'
         ],
     },
 )

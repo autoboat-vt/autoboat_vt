@@ -94,9 +94,18 @@
                     this.focused_waypoint = null;
                     this.last_focused_color = map_interface.waypoint_color;
 
+                    const key = "M9yBkV9J49pYUg5o8SGC";
                     L.tileLayer(
-                        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                        { minZoom: this.min_zoom, maxZoom: this.max_zoom }
+                        `https://api.maptiler.com/maps/openstreetmap/{z}/{x}/{y}.jpg?key=${key}`,
+                        {
+                            minZoom: this.min_zoom,
+                            maxZoom: this.max_zoom,
+                            tileSize: 512,
+                            zoomOffset: -1,
+                            attribution:
+                                '\u003ca href="https://www.maptiler.com/copyright/" target="_blank"\u003e\u0026copy; MapTiler\u003c/a\u003e \u003ca href="https://www.openstreetmap.org/copyright" target="_blank"\u003e\u0026copy; OpenStreetMap contributors\u003c/a\u003e',
+                            crossOrigin: true
+                        }
                     ).addTo(this.map);
 
                     L.control.scale().addTo(this.map);
@@ -166,57 +175,7 @@
                     }
                 }
 
-                /**
-                 * Unfocuses the currently focused waypoint.
-                 */
-                unfocus_waypoint() {
-                    if (this.focused_waypoint) {
-                        const marker = this.waypoint_markers.get(
-                            this.focused_waypoint
-                        );
-                        if (marker) {
-                            marker.setIcon(
-                                map_interface.get_icon(this.last_focused_color)
-                            );
-                        }
-                        this.focused_waypoint = null;
-                    }
-                }
-
-                /**
-                 * Adjusts icon sizes based on zoom level.
-                 * @param {number} zoom
-                 */
-                zoom_icons(zoom) {
-                    const scale = Math.pow(
-                        2,
-                        zoom - map_interface.map_options.zoom
-                    );
-                    this.boat_marker.setIcon(
-                        map_interface.get_boat_icon(scale)
-                    );
-
-                    const updateMarker = (marker, isBoat = false) => {
-                        const iconUrl = marker.options.icon.options.iconUrl;
-                        if (iconUrl.includes("marker-icon") || isBoat) {
-                            const newIcon = L.icon({
-                                iconUrl: iconUrl,
-                                shadowUrl:
-                                    map_interface.assets_url +
-                                    "marker-shadow.png",
-                                iconSize: [25 * scale, 41 * scale],
-                                iconAnchor: [12 * scale, 41 * scale],
-                                shadowSize: [41 * scale, 41 * scale]
-                            });
-                            marker.setIcon(newIcon);
-                        }
-                    };
-
-                    this.waypoint_markers.forEach(marker =>
-                        updateMarker(marker)
-                    );
-                    this.buoy_markers.forEach(marker => updateMarker(marker));
-                }
+                // Waypoint Methods
 
                 /**
                  * Synchronizes waypoints with the server.
@@ -241,8 +200,6 @@
                         console.error("Error syncing waypoint:", error);
                     }
                 }
-
-                // Waypoint Methods
 
                 /**
                  * Adds a waypoint to the map and syncs it with the server.
@@ -307,6 +264,23 @@
                     this.sync_waypoints();
                 }
 
+                /**
+                 * Unfocuses the currently focused waypoint.
+                 */
+                unfocus_waypoint() {
+                    if (this.focused_waypoint) {
+                        const marker = this.waypoint_markers.get(
+                            this.focused_waypoint
+                        );
+                        if (marker) {
+                            marker.setIcon(
+                                map_interface.get_icon(this.last_focused_color)
+                            );
+                        }
+                        this.focused_waypoint = null;
+                    }
+                }
+
                 // Buoy Methods
 
                 /**
@@ -348,7 +322,14 @@
                     this.buoys = [];
                 }
 
-                // Boat Telemetry Methods
+                // Boat Methods
+
+                /**
+                 * Focuses the map on the boat.
+                 */
+                focus_map_on_boat() {
+                    this.map.setView(this.boat.location, this.map.getMaxZoom());
+                }
 
                 /**
                  * Updates the boat's location on the map.
@@ -380,14 +361,7 @@
                     this.update_boat_heading(heading);
                 }
 
-                // Map Focus Methods
-
-                /**
-                 * Focuses the map on the boat.
-                 */
-                focus_map_on_boat() {
-                    this.map.setView(this.boat.location, this.map.getZoom());
-                }
+                // Miscellaneous Map Methods
 
                 /**
                  * Focuses the map on a specific marker.
@@ -435,6 +409,42 @@
                         );
                     }
                 }
+
+                /**
+                 * Adjusts icon sizes based on zoom level.
+                 * @param {number} zoom
+                 */
+                zoom_icons(zoom) {
+                    const scale = Math.pow(
+                        2,
+                        zoom - map_interface.map_options.zoom
+                    );
+                    this.boat_marker.setIcon(
+                        map_interface.get_boat_icon(scale)
+                    );
+
+                    const updateMarker = (marker, isBoat = false) => {
+                        const iconUrl = marker.options.icon.options.iconUrl;
+                        if (iconUrl.includes("marker-icon") || isBoat) {
+                            const newIcon = L.icon({
+                                iconUrl: iconUrl,
+                                shadowUrl:
+                                    map_interface.assets_url +
+                                    "marker-shadow.png",
+                                iconSize: [25 * scale, 41 * scale],
+                                iconAnchor: [12 * scale, 41 * scale],
+                                shadowSize: [41 * scale, 41 * scale]
+                            });
+                            marker.setIcon(newIcon);
+                        }
+                    };
+
+                    this.waypoint_markers.forEach(marker =>
+                        updateMarker(marker)
+                    );
+                    this.buoy_markers.forEach(marker => updateMarker(marker));
+                }
+            
             }
 
             const map = new map_interface();

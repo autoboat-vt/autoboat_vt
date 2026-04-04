@@ -34,6 +34,7 @@ class MainWindow(QMainWindow):
         for link in constants.JS_LIBRARIES:
             misc.cache_cdn_file(link, constants.ASSETS_DIR)
 
+        socketserver.TCPServer.allow_reuse_address = True
         self.asset_server = socketserver.TCPServer(("", constants.ASSET_SERVER_PORT), handler)
         print(f"[Info] Serving HTTP assets on port {constants.ASSET_SERVER_PORT}...")
         self.asset_server.serve_forever()

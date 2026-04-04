@@ -12,11 +12,10 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer="autoboat_user",
-    maintainer_email="chrisjnassif@gmail.com",
-    description="TODO: Package description",
-    license="TODO: License declaration",
-    tests_require=["pytest"],
+    maintainer="autoboatvt",
+    maintainer_email="autoboat@vt.edu",
+    description="Contains a library of autoboat compatible sensor drivers",
+    license="http://www.apache.org/licenses/LICENSE-2.0",
     entry_points={
         "console_scripts": [
             "gps = sensors.gps_publisher:main",

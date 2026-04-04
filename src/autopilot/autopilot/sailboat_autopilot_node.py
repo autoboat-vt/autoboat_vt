@@ -13,7 +13,12 @@ from std_msgs.msg import Bool, Float32, Int32, String
 from autoboat_msgs.msg import RCData, WaypointList
 
 from .autopilot_library.sailboat_autopilot import SailboatAutopilot
-from .autopilot_library.utils.constants import CONFIG_DIRECTORY, SailboatAutopilotMode
+from .autopilot_library.utils.constants import (
+    CONFIG_DIRECTORY,
+    QOS_AUTOPILOT_PARAM_CONFIG_PATH,
+    SailboatAutopilotMode,
+    SailboatStates,
+)
 from .autopilot_library.utils.position import Position
 from .autopilot_library.utils.utils_function_library import cartesian_vector_to_polar, get_bearing
 
@@ -34,8 +39,13 @@ class SailboatAutopilotNode(Node):
 
         self.logger = self.get_logger()
 
+        self.autopilot_param_config_path_publisher = self.create_publisher(
+            String, "/autopilot_param_config_path", QOS_AUTOPILOT_PARAM_CONFIG_PATH
+        )
         parameters_path = CONFIG_DIRECTORY / "sailboat_default_parameters.json"
-        with open(parameters_path, "r", encoding="utf-8") as parameters_file:
+        self.autopilot_param_config_path_publisher.publish(String(data=parameters_path.as_posix()))
+
+        with open(file=parameters_path, mode="r", encoding="utf-8") as parameters_file:
             self.raw_autopilot_parameters: dict[str, dict[str, Any]] = json.load(parameters_file)
 
         # structured like {parameter_name: parameter_value}
@@ -46,14 +56,11 @@ class SailboatAutopilotNode(Node):
         self.sailboat_autopilot = SailboatAutopilot(parameters=self.autopilot_parameters, logger=self.logger)
 
         # Initialize ros2 subscriptions, publishers, and timers
-        self.autopilot_refresh_timer = self.create_timer(
-            1 / self.autopilot_parameters["autopilot_refresh_rate"], self.update_ros_topics
-        )
-
+        autopilot_refresh_period = 1 / self.autopilot_parameters["autopilot_refresh_rate"]
+        self.autopilot_refresh_timer = self.create_timer(autopilot_refresh_period, self.update_ros_topics)
 
         self.create_subscription(String, "/autopilot_parameters", self.autopilot_parameters_callback, 10)
         self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10)
-
         self.create_subscription(NavSatFix, "/position", self.position_callback, qos_profile_sensor_data)
         self.create_subscription(Twist, "/velocity", self.velocity_callback, qos_profile_sensor_data)
         self.create_subscription(Float32, "/heading", self.heading_callback, qos_profile_sensor_data)
@@ -81,8 +88,6 @@ class SailboatAutopilotNode(Node):
         self.sail_angle: float = 0.0
         self.rudder_angle: float = 0.0
 
-        self.has_default_autopilot_parameters_been_received_by_telemetry_node = False
-
         self.should_zero_rudder_encoder = False
         self.rudder_encoder_has_been_zeroed = False
 
@@ -105,6 +110,8 @@ class SailboatAutopilotNode(Node):
         self.button_d: bool = False
         self.toggle_e: int = 0
         self.toggle_f: int = 0
+
+
 
     def rc_data_callback(self, rc_data_message: RCData) -> None:
         """
@@ -228,20 +235,21 @@ class SailboatAutopilotNode(Node):
 
         self.sailboat_autopilot.update_waypoints_list(waypoint_positions)
 
-    def default_autopilot_parameters_acknowledgement_callback(self, default_autopilot_parameters_acknowledgement: Bool) -> None:
-        self.has_default_autopilot_parameters_been_received_by_telemetry_node = default_autopilot_parameters_acknowledgement.data
-
     def position_callback(self, position: NavSatFix) -> None:
+        """A callback function to get the current position of the boat."""
         self.position = Position(longitude=position.longitude, latitude=position.latitude)
 
     def velocity_callback(self, global_velocity: Twist) -> None:
+        """A callback function to get the current velocity and speed of the boat."""
         self.global_velocity = np.array([global_velocity.linear.x, global_velocity.linear.y])
         self.speed = np.linalg.norm(self.global_velocity)
 
     def heading_callback(self, heading: Float32) -> None:
+        """A callback function to get the current heading of the boat."""
         self.heading = heading.data
 
     def apparent_wind_vector_callback(self, apparent_wind_vector: Vector3) -> None:
+        """A callback function to get the current apparent wind vector acting on the boat."""
         self.apparent_wind_vector = np.array([apparent_wind_vector.x, apparent_wind_vector.y])
         _, self.apparent_wind_angle = cartesian_vector_to_polar(apparent_wind_vector.x, apparent_wind_vector.y)
 
@@ -304,7 +312,7 @@ class SailboatAutopilotNode(Node):
             self.full_autonomy_maneuver_publisher.publish(String(data=self.sailboat_autopilot.current_state.name))
 
         else:
-            self.full_autonomy_maneuver_publisher.publish(String(data="N/A"))
+            self.full_autonomy_maneuver_publisher.publish(String(data=SailboatStates.NA.name))
 
         # Publish the desired heading
         if self.autopilot_mode in (SailboatAutopilotMode.HOLD_HEADING, SailboatAutopilotMode.HOLD_HEADING_AND_BEST_SAIL):
@@ -313,8 +321,9 @@ class SailboatAutopilotNode(Node):
         elif self.autopilot_mode == SailboatAutopilotMode.WAYPOINT_MISSION and self.sailboat_autopilot.waypoints is not None:
             current_waypoint = self.sailboat_autopilot.waypoints[self.sailboat_autopilot.current_waypoint_index]
 
-            # TODO: make it so that the bearing is the actual heading the autopilot is trying to follow (this is different when tacking)
-            # when tacking, the boat is not trying to head straight towards the waypoint, but rather, it is travelling on a tacking line
+            # TODO: make it so that the bearing is the actual heading the autopilot is trying to follow
+            # (this is different when tacking) when tacking, the boat is not trying to head straight towards the waypoint,
+            # but rather, it is travelling on a tacking line
             # maybe add a new ROS topic specifically for the actual heading that the autopilot is trying to follow
             bearing_to_waypoint = get_bearing(self.position, current_waypoint)
             self.desired_heading_publisher.publish(Float32(data=float(bearing_to_waypoint)))

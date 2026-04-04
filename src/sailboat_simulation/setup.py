@@ -6,7 +6,7 @@ package_name = "sailboat_simulation"
 
 setup(
     name=package_name,
-    version="0.0.0",
+    version="1.0.0",
     packages=find_packages(exclude=["test"]),
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
@@ -15,11 +15,10 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer="animated",
-    maintainer_email="73669160+ChrisNassif@users.noreply.github.com",
-    description="TODO: Package description",
-    license="TODO: License declaration",
-    tests_require=["pytest"],
+    maintainer="autoboatvt",
+    maintainer_email="autoboat@vt.edu",
+    description="Contains a ros2 compatible version of the usv sim lsa sailboat simulation",
+    license="http://www.apache.org/licenses/LICENSE-2.0",
     entry_points={
         "console_scripts": ["simulation = sailboat_simulation.simulation_node:main"],
     },

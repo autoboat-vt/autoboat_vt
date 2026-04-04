@@ -29,7 +29,7 @@ check_port() {
         [Yy]*)
             # gentle kill, then escalate
             lsof -iTCP:"$port" -sTCP:LISTEN -t | xargs kill -TERM >/dev/null 2>&1 || true
-            for i in {1..10}; do
+            for _ in {1..10}; do
                 if query_port "$port"; then
                     break
                 fi
@@ -38,7 +38,7 @@ check_port() {
             if ! query_port "$port"; then
                 echo "Escalating to kill -KILL for remaining processes on port $port..."
                 lsof -iTCP:"$port" -sTCP:LISTEN -t | xargs kill -KILL >/dev/null 2>&1 || true
-                for i in {1..10}; do
+                for _ in {1..10}; do
                     if query_port "$port"; then
                         break
                     fi
@@ -157,7 +157,7 @@ cleanup() {
     [[ -n "${PYTHON_PID:-}" ]] && kill "$PYTHON_PID" 2>/dev/null || true
     [[ -n "${GO_PID:-}" ]] && wait "$GO_PID" 2>/dev/null || true
     [[ -n "${PYTHON_PID:-}" ]] && wait "$PYTHON_PID" 2>/dev/null || true
-    temp_file="app_data/app_state.json"
+    temp_file="app_data/git_ignore/app_state.json"
     [[ -f $temp_file ]] && rm "$temp_file"
 }
 

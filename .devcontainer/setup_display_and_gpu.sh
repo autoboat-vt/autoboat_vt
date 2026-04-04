@@ -1,24 +1,102 @@
 #!/usr/bin/env bash
 
+# -----------------------------------------------------------------------------
+# IMPORTANT NOTE
+# This script is the main thing that is limiting devcontainer compatibility with any
+# distribution of linux or operating system. Unfortunately it is really annoying to fully 
+# support all linux distributions and all package managers because some of the 
+# package managers don't even have the packages we need.
+#
+# The current devcontainer compatibility with linux distros/ package managers is as follows:
+# Ubuntu/ Debain/ Mint based (apt): Normal + GPU forwarding
+# Fedora/ RHEL based (dnf): Normal 
+# RHEL/ CentOS based (yum): Normal
+# Arch Linux based (pacman): Normal
+# Alpine Linux based (apk): Normal
+#
+# GPU forwarding support means that the devcontainer will be able to see your GPU which
+# may be useful for testing deepstream accelerated computer vision tasks inside of the
+# devcontainer. 
+#
+# Currently Ubuntu/ Debian/ Mint based distros have the most robust support as most
+# users currently end up using some sort of Debian inspired distro. But if you end up
+# using another distro and you would like better support or the support listed here 
+# has deteriorated, please reach out to me at chrisjnassif@gmail.com and I can help you out.
+# -----------------------------------------------------------------------------
+
+
+
 # The set -e option instructs bash to immediately exit if any command has a non-zero exit status.
 # The set -u option causes the bash shell to treat unset variables as an error and exit immediately.
 # The set -o pipefail option prevents errors in a pipeline from being masked.
 set -euo pipefail
 
+#Command line argument to assume the Jetson GPU for making custom OS
+ASSUME_GPU=false
+for arg in "$@"; do
+    case "$arg" in
+        --assume-gpu) ASSUME_GPU=true ;;
+    esac
+done
+
+
+# Make the script ask the user for their linux/ shell password
+sudo -v
+
 # -----------------------------------------------------------------------------
-# setup
+# Setup
 # -----------------------------------------------------------------------------
 OS="$(uname -s)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/devcontainer_environment_variables"
 
+
 # -----------------------------------------------------------------------------
-# helper functions
+# Helper functions
 # -----------------------------------------------------------------------------
 log_info() { echo -e "[INFO]  $*"; }
 log_warn() { echo -e "[WARN]  $*"; }
 log_error() { echo -e "[ERROR] $*" >&2; }
-separator() { echo "------------------------------------------------------------"; }
+print_separator() { echo "------------------------------------------------------------"; }
+
+
+
+install_x11_linux() {
+    # Installs all relevant x11 packages depending on the installed package manager and updates package cache
+    if command -v apt &> /dev/null; then
+        echo "Detected Debian/Ubuntu (apt). Installing packages: x11-utils, x11-xserver-utils"
+        sudo apt-get update -qq || true 
+        sudo apt-get install -y -qq x11-utils x11-xserver-utils
+        
+    elif command -v dnf &> /dev/null; then
+        echo "Detected Fedora/RHEL 8+ (dnf). Installing packages: xorg-x11-utils, xorg-x11-server-utils"
+        sudo dnf makecache -q
+        sudo dnf install -y xorg-x11-utils xorg-x11-server-utils
+        
+    elif command -v yum &> /dev/null; then
+        echo "Detected RHEL/CentOS (yum). Installing packages: xorg-x11-utils, xorg-x11-server-utils"
+        sudo yum makecache -q
+        sudo yum install -y xorg-x11-utils xorg-x11-server-utils
+        
+    elif command -v pacman &> /dev/null; then
+        echo "Detected Arch Linux (pacman). Installing xorg-apps group."
+        sudo pacman -Syu --noconfirm xorg-apps
+        
+    elif command -v apk &> /dev/null; then
+        echo "Detected Alpine Linux (apk). Installing individual X11 utilities."
+        # Alpine requires specifying the exact tools normally found in the Ubuntu metapackages
+        sudo apk add --update \
+            xdpyinfo xev xfontsel xkill xlsatoms xlsclients xlsfonts xmessage \
+			xprop xvinfo xwininfo appres editres viewres iceauth rgb sessreg xgamma \
+			xhost xmodmap xrandr xrdb xrefresh xset xsetroot xvidtune
+        
+    else
+        echo "Error: No supported package manager found. Cannot install packages automatically."
+        exit 1
+    fi
+}
+
+
 
 setup() {
 	local display_value="$1"
@@ -75,19 +153,47 @@ setup() {
 	done
 }
 
+
+
 # -----------------------------------------------------------------------------
 # linux setup
 # -----------------------------------------------------------------------------
 setup_linux() {
 	log_info "Detected Linux environment."
+	
+	# Make sure that the user has proper permissions on the entire repository
+	sudo chmod -R 777 ..
 
 	# install X11 tools
 	log_info "Installing X11 utilities..."
-	sudo apt-get update -qq || true
-	sudo apt-get install -y x11-utils x11-xserver-utils
+	install_x11_linux
 
-	# gpu detection
-	if command -v nvidia-smi &>/dev/null; then
+
+	# Load udev rules for each device and remove any autoboat udev rules that existed before
+	# Udev rules basically just rename devices for us so that they are easier to access
+	# For example the raspberry pi pico udev rule would just make it so that the file descriptor for the raspberry pi pico device
+	# Would always be at the file: /dev/pico
+	# You can read more about udev rules here: https://opensource.com/article/18/11/udev
+	sudo chmod -R 777 /etc/udev/
+
+	if [ -f "/etc/udev/rules.d/99-autoboat-udev.rules" ]; then
+	    sudo rm -f /etc/udev/rules.d/99-autoboat-udev.rules
+	    sudo rm -f /etc/udev/rules.d/99-autoboat-udev.rules
+	fi
+
+	sudo echo 'ACTION=="add", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000a", SYMLINK+="pico", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
+	sudo echo 'ACTION=="add", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", SYMLINK+="gps", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
+	# sudo echo 'ACTION=="add", ATTRS{idVendor}=="8086", ATTRS{idProduct}=="0b5c", SYMLINK+="camera", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
+	sudo echo 'ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="A9001WL3", SYMLINK+="rc", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
+	sudo echo 'ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="ABSCDYAB", SYMLINK+="wind_sensor", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
+
+	sudo udevadm control --reload-rules
+	sudo udevadm trigger
+
+
+
+	# GPU detection
+	if [[ "$ASSUME_GPU" == true ]] || (command -v nvidia-smi &>/dev/null && command -v apt &> /dev/null); then
 		log_info "NVIDIA GPU detected."
 		setup ":0" 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"'
 
@@ -106,6 +212,7 @@ setup_linux() {
 			distribution="${ID}${VERSION_ID:-}"
 			case "$distribution" in
 			ubuntu24.04)
+				# TODO: I believe this is no longer necessary as nvidia now supports Ubuntu 24.04
 				log_warn "ubuntu24.04 not yet supported by NVIDIA. Using ubuntu22.04 repo."
 				distribution="ubuntu22.04"
 				;;
@@ -145,8 +252,8 @@ setup_linux() {
 			export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"
 			export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"
 
-			sudo apt-get update || true
-			sudo apt-get install -y nvidia-container-toolkit
+			sudo apt update -qq || true
+			sudo apt install -y nvidia-container-toolkit
 			log_info "Configuring Docker runtime for NVIDIA..."
 			sudo nvidia-ctk runtime configure --runtime=docker
 			sudo systemctl restart docker
@@ -155,11 +262,18 @@ setup_linux() {
 			log_info "NVIDIA Container Toolkit already installed."
 		fi
 
+	elif command -v nvidia-smi &>/dev/null; then
+		log_warn "NVIDIA GPU Detected, but you are not running a linux distribution that supports devcontainer GPU forwarding. Running CPU-only mode."
+	
+
 	else
 		log_info "No NVIDIA GPU found. Running CPU-only mode."
 		setup ":0"
 	fi
 }
+
+
+
 
 # -----------------------------------------------------------------------------
 # macOS setup
@@ -192,13 +306,15 @@ setup_unknown() {
 	log_warn "Running CPU-only. Display may not work properly."
 }
 
-separator
+
+
+print_separator
 case "$OS" in
 Linux) setup_linux ;;
 Darwin) setup_macos ;;
 *) setup_unknown ;;
 esac
-separator
+print_separator
 
 log_info "Setup complete!"
 exit 0
