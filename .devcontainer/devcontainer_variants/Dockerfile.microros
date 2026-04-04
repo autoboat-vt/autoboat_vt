@@ -1,4 +1,5 @@
-FROM vtautoboat/development_image:latest
+ARG BASE_IMAGE=vtautoboat/development_image:latest
+FROM ${BASE_IMAGE}
 
 
 RUN mkdir -p /tmp/autoboat_scripts

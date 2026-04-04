@@ -25,7 +25,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [ standard, microros ]
         architecture: [ amd64, arm64 ]
         include:
           - architecture: amd64
@@ -34,13 +33,6 @@ jobs:
           - architecture: arm64
             runner: ubuntu-22.04-arm
             platform: linux/arm64
-          - variant: standard
-            dockerfile: .devcontainer/Dockerfile
-            image_repo: vtautoboat/development_image
-          # Micro-ROS variant: uses specialized Dockerfile from variants/ folder
-          - variant: microros
-            dockerfile: .devcontainer/devcontainer_variants/Dockerfile.microros
-            image_repo: vtautoboat/development_image_microros
 
     steps:
       - name: Checkout repository
@@ -73,19 +65,32 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       # -----------------------------------------------------------------------
-      # Build the CI Docker image, cached between runs via GitHub Actions Cache.
-      # The image contains all C++ build dependencies.
+      # Build the CI Docker images, cached between runs via GitHub Actions Cache.
+      # We build the Base image first, then Micro-ROS on top of it.
       # -----------------------------------------------------------------------
-      - name: Build CI Docker Image
+      - name: Build Base Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ${{ matrix.dockerfile }}
+          file: .devcontainer/Dockerfile
           platforms: ${{ matrix.platform }}
           load: true
-          tags: autoboat-ci-image:latest
-          cache-from: type=gha,scope=ci-image-${{ matrix.variant }}-${{ matrix.architecture }}
-          cache-to: type=gha,mode=max,scope=ci-image-${{ matrix.variant }}-${{ matrix.architecture }}
+          tags: autoboat-base:latest
+          cache-from: type=gha,scope=ci-base-${{ matrix.architecture }}
+          cache-to: type=gha,mode=max,scope=ci-base-${{ matrix.architecture }}
+
+      - name: Build Micro-ROS Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: .devcontainer/devcontainer_variants/Dockerfile.microros
+          platforms: ${{ matrix.platform }}
+          load: true
+          build-args: |
+            BASE_IMAGE=autoboat-base:latest
+          tags: autoboat-microros:latest
+          cache-from: type=gha,scope=ci-microros-${{ matrix.architecture }}
+          cache-to: type=gha,mode=max,scope=ci-microros-${{ matrix.architecture }}
 
       # -----------------------------------------------------------------------
       # Run colcon build AND package everything inside the container.
@@ -99,7 +104,6 @@ jobs:
       #   output_artifacts/autoboat-vt-<arch>.deb            (install/ only, with deps)
       # -----------------------------------------------------------------------
       - name: Build ROS2 Packages, Tarball, and Debian Package
-        if: matrix.variant == 'standard'
         run: |
           docker run --rm \
             --user root \
@@ -107,7 +111,7 @@ jobs:
             -w /home/ws \
             -e DEB_VERSION="${{ steps.meta.outputs.version }}" \
             -e DEB_ARCH="${{ matrix.architecture }}" \
-            autoboat-ci-image:latest \
+            autoboat-base:latest \
             bash -c '
               set -e
               source /opt/ros/humble/setup.bash
@@ -175,10 +179,9 @@ jobs:
       # On every push/PR these are downloadable from the Actions tab for 5 days.
       # On tag pushes the release job picks them up too.
       - name: Upload Build Artifacts
-        if: matrix.variant == 'standard'
         uses: actions/upload-artifact@v4
         with:
-          name: autoboat-prebuilt-${{ matrix.variant }}-${{ matrix.architecture }}
+          name: autoboat-prebuilt-${{ matrix.architecture }}
           path: output_artifacts/
           retention-days: 5
 
@@ -186,13 +189,20 @@ jobs:
       # Push the built environment to Docker Hub if the code build succeeded.
       # This provides a pre-built platform image for others to use.
       # -----------------------------------------------------------------------
-      - name: Push Architecture-Specific Dev Image
+      - name: Push Architecture-Specific Dev Images
         if: success() && github.event_name != 'pull_request'
         run: |
-          TAG="${{ matrix.image_repo }}:${{ matrix.architecture }}"
-          echo "==> Tagging and pushing ${TAG}..."
-          docker tag autoboat-ci-image:latest $TAG
-          docker push $TAG
+          # Base image
+          TAG_BASE="vtautoboat/development_image:${{ matrix.architecture }}"
+          echo "==> Tagging and pushing ${TAG_BASE}..."
+          docker tag autoboat-base:latest $TAG_BASE
+          docker push $TAG_BASE
+
+          # Micro-ROS variant
+          TAG_MICROROS="vtautoboat/development_image_microros:${{ matrix.architecture }}"
+          echo "==> Tagging and pushing ${TAG_MICROROS}..."
+          docker tag autoboat-microros:latest $TAG_MICROROS
+          docker push $TAG_MICROROS
 
   # ============================================================================
   # Release job — only runs on version tag pushes (v*).
@@ -208,10 +218,10 @@ jobs:
       contents: write
 
     steps:
-      - name: Download all standard variant artifacts
+      - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: autoboat-prebuilt-standard-*
+          pattern: autoboat-prebuilt-*
           path: output_artifacts
           merge-multiple: true
 
