@@ -3,11 +3,16 @@
 <package format="3">
   <name>vesc_cpp</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>C++ Node for VESC Communication</description>
   <maintainer email="chrisjnassif@gmail.com">animated</maintainer>
-  <license>TODO: License declaration</license>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>autoboat_msgs</depend>
+  <depend>serial_driver</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

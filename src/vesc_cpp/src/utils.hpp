@@ -86,10 +86,35 @@ std::string get_device_filepath_from_vid_pid_and_serial_number(uint16_t vid, uin
 
             get_vid_pid_from_device_filepath("/dev/" + device_filename, current_vid, current_pid, current_serial_number);
 
-            if (vid == current_vid && pid == current_pid && serial_number == current_serial_number) {
+            if (vid == current_vid && pid == current_pid && (serial_number.empty() || serial_number == current_serial_number)) {
                 return "/dev/" + device_filename;
             }
         }
     }
 
+}
+
+
+
+void print_cpu_and_ram_stats() {
+    std::ifstream statm("/proc/self/statm");
+    long size, resident, share, text, lib, data, dt;
+    statm >> size >> resident >> share >> text >> lib >> data >> dt;
+
+    long page_size_kb = sysconf(_SC_PAGESIZE) / 1024; // in KB
+    std::cout << "Resident RAM: " << resident * page_size_kb << " KB\n";
+
+    // --- CPU time ---
+    std::ifstream stat("/proc/self/stat");
+    std::string tmp;
+    long utime_ticks, stime_ticks;
+    for (int i=0; i<13; ++i) stat >> tmp; // skip first 13 fields
+    stat >> utime_ticks >> stime_ticks;     // user and kernel time in ticks
+
+    long ticks_per_sec = sysconf(_SC_CLK_TCK);
+    double utime_sec = (double)utime_ticks / ticks_per_sec;
+    double stime_sec = (double)stime_ticks / ticks_per_sec;
+
+    std::cout << "User CPU time: " << utime_sec << " s\n";
+    std::cout << "System CPU time: " << stime_sec << " s\n";
 }

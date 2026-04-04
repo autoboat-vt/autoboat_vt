@@ -52,19 +52,19 @@ std::pair<double, double> cartesian_vector_to_polar(double x, double y) {
 }
 
 double get_angle_between_vectors(const std::array<double, 2>& v1, const std::array<double, 2>& v2) {
-    double mag1 = std::sqrt(v1[0]*v1[0] + v1[1]*v1[1]);
-    double mag2 = std::sqrt(v2[0]*v2[0] + v2[1]*v2[1]);
+    double magnitude1 = std::sqrt(v1[0]*v1[0] + v1[1]*v1[1]);
+    double magnitude2 = std::sqrt(v2[0]*v2[0] + v2[1]*v2[1]);
     
     double dot = v1[0]*v2[0] + v1[1]*v2[1];
-    double cos_theta = std::clamp(dot / (mag1 * mag2), -1.0, 1.0);
+    double cos_theta = std::clamp(dot / (magnitude1 * magnitude2), -1.0, 1.0);
     
     return std::acos(cos_theta) * (180.0 / M_PI);
 }
 
 double get_distance_between_angles(double angle1, double angle2) {
-    double diff = std::fmod(angle1 - angle2 + 180.0, 360.0);
-    if (diff < 0) diff += 360.0;
-    return -1.0 * (diff - 180.0);
+    double difference = std::fmod(angle1 - angle2 + 180.0, 360.0);
+    if (difference < 0) difference += 360.0;
+    return -1.0 * (difference - 180.0);
 }
 
 double get_bearing(const Position& current, const Position& dest) {
@@ -112,10 +112,10 @@ bool does_line_violate_no_sail_zone(
     double upwind_angle = std::fmod(global_true_wind_angle + 180.0, 360.0);
     double upwind_rad = upwind_angle * M_PI / 180.0;
     
-    std::array<double, 2> upwind_vec = {std::cos(upwind_rad), std::sin(upwind_rad)};
-    std::array<double, 2> dir_vec = {dx / dist, dy / dist};
+    std::array<double, 2> upwind_vector = {std::cos(upwind_rad), std::sin(upwind_rad)};
+    std::array<double, 2> dir_vector = {dx / dist, dy / dist};
 
-    double angle_diff = get_angle_between_vectors(upwind_vec, dir_vec);
+    double angle_diff = get_angle_between_vectors(upwind_vector, dir_vector);
     
     return (angle_diff < no_sail_zone_size);
 }

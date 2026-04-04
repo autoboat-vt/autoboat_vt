@@ -23,7 +23,7 @@ find_library(UDEV_LIB udev)
 
 
 include_directories(include include/sensors_cpp)
-include_directories(include include/xcrsf)
+include_directories(src)
 
 set(XCRSF_SRC_LIST 
     src/xcrsf/crossfire.cpp 

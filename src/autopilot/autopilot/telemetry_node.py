@@ -608,14 +608,21 @@ class TelemetryNode(Node):
         self.true_wind_speed, self.true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
 
         if self.current_waypoints != [] and self.current_waypoint_index < len(self.current_waypoints):
-            current_position = Position(self.position.latitude, self.position.longitude)
-            next_waypoint_position = Position(
-                self.current_waypoints[self.current_waypoint_index][0], self.current_waypoints[self.current_waypoint_index][1]
+            current_position = Position(
+                longitude=self.position.longitude,
+                latitude=self.position.latitude
             )
+            
+            next_waypoint_position = Position(
+                longitude=self.current_waypoints[self.current_waypoint_index][0],
+                longitude=self.current_waypoints[self.current_waypoint_index][1]
+            )
+            
             self.distance_to_next_waypoint = get_distance_between_positions(current_position, next_waypoint_position)
 
         else:
             self.distance_to_next_waypoint = 0.0
+
 
         self.rudder_angle_error = float(self.desired_rudder_angle - self.current_rudder_angle)
         self.sail_angle_error = float(self.desired_sail_angle - self.current_sail_angle)
