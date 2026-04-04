@@ -16,6 +16,11 @@ ARG USERNAME=autoboat_user
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
+
+# stores whether or not we are on arm or x86
+ARG TARGETARCH
+
+
 ENV SHELL=/bin/bash
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -102,29 +107,47 @@ RUN apt install -y --no-install-recommends docker docker.io
 # -------------------------------
 # Ensure that qt5 is installed properly so pyqt installation works
 # -------------------------------
-RUN apt-get install -y python3-pyqt5 python3-pyqt5.qtwebengine
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+      echo "Building for ARM64. Installing pre-compiled system packages via apt."; \
+      apt-get update && apt-get install -y \
+      python3-pyqt5 \
+      python3-pyqt5.qtwebengine; \
+   fi
+
+USER $USERNAME
+
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+      echo "Building for x86_64. Safe to download PyQt binaries via pip."; \
+      pip install PyQt5==5.15.11 PyQtWebEngine==5.15.7; \
+   fi
+
+
 
 
 # -------------------------------
 # Python requirements (as user)
 # -------------------------------
-USER $USERNAME
+
 COPY .devcontainer/required_pip_packages.txt /tmp/requirements.txt
 RUN pip install --upgrade pip
 RUN pip install packaging
 RUN pip install -r /tmp/requirements.txt
 
 # -------------------------------
-# Installation for gazebo 
+# Installation for gazebo (for simulation)
 # -------------------------------
-RUN sudo apt-get update \
-   && sudo apt-get install curl lsb-release gnupg \
-   && sudo curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg \
-   && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] https://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null \
-   && sudo apt-get update \
-   && sudo apt-get install gz-harmonic -y \
-   && sudo apt install ros-humble-ros-gzharmonic -y
-
+USER root
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+      echo "Building for x86_64. Safe to download gazebo."; \
+      apt update \
+      && apt install curl lsb-release gnupg \
+      && curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg \
+      && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] https://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null \
+      && apt update \
+      && apt install gz-harmonic -y \
+      && apt install ros-humble-ros-gzharmonic -y; \
+   fi
+USER $USERNAME
 
 
 # Install c++ curl, json, serial driver, asyncio, udev, libboost, ninja build system, ccache, and mold 
