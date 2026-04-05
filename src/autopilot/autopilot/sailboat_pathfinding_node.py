@@ -81,15 +81,31 @@ class PathfindingNode(Node):
         # ** in progress: working on manipulation of each object **
         local_obs=[]
         if self.obstacles:
+            GPS_vertices=[]
+            loc_vertices=[]
             for obstacle in self.obstacles:
-                # conversion from global GPS to local matrix coordinates
-                pass
+                for i in range(len(obstacle)):
+                    GPS_vertices.append(Position(obstacle[i].longitude,obstacle[i].latitude))
+
+                for i in range(len(obstacle)):
+                    [lon,lat]=GPS_vertices[i].get_local_coordinates(self.reference)
+                    loc_vertices.append([int(math.floor(lon-src[0]))+lims-1,int(math.floor(lat-src[1]))+lims-1])
+                
+                local_obs.append(loc_vertices)
+        
 
         # creating matrix
         matrix=[[1 for _ in range(lims*2)] for _ in range(lims*2)]
         self.get_logger().info("------------ source and destination MATRIX coordinates -----------------------------------")
         self.get_logger().info(str(lims-1))
         self.get_logger().info(str(xdist) + " " + str(ydist))
+
+        # adding matrices to the object
+        for polygon in local.obs:
+            for m in range(lims*2):
+                for n in range(lims*2):
+                    pt = Inside(m,n)
+                    matrix[m][n]=0 if pt.check(polygon) else 1
         
         # matrix[lims-1][lims-1]=2             this is the boat position
         # matrix[xdist][ydist]=3               this is the next waypoint position
