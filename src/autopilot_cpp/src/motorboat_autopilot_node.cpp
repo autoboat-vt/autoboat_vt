@@ -14,16 +14,15 @@ MotorboatAutopilotNode::MotorboatAutopilotNode() : Node("motorboat_autopilot_cpp
     std::ifstream file(json_file_path);
     json config = json::parse(file);
 
+    // create a dictionary directly out of the default values of the autopilot parameters
     for (auto it = config.begin(); it != config.end(); ++it) {
         autopilot_parameters[it.key()] = it.value()["default"];
     }
 
-    auto trans_qos = rclcpp::QoS(1).reliable().transient_local();
-    config_path_publisher = this->create_publisher<std_msgs::msg::String>("/autopilot_param_config_path", trans_qos);
+    auto transient_qos = rclcpp::QoS(1).reliable().transient_local();
+    config_path_publisher = this->create_publisher<std_msgs::msg::String>("/autopilot_param_config_path", transient_qos);
     
-    std_msgs::msg::String msg;
-    msg.data = json_file_path;
-    config_path_publisher->publish(msg);
+    config_path_publisher->publish(std_msgs::msg::String().set__data(json_file_path));
 
 
     motorboat_autopilot = MotorboatAutopilot(&autopilot_parameters);
@@ -31,7 +30,10 @@ MotorboatAutopilotNode::MotorboatAutopilotNode() : Node("motorboat_autopilot_cpp
     rclcpp::SensorDataQoS sensor_qos = rclcpp::SensorDataQoS();
     
     // Timer
-    autopilot_refresh_timer = create_wall_timer(std::chrono::duration<float>(1.0 / autopilot_parameters["autopilot_refresh_rate"].get<float>()), std::bind(&MotorboatAutopilotNode::update_ros_topics, this));
+    autopilot_refresh_timer = create_wall_timer(
+        std::chrono::duration<float>(1.0 / autopilot_parameters["autopilot_refresh_rate"].get<float>()), 
+        std::bind(&MotorboatAutopilotNode::update_ros_topics, this)
+    );
 
 
     // Subscriptions
@@ -95,9 +97,11 @@ void MotorboatAutopilotNode::rc_data_callback(const autoboat_msgs::msg::RCData::
     if (!previous_button_d && msg->button_d) {
         should_zero_encoder = true;
         encoder_has_been_zeroed = false;
-    } else if (encoder_has_been_zeroed) {
+    } 
+    else if (encoder_has_been_zeroed) {
         should_zero_encoder = false;
     }
+
     previous_button_d = msg->button_d;
 
     joystick_left_y = -1.0 * msg->joystick_left_y;
@@ -133,13 +137,14 @@ void MotorboatAutopilotNode::autopilot_parameters_callback(const std_msgs::msg::
 
         if (it.value().is_object() && it.value().contains("default")) {
             autopilot_parameters[key] = it.value()["default"];
-        } else {
+        } 
+        else {
             autopilot_parameters[key] = it.value();
         }
     }
 
 
-    // Handle Different Autopilot Refresh Rate
+    // Handle autopilot refresh rate differently, since it isn't a simple value
     if (new_parameters_json.contains("autopilot_refresh_rate")) {
         RCLCPP_INFO(this->get_logger(), "Updating autopilot refresh rate...");
         

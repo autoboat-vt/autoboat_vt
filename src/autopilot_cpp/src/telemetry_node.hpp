@@ -31,8 +31,20 @@ using json = nlohmann::json;
 
 
 
+/**
+ * @class TelemetryNode
+ * @brief ROS 2 node that collects information from multiple topics and transmits it to the groundstation.
+ * 
+ * This node handles communication with a telemetry server, including sending boat status
+ * and receiving waypoint or parameter updates.
+ */
 class TelemetryNode : public rclcpp::Node {
 public:
+    /**
+     * @brief Construct a new Telemetry Node object.
+     * 
+     * Initializes publishers, subscriptions, and connection to the telemetry server.
+     */
     TelemetryNode();
 
 private:
@@ -50,18 +62,82 @@ private:
 
     
     // Callbacks
+    /**
+     * @brief Callback for position (GPS) updates.
+     * @param msg The NavSatFix message.
+     */
     void position_callback(const sensor_msgs::msg::NavSatFix::SharedPtr msg);
+
+    /**
+     * @brief Callback for velocity updates.
+     * @param msg The Twist message.
+     */
     void velocity_callback(const geometry_msgs::msg::Twist::SharedPtr msg);
+
+    /**
+     * @brief Callback for heading updates.
+     * @param msg The Float32 message.
+     */
     void heading_callback(const std_msgs::msg::Float32::SharedPtr msg);
+
+    /**
+     * @brief Callback for apparent wind updates.
+     * @param msg The Vector3 message.
+     */
     void apparent_wind_callback(const geometry_msgs::msg::Vector3::SharedPtr msg);
+
+    /**
+     * @brief Callback for VESC telemetry data.
+     * @param msg The VESCTelemetryData message.
+     */
     void vesc_data_callback(const autoboat_msgs::msg::VESCTelemetryData::SharedPtr msg);
+
+    /**
+     * @brief Callback for desired heading updates.
+     * @param msg The Float32 message.
+     */
     void desired_heading_callback(const std_msgs::msg::Float32::SharedPtr msg);
+
+    /**
+     * @brief Callback for current waypoint index updates.
+     * @param msg The Int32 message.
+     */
     void waypoint_index_callback(const std_msgs::msg::Int32::SharedPtr msg);
+
+    /**
+     * @brief Callback for full autonomy maneuver updates.
+     * @param msg The UInt8 message.
+     */
     void full_autonomy_maneuver_callback(const std_msgs::msg::UInt8::SharedPtr msg);
+
+    /**
+     * @brief Callback for autopilot mode updates.
+     * @param msg The UInt8 message.
+     */
     void autopilot_mode_callback(const std_msgs::msg::UInt8::SharedPtr msg);
+
+    /**
+     * @brief Callback for desired sail angle updates.
+     * @param msg The Float32 message.
+     */
     void desired_sail_angle_callback(const std_msgs::msg::Float32::SharedPtr msg);
+
+    /**
+     * @brief Callback for desired rudder angle updates.
+     * @param msg The Float32 message.
+     */
     void desired_rudder_angle_callback(const std_msgs::msg::Float32::SharedPtr msg);
+
+    /**
+     * @brief Callback for current sail angle updates.
+     * @param msg The Float32 message.
+     */
     void current_sail_angle_callback(const std_msgs::msg::Float32::SharedPtr msg);
+
+    /**
+     * @brief Callback for current rudder angle updates.
+     * @param msg The Float32 message.
+     */
     void current_rudder_angle_callback(const std_msgs::msg::Float32::SharedPtr msg);
 
 
