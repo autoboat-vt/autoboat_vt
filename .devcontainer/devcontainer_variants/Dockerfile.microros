@@ -23,8 +23,7 @@ RUN echo '#!/bin/sh\nexec "$@"' > /usr/local/bin/sudo && chmod +x /usr/local/bin
 RUN HOME=/home/autoboat_user bash /tmp/autoboat_scripts/install_microros_helper_script.sh
 
 # Fix permissions and clean up
-RUN chown -R autoboat_user:autoboat_user /home/ws /home/autoboat_user && \
-    rm /usr/local/bin/sudo
+RUN chown -R autoboat_user:autoboat_user /home/autoboat_user && rm /usr/local/bin/sudo
 
 USER autoboat_user
 
