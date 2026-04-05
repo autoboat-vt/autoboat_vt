@@ -141,17 +141,17 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
       && apt install gz-harmonic -y \
       && apt install ros-humble-ros-gzharmonic -y; \
    fi
-USER $USERNAME
-
-
-
-RUN cd ~ \
+USER root
+RUN cd /tmp \
    && git clone --depth 1 https://github.com/libcpr/cpr.git \
    && cd cpr \
    && mkdir build && cd build \
    && cmake .. -DCPR_USE_SYSTEM_CURL=ON \
    && cmake --build . --parallel \
-   && sudo cmake --install . 
+   && cmake --install . \
+   && cd / && rm -rf /tmp/cpr
+
+USER $USERNAME
    
    
 CMD ["/bin/bash"]
