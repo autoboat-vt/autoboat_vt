@@ -31,7 +31,7 @@ jobs:
             runner: ubuntu-22.04
             platform: linux/amd64
           - architecture: arm64
-            runner: ubuntu-22.04-arm64
+            runner: ubuntu-22.04-arm
             platform: linux/arm64
 
     steps:
