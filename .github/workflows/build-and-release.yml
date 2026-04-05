@@ -38,6 +38,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Create temporary .dockerignore
+        run: |
+          echo "*" > .dockerignore
+          echo "!/.devcontainer/" >> .dockerignore
+          echo "!/.devcontainer/**" >> .dockerignore
+          echo "Building with context:"
+          du -sh .devcontainer/
+
       - name: Cache C++ Build (CCACHE)
         uses: actions/cache@v4
         with:
@@ -52,7 +60,7 @@ jobs:
 
       - name: Log in to Docker Hub
         # Only push images to the registry when pushing to the main branch.
-        # if: github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -60,7 +68,7 @@ jobs:
 
       - name: Log in to GHCR
         # Only push images to the registry when pushing to the main branch.
-        # if: github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -102,8 +110,8 @@ jobs:
         uses: docker/bake-action@v6
         with:
           files: .github/workflows/docker-bake.hcl
-          push: true
-          load: false
+          push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
           set: |
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
@@ -123,6 +131,7 @@ jobs:
         
 
       - name: Pull Base Image for local build
+        if: github.event_name != 'pull_request'
         run: |
           docker pull vtautoboat/development_image:${{ matrix.architecture }}
           # No need to retag, we will use the full name in the build step
@@ -246,6 +255,7 @@ jobs:
   publish-dev-image:
     name: Publish Multi-Arch Dev Image (${{ matrix.variant }})
     needs: build
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: write

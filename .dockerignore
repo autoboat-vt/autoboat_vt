@@ -1,8 +1,0 @@
-# 1. Ignore everything initially
-*
-
-# 2. Re-include only the .devcontainer folder and its contents
-!/.devcontainer/
-
-# 3. Explicitly allow any files inside .devcontainer (recursive)
-!/.devcontainer/**
