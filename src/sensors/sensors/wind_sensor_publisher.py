@@ -1,18 +1,18 @@
 #!/usr/bin/python3
 
-import rclpy
-from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
-
-from std_msgs.msg import Bool
-from geometry_msgs.msg import Vector3
+import os
+import time
+from collections import deque
 
 import numpy as np
-from collections import deque
+import psutil
+import rclpy
 import serial
+from geometry_msgs.msg import Vector3
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from serial.tools import list_ports
-import time, psutil, os
-
+from std_msgs.msg import Bool
 
 WIND_SENSOR_VID = 0x0403
 WIND_SENSOR_PID = 0x6001
@@ -92,20 +92,12 @@ class WindSensorPublisher(Node):
 
 
     def timer_callback(self):
-<<<<<<< HEAD
         # start_time = time.time()
         
         raw_data = self.sensor_serial.readline().decode('ascii')
         split_data = raw_data.split(',')
         
         print(split_data)
-=======
-        raw_data = self.sensor_serial.readline().decode("ascii")
-        split_data = raw_data.split(",")
-
-        if len(split_data) != 6:
-            return
->>>>>>> main
 
         NMEA_encoding, apparent_wind_angle, _, apparent_wind_speed, speed_type, checksum = split_data
 

@@ -1,16 +1,15 @@
-import rclpy
-from rclpy.qos import qos_profile_sensor_data
-from rclpy.node import Node
-
-from autoboat_msgs.msg import VESCTelemetryData, VESCControlData
-
-from pyvesc.VESC.messages import *
-
-from pyvesc import VESC
+import os
+import signal
 import time
-from serial.tools import list_ports
-import os, signal
 
+import rclpy
+from pyvesc import VESC
+from pyvesc.VESC.messages import *
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
+from serial.tools import list_ports
+
+from autoboat_msgs.msg import VESCControlData, VESCTelemetryData
 
 MOTOR_POLE_PAIRS = 7
 
@@ -74,23 +73,15 @@ class VESCPublisher(Node):
             if msg.control_type_for_vesc == "rpm":
                 self.motorVal = msg.desired_vesc_rpm * MOTOR_POLE_PAIRS
                 self.motor.set_rpm(int(self.motorVal))
-<<<<<<< HEAD
                 
             elif(msg.control_type_for_vesc == "duty_cycle"):
                 self.motorVal = msg.desired_vesc_duty_cycle
                 self.motor.set_duty_cycle(int(self.motorVal))
             
-=======
-
-            elif msg.control_type_for_vesc == "duty_cycle":
-                self.motorVal = msg.desired_vesc_duty_cycle
-                self.motor.set_duty_cycle(self.motorVal)
->>>>>>> main
             else:
                 self.motorVal = msg.desired_vesc_current
                 self.motor.set_current(int(self.motorVal))
                 
-
         except:
             self.get_logger().error("Disconnected from the VESC")
             self.destroy_node()

@@ -8,21 +8,21 @@ from sys import argv
 argv = argv[1:]
 
 
-import rclpy
-from rclpy.qos import qos_profile_sensor_data
+import os
 import time
-import serial
-from serial.tools import list_ports
-from std_msgs.msg import Bool
-from autoboat_msgs.msg import RCData
-from rclpy.node import Node
-
-from crsf_parser.payloads import PacketsTypes
-from crsf_parser.frames import crsf_frame
-from crsf_parser import CRSFParser, PacketValidationStatus
 
 import psutil
-import os
+import rclpy
+import serial
+from crsf_parser import CRSFParser, PacketValidationStatus
+from crsf_parser.frames import crsf_frame
+from crsf_parser.payloads import PacketsTypes
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
+from serial.tools import list_ports
+from std_msgs.msg import Bool
+
+from autoboat_msgs.msg import RCData
 
 RC_VID = 0x0403
 RC_PID = 0x6001
@@ -51,12 +51,8 @@ class RCPublisher(Node):
 
     def __init__(self):
         super().__init__("rc_publisher")
-<<<<<<< HEAD
         
         
-=======
-
->>>>>>> main
         self.create_timer(0.3, self.timer_callback)
 
         serial_port = getPort(RC_VID, RC_PID, RC_SERIAL_NUMBER)

@@ -4,7 +4,6 @@ gpu-id=0
 net-scale-factor=0.0039215697906911373
 model-color-format=0
 
-<<<<<<< HEAD
 #onnx-file=yolo11n.pt.onnx
 #onnx-file=yolo11m_dynamic.pt.onnx
 #onnx-file=yolo11l_dynamic.pt.onnx
@@ -15,11 +14,6 @@ model-color-format=0
 #onnx-file=yolo11n.pt.onnx
 #onnx-file=yolo11n.pt.onnx
 #onnx-file=yolo11n.pt.onnx
-<<<<<<< HEAD
-=======
-#onnx-file=yolo11n.pt.onnx
-#onnx-file=yolo11n.pt.onnx
->>>>>>> main
 onnx-file=yolo11n.pt.onnx
 
 
@@ -34,11 +28,6 @@ onnx-file=yolo11n.pt.onnx
 #model-engine-file=yolo11n_model_b1_gpu0_fp16.engine
 #model-engine-file=yolo11n_model_b1_gpu0_fp16.engine
 #model-engine-file=yolo11n_model_b1_gpu0_fp16.engine
-<<<<<<< HEAD
-=======
-#model-engine-file=yolo11n_model_b1_gpu0_fp16.engine
-#model-engine-file=yolo11n_model_b1_gpu0_fp16.engine
->>>>>>> main
 model-engine-file=yolo11n_model_b1_gpu0_fp16.engine
 =======
 # This is the onnx file section.
