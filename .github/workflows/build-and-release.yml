@@ -79,8 +79,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver: docker
 
       # -----------------------------------------------------------------------
       # Build the CI Docker images, cached between runs via GitHub Actions Cache.
@@ -94,7 +92,10 @@ jobs:
           platforms: ${{ matrix.platform }}
           load: true
           tags: autoboat-base:latest
-          cache-from: type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}
+          cache-from: |
+            type=gha
+            type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}
+          cache-to: type=gha,mode=max
 
       - name: Build Micro-ROS Docker Image
         uses: docker/build-push-action@v5
@@ -106,7 +107,10 @@ jobs:
           build-args: |
             BASE_IMAGE=autoboat-base:latest
           tags: autoboat-microros:latest
-          cache-from: type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}
+          cache-from: |
+            type=gha
+            type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}
+          cache-to: type=gha,mode=max
 
       # -----------------------------------------------------------------------
       # Run colcon build AND package everything inside the container.

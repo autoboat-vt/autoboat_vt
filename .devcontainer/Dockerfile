@@ -165,7 +165,7 @@ RUN sudo apt-get update \
 
 
 RUN cd ~ \
-   && git clone https://github.com/libcpr/cpr.git \
+   && git clone --depth 1 --branch v1.11.0 https://github.com/libcpr/cpr.git \
    && cd cpr && mkdir build && cd build \
    && cmake .. -DCPR_USE_SYSTEM_CURL=ON \
    && cmake --build . --parallel \
