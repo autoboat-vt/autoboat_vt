@@ -1,0 +1,74 @@
+name: ROS2 PR Verification
+
+on:
+  pull_request:
+    branches: [ "main", "cpp" ]
+
+env:
+  COLCON_IGNORE_PACKAGES: "foil_dynamics rudder_dynamics sail_limits sailboat_simulation autopilot_transform wind_arrow"
+
+jobs:
+  build:
+    name: Verify Build (${{ matrix.architecture }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [ amd64, arm64 ]
+        include:
+          - architecture: amd64
+            runner: ubuntu-22.04
+            platform: linux/amd64
+          - architecture: arm64
+            runner: ubuntu-22.04-arm
+            platform: linux/arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Lowercase repository owner
+        run: |
+          echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> ${GITHUB_ENV}
+
+      - name: Compute package version
+        id: meta
+        run: |
+          VERSION="0.0.0+git$(git rev-parse --short HEAD)"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Package version: ${VERSION}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Images (Bake)
+        uses: docker/bake-action@v4
+        with:
+          workdir: .github/workflows # Look for docker-bake.hcl here
+          push: false
+          load: true
+          set: |
+            *.cache-from=type=gha
+            *.cache-to=type=gha,mode=max
+            var:OWNER=${{ env.OWNER_LC }}
+            var:ARCHITECTURE=${{ matrix.architecture }}
+            var:VERSION=${{ steps.meta.outputs.version }}
+            var:GITHUB_SHA=${{ github.sha }}
+            var:IS_OFFICIAL=false
+            var:IS_RELEASE=false
+
+      - name: Build ROS2 Packages
+        run: |
+          docker run --rm \
+            --user root \
+            -v ${{ github.workspace }}:/home/ws \
+            -w /home/ws \
+            -e DEB_VERSION="${{ steps.meta.outputs.version }}" \
+            -e DEB_ARCH="${{ matrix.architecture }}" \
+            autoboat-base:latest \
+            bash -c '
+              set -e
+              source /opt/ros/humble/setup.bash
+              echo "==> colcon build ignore: ${{ env.COLCON_IGNORE_PACKAGES }}"
+              colcon build --packages-ignore ${{ env.COLCON_IGNORE_PACKAGES }}
+            '

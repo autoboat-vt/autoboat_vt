@@ -13,8 +13,6 @@ on:
     branches: [ "main", "cpp" ]
     tags:
       - 'v*'
-  pull_request:
-    branches: [ "main", "cpp" ]
 
 jobs:
   build:
@@ -86,113 +84,32 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       # -----------------------------------------------------------------------
-      # Build the CI Docker images, cached between runs via GitHub Actions Cache.
-      # We build the Base image first, then Micro-ROS on top of it.
+      # Build the CI Docker images using Docker Bake.
+      # Bake handles the dependency graph between images (e.g. Micro-ROS depends on Base)
+      # internally, ensuring 100% cache efficiency and perfect image visibility.
       # -----------------------------------------------------------------------
-      - name: Build Base Docker Image
-        uses: docker/build-push-action@v5
+      - name: Build and Push Docker Images (Bake)
+        uses: docker/bake-action@v4
         with:
-          context: .
-          file: .devcontainer/Dockerfile
-          platforms: ${{ matrix.platform }}
-          load: true
-          tags: |
-            autoboat-base:latest
-            vtautoboat/development_image:${{ matrix.architecture }}
-            ghcr.io/${{ env.OWNER_LC }}/development_image:${{ matrix.architecture }}
-            ghcr.io/${{ env.OWNER_LC }}/development_image:${{ github.sha }}
-          cache-from: |
-            type=gha
-            type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}
-          cache-to: type=gha,mode=max
+          workdir: .github/workflows # Look for docker-bake.hcl here
+          push: true
+          load: false
+          set: |
+            *.cache-from=type=gha
+            *.cache-to=type=gha,mode=max
+            var:OWNER=${{ env.OWNER_LC }}
+            var:ARCHITECTURE=${{ matrix.architecture }}
+            var:VERSION=${{ steps.meta.outputs.version }}
+            var:MAJOR=${{ steps.meta.outputs.major }}
+            var:MINOR=${{ steps.meta.outputs.minor }}
+            var:GITHUB_SHA=${{ github.sha }}
+            var:IS_OFFICIAL=true
+            var:IS_RELEASE=${{ startsWith(github.ref, 'refs/tags/v') }}
 
-      - name: Push Base Docker Image
+      - name: Pull Base Image for local build
         run: |
-          echo "==> 1. Pushing SHA-based tag to GHCR for internal Buildx visibility..."
-          docker push ghcr.io/${{ env.OWNER_LC }}/development_image:${{ github.sha }}
-
-          # Only push official/versioned tags on main or tags
-          if [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.ref }}" == refs/tags/v* ]]; then
-            echo "==> 2. Pushing official tags to registries..."
-            docker push vtautoboat/development_image:${{ matrix.architecture }}
-            docker push ghcr.io/${{ env.OWNER_LC }}/development_image:${{ matrix.architecture }}
-            
-            # Handle semantic version tags if this is a version tag push
-            if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-              VERSION="${{ steps.meta.outputs.version }}"
-              MAJOR="${{ steps.meta.outputs.major }}"
-              MINOR="${{ steps.meta.outputs.minor }}"
-              
-              for TAG in "v${VERSION}" "v${MINOR}" "v${MAJOR}"; do
-                echo "==> Tagging and pushing: ${TAG}"
-                docker tag autoboat-base:latest "vtautoboat/development_image:${TAG}-${{ matrix.architecture }}"
-                docker push "vtautoboat/development_image:${TAG}-${{ matrix.architecture }}"
-                
-                docker tag autoboat-base:latest "ghcr.io/${{ env.OWNER_LC }}/development_image:${TAG}-${{ matrix.architecture }}"
-                docker push "ghcr.io/${{ env.OWNER_LC }}/development_image:${TAG}-${{ matrix.architecture }}"
-              done
-            fi
-            
-            echo "==> 3. Pushing short SHA tag..."
-            SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-            docker tag autoboat-base:latest ghcr.io/${{ env.OWNER_LC }}/development_image:$SHORT_SHA
-            docker push ghcr.io/${{ env.OWNER_LC }}/development_image:$SHORT_SHA
-          else
-            echo "==> Skipping official tags (not on main or version tag)."
-          fi
-
-      - name: Build Micro-ROS Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: .devcontainer/devcontainer_variants/Dockerfile.microros
-          platforms: ${{ matrix.platform }}
-          load: true
-          build-args: |
-            BASE_IMAGE=ghcr.io/${{ env.OWNER_LC }}/development_image:${{ matrix.architecture }}
-          tags: |
-            autoboat-microros:latest
-            vtautoboat/development_image_microros:${{ matrix.architecture }}
-            ghcr.io/${{ env.OWNER_LC }}/development_image_microros:${{ matrix.architecture }}
-          cache-from: |
-            type=gha
-            type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}
-          cache-to: type=gha,mode=max
-
-      - name: Push Micro-ROS Docker Image
-        run: |
-          # Only push on main or tags
-          if [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.ref }}" == refs/tags/v* ]]; then
-            echo "==> Pushing Micro-ROS variant to registries..."
-            docker push vtautoboat/development_image_microros:${{ matrix.architecture }}
-            docker push ghcr.io/${{ env.OWNER_LC }}/development_image_microros:${{ matrix.architecture }}
-            
-            # Additional tags
-            docker tag autoboat-microros:latest ghcr.io/${{ env.OWNER_LC }}/development_image_microros:${{ github.sha }}
-            docker push ghcr.io/${{ env.OWNER_LC }}/development_image_microros:${{ github.sha }}
-            
-            # Handle semantic version tags if this is a version tag push
-            if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-              VERSION="${{ steps.meta.outputs.version }}"
-              MAJOR="${{ steps.meta.outputs.major }}"
-              MINOR="${{ steps.meta.outputs.minor }}"
-              
-              for TAG in "v${VERSION}" "v${MINOR}" "v${MAJOR}"; do
-                echo "==> Tagging and pushing Micro-ROS: ${TAG}"
-                docker tag autoboat-microros:latest "vtautoboat/development_image_microros:${TAG}-${{ matrix.architecture }}"
-                docker push "vtautoboat/development_image_microros:${TAG}-${{ matrix.architecture }}"
-                
-                docker tag autoboat-microros:latest "ghcr.io/${{ env.OWNER_LC }}/development_image_microros:${TAG}-${{ matrix.architecture }}"
-                docker push "ghcr.io/${{ env.OWNER_LC }}/development_image_microros:${TAG}-${{ matrix.architecture }}"
-              done
-            fi
-
-            SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-            docker tag autoboat-microros:latest ghcr.io/${{ env.OWNER_LC }}/development_image_microros:$SHORT_SHA
-            docker push ghcr.io/${{ env.OWNER_LC }}/development_image_microros:$SHORT_SHA
-          else
-            echo "==> Skipping Micro-ROS push (not on main or version tag)."
-          fi
+          docker pull vtautoboat/development_image:${{ matrix.architecture }}
+          docker tag vtautoboat/development_image:${{ matrix.architecture }} autoboat-base:latest
 
       # -----------------------------------------------------------------------
       # Run colcon build AND package everything inside the container.
@@ -260,7 +177,6 @@ jobs:
       # On every push/PR these are downloadable from the Actions tab for 5 days.
       # On tag pushes the release job picks them up too.
       - name: Upload Build Artifacts
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: autoboat-prebuilt-${{ matrix.architecture }}
@@ -276,7 +192,6 @@ jobs:
   release:
     name: Create GitHub Release
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -301,6 +216,9 @@ jobs:
             output_artifacts/autoboat-vt-*.deb
           generate_release_notes: true
           draft: false
+          
+          # This checks is we are pushing to the main branch or have a version like v1.2.3-beta
+          # if so then this is marked on github as a prerelease version
           prerelease: ${{ github.ref_name == 'main' || contains(github.ref, '-') }}
 
 
@@ -311,7 +229,6 @@ jobs:
   publish-dev-image:
     name: Publish Multi-Arch Dev Image (${{ matrix.variant }})
     needs: build
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
