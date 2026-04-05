@@ -11,4 +11,4 @@ docker tag "$IMAGE_NAME" "$GHCR_IMAGE:$DOCKER_TAG"
 docker push "$GHCR_IMAGE:$DOCKER_TAG"
 
 docker tag "$IMAGE_NAME" "$GHCR_IMAGE:$SOURCE_COMMIT"
-docker push "$GHCR_IMAGE:$SOURCE_COMMIT"s
+docker push "$GHCR_IMAGE:$SOURCE_COMMIT"
