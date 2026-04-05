@@ -19,6 +19,9 @@ on:
 jobs:
   build:
     name: Build (${{ matrix.architecture }})
+    permissions:
+      contents: write
+      packages: write
     
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -36,6 +39,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Lowercase repository owner
+        run: |
+          echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> ${GITHUB_ENV}
 
       - name: Log in to Docker Hub
         # Only push images to the registry when pushing to the main branch.
@@ -175,12 +182,12 @@ jobs:
 
       # -----------------------------------------------------------------------
       - name: Push Architecture-Specific Dev Images
-        # if: success() && github.ref == 'refs/heads/main'
+        if: success()
         run: |
           # Base image
           TAG_BASE="vtautoboat/development_image:${{ matrix.architecture }}"
-          GHCR_BASE="ghcr.io/${TAG_BASE}"
-          GHCR_SHA="ghcr.io/vtautoboat/development_image:${GITHUB_SHA::7}"
+          GHCR_BASE="ghcr.io/${OWNER_LC}/development_image:${{ matrix.architecture }}"
+          GHCR_SHA="ghcr.io/${OWNER_LC}/development_image:${GITHUB_SHA::7}"
 
           echo "==> Tagging and pushing ${TAG_BASE}..."
           docker tag autoboat-base:latest "$TAG_BASE"
@@ -196,8 +203,8 @@ jobs:
 
           # Micro-ROS variant
           TAG_MICROROS="vtautoboat/development_image_microros:${{ matrix.architecture }}"
-          GHCR_MICROROS="ghcr.io/${TAG_MICROROS}"
-          GHCR_SHA_MICROROS="ghcr.io/vtautoboat/development_image_microros:${GITHUB_SHA::7}"
+          GHCR_MICROROS="ghcr.io/${OWNER_LC}/development_image_microros:${{ matrix.architecture }}"
+          GHCR_SHA_MICROROS="ghcr.io/${OWNER_LC}/development_image_microros:${GITHUB_SHA::7}"
 
           echo "==> Tagging and pushing ${TAG_MICROROS}..."
           docker tag autoboat-microros:latest "$TAG_MICROROS"
@@ -256,6 +263,9 @@ jobs:
     needs: build
     # if: success() && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     strategy:
       matrix:
         variant: [ standard, microros ]
@@ -280,10 +290,12 @@ jobs:
 
       - name: Create and Push Multi-Arch Manifests
         run: |
-          GHCR_REPO="ghcr.io/${{ matrix.image_repo }}"
+          OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}
+          GHCR_REPO="ghcr.io/${OWNER_LC}/${{ matrix.variant == 'standard' && 'development_image' || 'development_image_microros' }}"
+          DOCKER_HUB_REPO="vtautoboat/${{ matrix.variant == 'standard' && 'development_image' || 'development_image_microros' }}"
 
-          echo "==> Creating multi-arch manifest for ${{ matrix.image_repo }}:latest..."
-          docker buildx imagetools create -t ${{ matrix.image_repo }}:latest ${{ matrix.image_repo }}:amd64 ${{ matrix.image_repo }}:arm64
+          echo "==> Creating multi-arch manifest for ${DOCKER_HUB_REPO}:latest..."
+          docker buildx imagetools create -t ${DOCKER_HUB_REPO}:latest ${DOCKER_HUB_REPO}:amd64 ${DOCKER_HUB_REPO}:arm64
 
           echo "==> Creating multi-arch manifest for ${GHCR_REPO}:latest..."
           docker buildx imagetools create -t ${GHCR_REPO}:latest ${GHCR_REPO}:amd64 ${GHCR_REPO}:arm64
