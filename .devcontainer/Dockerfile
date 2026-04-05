@@ -25,14 +25,11 @@ ARG TARGETARCH
 ENV SHELL=/bin/bash
 ENV DEBIAN_FRONTEND=noninteractive
 
-# -------------------------------
-# Create user + sudo setup
-# -------------------------------
-# -----------------------------------------------------------------------
-# Install all system dependencies in a single consolidated layer.
-# This minimizes the number of layers and improves build performance.
-# -------------------------------
-RUN apt-get update && apt-get install -y --no-install-recommends \
+
+
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && apt-get update && apt-get install -y --no-install-recommends \
     sudo \
     python3-pip \
     cron \
