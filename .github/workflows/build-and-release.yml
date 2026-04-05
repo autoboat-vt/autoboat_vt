@@ -71,6 +71,11 @@ jobs:
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
+            # Extract Major and Minor version components
+            MAJOR=$(echo "${VERSION}" | cut -d. -f1)
+            MINOR=$(echo "${VERSION}" | cut -d. -f1,2)
+            echo "major=${MAJOR}" >> "$GITHUB_OUTPUT"
+            echo "minor=${MINOR}" >> "$GITHUB_OUTPUT"
           else
             VERSION="0.0.0+git$(git rev-parse --short HEAD)"
           fi
@@ -91,11 +96,51 @@ jobs:
           file: .devcontainer/Dockerfile
           platforms: ${{ matrix.platform }}
           load: true
-          tags: autoboat-base:latest
+          tags: |
+            autoboat-base:latest
+            vtautoboat/development_image:${{ matrix.architecture }}
+            ghcr.io/${{ env.OWNER_LC }}/development_image:${{ matrix.architecture }}
+            ghcr.io/${{ env.OWNER_LC }}/development_image:${{ github.sha }}
+            ghcr.io/${{ env.OWNER_LC }}/development_image:${GITHUB_SHA::7}
           cache-from: |
             type=gha
             type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}
           cache-to: type=gha,mode=max
+
+      - name: Push Base Docker Image
+        run: |
+          echo "==> 1. Pushing SHA-based tag to GHCR for internal Buildx visibility..."
+          docker push ghcr.io/${{ env.OWNER_LC }}/development_image:${{ github.sha }}
+
+          # Only push official/versioned tags on main or tags
+          if [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "==> 2. Pushing official tags to registries..."
+            docker push vtautoboat/development_image:${{ matrix.architecture }}
+            docker push ghcr.io/${{ env.OWNER_LC }}/development_image:${{ matrix.architecture }}
+            
+            # Handle semantic version tags if this is a version tag push
+            if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+              VERSION="${{ steps.meta.outputs.version }}"
+              MAJOR="${{ steps.meta.outputs.major }}"
+              MINOR="${{ steps.meta.outputs.minor }}"
+              
+              for TAG in "v${VERSION}" "v${MINOR}" "v${MAJOR}"; do
+                echo "==> Tagging and pushing: ${TAG}"
+                docker tag autoboat-base:latest "vtautoboat/development_image:${TAG}-${{ matrix.architecture }}"
+                docker push "vtautoboat/development_image:${TAG}-${{ matrix.architecture }}"
+                
+                docker tag autoboat-base:latest "ghcr.io/${{ env.OWNER_LC }}/development_image:${TAG}-${{ matrix.architecture }}"
+                docker push "ghcr.io/${{ env.OWNER_LC }}/development_image:${TAG}-${{ matrix.architecture }}"
+              done
+            fi
+            
+            echo "==> 3. Pushing short SHA tag..."
+            SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+            docker tag autoboat-base:latest ghcr.io/${{ env.OWNER_LC }}/development_image:$SHORT_SHA
+            docker push ghcr.io/${{ env.OWNER_LC }}/development_image:$SHORT_SHA
+          else
+            echo "==> Skipping official tags (not on main or version tag)."
+          fi
 
       - name: Build Micro-ROS Docker Image
         uses: docker/build-push-action@v5
@@ -105,12 +150,51 @@ jobs:
           platforms: ${{ matrix.platform }}
           load: true
           build-args: |
-            BASE_IMAGE=autoboat-base:latest
-          tags: autoboat-microros:latest
+            BASE_IMAGE=ghcr.io/${{ env.OWNER_LC }}/development_image:${{ matrix.architecture }}
+          tags: |
+            autoboat-microros:latest
+            vtautoboat/development_image_microros:${{ matrix.architecture }}
+            ghcr.io/${{ env.OWNER_LC }}/development_image_microros:${{ matrix.architecture }}
+            ghcr.io/${{ env.OWNER_LC }}/development_image_microros:${GITHUB_SHA::7}
           cache-from: |
             type=gha
             type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}
           cache-to: type=gha,mode=max
+
+      - name: Push Micro-ROS Docker Image
+        run: |
+          # Only push on main or tags
+          if [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "==> Pushing Micro-ROS variant to registries..."
+            docker push vtautoboat/development_image_microros:${{ matrix.architecture }}
+            docker push ghcr.io/${{ env.OWNER_LC }}/development_image_microros:${{ matrix.architecture }}
+            
+            # Additional tags
+            docker tag autoboat-microros:latest ghcr.io/${{ env.OWNER_LC }}/development_image_microros:${{ github.sha }}
+            docker push ghcr.io/${{ env.OWNER_LC }}/development_image_microros:${{ github.sha }}
+            
+            # Handle semantic version tags if this is a version tag push
+            if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+              VERSION="${{ steps.meta.outputs.version }}"
+              MAJOR="${{ steps.meta.outputs.major }}"
+              MINOR="${{ steps.meta.outputs.minor }}"
+              
+              for TAG in "v${VERSION}" "v${MINOR}" "v${MAJOR}"; do
+                echo "==> Tagging and pushing Micro-ROS: ${TAG}"
+                docker tag autoboat-microros:latest "vtautoboat/development_image_microros:${TAG}-${{ matrix.architecture }}"
+                docker push "vtautoboat/development_image_microros:${TAG}-${{ matrix.architecture }}"
+                
+                docker tag autoboat-microros:latest "ghcr.io/${{ env.OWNER_LC }}/development_image_microros:${TAG}-${{ matrix.architecture }}"
+                docker push "ghcr.io/${{ env.OWNER_LC }}/development_image_microros:${TAG}-${{ matrix.architecture }}"
+              done
+            fi
+
+            SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+            docker tag autoboat-microros:latest ghcr.io/${{ env.OWNER_LC }}/development_image_microros:$SHORT_SHA
+            docker push ghcr.io/${{ env.OWNER_LC }}/development_image_microros:$SHORT_SHA
+          else
+            echo "==> Skipping Micro-ROS push (not on main or version tag)."
+          fi
 
       # -----------------------------------------------------------------------
       # Run colcon build AND package everything inside the container.
@@ -178,49 +262,13 @@ jobs:
       # On every push/PR these are downloadable from the Actions tab for 5 days.
       # On tag pushes the release job picks them up too.
       - name: Upload Build Artifacts
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: autoboat-prebuilt-${{ matrix.architecture }}
           path: output_artifacts/
           # retention-days: 5
 
-      # -----------------------------------------------------------------------
-      - name: Push Architecture-Specific Dev Images
-        if: success()
-        run: |
-          # Base image
-          TAG_BASE="vtautoboat/development_image:${{ matrix.architecture }}"
-          GHCR_BASE="ghcr.io/${OWNER_LC}/development_image:${{ matrix.architecture }}"
-          GHCR_SHA="ghcr.io/${OWNER_LC}/development_image:${GITHUB_SHA::7}"
-
-          echo "==> Tagging and pushing ${TAG_BASE}..."
-          docker tag autoboat-base:latest "$TAG_BASE"
-          docker push "$TAG_BASE"
-
-          echo "==> Tagging and pushing ${GHCR_BASE}..."
-          docker tag autoboat-base:latest "$GHCR_BASE"
-          docker push "$GHCR_BASE"
-
-          echo "==> Tagging and pushing ${GHCR_SHA}..."
-          docker tag autoboat-base:latest "$GHCR_SHA"
-          docker push "$GHCR_SHA"
-
-          # Micro-ROS variant
-          TAG_MICROROS="vtautoboat/development_image_microros:${{ matrix.architecture }}"
-          GHCR_MICROROS="ghcr.io/${OWNER_LC}/development_image_microros:${{ matrix.architecture }}"
-          GHCR_SHA_MICROROS="ghcr.io/${OWNER_LC}/development_image_microros:${GITHUB_SHA::7}"
-
-          echo "==> Tagging and pushing ${TAG_MICROROS}..."
-          docker tag autoboat-microros:latest "$TAG_MICROROS"
-          docker push "$TAG_MICROROS"
-
-          echo "==> Tagging and pushing ${GHCR_MICROROS}..."
-          docker tag autoboat-microros:latest "$GHCR_MICROROS"
-          docker push "$GHCR_MICROROS"
-
-          echo "==> Tagging and pushing ${GHCR_SHA_MICROROS}..."
-          docker tag autoboat-microros:latest "$GHCR_SHA_MICROROS"
-          docker push "$GHCR_SHA_MICROROS"
 
   # ============================================================================
   # Release job — only runs on version tag pushes (v*).
@@ -265,7 +313,7 @@ jobs:
   publish-dev-image:
     name: Publish Multi-Arch Dev Image (${{ matrix.variant }})
     needs: build
-    # if: success() && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -303,3 +351,16 @@ jobs:
 
           echo "==> Creating multi-arch manifest for ${GHCR_REPO}:latest..."
           docker buildx imagetools create -t ${GHCR_REPO}:latest ${GHCR_REPO}:amd64 ${GHCR_REPO}:arm64
+
+          # Handle semantic version tags
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            MAJOR=$(echo "${VERSION}" | cut -d. -f1)
+            MINOR=$(echo "${VERSION}" | cut -d. -f1,2)
+            
+            for TAG in "v${VERSION}" "v${MINOR}" "v${MAJOR}"; do
+              echo "==> Creating multi-arch manifest for ${TAG}..."
+              docker buildx imagetools create -t ${DOCKER_HUB_REPO}:${TAG} ${DOCKER_HUB_REPO}:${TAG}-amd64 ${DOCKER_HUB_REPO}:${TAG}-arm64
+              docker buildx imagetools create -t ${GHCR_REPO}:${TAG} ${GHCR_REPO}:${TAG}-amd64 ${GHCR_REPO}:${TAG}-arm64
+            done
+          fi
