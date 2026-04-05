@@ -20,7 +20,7 @@ jobs:
             runner: ubuntu-22.04
             platform: linux/amd64
           - architecture: arm64
-            runner: ubuntu-22.04-arm
+            runner: ubuntu-22.04-arm64
             platform: linux/arm64
 
     steps:
@@ -58,8 +58,10 @@ jobs:
           set: |
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
-            *.cache-from=type=registry,ref=vtautoboat/development_image:local-${{ matrix.architecture }}
-            *.cache-from=type=registry,ref=vtautoboat/development_image_microros:local-${{ matrix.architecture }}
+            *.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}
+            *.cache-from=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}
+            *.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache
+            *.cache-from=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache
         env:
           BUILDX_BAKE_VAR_OWNER: ${{ env.OWNER_LC }}
           BUILDX_BAKE_VAR_ARCHITECTURE: ${{ matrix.architecture }}
