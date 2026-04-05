@@ -1,0 +1,19 @@
+#!/bin/bash
+set -eu
+
+: "${GHCR_USERNAME:?Missing GHCR_USERNAME}"
+: "${GHCR_PAT:?Missing GHCR_PAT}"
+: "${GHCR_IMAGE:?Missing GHCR_IMAGE}"
+
+echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+
+docker tag "$IMAGE_NAME" "$GHCR_IMAGE:$DOCKER_TAG"
+docker push "$GHCR_IMAGE:$DOCKER_TAG"
+
+docker tag "$IMAGE_NAME" "$GHCR_IMAGE:$SOURCE_COMMIT"
+docker push "$GHCR_IMAGE:$SOURCE_COMMIT"
+
+if [ "${DOCKER_TAG:-}" = "latest" ]; then
+    docker tag "$IMAGE_NAME" "$GHCR_IMAGE:latest"
+    docker push "$GHCR_IMAGE:latest"
+fi
