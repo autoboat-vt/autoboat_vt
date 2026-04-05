@@ -50,12 +50,12 @@ jobs:
           set: |
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
-            var:OWNER=${{ env.OWNER_LC }}
-            var:ARCHITECTURE=${{ matrix.architecture }}
-            var:VERSION=${{ steps.meta.outputs.version }}
-            var:GITHUB_SHA=${{ github.sha }}
-            var:IS_OFFICIAL=false
-            var:IS_RELEASE=false
+            OWNER=${{ env.OWNER_LC }}
+            ARCHITECTURE=${{ matrix.architecture }}
+            VERSION=${{ steps.meta.outputs.version }}
+            GITHUB_SHA=${{ github.sha }}
+            IS_OFFICIAL=false
+            IS_RELEASE=false
 
       - name: Build ROS2 Packages
         run: |

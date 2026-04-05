@@ -76,6 +76,8 @@ jobs:
             echo "minor=${MINOR}" >> "$GITHUB_OUTPUT"
           else
             VERSION="0.0.0+git$(git rev-parse --short HEAD)"
+            echo "major=0" >> "$GITHUB_OUTPUT"
+            echo "minor=0.0" >> "$GITHUB_OUTPUT"
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Package version: ${VERSION}"
@@ -97,14 +99,14 @@ jobs:
           set: |
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
-            var:OWNER=${{ env.OWNER_LC }}
-            var:ARCHITECTURE=${{ matrix.architecture }}
-            var:VERSION=${{ steps.meta.outputs.version }}
-            var:MAJOR=${{ steps.meta.outputs.major }}
-            var:MINOR=${{ steps.meta.outputs.minor }}
-            var:GITHUB_SHA=${{ github.sha }}
-            var:IS_OFFICIAL=true
-            var:IS_RELEASE=${{ startsWith(github.ref, 'refs/tags/v') }}
+            OWNER=${{ env.OWNER_LC }}
+            ARCHITECTURE=${{ matrix.architecture }}
+            VERSION=${{ steps.meta.outputs.version }}
+            MAJOR=${{ steps.meta.outputs.major }}
+            MINOR=${{ steps.meta.outputs.minor }}
+            GITHUB_SHA=${{ github.sha }}
+            IS_OFFICIAL=true
+            IS_RELEASE=${{ startsWith(github.ref, 'refs/tags/v') }}
 
       - name: Pull Base Image for local build
         run: |
