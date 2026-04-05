@@ -51,12 +51,12 @@ jobs:
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
         env:
-          OWNER: ${{ env.OWNER_LC }}
-          ARCHITECTURE: ${{ matrix.architecture }}
-          VERSION: ${{ steps.meta.outputs.version }}
-          GITHUB_SHA: ${{ github.sha }}
-          IS_OFFICIAL: false
-          IS_RELEASE: false
+          BUILDX_BAKE_VAR_OWNER: ${{ env.OWNER_LC }}
+          BUILDX_BAKE_VAR_ARCHITECTURE: ${{ matrix.architecture }}
+          BUILDX_BAKE_VAR_VERSION: ${{ steps.meta.outputs.version }}
+          BUILDX_BAKE_VAR_GITHUB_SHA: ${{ github.sha }}
+          BUILDX_BAKE_VAR_IS_OFFICIAL: false
+          BUILDX_BAKE_VAR_IS_RELEASE: false
 
       - name: Build ROS2 Packages
         run: |

@@ -100,14 +100,14 @@ jobs:
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
         env:
-          OWNER: ${{ env.OWNER_LC }}
-          ARCHITECTURE: ${{ matrix.architecture }}
-          VERSION: ${{ steps.meta.outputs.version }}
-          MAJOR: ${{ steps.meta.outputs.major }}
-          MINOR: ${{ steps.meta.outputs.minor }}
-          GITHUB_SHA: ${{ github.sha }}
-          IS_OFFICIAL: true
-          IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          BUILDX_BAKE_VAR_OWNER: ${{ env.OWNER_LC }}
+          BUILDX_BAKE_VAR_ARCHITECTURE: ${{ matrix.architecture }}
+          BUILDX_BAKE_VAR_VERSION: ${{ steps.meta.outputs.version }}
+          BUILDX_BAKE_VAR_MAJOR: ${{ steps.meta.outputs.major }}
+          BUILDX_BAKE_VAR_MINOR: ${{ steps.meta.outputs.minor }}
+          BUILDX_BAKE_VAR_GITHUB_SHA: ${{ github.sha }}
+          BUILDX_BAKE_VAR_IS_OFFICIAL: true
+          BUILDX_BAKE_VAR_IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
         
 
       - name: Pull Base Image for local build
