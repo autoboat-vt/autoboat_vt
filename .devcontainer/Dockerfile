@@ -27,9 +27,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 
 
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    groupadd --gid $USER_GID $USERNAME \
+RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
     && apt-get update && apt-get install -y --no-install-recommends \
     sudo \
@@ -87,9 +85,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # -------------------------------
 # Install RealSense / OSRF Gazebo / Golang (Separate due to repos)
 # -------------------------------
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    add-apt-repository ppa:longsleep/golang-backports -y \
+RUN add-apt-repository ppa:longsleep/golang-backports -y \
     && curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add - \
     && curl -s https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] https://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null \
@@ -107,17 +103,14 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # -------------------------------
 # Ensure that qt5 is installed properly so pyqt installation works
 # -------------------------------
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    if [ "$TARGETARCH" = "arm64" ]; then \
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
       echo "Building for ARM64. Installing pre-compiled system packages via apt."; \
       apt-get update && apt-get install -y python3-pyqt5 python3-pyqt5.qtwebengine && rm -rf /var/lib/apt/lists/*; \
    fi
 
 USER $USERNAME
 
-RUN --mount=type=cache,target=/home/autoboat_user/.cache/pip \
-    if [ "$TARGETARCH" = "amd64" ]; then \
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
       echo "Building for x86_64. Safe to download PyQt binaries via pip."; \
       pip install PyQt5==5.15.11 PyQtWebEngine==5.15.7; \
    fi
@@ -130,20 +123,15 @@ RUN --mount=type=cache,target=/home/autoboat_user/.cache/pip \
 # -------------------------------
 
 COPY .devcontainer/required_pip_packages.txt /tmp/requirements.txt
-RUN --mount=type=cache,target=/home/autoboat_user/.cache/pip \
-    pip install --upgrade pip
-RUN --mount=type=cache,target=/home/autoboat_user/.cache/pip \
-    pip install packaging
-RUN --mount=type=cache,target=/home/autoboat_user/.cache/pip \
-    pip install -r /tmp/requirements.txt
+RUN pip install --upgrade pip
+RUN pip install packaging
+RUN pip install -r /tmp/requirements.txt
 
 # -------------------------------
 # Installation for gazebo (for simulation)
 # -------------------------------
 USER root
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    if [ "$TARGETARCH" = "amd64" ]; then \
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
       echo "Building for x86_64. Safe to download gazebo."; \
       apt update \
       && apt install curl lsb-release gnupg \
