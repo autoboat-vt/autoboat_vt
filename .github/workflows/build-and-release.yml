@@ -19,7 +19,7 @@ on:
 jobs:
   build:
     name: Build (${{ matrix.architecture }})
-    # Public repos get free native arm64 runners — no slow QEMU emulation.
+    
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -118,32 +118,14 @@ jobs:
 
               # ── 1. Build ────────────────────────────────────────────────────
               echo "==> colcon build ignore: ${{ env.COLCON_IGNORE_PACKAGES }}"
-              colcon build \
-                --packages-ignore ${{ env.COLCON_IGNORE_PACKAGES }} \
-                --symlink-install \
-                --cmake-args \
-                  -DCMAKE_BUILD_TYPE=Debug \
-                  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+              colcon build --packages-ignore ${{ env.COLCON_IGNORE_PACKAGES }}
 
-              # ── 2. Resolve symlinks ─────────────────────────────────────────
-              # --symlink-install creates symlinks in install/ pointing into src/.
-              # We copy with cp -rL to produce real files, so the tarball/deb
-              # works on machines that have no src/ directory.
-              # IMPORTANT: use install_resolved (same bind-mount filesystem) not
-              # /tmp (different filesystem) — mv across filesystems fails.
-              echo "==> Resolving symlinks in install/..."
-              cp -rL install install_resolved
-              rm -rf install
-              mv install_resolved install
-
-              mkdir -p output_artifacts
-
-              # ── 3. Tarball (build/ + install/) ──────────────────────────────
+              # ── 2. Tarball (build/ + install/) ──────────────────────────────
               echo "==> Creating tarball..."
-              tar -czf "output_artifacts/autoboat-prebuilt-${DEB_ARCH}.tar.gz" \
-                build/ install/
+              mkdir -p output_artifacts
+              tar -czf "output_artifacts/autoboat-prebuilt-${DEB_ARCH}.tar.gz" build/ install/
 
-              # ── 4. Debian package (install/ only) ───────────────────────────
+              # ── 3. Debian package (install/ only) ───────────────────────────
               echo "==> Building .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
               PKG_DIR=/home/ws/deb_pkg
               mkdir -p "${PKG_DIR}/DEBIAN"
@@ -153,9 +135,7 @@ jobs:
               cp -r install "${PKG_DIR}/opt/autoboat/"
 
               # Fill in version + arch placeholders in the control file template
-              sed \
-                -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" \
-                -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
+              sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
                 .github/deb/control.template > "${PKG_DIR}/DEBIAN/control"
 
               # Maintainer scripts
@@ -163,10 +143,9 @@ jobs:
               cp .github/deb/prerm    "${PKG_DIR}/DEBIAN/prerm"
               chmod 0755 "${PKG_DIR}/DEBIAN/postinst" "${PKG_DIR}/DEBIAN/prerm"
 
-              dpkg-deb --build "${PKG_DIR}" \
-                "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
+              dpkg-deb --build "${PKG_DIR}" "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
 
-              # ── 5. Fix permissions for host runner upload ───────────────────
+              # ── 4. Fix permissions for host runner upload ───────────────────
               echo "==> Fixing permissions for host runner..."
               # Ensure the host runner can read everything in output_artifacts
               chmod -R a+rX output_artifacts/
@@ -235,6 +214,7 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref, '-') }}
 
+
   # ============================================================================
   # Publish Multi-Arch Dev Image — runs after successful build.
   # Combines the amd64 and arm64 images into a single multi-arch manifest.
@@ -262,6 +242,4 @@ jobs:
       - name: Create and Push Multi-Arch Manifest
         run: |
           echo "==> Creating multi-arch manifest for ${{ matrix.image_repo }}:latest..."
-          docker buildx imagetools create -t ${{ matrix.image_repo }}:latest \
-            ${{ matrix.image_repo }}:amd64 \
-            ${{ matrix.image_repo }}:arm64
+          docker buildx imagetools create -t ${{ matrix.image_repo }}:latest ${{ matrix.image_repo }}:amd64 ${{ matrix.image_repo }}:arm64
