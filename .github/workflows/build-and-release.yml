@@ -101,7 +101,6 @@ jobs:
             vtautoboat/development_image:${{ matrix.architecture }}
             ghcr.io/${{ env.OWNER_LC }}/development_image:${{ matrix.architecture }}
             ghcr.io/${{ env.OWNER_LC }}/development_image:${{ github.sha }}
-            ghcr.io/${{ env.OWNER_LC }}/development_image:${GITHUB_SHA::7}
           cache-from: |
             type=gha
             type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}
@@ -155,7 +154,6 @@ jobs:
             autoboat-microros:latest
             vtautoboat/development_image_microros:${{ matrix.architecture }}
             ghcr.io/${{ env.OWNER_LC }}/development_image_microros:${{ matrix.architecture }}
-            ghcr.io/${{ env.OWNER_LC }}/development_image_microros:${GITHUB_SHA::7}
           cache-from: |
             type=gha
             type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}
