@@ -27,6 +27,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache C++ Build (CCACHE)
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.architecture }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ matrix.architecture }}-
+
       - name: Lowercase repository owner
         run: |
           echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> ${GITHUB_ENV}
@@ -50,6 +58,8 @@ jobs:
           set: |
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
+            *.cache-from=type=registry,ref=vtautoboat/development_image:local-${{ matrix.architecture }}
+            *.cache-from=type=registry,ref=vtautoboat/development_image_microros:local-${{ matrix.architecture }}
         env:
           BUILDX_BAKE_VAR_OWNER: ${{ env.OWNER_LC }}
           BUILDX_BAKE_VAR_ARCHITECTURE: ${{ matrix.architecture }}
@@ -63,13 +73,16 @@ jobs:
           docker run --rm \
             --user root \
             -v ${{ github.workspace }}:/home/ws \
+            -v ${{ github.workspace }}/.ccache:/home/ws/.ccache \
             -w /home/ws \
             -e DEB_VERSION="${{ steps.meta.outputs.version }}" \
             -e DEB_ARCH="${{ matrix.architecture }}" \
-            autoboat-base:latest \
+            -e CCACHE_DIR=/home/ws/.ccache \
+            -e CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            vtautoboat/development_image:local-${{ matrix.architecture }} \
             bash -c '
               set -e
               source /opt/ros/humble/setup.bash
               echo "==> colcon build ignore: ${{ env.COLCON_IGNORE_PACKAGES }}"
-              colcon build --packages-ignore ${{ env.COLCON_IGNORE_PACKAGES }}
+              colcon build --packages-ignore ${{ env.COLCON_IGNORE_PACKAGES }} --cmake-args -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=mold"
             '

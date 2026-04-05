@@ -43,9 +43,8 @@ target "base" {
   dockerfile = ".devcontainer/Dockerfile"
   platforms = ["linux/${ARCHITECTURE}"]
   tags = [
-    "autoboat-base:latest",
-    IS_OFFICIAL == "true" ? "vtautoboat/development_image:${ARCHITECTURE}" : "",
-    IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image:${ARCHITECTURE}" : "",
+    "${IS_OFFICIAL}" == "true" ? "vtautoboat/development_image:${ARCHITECTURE}" : "vtautoboat/development_image:local-${ARCHITECTURE}",
+    "${IS_OFFICIAL}" == "true" ? "ghcr.io/${OWNER}/development_image:${ARCHITECTURE}" : "",
     IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image:${GITHUB_SHA}" : "",
     IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image:${substr(GITHUB_SHA, 0, 7)}" : "",
     IS_RELEASE == "true" ? "vtautoboat/development_image:v${VERSION}-${ARCHITECTURE}" : "",
@@ -68,9 +67,8 @@ target "microros" {
     BASE_IMAGE = "base"
   }
   tags = [
-    "autoboat-microros:latest",
-    IS_OFFICIAL == "true" ? "vtautoboat/development_image_microros:${ARCHITECTURE}" : "",
-    IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image_microros:${ARCHITECTURE}" : "",
+    "${IS_OFFICIAL}" == "true" ? "vtautoboat/development_image_microros:${ARCHITECTURE}" : "vtautoboat/development_image_microros:local-${ARCHITECTURE}",
+    "${IS_OFFICIAL}" == "true" ? "ghcr.io/${OWNER}/development_image_microros:${ARCHITECTURE}" : "",
     IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image_microros:${GITHUB_SHA}" : "",
     IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image_microros:${substr(GITHUB_SHA, 0, 7)}" : "",
     IS_RELEASE == "true" ? "vtautoboat/development_image_microros:v${VERSION}-${ARCHITECTURE}" : "",
