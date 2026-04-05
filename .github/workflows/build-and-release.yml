@@ -39,11 +39,20 @@ jobs:
 
       - name: Log in to Docker Hub
         # Only push images to the registry when pushing to the main branch.
-        if: github.ref == 'refs/heads/main'
+        # if: github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        # Only push images to the registry when pushing to the main branch.
+        # if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # -----------------------------------------------------------------------
       # Compute the package version from the git tag (e.g. v1.2.3 → 1.2.3)
@@ -166,19 +175,41 @@ jobs:
 
       # -----------------------------------------------------------------------
       - name: Push Architecture-Specific Dev Images
-        if: success() && github.ref == 'refs/heads/main'
+        # if: success() && github.ref == 'refs/heads/main'
         run: |
           # Base image
           TAG_BASE="vtautoboat/development_image:${{ matrix.architecture }}"
+          GHCR_BASE="ghcr.io/${TAG_BASE}"
+          GHCR_SHA="ghcr.io/vtautoboat/development_image:${GITHUB_SHA::7}"
+
           echo "==> Tagging and pushing ${TAG_BASE}..."
-          docker tag autoboat-base:latest $TAG_BASE
-          docker push $TAG_BASE
+          docker tag autoboat-base:latest "$TAG_BASE"
+          docker push "$TAG_BASE"
+
+          echo "==> Tagging and pushing ${GHCR_BASE}..."
+          docker tag autoboat-base:latest "$GHCR_BASE"
+          docker push "$GHCR_BASE"
+
+          echo "==> Tagging and pushing ${GHCR_SHA}..."
+          docker tag autoboat-base:latest "$GHCR_SHA"
+          docker push "$GHCR_SHA"
 
           # Micro-ROS variant
           TAG_MICROROS="vtautoboat/development_image_microros:${{ matrix.architecture }}"
+          GHCR_MICROROS="ghcr.io/${TAG_MICROROS}"
+          GHCR_SHA_MICROROS="ghcr.io/vtautoboat/development_image_microros:${GITHUB_SHA::7}"
+
           echo "==> Tagging and pushing ${TAG_MICROROS}..."
-          docker tag autoboat-microros:latest $TAG_MICROROS
-          docker push $TAG_MICROROS
+          docker tag autoboat-microros:latest "$TAG_MICROROS"
+          docker push "$TAG_MICROROS"
+
+          echo "==> Tagging and pushing ${GHCR_MICROROS}..."
+          docker tag autoboat-microros:latest "$GHCR_MICROROS"
+          docker push "$GHCR_MICROROS"
+
+          echo "==> Tagging and pushing ${GHCR_SHA_MICROROS}..."
+          docker tag autoboat-microros:latest "$GHCR_SHA_MICROROS"
+          docker push "$GHCR_SHA_MICROROS"
 
   # ============================================================================
   # Release job — only runs on version tag pushes (v*).
@@ -222,7 +253,7 @@ jobs:
   publish-dev-image:
     name: Publish Multi-Arch Dev Image (${{ matrix.variant }})
     needs: build
-    if: success() && github.ref == 'refs/heads/main'
+    # if: success() && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -239,7 +270,19 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Create and Push Multi-Arch Manifest
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and Push Multi-Arch Manifests
         run: |
+          GHCR_REPO="ghcr.io/${{ matrix.image_repo }}"
+
           echo "==> Creating multi-arch manifest for ${{ matrix.image_repo }}:latest..."
           docker buildx imagetools create -t ${{ matrix.image_repo }}:latest ${{ matrix.image_repo }}:amd64 ${{ matrix.image_repo }}:arm64
+
+          echo "==> Creating multi-arch manifest for ${GHCR_REPO}:latest..."
+          docker buildx imagetools create -t ${GHCR_REPO}:latest ${GHCR_REPO}:amd64 ${GHCR_REPO}:arm64
