@@ -99,14 +99,16 @@ jobs:
           set: |
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
-            OWNER=${{ env.OWNER_LC }}
-            ARCHITECTURE=${{ matrix.architecture }}
-            VERSION=${{ steps.meta.outputs.version }}
-            MAJOR=${{ steps.meta.outputs.major }}
-            MINOR=${{ steps.meta.outputs.minor }}
-            GITHUB_SHA=${{ github.sha }}
-            IS_OFFICIAL=true
-            IS_RELEASE=${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          OWNER: ${{ env.OWNER_LC }}
+          ARCHITECTURE: ${{ matrix.architecture }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          MAJOR: ${{ steps.meta.outputs.major }}
+          MINOR: ${{ steps.meta.outputs.minor }}
+          GITHUB_SHA: ${{ github.sha }}
+          IS_OFFICIAL: true
+          IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        
 
       - name: Pull Base Image for local build
         run: |
