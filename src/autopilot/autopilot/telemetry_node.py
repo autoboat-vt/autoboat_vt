@@ -614,8 +614,8 @@ class TelemetryNode(Node):
             )
             
             next_waypoint_position = Position(
-                longitude=self.current_waypoints[self.current_waypoint_index][0],
-                longitude=self.current_waypoints[self.current_waypoint_index][1]
+                longitude=self.current_waypoints[self.current_waypoint_index][1],
+                latitude=self.current_waypoints[self.current_waypoint_index][0]
             )
             
             self.distance_to_next_waypoint = get_distance_between_positions(current_position, next_waypoint_position)
