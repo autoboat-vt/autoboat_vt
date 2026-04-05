@@ -91,7 +91,7 @@ jobs:
       - name: Build and Push Docker Images (Bake)
         uses: docker/bake-action@v6
         with:
-          workdir: .github/workflows # Look for docker-bake.hcl here
+          files: .github/workflows/docker-bake.hcl
           push: true
           load: false
           set: |
