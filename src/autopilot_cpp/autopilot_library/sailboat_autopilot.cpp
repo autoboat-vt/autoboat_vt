@@ -10,9 +10,9 @@
 float SailboatAutopilot::get_decision_zone_size(float distance_to_waypoint) {
     float tack_distance = (*autopilot_parameters)["tack_distance"].get<float>();
     float no_sail_zone_half = (*autopilot_parameters)["no_sail_zone_size"].get<float>() / 2.0;
-    float arg = (tack_distance / distance_to_waypoint) * std::sin(no_sail_zone_half * M_PI / 180.0);
-    arg = std::clamp(arg, (float) -1.0, (float) 1.0);
-    float decision_zone_size = std::asin(arg) * 180.0 / M_PI;
+    float arg = (tack_distance / distance_to_waypoint) * std::sin(no_sail_zone_half * static_cast<float>(M_PI) / 180.0f);
+    arg = std::clamp(arg, -1.0f, 1.0f);
+    float decision_zone_size = std::asin(arg) * 180.0f / static_cast<float>(M_PI);
 
     return std::clamp(decision_zone_size, (float) 0.0, (*autopilot_parameters)["no_sail_zone_size"].get<float>());
 }
@@ -20,8 +20,8 @@ float SailboatAutopilot::get_decision_zone_size(float distance_to_waypoint) {
 
 
 SailboatManeuvers SailboatAutopilot::get_maneuver_from_desired_heading(float heading, float desired_heading, float true_wind_angle) {
-    float global_wind = std::fmod(true_wind_angle + heading, 360.0);
-    float global_upwind = std::fmod(global_wind + 180.0, 360.0);
+    float global_wind = std::fmod(true_wind_angle + heading, 360.0f);
+    float global_upwind = std::fmod(global_wind + 180.0f, 360.0f);
     
     if (is_angle_between_boundaries(global_wind, heading, desired_heading)) {
         return SailboatManeuvers::JIBE;
@@ -42,17 +42,17 @@ std::pair<float, bool> SailboatAutopilot::apply_decision_zone_tacking_logic(
     float true_wind_angle, float apparent_wind_angle, float distance
 ) {
     
-    float global_true_wind = std::fmod(current_heading + true_wind_angle, 360.0);
-    float global_true_upwind = std::fmod(global_true_wind + 180.0, 360.0);
-    float global_app_upwind = std::fmod(current_heading + apparent_wind_angle + 180.0, 360.0);
+    float global_true_wind = std::fmod(current_heading + true_wind_angle, 360.0f);
+    float global_true_upwind = std::fmod(global_true_wind + 180.0f, 360.0f);
+    float global_app_upwind = std::fmod(current_heading + apparent_wind_angle + 180.0f, 360.0f);
 
-    float no_sail_zone_half = (*autopilot_parameters)["no_sail_zone_size"].get<float>() / 2.0;
-    float no_sail_zone_lower = std::fmod(global_app_upwind - no_sail_zone_half + 360.0, 360.0);
-    float no_sail_zone_upper = std::fmod(global_app_upwind + no_sail_zone_half, 360.0);
+    float no_sail_zone_half = (*autopilot_parameters)["no_sail_zone_size"].get<float>() / 2.0f;
+    float no_sail_zone_lower = std::fmod(global_app_upwind - no_sail_zone_half + 360.0f, 360.0f);
+    float no_sail_zone_upper = std::fmod(global_app_upwind + no_sail_zone_half, 360.0f);
 
-    float decision_zone_size_half = get_decision_zone_size(distance) / 2.0;
-    float decision_zone_lower = std::fmod(global_true_upwind - decision_zone_size_half + 360.0, 360.0);
-    float decision_zone_upper = std::fmod(global_true_upwind + decision_zone_size_half, 360.0);
+    float decision_zone_size_half = get_decision_zone_size(distance) / 2.0f;
+    float decision_zone_lower = std::fmod(global_true_upwind - decision_zone_size_half + 360.0f, 360.0f);
+    float decision_zone_upper = std::fmod(global_true_upwind + decision_zone_size_half, 360.0f);
 
 
     if (!is_angle_between_boundaries(desired_heading, no_sail_zone_lower, no_sail_zone_upper)) {
@@ -61,12 +61,12 @@ std::pair<float, bool> SailboatAutopilot::apply_decision_zone_tacking_logic(
     }
 
     if (is_angle_between_boundaries(desired_heading, decision_zone_upper, no_sail_zone_upper)) {
-        bool port_side = (std::fmod(current_heading - global_true_upwind + 360.0, 360.0) >= 180.0);
+        bool port_side = (std::fmod(current_heading - global_true_upwind + 360.0f, 360.0f) >= 180.0f);
         return {no_sail_zone_upper, port_side};
     }
 
     if (is_angle_between_boundaries(desired_heading, decision_zone_lower, no_sail_zone_lower)) {
-        bool star_side = (std::fmod(current_heading - global_true_upwind + 360.0, 360.0) < 180.0);
+        bool star_side = (std::fmod(current_heading - global_true_upwind + 360.0f, 360.0f) < 180.0f);
         return {no_sail_zone_lower, star_side};
     }
 

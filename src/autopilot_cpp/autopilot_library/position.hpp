@@ -38,7 +38,7 @@ public:
      * @param reference_longitude The longitude of the origin for local coordinates.
      * @param reference_latitude The latitude of the origin for local coordinates.
      */
-    Position(double local_x, double local_y, double reference_longitude, double reference_latitude);
+    Position(float local_x, float local_y, double reference_longitude, double reference_latitude);
 
     /**
      * Sets the position using longitude and latitude.
@@ -66,12 +66,12 @@ public:
      * @param reference_longitude The reference longitude for the NED frame.
      * @param reference_latitude The reference latitude for the NED frame.
      */
-    void set_local_coordinates(double local_x, double local_y, double reference_longitude, double reference_latitude);
+    void set_local_coordinates(float local_x, float local_y, double reference_longitude, double reference_latitude);
 
     /**
      * Gets the local NED coordinates of this position with respect to a reference position.
      * @param reference_longitude_latitude Array where [0] is reference longitude and [1] is reference latitude.
      * @return Array where [0] is local x (North) and [1] is local y (East).
      */
-    std::array<double, 2> get_local_coordinates(const std::array<double, 2>& reference_longitude_latitude) const;
+    std::array<float, 2> get_local_coordinates(const std::array<double, 2>& reference_longitude_latitude) const;
 };

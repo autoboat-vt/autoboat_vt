@@ -204,58 +204,41 @@ std::pair<float, float> MotorboatAutopilotNode::step() {
 
 
 void MotorboatAutopilotNode::update_ros_topics() {
-
-    // Publish config path to guarantee delivery
-    if (config_path_publisher) {
-        std_msgs::msg::String msg;
-        std::string package_share_directory = ament_index_cpp::get_package_share_directory("autopilot_cpp");
-        msg.data = package_share_directory + "/config/motorboat_default_parameters.json";
-        config_path_publisher->publish(msg);
-    }
-
+    
     // Publish mode and telemetry info
-    std_msgs::msg::Int32 index_msg;
-    index_msg.data = motorboat_autopilot.get_current_waypoint_index();
-    current_waypoint_index_publisher->publish(index_msg);
+    current_waypoint_index_publisher->publish(std_msgs::msg::Int32().set__data(motorboat_autopilot.get_current_waypoint_index()));
 
-    std_msgs::msg::UInt8 mode_msg;
-    mode_msg.data = static_cast<uint8_t>(autopilot_mode);
-    autopilot_mode_publisher->publish(mode_msg);
+    autopilot_mode_publisher->publish(std_msgs::msg::UInt8().set__data(static_cast<uint8_t>(autopilot_mode)));
 
-    std_msgs::msg::UInt8 maneuver_msg;
-    maneuver_msg.data = 255;
-    full_autonomy_maneuver_publisher->publish(maneuver_msg);
+
+    // TODO LOOK INTO WHY WE ARE SENDING THIS AT ALL FOR THE MOTORBOAT AUTOPILOT NODE
+    full_autonomy_maneuver_publisher->publish(std_msgs::msg::UInt8().set__data(255));
 
     // Calculate and Publish Rudder Angle
     auto [desired_rudder_angle, desired_rpm] = step();
     
-    std_msgs::msg::Float32 rudder_msg;
-    rudder_msg.data = desired_rudder_angle;
-    desired_rudder_angle_publisher->publish(rudder_msg);
+
+    desired_rudder_angle_publisher->publish(std_msgs::msg::Float32().set__data(desired_rudder_angle));
 
     // Publish Current Target Heading for Telemetry
     if (autopilot_mode == MotorboatAutopilotMode::Hold_Heading) {
-        std_msgs::msg::Float32 head_msg;
-        head_msg.data = static_cast<float>(heading_to_hold);
-        desired_heading_publisher->publish(head_msg);
-    } else if (autopilot_mode == MotorboatAutopilotMode::Waypoint_Mission && motorboat_autopilot.get_current_waypoints_list().size() > 0) {
+        desired_heading_publisher->publish(std_msgs::msg::Float32().set__data(heading_to_hold));
+    } 
+    else if (autopilot_mode == MotorboatAutopilotMode::Waypoint_Mission && motorboat_autopilot.get_current_waypoints_list().size() > 0) {
         Position pos(current_longitude, current_latitude);
-        int idx = motorboat_autopilot.get_current_waypoint_index();
-        auto list = motorboat_autopilot.get_current_waypoints_list();
-        if (idx >= 0 && idx < (int)list.size()) {
-            double bearing = get_bearing(pos, list[idx]);
-            std_msgs::msg::Float32 head_msg;
-            head_msg.data = static_cast<float>(bearing);
-            desired_heading_publisher->publish(head_msg);
-        } else {
-            std_msgs::msg::Float32 head_msg;
-            head_msg.data = 0.0f;
-            desired_heading_publisher->publish(head_msg);
+        int waypoint_index = motorboat_autopilot.get_current_waypoint_index();
+        auto waypoints_list = motorboat_autopilot.get_current_waypoints_list();
+        
+        if (waypoint_index >= 0 && waypoint_index < (int)waypoints_list.size()) {
+            float bearing = get_bearing(pos, waypoints_list[waypoint_index]);
+            desired_heading_publisher->publish(std_msgs::msg::Float32().set__data(bearing));
+        } 
+        else {
+            desired_heading_publisher->publish(std_msgs::msg::Float32().set__data(0.0f));
         }
-    } else {
-        std_msgs::msg::Float32 head_msg;
-        head_msg.data = 0.0f;
-        desired_heading_publisher->publish(head_msg);
+    } 
+    else {
+        desired_heading_publisher->publish(std_msgs::msg::Float32().set__data(0.0f));
     }
 
 
@@ -270,64 +253,68 @@ void MotorboatAutopilotNode::update_ros_topics() {
     bool has_heading_disconnected = heading_dt >= autopilot_parameters["heading_data_failsafe_time"].get<double>();
     bool has_sensor_disconnected = has_rc_disconnected || has_gps_disconnected || has_heading_disconnected;
 
-    autoboat_msgs::msg::VESCControlData vesc_msg;
-
     if (has_sensor_disconnected) {
-        vesc_msg.control_type_for_vesc = "rpm";
-        vesc_msg.desired_vesc_rpm = 0.0;
-        vesc_msg.desired_vesc_current = 0.0;
-        vesc_msg.desired_vesc_duty_cycle = 0.0;
+        propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
+            .set__control_type_for_vesc("rpm")
+            .set__desired_vesc_rpm(0.0)
+            .set__desired_vesc_current(0.0)
+            .set__desired_vesc_duty_cycle(0.0)
+        );
     }
     else if (autopilot_mode == MotorboatAutopilotMode::Full_RC || autopilot_mode == MotorboatAutopilotMode::Hold_Heading) {
         if (propeller_motor_control_mode == MotorboatControls::RPM) {
-            vesc_msg.control_type_for_vesc = "rpm";
-            vesc_msg.desired_vesc_rpm = 100.0 * joystick_left_y; 
-            vesc_msg.desired_vesc_current = 0.0;
-            vesc_msg.desired_vesc_duty_cycle = 0.0;
+            propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
+                .set__control_type_for_vesc("rpm")
+                .set__desired_vesc_rpm(100.0 * joystick_left_y)
+                .set__desired_vesc_current(0.0)
+                .set__desired_vesc_duty_cycle(0.0)
+            );
         } 
         else if (propeller_motor_control_mode == MotorboatControls::DUTY_CYCLE) {
-            vesc_msg.control_type_for_vesc = "duty_cycle";
-            vesc_msg.desired_vesc_duty_cycle = joystick_left_y;
-            vesc_msg.desired_vesc_current = 0.0;
-            vesc_msg.desired_vesc_rpm = 0.0;
+            propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
+                .set__control_type_for_vesc("duty_cycle")
+                .set__desired_vesc_duty_cycle(joystick_left_y)
+                .set__desired_vesc_current(0.0)
+                .set__desired_vesc_rpm(0.0)
+            );
         } 
         else if (propeller_motor_control_mode == MotorboatControls::CURRENT) {
-            vesc_msg.control_type_for_vesc = "current";
-            vesc_msg.desired_vesc_current = joystick_left_y;
-            vesc_msg.desired_vesc_rpm = 0.0;
-            vesc_msg.desired_vesc_duty_cycle = 0.0;
+            propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
+                .set__control_type_for_vesc("current")
+                .set__desired_vesc_current(joystick_left_y)
+                .set__desired_vesc_rpm(0.0)
+                .set__desired_vesc_duty_cycle(0.0)
+            );
         }
     }
     else if (autopilot_mode == MotorboatAutopilotMode::Waypoint_Mission) {
-        vesc_msg.control_type_for_vesc = "rpm";
-        vesc_msg.desired_vesc_current = 0.0;
-        vesc_msg.desired_vesc_rpm = desired_rpm;
-        vesc_msg.desired_vesc_duty_cycle = 0.0;
+        propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
+            .set__control_type_for_vesc("rpm")
+            .set__desired_vesc_current(0.0)
+            .set__desired_vesc_rpm(desired_rpm)
+            .set__desired_vesc_duty_cycle(0.0)
+        );
     }
     else {
-        vesc_msg.control_type_for_vesc = "rpm";
-        vesc_msg.desired_vesc_current = 0.0;
-        vesc_msg.desired_vesc_rpm = 0.0;
-        vesc_msg.desired_vesc_duty_cycle = 0.0;
+        propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
+            .set__control_type_for_vesc("rpm")
+            .set__desired_vesc_current(0.0)
+            .set__desired_vesc_rpm(0.0)
+            .set__desired_vesc_duty_cycle(0.0)
+        );
     }
-    
-    propeller_motor_control_struct_publisher->publish(vesc_msg);
 
 
     // Zero Encoder Handling
     if (should_zero_encoder) {
-        std_msgs::msg::Bool zero_msg;
-        zero_msg.data = true;
-        zero_rudder_encoder_publisher->publish(zero_msg);
+        zero_rudder_encoder_publisher->publish(std_msgs::msg::Bool().set__data(true));
         encoder_has_been_zeroed = true;
         should_zero_encoder = false; // Reset flag after publishing
     }
 
 
     // Should Propeller Motor Be Powered
-    std_msgs::msg::Bool should_propeller_motor_be_powered_msg;
-    should_propeller_motor_be_powered_msg.data = should_propeller_motor_be_powered;
-    should_propeller_motor_be_powered_publisher->publish(should_propeller_motor_be_powered_msg);
+    should_propeller_motor_be_powered_publisher->publish(std_msgs::msg::Bool().set__data(should_propeller_motor_be_powered));
 }
 
 

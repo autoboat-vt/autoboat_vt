@@ -2,10 +2,13 @@
 #include "geographic_function_library.hpp"
 
 
-Position::Position(double longitude, double latitude)
-    : longitude(longitude), latitude(latitude) {}
+Position::Position(double longitude_, double latitude_) {
+    longitude = longitude_;
+    latitude = latitude_;
+}
 
-Position::Position(double local_x, double local_y, double reference_longitude, double reference_latitude) {
+
+Position::Position(float local_x, float local_y, double reference_longitude, double reference_latitude) {
     set_local_coordinates(local_x, local_y, reference_longitude, reference_latitude);
 }
 
@@ -22,7 +25,7 @@ std::array<double, 2> Position::get_latitude_longitude() const {
     return {latitude, longitude};
 }
 
-void Position::set_local_coordinates(double local_x, double local_y, double reference_longitude, double reference_latitude) {
+void Position::set_local_coordinates(float local_x, float local_y, double reference_longitude, double reference_latitude) {
     // navpy style ned_vector is [North, East, Down]
     // local_x is North, local_y is East
     std::array<double, 3> lla_vector = ned2lla({local_x, local_y, 0.0}, reference_latitude, reference_longitude, 0.0);
@@ -30,7 +33,7 @@ void Position::set_local_coordinates(double local_x, double local_y, double refe
     this->longitude = lla_vector[1];
 }
 
-std::array<double, 2> Position::get_local_coordinates(const std::array<double, 2>& reference_longitude_latitude) const {
+std::array<float, 2> Position::get_local_coordinates(const std::array<double, 2>& reference_longitude_latitude) const {
     double reference_longitude = reference_longitude_latitude[0];
     double reference_latitude = reference_longitude_latitude[1];
 
@@ -38,5 +41,5 @@ std::array<double, 2> Position::get_local_coordinates(const std::array<double, 2
     std::array<float, 3> ned_vector = lla2ned(this->latitude, this->longitude, 0.0, reference_latitude, reference_longitude, 0.0);
     
     // Return [North, East] which corresponds to [local_x, local_y]
-    return {static_cast<double>(ned_vector[0]), static_cast<double>(ned_vector[1])};
+    return {ned_vector[0], ned_vector[1]};
 }

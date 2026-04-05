@@ -8,6 +8,8 @@ static const std::string WIND_SENSOR_SERIAL_NUMBER = "ABSCDYAB";
 
 static constexpr double KNOTS_TO_METERS_PER_SECOND = 0.514444;
 
+
+
 WindSensorPublisher::WindSensorPublisher(): Node("wind_sensor_publisher"), io_ctx(), serial_driver(io_ctx) {
     apparent_wind_vector_publisher = this->create_publisher<geometry_msgs::msg::Vector3>("/apparent_wind_vector", rclcpp::SensorDataQoS());
 
@@ -83,12 +85,11 @@ void WindSensorPublisher::main_loop() {
 
     auto filtered = weighted_average(wind_history);
 
-    geometry_msgs::msg::Vector3 msg;
-    msg.x = filtered.first;
-    msg.y = filtered.second;
-    msg.z = 0.0;
-
-    apparent_wind_vector_publisher->publish(msg);
+    apparent_wind_vector_publisher->publish(geometry_msgs::msg::Vector3()
+        .set__x(filtered.first)
+        .set__y(filtered.second)
+        .set__z(0.0)
+    );
     print_cpu_and_ram_stats();
 }
 

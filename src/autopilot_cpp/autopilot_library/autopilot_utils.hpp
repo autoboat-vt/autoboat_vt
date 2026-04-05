@@ -61,40 +61,40 @@ std::string to_string(SailboatStates state);
 
 
 /**
- * Checks if two floats are within 0.001 of each other.
+ * Checks if two floats are within 0.01 of each other.
  */
-bool check_float_equivalence(double f1, double f2);
+bool check_float_equivalence(float f1, float f2);
 
 /**
  * Converts cartesian (x, y) to polar (magnitude, direction in degrees CCW from East).
  */
-std::pair<double, double> cartesian_vector_to_polar(double x, double y);
+std::pair<float, float> cartesian_vector_to_polar(float x, float y);
 
 /**
  * Returns the smallest angle (degrees) between two 2D vectors.
  */
-double get_angle_between_vectors(const std::array<double, 2>& v1, const std::array<double, 2>& v2);
+float get_angle_between_vectors(const std::array<float, 2>& v1, const std::array<float, 2>& v2);
 
 /**
  * Computes the shortest angular distance between two angles in degrees.
  */
-double get_distance_between_angles(double angle1, double angle2);
+float get_distance_between_angles(float angle1, float angle2);
 
 /**
  * Gets bearing from current position to destination.
  * Returns angle 0-360 CCW from East to match Python logic.
  */
-double get_bearing(const Position& current, const Position& dest);
+float get_bearing(const Position& current, const Position& dest);
 
 /**
  * Distance between positions in meters using Haversine or Vincenty (based on library config).
  */
-double get_distance_between_positions(const Position& p1, const Position& p2);
+float get_distance_between_positions(const Position& p1, const Position& p2);
 
 /**
  * Checks if 'angle' is between boundary1 and boundary2 using vector summation logic.
  */
-bool is_angle_between_boundaries(double angle, double b1, double b2);
+bool is_angle_between_boundaries(float angle, float b1, float b2);
 
 
 
@@ -105,20 +105,20 @@ bool is_angle_between_boundaries(double angle, double b1, double b2);
  * Checks if a direct line to destination enters the "No Sail Zone" (upwind).
  */
 bool does_line_violate_no_sail_zone(
-    const std::array<double, 2>& current,
-    const std::array<double, 2>& dest,
-    double global_true_wind_angle,
-    double no_sail_zone_size
+    const std::array<float, 2>& current,
+    const std::array<float, 2>& dest,
+    float global_true_wind_angle,
+    float no_sail_zone_size
 );
 
 /**
  * Line segment vs Circle collision detection.
  */
 bool does_line_segment_intersect_circle(
-    const std::array<double, 2>& start,
-    const std::array<double, 2>& end,
-    const std::array<double, 2>& circle_pos,
-    double radius
+    const std::array<float, 2>& start,
+    const std::array<float, 2>& end,
+    const std::array<float, 2>& circle_pos,
+    float radius
 );
 
 

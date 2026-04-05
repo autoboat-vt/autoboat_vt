@@ -18,12 +18,9 @@ SailboatAutopilotNode::SailboatAutopilotNode() : Node("sailboat_autopilot") {
         autopilot_parameters[it.key()] = it.value()["default"];
     }
 
-    auto trans_qos = rclcpp::QoS(1).reliable().transient_local();
-    config_path_publisher = this->create_publisher<std_msgs::msg::String>("/autopilot_param_config_path", trans_qos);
-    
-    std_msgs::msg::String msg;
-    msg.data = json_file_path;
-    config_path_publisher->publish(msg);
+    auto transient_qos = rclcpp::QoS(1).reliable().transient_local();
+    config_path_publisher = this->create_publisher<std_msgs::msg::String>("/autopilot_param_config_path", transient_qos);
+    config_path_publisher->publish(std_msgs::msg::String().set__data(json_file_path));
 
 
 
@@ -187,14 +184,6 @@ void SailboatAutopilotNode::autopilot_parameters_callback(const std_msgs::msg::S
 
 
 void SailboatAutopilotNode::update_ros_topics() {
-    // Publish config path to guarantee delivery
-    if (config_path_publisher) {
-        std_msgs::msg::String msg;
-        std::string package_share_directory = ament_index_cpp::get_package_share_directory("autopilot_cpp");
-        msg.data = package_share_directory + "/config/sailboat_default_parameters.json";
-        config_path_publisher->publish(msg);
-    }
-
     if (sailboat_autopilot.get_current_waypoints_list().size() == 0) {
         return;
     }
@@ -262,9 +251,6 @@ void SailboatAutopilotNode::update_ros_topics() {
     }
 
     
-    std_msgs::msg::Int32 waypoint_index_message; 
-    waypoint_index_message.data = sailboat_autopilot.get_current_waypoint_index();
-    waypoint_index_publisher->publish(waypoint_index_message);
 
 }
 

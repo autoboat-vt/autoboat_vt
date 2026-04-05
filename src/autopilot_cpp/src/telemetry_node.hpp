@@ -154,12 +154,12 @@ private:
     cpr::Session write_boat_status_session, read_waypoints_session, read_autopilot_parameters_session;
 
     double position_latitude = 0, position_longitude = 0;
-    double velocity_vector_x = 0, velocity_vector_y = 0;
-    double heading = 0, desired_heading = 0;
-    double apparent_wind_x = 0, apparent_wind_y = 0;
-    double apparent_wind_speed = 0, apparent_wind_angle = 0;
-    double desired_sail_angle = 0, desired_rudder_angle = 0;
-    double current_sail_angle = 0, current_rudder_angle = 0;
+    float velocity_vector_x = 0.0f, velocity_vector_y = 0.0f;
+    float heading = 0.0f, desired_heading = 0.0f;
+    float apparent_wind_x = 0.0f, apparent_wind_y = 0.0f;
+    float apparent_wind_speed = 0.0f, apparent_wind_angle = 0.0f;
+    float desired_sail_angle = 0.0f, desired_rudder_angle = 0.0f;
+    float current_sail_angle = 0.0f, current_rudder_angle = 0.0f;
     int current_waypoint_index = 0;
     uint8_t autopilot_mode = 0, full_autonomy_maneuver = 0;
     std::vector<std::pair<double,double>> current_waypoints_list;

@@ -98,25 +98,23 @@ void VescNode::timer_callback() {
     
     if (processed > 0) {
         // We Successfully parsed a message, now publish
-        auto out_msg = autoboat_msgs::msg::VESCTelemetryData();
-        
         float rpm = protocol.data.rpm / MOTOR_POLE_PAIRS;
         float c_motor = protocol.data.avgMotorCurrent;
-        
-        out_msg.rpm = rpm;
-        out_msg.duty_cycle = protocol.data.dutyCycleNow;
-        out_msg.voltage_to_vesc = protocol.data.inpVoltage;
-        out_msg.current_to_vesc = protocol.data.avgInputCurrent;
-        out_msg.voltage_to_motor = rpm / 180.0f; 
-        out_msg.avg_current_to_motor = c_motor;
-        out_msg.wattage_to_motor = c_motor * rpm / 180.0f;
-        out_msg.motor_temperature = protocol.data.tempMotor;
-        out_msg.vesc_temperature = protocol.data.tempMosfet;
-        out_msg.time_since_vesc_startup_in_ms = 0; 
-        out_msg.amp_hours = protocol.data.ampHours;
-        out_msg.amp_hours_charged = protocol.data.ampHoursCharged;
 
-        telemetry_pub->publish(out_msg);
+        telemetry_pub->publish(autoboat_msgs::msg::VESCTelemetryData()
+            .set__rpm(rpm)
+            .set__duty_cycle(protocol.data.dutyCycleNow)
+            .set__voltage_to_vesc(protocol.data.inpVoltage)
+            .set__current_to_vesc(protocol.data.avgInputCurrent)
+            .set__voltage_to_motor(rpm / 180.0f)
+            .set__avg_current_to_motor(c_motor)
+            .set__wattage_to_motor(c_motor * rpm / 180.0f)
+            .set__motor_temperature(protocol.data.tempMotor)
+            .set__vesc_temperature(protocol.data.tempMosfet)
+            .set__time_since_vesc_startup_in_ms(0)
+            .set__amp_hours(protocol.data.ampHours)
+            .set__amp_hours_charged(protocol.data.ampHoursCharged)
+        );
         print_cpu_and_ram_stats();
     }
 }

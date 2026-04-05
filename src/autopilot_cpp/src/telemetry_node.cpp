@@ -137,12 +137,12 @@ void TelemetryNode::initialize_server_connection() {
 void TelemetryNode::send_boat_status() {
     if (instance_id < 0) return;
 
-    double tw_x = apparent_wind_x + velocity_vector_x;
-    double tw_y = apparent_wind_y + velocity_vector_y;
-    double r = std::hypot(tw_x, tw_y);
-    double th = std::atan2(tw_y, tw_x) * 180.0 / M_PI;
+    float tw_x = velocity_vector_x + apparent_wind_x;
+    float tw_y = velocity_vector_y + apparent_wind_y;
+    float r = std::hypot(tw_x, tw_y);
+    float th = std::atan2(tw_y, tw_x) * 180.0f / static_cast<float>(M_PI);
 
-    double dist_wp = 0.0;
+    float dist_wp = 0.0f;
     if (!current_waypoints_list.empty() && current_waypoint_index >= 0 && current_waypoint_index < (int)current_waypoints_list.size()) {
         double lat2 = current_waypoints_list[current_waypoint_index].first;
         double lon2 = current_waypoints_list[current_waypoint_index].second;
@@ -261,9 +261,7 @@ void TelemetryNode::update_autopilot_params() {
     json response = get_response_from_telemetry_server("autopilot_parameters/get_new/" + std::to_string(instance_id), &read_autopilot_parameters_session);
     if (response.is_object() && !response.empty()) {
         autopilot_parameters = response;
-        std_msgs::msg::String msg;
-        msg.data = autopilot_parameters.dump();
-        autopilot_parameters_publisher->publish(msg);
+        autopilot_parameters_publisher->publish(std_msgs::msg::String().set__data(autopilot_parameters.dump()));
     }
 }
 
@@ -368,9 +366,10 @@ void TelemetryNode::heading_callback(const std_msgs::msg::Float32::SharedPtr msg
 }
 
 void TelemetryNode::apparent_wind_callback(const geometry_msgs::msg::Vector3::SharedPtr msg) {
-    apparent_wind_x = msg->x; apparent_wind_y = msg->y;
-    apparent_wind_speed = std::hypot(msg->x, msg->y);
-    apparent_wind_angle = std::atan2(msg->y, msg->x) * 180.0 / M_PI;
+    apparent_wind_x = static_cast<float>(msg->x); 
+    apparent_wind_y = static_cast<float>(msg->y);
+    apparent_wind_speed = std::hypot(apparent_wind_x, apparent_wind_y);
+    apparent_wind_angle = std::atan2(apparent_wind_y, apparent_wind_x) * 180.0f / static_cast<float>(M_PI);
 }
 
 void TelemetryNode::vesc_data_callback(const autoboat_msgs::msg::VESCTelemetryData::SharedPtr msg) {

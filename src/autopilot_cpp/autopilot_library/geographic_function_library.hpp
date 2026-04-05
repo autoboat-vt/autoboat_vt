@@ -47,9 +47,9 @@ constexpr double WGS84_F = 1 / 298.257223563;     // flattening
  * @param longitude1 Longitude of the first point in degrees.
  * @param latitude2 Latitude of the second point in degrees.
  * @param longitude2 Longitude of the second point in degrees.
- * @return double Distance in meters.
+ * @return float Distance in meters.
  */
-double get_distance_haversine(double latitude1, double longitude1, double latitude2, double longitude2);
+float get_distance_haversine(double latitude1, double longitude1, double latitude2, double longitude2);
 
 /**
  * @brief Calculate the distance between two points using Vincenty's formulae (more accurate than Haversine).
@@ -57,9 +57,9 @@ double get_distance_haversine(double latitude1, double longitude1, double latitu
  * @param longitude1 Longitude of the first point in degrees.
  * @param latitude2 Latitude of the second point in degrees.
  * @param longitude2 Longitude of the second point in degrees.
- * @return double Distance in meters.
+ * @return float Distance in meters.
  */
-double get_distance_vincenty(double latitude1, double longitude1, double latitude2, double longitude2);
+float get_distance_vincenty(double latitude1, double longitude1, double latitude2, double longitude2);
 
 /**
  * @brief Calculate the distance between two points using the configured distance function.
@@ -67,9 +67,9 @@ double get_distance_vincenty(double latitude1, double longitude1, double latitud
  * @param longitude1 Longitude of the first point in degrees.
  * @param latitude2 Latitude of the second point in degrees.
  * @param longitude2 Longitude of the second point in degrees.
- * @return double Distance in meters.
+ * @return float Distance in meters.
  */
-double get_distance(double latitude1, double longitude1, double latitude2, double longitude2);
+float get_distance(double latitude1, double longitude1, double latitude2, double longitude2);
 
 /**
  * @brief Calculate the bearing from one point to another.
@@ -77,9 +77,9 @@ double get_distance(double latitude1, double longitude1, double latitude2, doubl
  * @param longitude1 Longitude of the starting point in degrees.
  * @param latitude2 Latitude of the destination point in degrees.
  * @param longitude2 Longitude of the destination point in degrees.
- * @return double Bearing in degrees (counter-clockwise from true East).
+ * @return float Bearing in degrees (counter-clockwise from true East).
  */
-double calculate_bearing(double latitude1, double longitude1, double latitude2, double longitude2);
+float calculate_bearing(double latitude1, double longitude1, double latitude2, double longitude2);
 
 
 /**
@@ -109,7 +109,7 @@ std::array<double, 3> ecef2lla(double x, double y, double z);
 std::array<std::array<double, 3>, 3> nedRotation(double lat_deg, double lon_deg);
 
 /**
- * @brief Multiply a 3x3 matrix by a 3x1 vector.
+ * @brief Multiply a 3x3 matrix by a 3x1 vector (double version).
  * @param C 3x3 matrix.
  * @param v 3x1 vector.
  * @return std::array<double, 3> Resultant vector.
@@ -132,7 +132,7 @@ std::array<float, 3> ecef2ned(const std::array<double,3> &ecef_vector, double re
  * @param reference_longitude Reference longitude in degrees.
  * @return std::array<double, 3> ECEF coordinates {x, y, z}.
  */
-std::array<double, 3> ned2ecef(const std::array<double,3> &ned_vector, double reference_latitude, double reference_longitude);
+std::array<double, 3> ned2ecef(const std::array<float,3> &ned_vector, double reference_latitude, double reference_longitude);
 
 /**
  * @brief Convert Geodetic (LLA) to NED coordinates relative to a reference point.
@@ -154,4 +154,4 @@ std::array<float, 3> lla2ned(double latitude, double longitude, double altitude,
  * @param reference_altitude Reference altitude.
  * @return std::array<double, 3> LLA coordinates {lat_deg, lon_deg, alt_m}.
  */
-std::array<double, 3> ned2lla(const std::array<double,3> &ned_vector, double reference_latitude, double reference_longitude, double reference_altitude);
+std::array<double, 3> ned2lla(const std::array<float,3> &ned_vector, double reference_latitude, double reference_longitude, double reference_altitude);

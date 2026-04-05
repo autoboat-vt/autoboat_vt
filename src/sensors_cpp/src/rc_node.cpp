@@ -23,7 +23,7 @@ RCDataPublisher::RCDataPublisher() : Node("rc_data_publisher"), crossfire_device
     while (!crossfire_device.is_paired() && rclcpp::ok()) {
         std::printf("Waiting for reconnect...\n");
         RCLCPP_INFO(this->get_logger(), "Waiting for reconnect...\n:");
-        auto _ = crossfire_device.open_port();
+        crossfire_device.open_port();
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
 
@@ -33,31 +33,36 @@ RCDataPublisher::RCDataPublisher() : Node("rc_data_publisher"), crossfire_device
 }
 
 void RCDataPublisher::main_loop() {
-    autoboat_msgs::msg::RCData message = autoboat_msgs::msg::RCData();
-
     if (!crossfire_device.is_paired()) {
         throw std::runtime_error("Connection to RC Receiver Lost");
     }
 
     const std::array<uint16_t, 16> channels = crossfire_device.get_channel_state();
 
-    message.joystick_left_y = normalize_joystick_input(channels[0], 174, 1811);
-    message.joystick_left_x = normalize_joystick_input(channels[1], 174, 1811);
-    
-    message.joystick_right_y = normalize_joystick_input(channels[2], 191, 1792);
-    message.joystick_right_x = normalize_joystick_input(channels[3], 174, 1811);
-
-    parse_multiplexed_buttons(channels[8], message.button_a, message.button_d);
-    message.toggle_b = parse_toggle(channels[5]);
-    message.toggle_c = parse_toggle(channels[6]);
-    message.toggle_e = parse_toggle(channels[4]);
-    message.toggle_f = parse_toggle(channels[7]);
+    int toggle_b = parse_toggle(channels[5]);
+    int toggle_c = parse_toggle(channels[6]);
+    int toggle_e = parse_toggle(channels[4]);
+    int toggle_f = parse_toggle(channels[7]);
 
     // something very bad happened
-    if (message.toggle_b == -1 || message.toggle_c == -1 || message.toggle_e == -1 || message.toggle_f == -1) 
+    if (toggle_b == -1 || toggle_c == -1 || toggle_e == -1 || toggle_f == -1) 
         return;
 
-    rc_data_publisher->publish(message);
+    bool button_a, button_d;
+    parse_multiplexed_buttons(channels[8], button_a, button_d);
+
+    rc_data_publisher->publish(autoboat_msgs::msg::RCData()
+        .set__joystick_left_y(normalize_joystick_input(channels[0], 174, 1811))
+        .set__joystick_left_x(normalize_joystick_input(channels[1], 174, 1811))
+        .set__joystick_right_y(normalize_joystick_input(channels[2], 191, 1792))
+        .set__joystick_right_x(normalize_joystick_input(channels[3], 174, 1811))
+        .set__button_a(button_a)
+        .set__button_d(button_d)
+        .set__toggle_b(toggle_b)
+        .set__toggle_c(toggle_c)
+        .set__toggle_e(toggle_e)
+        .set__toggle_f(toggle_f)
+    );
     print_cpu_and_ram_stats();
 }
 
@@ -72,9 +77,8 @@ int RCDataPublisher::parse_toggle(int toggle_state) {
         return 1;
     else if (toggle_state <= 2000)
         return 2;
-    else { 
+    else 
         return -1;
-    }
 }
 
 void RCDataPublisher::parse_multiplexed_buttons(int button_state, bool& button1_return, bool& button2_return) {

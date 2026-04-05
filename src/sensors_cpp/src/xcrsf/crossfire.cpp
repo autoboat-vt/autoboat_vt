@@ -119,4 +119,4 @@ namespace crossfire {
             this->link_state_.downlink_link_quality = crsf_cata[11]; this->link_state_.downlink_snr = static_cast<int8_t>(crsf_cata[12]);
         }
     }
-} // namespace crossfire
+}

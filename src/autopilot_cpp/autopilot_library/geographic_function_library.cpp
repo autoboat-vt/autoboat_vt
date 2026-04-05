@@ -7,14 +7,14 @@ const std::string DISTANCE_FUNCTION_TO_USE = "haversine";
 // haversine distance for distance between 2 points on a spheroid (approximation to an elipsoid)
 // this is a less accurate distance function than vincenty since it assumes that the earth is a perfect sphere
 // https://en.wikipedia.org/wiki/Haversine_formula
-double get_distance_haversine(double latitude1, double longitude1, double latitude2, double longitude2) {
+float get_distance_haversine(double latitude1, double longitude1, double latitude2, double longitude2) {
     // Haversine in meters
     const double R = WGS84_A;
     double dlat = (latitude2 - latitude1) * M_PI / 180.0;
     double dlon = (longitude2 - longitude1) * M_PI / 180.0;
     double a = sin(dlat/2)*sin(dlat/2) + cos(latitude1*M_PI/180.0)*cos(latitude2*M_PI/180.0)*sin(dlon/2)*sin(dlon/2);
     double c = 2*atan2(sqrt(a), sqrt(1-a));
-    return R * c;
+    return static_cast<float>(R * c);
 }
 
 
@@ -23,7 +23,7 @@ double get_distance_haversine(double latitude1, double longitude1, double latitu
 // this is a more accurate distance function than haversine since it doesn't make the assumption that the earth is a perfect sphere
 // https://github.com/dariusarnold/vincentys-formula
 // https://en.wikipedia.org/wiki/Vincenty%27s_formulae 
-double get_distance_vincenty(double latitude1, double longitude1, double latitude2, double longitude2) {
+float get_distance_vincenty(double latitude1, double longitude1, double latitude2, double longitude2) {
     using namespace std;
 
     constexpr double req = WGS84_A;             // Radius at equator
@@ -51,7 +51,7 @@ double get_distance_vincenty(double latitude1, double longitude1, double latitud
         sin_sigma = sqrt(pow((cos(u2) * sin(lam)), 2.) + pow(cos(u1)*sin(u2) - sin(u1)*cos(u2)*cos(lam), 2.));
         if (sin_sigma == 0.) {
             // Coincident points, prevent division by zero resulting in NaN.
-            return 0.;
+            return 0.0f;
         }
         cos_sigma = sin(u1) * sin(u2) + cos(u1) * cos(u2) * cos(lam);
         sigma = atan(sin_sigma / cos_sigma);
@@ -75,13 +75,13 @@ double get_distance_vincenty(double latitude1, double longitude1, double latitud
     const double delta_sig = B * sin_sigma * (cos2sigma + 0.25 * B * (cos_sigma * (-1 + 2 * pow(cos2sigma, 2.)) - (1. / 6) * B * cos2sigma * (-3 + 4 * pow(sin_sigma, 2.)) * (-3 + 4 * pow(cos2sigma, 2.))));
     const double dis = rpol * A * (sigma - delta_sig);
 
-    return dis;
+    return static_cast<float>(dis);
 }
 
 
 
 
-double get_distance(double latitude1, double longitude1, double latitude2, double longitude2) {
+float get_distance(double latitude1, double longitude1, double latitude2, double longitude2) {
     if (DISTANCE_FUNCTION_TO_USE == "vincenty") 
         return get_distance_vincenty(latitude1, longitude1, latitude2, longitude2);
 
@@ -104,19 +104,19 @@ double get_distance(double latitude1, double longitude1, double latitude2, doubl
  * @param longitude2 Longitude of point 2 in degrees.
  * @return Azimuth in degrees, clockwise from North (0 to 360).
  */
-double calculate_bearing(double latitude1, double longitude1, double latitude2, double longitude2) {
+float calculate_bearing(double latitude1, double longitude1, double latitude2, double longitude2) {
    
     // Convert degrees to radians
-    latitude1 = (latitude1 * M_PI / 180.0);
-    longitude1 = (longitude1 * M_PI / 180.0);
-    latitude2 = (latitude2 * M_PI / 180.0);
-    longitude2 = (longitude2 * M_PI / 180.0);
+    double lat1 = (latitude1 * M_PI / 180.0);
+    double lon1 = (longitude1 * M_PI / 180.0);
+    double lat2 = (latitude2 * M_PI / 180.0);
+    double lon2 = (longitude2 * M_PI / 180.0);
 
-    const double deltaLon = longitude2 - longitude1;
+    const double deltaLon = lon2 - lon1;
 
     // Calculate the components for atan2
-    const double y = std::sin(deltaLon) * std::cos(latitude2);
-    const double x = std::cos(latitude1) * std::sin(latitude2) - std::sin(latitude1) * std::cos(latitude2) * std::cos(deltaLon);
+    const double y = std::sin(deltaLon) * std::cos(lat2);
+    const double x = std::cos(lat1) * std::sin(lat2) - std::sin(lat1) * std::cos(lat2) * std::cos(deltaLon);
 
     // Use atan2(y, x) to get the angle in radians (range -PI to +PI)
     double azimuthRad = std::atan2(y, x);
@@ -129,7 +129,7 @@ double calculate_bearing(double latitude1, double longitude1, double latitude2, 
         azimuthDeg += 360.0;
     }
 
-    return azimuthDeg;
+    return static_cast<float>(azimuthDeg);
 }
 
 
@@ -210,15 +210,15 @@ std::array<std::array<double, 3>, 3> nedRotation(double lat_deg, double lon_deg)
     double sinLon = std::sin(lon), cosLon = std::cos(lon);
 
     return {{
-        {-sinLat*cosLon, -sinLat*sinLon,  cosLat},
-        {-sinLon,         cosLon,         0     },
-        {-cosLat*cosLon, -cosLat*sinLon, -sinLat}
+        {-sinLat*cosLon,  -sinLat*sinLon, cosLat},
+        {-sinLon,         cosLon,         0.0},
+        {-cosLat*cosLon,  -cosLat*sinLon, -sinLat}
     }};
 }
 
 
 
-// multiply matrix * vector
+// multiply matrix * vector (double version)
 std::array<double, 3> matmul(const std::array<std::array<double,3>,3> &C, const std::array<double,3> &v) {
     return {
         C[0][0]*v[0] + C[0][1]*v[1] + C[0][2]*v[2],
@@ -246,7 +246,7 @@ std::array<float, 3> ecef2ned(const std::array<double,3> &ecef_vector, double re
 // -------------------------
 // NED to ECEF
 // -------------------------
-std::array<double, 3> ned2ecef(const std::array<double,3> &ned_vector, double reference_latitude, double reference_longitude) {
+std::array<double, 3> ned2ecef(const std::array<float,3> &ned_vector, double reference_latitude, double reference_longitude) {
     std::array<std::array<double, 3>, 3> C = nedRotation(reference_latitude, reference_longitude);
 
     // Use transpose
@@ -256,7 +256,13 @@ std::array<double, 3> ned2ecef(const std::array<double,3> &ned_vector, double re
         {C[0][2], C[1][2], C[2][2]}
     }};
 
-    return matmul(Ct, ned_vector);
+    std::array<double, 3> ned_double = {
+        static_cast<double>(ned_vector[0]),
+        static_cast<double>(ned_vector[1]),
+        static_cast<double>(ned_vector[2])
+    };
+
+    return matmul(Ct, ned_double);
 }
 
 
@@ -276,7 +282,7 @@ std::array<float, 3> lla2ned(double latitude, double longitude, double altitude,
 // -------------------------
 // NED to LLA
 // -------------------------
-std::array<double, 3> ned2lla(const std::array<double,3> &ned_vector, double reference_latitude, double reference_longitude, double reference_altitude) {
+std::array<double, 3> ned2lla(const std::array<float,3> &ned_vector, double reference_latitude, double reference_longitude, double reference_altitude) {
     std::array<double, 3> e0 = lla2ecef(reference_latitude, reference_longitude, reference_altitude);
     std::array<double, 3> e_rel = ned2ecef(ned_vector, reference_latitude, reference_longitude);
 

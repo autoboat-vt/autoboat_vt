@@ -25,7 +25,7 @@ void DiscretePID::set_gains(float sample_period_, float Kp_, float Ki_, float Kd
     if (Kd_ >= 0.0) this->Kd = Kd_;
     if (n_  >= 0.0) this->n  = n_;
 
-    if (sample_period_ >= 0.0) this->sample_period = sample_period;
+    if (sample_period_ >= 0.0f) this->sample_period = sample_period_;
 }
 
 
