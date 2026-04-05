@@ -1,11 +1,6 @@
-Make sure that the github actions fully work for creating the build and install folders for all of the different ros2 packages we are making
-
 Make sure that all of the code is fully working
 
 Make sure that the vesc driver and all of the other sensor drivers are now fully benchmarked and tested so we know the exact ram/ cpu usages of each of the drivers
-
-Make sure that the build time is as fast as possible for incremental builds and full builds (full compilation time is 49 seconds on my computer rn)
-
 
 
 MAKE SURE TO REFACTOR GEOGRAPHIC_FUCNTION_LIBRARY LATER
