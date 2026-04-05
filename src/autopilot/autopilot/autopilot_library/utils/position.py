@@ -1,3 +1,5 @@
+from typing import Optional
+
 import navpy
 import numpy as np
 import numpy.typing as npt
@@ -8,6 +10,8 @@ from pygeodesy.ellipsoidalKarney import LatLon
 # used to specify what is available to import from this file
 __all__ = ["Position"]
 
+
+
 class Position:
     """
     A position that describes a point on the earth which is stored internally as its longitude and latitude.
@@ -17,11 +21,72 @@ class Position:
 
     This class mainly just calls on python libraries such as ```navpy```, ```utm```, and ```pygeodesy``` to convert to
     other position measurement systems.
+    
+    
+    The constructor supports two mutually exclusive initialization schemes:
+    1. **Global:** Provide `longitude` and `latitude` only.
+    
+    >>> Position(longitude=longitude, latitude=latitude)
+    
+    2. **Local:** Provide `local_x`, `local_y`, and a reference global point
+    (`reference_longitude`, `reference_latitude`) to calculate the position.
+    
+    >>> Position(local_x=local_x, local_y=local_y, reference_longitude=reference_longitude, reference_latitude=reference_latitude)
+
+
+    Parameters
+    ----------
+        longitude: float
+            The global longitude in degrees.
+        latitude: float
+            The global latitude in degrees.
+        local_x: float
+            The Cartesian x-coordinate (e.g., Easting or NED North) relative to the reference point.
+        local_y: float
+            The Cartesian y-coordinate (e.g., Northing or NED East) relative to the reference point.
+        reference_longitude: float
+            The longitude of the origin for local coordinates.
+        reference_latitude: float
+            The latitude of the origin for local coordinates.
+    
+    Raises
+    ------
+        Exception: If the provided arguments do not match one of the two supported initialization schemes.
     """
 
-    def __init__(self, longitude: float, latitude: float) -> None:
-        self.longitude = longitude
-        self.latitude = latitude
+    def __init__(
+        self, longitude: Optional[float] = None, latitude: Optional[float] = None,
+        local_x: Optional[float] = None, local_y: Optional[float] = None,
+        reference_longitude: Optional[float] = None, reference_latitude: Optional[float] = None
+    ) -> None:
+        
+        is_using_longitude_latitude_coordinates = (
+            longitude is not None and latitude is not None and
+            local_x is None and local_y is None and reference_longitude is None and reference_latitude is None
+        )
+        
+        is_using_local_coordinates = (
+            longitude is None and latitude is None and
+            local_x is not None and local_y is not None and reference_longitude is not None and reference_latitude is not None
+        )
+        
+        
+        if (not (is_using_local_coordinates or is_using_longitude_latitude_coordinates)):
+            raise Exception(
+                "Incorrect parameters passed to construct the Position object. "
+                "The Position Object only supports the following initialization scheme:"
+                "Position(longitude=longitude, latitude=latitude) or "
+                "Position(local_x=local_x, local_y=local_y, reference_longitude=reference_longitude, "
+                "reference_latitude=reference_latitude)"
+            )
+        
+        if (is_using_longitude_latitude_coordinates):
+            self.longitude = longitude
+            self.latitude = latitude
+        
+        else: # is_using_local_coordinates
+            self.set_local_coordinates(local_x, local_y, reference_longitude, reference_latitude)
+        
 
 
 
