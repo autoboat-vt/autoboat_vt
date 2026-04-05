@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <algorithm>
+#include <limits>
 
 
 
@@ -10,9 +11,9 @@
 float SailboatAutopilot::get_decision_zone_size(float distance_to_waypoint) {
     float tack_distance = (*autopilot_parameters)["tack_distance"].get<float>();
     float no_sail_zone_half = (*autopilot_parameters)["no_sail_zone_size"].get<float>() / 2.0;
-    float arg = (tack_distance / distance_to_waypoint) * std::sin(no_sail_zone_half * static_cast<float>(M_PI) / 180.0f);
-    arg = std::clamp(arg, -1.0f, 1.0f);
-    float decision_zone_size = std::asin(arg) * 180.0f / static_cast<float>(M_PI);
+    float temp = (tack_distance / distance_to_waypoint) * std::sin(no_sail_zone_half * static_cast<float>(M_PI) / 180.0f);
+    temp = std::clamp(temp, -1.0f, 1.0f);
+    float decision_zone_size = std::asin(temp) * 180.0f / static_cast<float>(M_PI);
 
     return std::clamp(decision_zone_size, (float) 0.0, (*autopilot_parameters)["no_sail_zone_size"].get<float>());
 }
@@ -20,14 +21,14 @@ float SailboatAutopilot::get_decision_zone_size(float distance_to_waypoint) {
 
 
 SailboatManeuvers SailboatAutopilot::get_maneuver_from_desired_heading(float heading, float desired_heading, float true_wind_angle) {
-    float global_wind = std::fmod(true_wind_angle + heading, 360.0f);
-    float global_upwind = std::fmod(global_wind + 180.0f, 360.0f);
+    float global_wind_angle = std::fmod(true_wind_angle + heading, 360.0f);
+    float global_upwind_angle = std::fmod(global_wind_angle + 180.0f, 360.0f);
     
-    if (is_angle_between_boundaries(global_wind, heading, desired_heading)) {
+    if (is_angle_between_boundaries(global_wind_angle, heading, desired_heading)) {
         return SailboatManeuvers::JIBE;
     }
     
-    if (is_angle_between_boundaries(global_upwind, heading, desired_heading)) { 
+    if (is_angle_between_boundaries(global_upwind_angle, heading, desired_heading)) { 
         return SailboatManeuvers::TACK;
     }
     
@@ -71,11 +72,15 @@ std::pair<float, bool> SailboatAutopilot::apply_decision_zone_tacking_logic(
     }
 
 
-    float d_low = std::abs(get_distance_between_angles(no_sail_zone_lower, current_heading));
-    float d_high = std::abs(get_distance_between_angles(no_sail_zone_upper, current_heading));
+    float distance_to_lower_no_sail_zone = std::abs(get_distance_between_angles(no_sail_zone_lower, current_heading));
+    float distance_to_upper_no_sail_zone = std::abs(get_distance_between_angles(no_sail_zone_upper, current_heading));
 
-
-    return (d_low < d_high) ? std::make_pair(no_sail_zone_lower, false) : std::make_pair(no_sail_zone_upper, false);
+    if (distance_to_lower_no_sail_zone < distance_to_upper_no_sail_zone) {
+        return std::make_pair(no_sail_zone_lower, false);
+    }
+    else {
+        return std::make_pair(no_sail_zone_upper, false);
+    }
 }
 
 
@@ -144,8 +149,8 @@ std::pair<float, float> SailboatAutopilot::step(
     switch(current_autopilot_mode) {
 
         case SailboatAutopilotModes::Waypoint_Mission: {
-            auto res = run_waypoint_mission_step(current_position, current_global_velocity_vector, current_heading, current_apparent_wind_vector);
-            return {res.first, res.second};
+            auto response = run_waypoint_mission_step(current_position, current_global_velocity_vector, current_heading, current_apparent_wind_vector);
+            return {response.first, response.second};
         }
 
         case SailboatAutopilotModes::Hold_Heading: {
@@ -185,29 +190,43 @@ std::pair<float, float> SailboatAutopilot::step(
 
 
 float SailboatAutopilot::get_optimal_sail_angle(float apparent_wind_angle) {
-
     std::vector<float> wind_angles = (*autopilot_parameters)["sail_lookup_table_wind_angles"].get<std::vector<float>>();
     std::vector<float> sail_angles = (*autopilot_parameters)["sail_lookup_table_sail_positions"].get<std::vector<float>>();
 
-    float abs_awa = std::abs(get_distance_between_angles(apparent_wind_angle, 0.0));
-    
-    if (abs_awa <= wind_angles.front()) {
-        return sail_angles.front();
-    }
+    int left_index = -1;
+    int right_index = -1;
 
-    if (abs_awa >= wind_angles.back()) {
-        return sail_angles.back();
-    }
-
-
-    for (size_t i = 0; i < wind_angles.size() - 1; ++i) {
-        if (abs_awa >= wind_angles[i] && abs_awa <= wind_angles[i+1]) {
-            float t = (abs_awa - wind_angles[i]) / (wind_angles[i+1] - wind_angles[i]);
-            return sail_angles[i] + t * (sail_angles[i+1] - sail_angles[i]);
+    float max_less_than_equal = -std::numeric_limits<float>::infinity();
+    for (size_t i = 0; i < wind_angles.size(); ++i) {
+        if (wind_angles[i] <= apparent_wind_angle) {
+            if (wind_angles[i] > max_less_than_equal) {
+                max_less_than_equal = wind_angles[i];
+                left_index = i;
+            }
         }
     }
 
-    return (*autopilot_parameters)["min_sail_angle"].get<float>();
+    float min_greater_than_equal = std::numeric_limits<float>::infinity();
+    for (size_t i = 0; i < wind_angles.size(); ++i) {
+        if (wind_angles[i] >= apparent_wind_angle) {
+            if (wind_angles[i] < min_greater_than_equal) {
+                min_greater_than_equal = wind_angles[i];
+                right_index = i;
+            }
+        }
+    }
+
+    if (left_index == -1 || right_index == -1) {
+        return 0.0f;
+    }
+
+    if (left_index == right_index) {
+        return sail_angles[left_index];
+    } 
+    else {
+        float slope = (sail_angles[right_index] - sail_angles[left_index]) / (wind_angles[right_index] - wind_angles[left_index]);
+        return slope * (apparent_wind_angle - wind_angles[left_index]) + sail_angles[left_index];
+    }
 }
 
     

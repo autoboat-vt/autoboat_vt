@@ -47,21 +47,80 @@ public:
      */
     TelemetryNode();
 
-private:
-    std::string sha256(const std::string& str);
-
-    void config_path_callback(const std_msgs::msg::String::SharedPtr msg);
-    void initialize_server_connection();
-    void send_boat_status();
-    void post_bytes(const std::string& route, const char* data, size_t size, cpr::Session* session = nullptr);
-    void update_waypoints();
-    void update_autopilot_params();
-    json get_response_from_telemetry_server(const std::string& route, cpr::Session* session = nullptr);
-    void post_json_to_telemetry_server(const std::string& route, const json& j, cpr::Session* session = nullptr);
-    void post_empty_to_telemetry_server(const std::string& route, cpr::Session* session = nullptr);
 
     
+private:
+    /**
+     * @brief Computes the SHA256 hash of a given string.
+     * @param str The input string to hash.
+     * @return The hex-encoded SHA256 hash.
+     */
+    std::string sha256(const std::string& str);
+
+    /**
+     * @brief Callback function for receiving the configuration path.
+     * @param msg The String message containing the path to the configuration file.
+     */
+    void config_path_callback(const std_msgs::msg::String::SharedPtr msg);
+
+    /**
+     * @brief Initializes the connection settings and sessions for the telemetry server.
+     */
+    void initialize_server_connection();
+
+    /**
+     * @brief Sends the current boat status/telemetry to the telemetry server.
+     */
+    void send_boat_status();
+
+    /**
+     * @brief Sends raw byte data to a specific route on the telemetry server using POST.
+     * @param route The server endpoint route.
+     * @param data Pointer to the byte data.
+     * @param size Size of the data in bytes.
+     * @param session Optional cpr::Session to use for the request.
+     */
+    void post_bytes(const std::string& route, const char* data, size_t size, cpr::Session* session = nullptr);
+
+    /**
+     * @brief Periodically checks for and updates the mission waypoints from the server.
+     */
+    void update_waypoints();
+
+    /**
+     * @brief Periodically checks for and updates autopilot parameters from the server.
+     */
+    void update_autopilot_params();
+
+    /**
+     * @brief Performs a GET request to the telemetry server and parses the response as JSON.
+     * @param route The server endpoint route.
+     * @param session Optional cpr::Session to use for the request.
+     * @return The JSON response from the server.
+     */
+    json get_response_from_telemetry_server(const std::string& route, cpr::Session* session = nullptr);
+
+    /**
+     * @brief Performs a POST request with a JSON payload to the telemetry server.
+     * @param route The server endpoint route.
+     * @param j The JSON object to send.
+     * @param session Optional cpr::Session to use for the request.
+     */
+    void post_json_to_telemetry_server(const std::string& route, const json& j, cpr::Session* session = nullptr);
+
+    /**
+     * @brief Performs an empty POST request to the telemetry server.
+     * @param route The server endpoint route.
+     * @param session Optional cpr::Session to use for the request.
+     */
+    void post_empty_to_telemetry_server(const std::string& route, cpr::Session* session = nullptr);
+
+
+    
+
+    // ----------------------------------------------------------------------------------------
     // Callbacks
+    // ----------------------------------------------------------------------------------------
     /**
      * @brief Callback for position (GPS) updates.
      * @param msg The NavSatFix message.
@@ -141,8 +200,9 @@ private:
     void current_rudder_angle_callback(const std_msgs::msg::Float32::SharedPtr msg);
 
 
-    
+    // ----------------------------------------------------------------------------------------
     // State
+    // ----------------------------------------------------------------------------------------
     bool params_loaded = false;
     bool is_sailboat_mode = false;
     bool is_motorboat_mode = false;

@@ -4,7 +4,7 @@
 #include "autoboat_msgs/msg/rc_data.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
-#include "sensors_cpp/utils.hpp"
+#include "utils.hpp"
 
 #include <chrono>
 #include <functional>
@@ -41,11 +41,11 @@ private:
     /**
      * @brief Normalizes a raw joystick input to a range of -100 to 100.
      * @param input Raw PWM/CRSF value.
-     * @param cur_min Minimum possible raw value.
-     * @param cur_max Maximum possible raw value.
+     * @param min Minimum possible raw value.
+     * @param max Maximum possible raw value.
      * @return float Normalized value (-100 to 100).
      */
-    float normalize_joystick_input(float input, float cur_min, float cur_max);
+    float normalize_joystick_input(float input, float min, float max);
 
     /**
      * @brief Parses a raw toggle state into 0, 1, or 2.

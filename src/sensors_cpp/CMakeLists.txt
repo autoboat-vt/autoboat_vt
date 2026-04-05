@@ -22,7 +22,6 @@ find_library(UDEV_LIB udev)
 
 
 
-include_directories(include include/sensors_cpp)
 include_directories(src)
 
 set(XCRSF_SRC_LIST 

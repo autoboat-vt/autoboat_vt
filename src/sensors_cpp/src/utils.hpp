@@ -34,25 +34,25 @@ void get_vid_pid_from_device_filepath(const std::string& device_path, int& vid_r
         return;
     }
 
-    auto opened_dev = udev_device_new_from_devnum(udev, type, statbuf.st_rdev);
-    auto dev = opened_dev;
+    auto opened_device = udev_device_new_from_devnum(udev, type, statbuf.st_rdev);
+    auto device = opened_device;
 
-    while (dev != nullptr) {
-        auto serial = udev_device_get_sysattr_value(dev, "serial");
+    while (device != nullptr) {
+        auto serial = udev_device_get_sysattr_value(device, "serial");
         if (!serial) {
-            dev = udev_device_get_parent(dev);
+            device = udev_device_get_parent(device);
         } 
 
         else {
-            vid_result = strtol(udev_device_get_sysattr_value(dev, "idVendor"), NULL, 16);
-            pid_result = strtol(udev_device_get_sysattr_value(dev, "idProduct"), NULL, 16);
+            vid_result = strtol(udev_device_get_sysattr_value(device, "idVendor"), NULL, 16);
+            pid_result = strtol(udev_device_get_sysattr_value(device, "idProduct"), NULL, 16);
             serial_number_result = serial;
             break;
         }
     }
 
-    if (opened_dev) 
-        udev_device_unref(opened_dev);
+    if (opened_device) 
+        udev_device_unref(opened_device);
     
     udev_unref(udev);
 }

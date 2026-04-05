@@ -6,3 +6,6 @@ Make sure that the vesc driver and all of the other sensor drivers are now fully
 
 Make sure that the build time is as fast as possible for incremental builds and full builds (full compilation time is 49 seconds on my computer rn)
 
+
+
+MAKE SURE TO REFACTOR GEOGRAPHIC_FUCNTION_LIBRARY

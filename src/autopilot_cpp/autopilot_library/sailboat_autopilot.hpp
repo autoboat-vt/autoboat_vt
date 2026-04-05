@@ -7,6 +7,7 @@
 #include <cmath>
 #include <algorithm>
 #include <array>
+#include <limits>
 
 #include <nlohmann/json.hpp>
 

@@ -49,20 +49,27 @@ float get_distance_vincenty(double latitude1, double longitude1, double latitude
 
     while (abs(diff) > tol) {
         sin_sigma = sqrt(pow((cos(u2) * sin(lam)), 2.) + pow(cos(u1)*sin(u2) - sin(u1)*cos(u2)*cos(lam), 2.));
+        
         if (sin_sigma == 0.) {
             // Coincident points, prevent division by zero resulting in NaN.
             return 0.0f;
         }
+        
         cos_sigma = sin(u1) * sin(u2) + cos(u1) * cos(u2) * cos(lam);
         sigma = atan(sin_sigma / cos_sigma);
+        
         if (sigma <= 0) sigma = M_PI + sigma;
+        
         sin_alpha = (cos(u1) * cos(u2) * sin(lam)) / sin_sigma;
         cos_sq_alpha = 1 - pow(sin_alpha, 2.);
+        
         if (cos_sq_alpha == 0.) {
             cos2sigma = 0.;
-        } else {
+        } 
+        else {
             cos2sigma = cos_sigma - ((2 * sin(u1) * sin(u2)) / cos_sq_alpha);
         }
+        
         C = (flat / 16) * cos_sq_alpha * (4 + flat * (4 - 3 * cos_sq_alpha));
         lam_pre = lam;
         lam = lon + (1 - C) * flat * sin_alpha * (sigma + C * sin_sigma * (cos2sigma + C * cos_sigma * (2 * pow(cos2sigma, 2.) - 1)));

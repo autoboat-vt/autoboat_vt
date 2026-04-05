@@ -2,9 +2,9 @@
 #include "geographic_function_library.hpp"
 
 
-Position::Position(double longitude_, double latitude_) {
-    longitude = longitude_;
-    latitude = latitude_;
+Position::Position(double longitude, double latitude) {
+    this->longitude = longitude;
+    this->latitude = latitude;
 }
 
 

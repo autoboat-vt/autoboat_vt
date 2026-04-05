@@ -58,9 +58,9 @@ float get_angle_between_vectors(const std::array<float, 2>& v1, const std::array
     if (magnitude1 < 1e-6f || magnitude2 < 1e-6f) return 0.0f;
 
     float dot = v1[0]*v2[0] + v1[1]*v2[1];
-    float cos_theta = std::clamp(dot / (magnitude1 * magnitude2), -1.0f, 1.0f);
+    float cosine_theta = std::clamp(dot / (magnitude1 * magnitude2), -1.0f, 1.0f);
     
-    return std::acos(cos_theta) * (180.0f / static_cast<float>(M_PI));
+    return std::acos(cosine_theta) * (180.0f / static_cast<float>(M_PI));
 }
 
 float get_distance_between_angles(float angle1, float angle2) {
@@ -74,6 +74,8 @@ float get_bearing(const Position& current, const Position& dest) {
     float azimuth = calculate_bearing(current.latitude, current.longitude, dest.latitude, dest.longitude);
     
     // Convert: North (0) -> 90, East (90) -> 0, etc.
+    // We generally want the angle to be counter clockwise from true east and
+    // azimuths are generally given as clockwise from true north
     float bearing = std::fmod(-azimuth + 90.0f, 360.0f);
     if (bearing < 0) bearing += 360.0f;
     return bearing;
@@ -83,60 +85,60 @@ float get_distance_between_positions(const Position& position1, const Position& 
     return get_distance(position1.latitude, position1.longitude, position2.latitude, position2.longitude);
 }
 
-bool is_angle_between_boundaries(float angle, float b1, float b2) {
-    float a_rad = angle * static_cast<float>(M_PI) / 180.0f;
-    float b1_rad = b1 * static_cast<float>(M_PI) / 180.0f;
-    float b2_rad = b2 * static_cast<float>(M_PI) / 180.0f;
+bool is_angle_between_boundaries(float angle, float boundary1, float boundary2) {
+    float angle_radians = angle * static_cast<float>(M_PI) / 180.0f;
+    float boundary1_radians = boundary1 * static_cast<float>(M_PI) / 180.0f;
+    float boundary2_radians = boundary2 * static_cast<float>(M_PI) / 180.0f;
 
-    std::array<float, 2> v_a = {std::cos(a_rad), std::sin(a_rad)};
-    std::array<float, 2> v_b1 = {std::cos(b1_rad), std::sin(b1_rad)};
-    std::array<float, 2> v_b2 = {std::cos(b2_rad), std::sin(b2_rad)};
+    std::array<float, 2> angle_vector = {std::cos(angle_radians), std::sin(angle_radians)};
+    std::array<float, 2> boundary1_vector = {std::cos(boundary1_radians), std::sin(boundary1_radians)};
+    std::array<float, 2> boundary2_vector = {std::cos(boundary2_radians), std::sin(boundary2_radians)};
 
     return check_float_equivalence(
-        get_angle_between_vectors(v_b1, v_a) + get_angle_between_vectors(v_a, v_b2),
-        get_angle_between_vectors(v_b1, v_b2)
+        get_angle_between_vectors(boundary1_vector, angle_vector) + get_angle_between_vectors(angle_vector, boundary2_vector),
+        get_angle_between_vectors(boundary1_vector, boundary2_vector)
     );
 }
 
 bool does_line_violate_no_sail_zone(
-    const std::array<float, 2>& current,
-    const std::array<float, 2>& dest,
+    const std::array<float, 2>& current_waypoint,
+    const std::array<float, 2>& destination_waypoint,
     float global_true_wind_angle,
     float no_sail_zone_size
 ) {
-    float dx = dest[0] - current[0];
-    float dy = dest[1] - current[1];
-    float dist = std::sqrt(dx*dx + dy*dy);
+    float dx = destination_waypoint[0] - current_waypoint[0];
+    float dy = destination_waypoint[1] - current_waypoint[1];
+    float distance = std::sqrt(dx*dx + dy*dy);
     
-    if (dist < 1e-6f) return false;
+    if (distance < 1e-6f) return false;
 
     // Upwind angle is opposite to wind
     float upwind_angle = std::fmod(global_true_wind_angle + 180.0f, 360.0f);
-    float upwind_rad = upwind_angle * static_cast<float>(M_PI) / 180.0f;
+    float upwind_angle_radians = upwind_angle * static_cast<float>(M_PI) / 180.0f;
     
-    std::array<float, 2> upwind_vector = {std::cos(upwind_rad), std::sin(upwind_rad)};
-    std::array<float, 2> dir_vector = {dx / dist, dy / dist};
+    std::array<float, 2> upwind_vector = {std::cos(upwind_angle_radians), std::sin(upwind_angle_radians)};
+    std::array<float, 2> displacement_direction = {dx / distance, dy / distance};
 
-    float angle_diff = get_angle_between_vectors(upwind_vector, dir_vector);
+    float angle_between = get_angle_between_vectors(upwind_vector, displacement_direction);
     
-    return (angle_diff < no_sail_zone_size);
+    return (angle_between < no_sail_zone_size);
 }
 
 bool does_line_segment_intersect_circle(
-    const std::array<float, 2>& start,
-    const std::array<float, 2>& end,
-    const std::array<float, 2>& circle_pos,
-    float radius
+    const std::array<float, 2>& line_start,
+    const std::array<float, 2>& line_end,
+    const std::array<float, 2>& circle_position,
+    float circle_radius
 ) {
-    float dx = end[0] - start[0];
-    float dy = end[1] - start[1];
+    float dx = line_end[0] - line_start[0];
+    float dy = line_end[1] - line_start[1];
     
-    float fx = start[0] - circle_pos[0];
-    float fy = start[1] - circle_pos[1];
+    float fx = line_end[0] - circle_position[0];
+    float fy = line_end[1] - circle_position[1];
 
     float a = dx*dx + dy*dy;
     float b = 2 * (fx*dx + fy*dy);
-    float c = (fx*fx + fy*fy) - radius*radius;
+    float c = (fx*fx + fy*fy) - circle_radius*circle_radius;
 
     float discriminant = b*b - 4*a*c;
     

@@ -43,8 +43,8 @@ private:
      */
     void timer_callback();
 
-    rclcpp::Subscription<autoboat_msgs::msg::VESCControlData>::SharedPtr control_sub;
-    rclcpp::Publisher<autoboat_msgs::msg::VESCTelemetryData>::SharedPtr telemetry_pub;
+    rclcpp::Subscription<autoboat_msgs::msg::VESCControlData>::SharedPtr vesc_control_subscriber;
+    rclcpp::Publisher<autoboat_msgs::msg::VESCTelemetryData>::SharedPtr vesc_telemetry_data_publisher;
     rclcpp::TimerBase::SharedPtr timer;
 
     drivers::common::IoContext io_ctx;

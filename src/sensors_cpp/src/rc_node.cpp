@@ -1,5 +1,4 @@
 #include "rc_node.hpp"
-#include <filesystem>
 
 using namespace std::chrono_literals;
 
@@ -9,9 +8,11 @@ static constexpr uint16_t RC_VID = 0x0403;
 static constexpr uint16_t RC_PID = 0x6001;
 static const std::string RC_SERIAL_NUMBER = "A9001WL3";
 
-namespace fs = std::filesystem;
+
+
 
 RCDataPublisher::RCDataPublisher() : Node("rc_data_publisher"), crossfire_device(get_device_filepath_from_vid_pid_and_serial_number(RC_VID, RC_PID, RC_SERIAL_NUMBER)) {
+        
     if (crossfire_device.open_port()) { 
         std::printf("Port opened...\n"); 
     }
@@ -66,8 +67,8 @@ void RCDataPublisher::main_loop() {
     print_cpu_and_ram_stats();
 }
 
-float RCDataPublisher::normalize_joystick_input(float input, float cur_min, float cur_max) {
-    return (((input - cur_min) * 200) / (cur_max - cur_min)) - 100;
+float RCDataPublisher::normalize_joystick_input(float input, float min, float max) {
+    return (((input - min) * 200) / (max - min)) - 100;
 }
 
 int RCDataPublisher::parse_toggle(int toggle_state) {

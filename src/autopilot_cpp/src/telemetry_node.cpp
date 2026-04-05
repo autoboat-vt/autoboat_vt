@@ -6,8 +6,11 @@ using std::placeholders::_1;
 
 
 
-TelemetryNode::TelemetryNode() : Node("telemetry_cpp"), telemetry_server_url_string("https://vt-autoboat-telemetry.uk") {
+TelemetryNode::TelemetryNode() : Node("telemetry_cpp") {
+
+    telemetry_server_url_string = "https://vt-autoboat-telemetry.uk";
     telemetry_server_url = cpr::Url{telemetry_server_url_string};
+    
     write_boat_status_session.SetUrl(telemetry_server_url);
     read_waypoints_session.SetUrl(telemetry_server_url);
     read_autopilot_parameters_session.SetUrl(telemetry_server_url);
@@ -68,7 +71,8 @@ void TelemetryNode::config_path_callback(const std_msgs::msg::String::SharedPtr 
 
     try {
         autopilot_parameters = json::parse(file);
-    } catch (const std::exception& e) {
+    } 
+    catch (const std::exception& e) {
         RCLCPP_WARN(this->get_logger(), "JSON Parse error: %s", e.what());
         return;
     }
@@ -76,10 +80,12 @@ void TelemetryNode::config_path_callback(const std_msgs::msg::String::SharedPtr 
     if (path.find("sailboat_default_parameters") != std::string::npos) {
         is_sailboat_mode = true;
         is_motorboat_mode = false;
-    } else if (path.find("motorboat_default_parameters") != std::string::npos) {
+    } 
+    else if (path.find("motorboat_default_parameters") != std::string::npos) {
         is_sailboat_mode = false;
         is_motorboat_mode = true;
-    } else {
+    }
+    else {
         RCLCPP_WARN(this->get_logger(), "Unrecognized parameter config name.");
         return;
     }
@@ -116,7 +122,8 @@ void TelemetryNode::initialize_server_connection() {
                 if (!does_hash_exist) {
                     json stringified_params = autopilot_parameters.dump(-1, ',', false, nlohmann::detail::error_handler_t::replace);
                     post_json_to_telemetry_server("autopilot_parameters/set_default/" + std::to_string(instance_id), stringified_params, &read_autopilot_parameters_session);
-                } else {
+                } 
+                else {
                     post_empty_to_telemetry_server("autopilot_parameters/set_default_from_hash/" + std::to_string(instance_id) + "/" + config_hash, &read_autopilot_parameters_session);
                 }
 
@@ -137,16 +144,16 @@ void TelemetryNode::initialize_server_connection() {
 void TelemetryNode::send_boat_status() {
     if (instance_id < 0) return;
 
-    float tw_x = velocity_vector_x + apparent_wind_x;
-    float tw_y = velocity_vector_y + apparent_wind_y;
-    float r = std::hypot(tw_x, tw_y);
-    float th = std::atan2(tw_y, tw_x) * 180.0f / static_cast<float>(M_PI);
+    float true_wind_x = velocity_vector_x + apparent_wind_x;
+    float true_wind_y = velocity_vector_y + apparent_wind_y;
+    float true_wind_speed = std::hypot(true_wind_x, true_wind_y);
+    float true_wind_angle = std::atan2(true_wind_y, true_wind_x) * 180.0f / static_cast<float>(M_PI);
 
-    float dist_wp = 0.0f;
+    float distance_to_next_waypoint = 0.0f;
     if (!current_waypoints_list.empty() && current_waypoint_index >= 0 && current_waypoint_index < (int)current_waypoints_list.size()) {
-        double lat2 = current_waypoints_list[current_waypoint_index].first;
-        double lon2 = current_waypoints_list[current_waypoint_index].second;
-        dist_wp = get_distance(position_latitude, position_longitude, lat2, lon2);
+        double latitude2 = current_waypoints_list[current_waypoint_index].first;
+        double longitude2 = current_waypoints_list[current_waypoint_index].second;
+        distance_to_next_waypoint = get_distance(position_latitude, position_longitude, latitude2, longitude2);
     }
 
     std::string route = "boat_status/set_fast/" + std::to_string(instance_id);
@@ -155,7 +162,7 @@ void TelemetryNode::send_boat_status() {
         SailboatStatusPayload payload;
         payload.latitude = position_latitude;
         payload.longitude = position_longitude;
-        payload.distance_to_next_waypoint = dist_wp;
+        payload.distance_to_next_waypoint = distance_to_next_waypoint;
         payload.speed = std::hypot(velocity_vector_x, velocity_vector_y);
         payload.velocity_x = velocity_vector_x;
         payload.velocity_y = velocity_vector_y;
@@ -167,8 +174,8 @@ void TelemetryNode::send_boat_status() {
         payload.current_waypoint_index = current_waypoint_index;
         payload.autopilot_mode = autopilot_mode;
 
-        payload.true_wind_speed = r;
-        payload.true_wind_angle = th;
+        payload.true_wind_speed = true_wind_speed;
+        payload.true_wind_angle = true_wind_angle;
         payload.apparent_wind_speed = apparent_wind_speed;
         payload.apparent_wind_angle = apparent_wind_angle;
         payload.current_sail_angle = current_sail_angle;
@@ -182,7 +189,7 @@ void TelemetryNode::send_boat_status() {
         MotorboatStatusPayload payload;
         payload.latitude = position_latitude;
         payload.longitude = position_longitude;
-        payload.distance_to_next_waypoint = dist_wp;
+        payload.distance_to_next_waypoint = distance_to_next_waypoint;
         payload.speed = std::hypot(velocity_vector_x, velocity_vector_y);
         payload.velocity_x = velocity_vector_x;
         payload.velocity_y = velocity_vector_y;
@@ -212,13 +219,13 @@ void TelemetryNode::send_boat_status() {
 
 void TelemetryNode::post_bytes(const std::string& route, const char* data, size_t size, cpr::Session* session) {
     std::string url = telemetry_server_url_string + "/" + route;
-    std::string body_str = std::string(data, size);
+    std::string body_string = std::string(data, size);
 
     while (rclcpp::ok()) {
         cpr::Response response;
         if (session) {
             session->SetUrl(cpr::Url{url});
-            session->SetBody(cpr::Body{body_str});
+            session->SetBody(cpr::Body{body_string});
             session->SetHeader(cpr::Header{{"Content-Type", "application/octet-stream"}});
             session->SetTimeout(cpr::Timeout{10000});
             response = session->Post();
@@ -226,7 +233,7 @@ void TelemetryNode::post_bytes(const std::string& route, const char* data, size_
         else {
             response = cpr::Post(
                 cpr::Url{url},
-                cpr::Body{body_str},
+                cpr::Body{body_string},
                 cpr::Header{{"Content-Type", "application/octet-stream"}},
                 cpr::Timeout{10000}
             );
@@ -241,20 +248,22 @@ void TelemetryNode::update_waypoints() {
     json response = get_response_from_telemetry_server("waypoints/get_new/" + std::to_string(instance_id), &read_waypoints_session);
     if (!response.is_array() || response.empty()) return;
 
-    autoboat_msgs::msg::WaypointList wp_list;
+    autoboat_msgs::msg::WaypointList waypoint_list;
     current_waypoints_list.clear();
-    for (const auto& w : response) {
-        if (w.is_array() && w.size() >= 2) {
-            double lat = w[0].get<double>();
-            double lon = w[1].get<double>();
-            current_waypoints_list.push_back({lat, lon});
-            sensor_msgs::msg::NavSatFix nav;
-            nav.latitude = lat;
-            nav.longitude = lon;
-            wp_list.waypoints.push_back(nav);
+    for (const auto& waypoint : response) {
+        if (waypoint.is_array() && waypoint.size() >= 2) {
+            double latitude = waypoint[0].get<double>();
+            double longitude = waypoint[1].get<double>();
+            current_waypoints_list.push_back({latitude, longitude});
+
+            waypoint_list.waypoints.push_back(
+                sensor_msgs::msg::NavSatFix()
+                .set__latitude(latitude)
+                .set__longitude(longitude)
+            );
         }
     }
-    waypoints_list_publisher->publish(wp_list);
+    waypoints_list_publisher->publish(waypoint_list);
 }
 
 void TelemetryNode::update_autopilot_params() {
@@ -280,10 +289,8 @@ json TelemetryNode::get_response_from_telemetry_server(const std::string& route,
         if (response.status_code == 200) {
             try { 
                 return json::parse(response.text); 
-            } 
-            catch(...) {
-
             }
+            catch(...) {}
 
             return json();
         }
@@ -295,13 +302,13 @@ json TelemetryNode::get_response_from_telemetry_server(const std::string& route,
 
 void TelemetryNode::post_json_to_telemetry_server(const std::string& route, const json& j, cpr::Session* session) {
     std::string url = telemetry_server_url_string + "/" + route;
-    std::string body_str = j.dump(-1, ',', false, nlohmann::detail::error_handler_t::replace);
+    std::string body_string = j.dump(-1, ',', false, nlohmann::detail::error_handler_t::replace);
 
     while (rclcpp::ok()) {
         cpr::Response response;
         if (session) {
             session->SetUrl(cpr::Url{url});
-            session->SetBody(cpr::Body{body_str});
+            session->SetBody(cpr::Body{body_string});
             session->SetHeader(cpr::Header{{"Content-Type", "application/json"}});
             session->SetTimeout(cpr::Timeout{10000});
             response = session->Post();
@@ -309,7 +316,7 @@ void TelemetryNode::post_json_to_telemetry_server(const std::string& route, cons
         else {
             response = cpr::Post(
                 cpr::Url{url},
-                cpr::Body{body_str},
+                cpr::Body{body_string},
                 cpr::Header{{"Content-Type", "application/json"}},
                 cpr::Timeout{10000}
             );

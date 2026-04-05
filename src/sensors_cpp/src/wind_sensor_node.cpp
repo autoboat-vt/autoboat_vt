@@ -11,14 +11,21 @@ static constexpr double KNOTS_TO_METERS_PER_SECOND = 0.514444;
 
 
 WindSensorPublisher::WindSensorPublisher(): Node("wind_sensor_publisher"), io_ctx(), serial_driver(io_ctx) {
-    apparent_wind_vector_publisher = this->create_publisher<geometry_msgs::msg::Vector3>("/apparent_wind_vector", rclcpp::SensorDataQoS());
 
     RCLCPP_INFO(this->get_logger(), "Initializing wind sensor node...");
 
-    drivers::serial_driver::SerialPortConfig cfg(38400, drivers::serial_driver::FlowControl::NONE, drivers::serial_driver::Parity::NONE, drivers::serial_driver::StopBits::ONE);
+
+    apparent_wind_vector_publisher = this->create_publisher<geometry_msgs::msg::Vector3>("/apparent_wind_vector", rclcpp::SensorDataQoS());
+
+    drivers::serial_driver::SerialPortConfig serial_port_config(
+        38400, 
+        drivers::serial_driver::FlowControl::NONE, 
+        drivers::serial_driver::Parity::NONE, 
+        drivers::serial_driver::StopBits::ONE
+    );
     
     std::string device_filepath = get_device_filepath_from_vid_pid_and_serial_number(WIND_SENSOR_VID, WIND_SENSOR_PID, WIND_SENSOR_SERIAL_NUMBER);
-    serial_driver.init_port(device_filepath, cfg);
+    serial_driver.init_port(device_filepath, serial_port_config);
     serial_port = serial_driver.port();
     
     if (!serial_port) 
@@ -70,24 +77,24 @@ void WindSensorPublisher::main_loop() {
         return;
     }
 
-    double apparent_angle = std::stod(fields[1]);
-    double apparent_speed_knots = std::stod(fields[3]);
-    double speed_mps = apparent_speed_knots * KNOTS_TO_METERS_PER_SECOND;
-    double angle_ccw = std::fmod(180.0 - apparent_angle + 360.0, 360.0);
+    double apparent_wind_angle = std::stod(fields[1]);
+    double apparent_wind_speed_knots = std::stod(fields[3]);
+    double apparent_wind_speed_meters_per_second = apparent_wind_speed_knots * KNOTS_TO_METERS_PER_SECOND;
+    double wind_angle_ccw = std::fmod(180.0 - apparent_wind_angle + 360.0, 360.0);
 
-    double x = speed_mps * std::cos(angle_ccw * M_PI / 180.0);
-    double y = speed_mps * std::sin(angle_ccw * M_PI / 180.0);
+    double wind_speed_x = apparent_wind_speed_meters_per_second * std::cos(wind_angle_ccw * M_PI / 180.0);
+    double wind_speed_y = apparent_wind_speed_meters_per_second * std::sin(wind_angle_ccw * M_PI / 180.0);
 
     if (wind_history.size() >= 15) 
         wind_history.pop_front();
     
-    wind_history.push_back({x, y});
+    wind_history.push_back({wind_speed_x, wind_speed_y});
 
-    auto filtered = weighted_average(wind_history);
+    auto filtered_wind_vector = weighted_average(wind_history);
 
     apparent_wind_vector_publisher->publish(geometry_msgs::msg::Vector3()
-        .set__x(filtered.first)
-        .set__y(filtered.second)
+        .set__x(filtered_wind_vector.first)
+        .set__y(filtered_wind_vector.second)
         .set__z(0.0)
     );
     print_cpu_and_ram_stats();
@@ -100,14 +107,14 @@ double WindSensorPublisher::sum_integers(int n) {
 std::pair<double, double> WindSensorPublisher::weighted_average(const std::deque<std::pair<double,double>> &d) {
     double w1 = 0.0;
     double w2 = 0.0;
-    int idx = 1;
+    int index = 1;
     for (auto &p : d) {
-        w1 += p.first * idx;
-        w2 += p.second * idx;
-        idx++;
+        w1 += p.first * index;
+        w2 += p.second * index;
+        index++;
     }
-    double denom = sum_integers((int)d.size());
-    return { w1/denom, w2/denom };
+    double denominator = sum_integers((int)d.size());
+    return { w1/denominator, w2/denominator };
 }
 
 int main(int argc, char** argv) {

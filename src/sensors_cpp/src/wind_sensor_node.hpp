@@ -6,7 +6,7 @@
 
 #include <serial_driver/serial_driver.hpp>
 #include <serial_driver/serial_port.hpp>
-#include "sensors_cpp/utils.hpp"
+#include "utils.hpp"
 
 #include <deque>
 #include <string>
