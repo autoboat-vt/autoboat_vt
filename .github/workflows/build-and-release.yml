@@ -200,7 +200,7 @@ jobs:
               echo "==> Packaging Micro-ROS dependencies..."
               # The microros image has these in /tmp/src/microros/dependencies
               # We install them to /opt/autoboat/microros/dependencies
-              mkdir -p "${PKG_DIR}/opt/autoboat/microros"
+              mkdir -p "${PKG_DIR}/opt/autoboat/microros/dependencies"
               mv /tmp/src/microros/dependencies/** "${PKG_DIR}/opt/autoboat/microros/dependencies/"
 
               # TODO MAKE THIS USE PROPER UDEV RULES FOR ALL DEVICES
