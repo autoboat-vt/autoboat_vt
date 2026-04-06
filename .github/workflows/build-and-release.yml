@@ -230,7 +230,7 @@ jobs:
               cp .github/deb/postrm   "${PKG_DIR_UC}/DEBIAN/postrm"
               chmod 0755 "${PKG_DIR_UC}/DEBIAN/postinst" "${PKG_DIR_UC}/DEBIAN/prerm" "${PKG_DIR_UC}/DEBIAN/postrm"
 
-              dpkg-deb --build "${PKG_DIR_UC}" "output_artifacts/autoboat-vt-microros-${DEB_ARCH}.deb"
+              dpkg-deb --build "${PKG_DIR_UC}" "output_artifacts/autoboat-vt-microros-full-${DEB_ARCH}.deb"
 
               # ── 5. Fix permissions for host runner upload ───────────────────
               echo "==> Fixing permissions for host runner..."
