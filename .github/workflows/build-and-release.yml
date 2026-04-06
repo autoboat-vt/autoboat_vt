@@ -254,7 +254,7 @@ jobs:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
           files: |
             output_artifacts/autoboat-vt-*.deb
-          generate_release_notes: true
+          generate_release_notes: false
           draft: false
           
           # This checks if we are pushing to branches or have a version like v1.2.3-beta
