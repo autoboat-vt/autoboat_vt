@@ -31,7 +31,13 @@ EOF
 
 chmod +x /etc/profile.d/autoboat-vt.sh
 
-# 2. Automatically update the current user's .bashrc for future interactive shells
+# 2. Reload udev rules to apply the new picotool rules
+if command -v udevadm > /dev/null 2>&1; then
+    echo "Reloading udev rules..."
+    udevadm control --reload-rules && udevadm trigger || true
+fi
+
+# 3. Automatically update the current user's .bashrc for future interactive shells
 if [ -n "$SUDO_USER" ]; then
     USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
     BASHRC="${USER_HOME}/.bashrc"

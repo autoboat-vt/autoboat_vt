@@ -6,7 +6,8 @@ name: ROS2 Cross-Architecture Build & Release
 # These are passed directly to `colcon build --packages-ignore`.
 # ============================================================================
 env:
-  COLCON_IGNORE_PACKAGES: "foil_dynamics rudder_dynamics sail_limits sailboat_simulation autopilot_transform wind_arrow"
+  COLCON_IGNORE_PACKAGES: "autopilot sensors sailboat_simulation object_detection sensors vesc"
+  # COLCON_IGNORE_PACKAGES: "foil_dynamics rudder_dynamics sail_limits sailboat_simulation autopilot_transform wind_arrow"
 
 on:
   push:
@@ -139,7 +140,7 @@ jobs:
       - name: Pull Base Image for local build
         if: github.event_name != 'pull_request'
         run: |
-          docker pull vtautoboat/development_image:${{ matrix.architecture }}
+          docker pull vtautoboat/development_image_microros:${{ matrix.architecture }}
           # No need to retag, we will use the full name in the build step
 
       # -----------------------------------------------------------------------
