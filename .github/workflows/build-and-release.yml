@@ -18,6 +18,7 @@ on:
     branches: [ "main", "cpp" ]
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -39,7 +40,7 @@ jobs:
           - architecture: arm64
             runner: ubuntu-22.04-arm
             platform: linux/arm64
-            ignore_packages: ${{ env.COLCON_IGNORE_PACKAGE_ARM }}
+            ignore_packages: ${{ env.COLCON_IGNORE_PACKAGES_ARM }}
 
     steps:
       - name: Checkout repository
