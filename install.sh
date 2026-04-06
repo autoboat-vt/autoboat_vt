@@ -1,5 +1,7 @@
 #!/bin/bash
 set -e
+# 0. Headless configuration
+export DEBIAN_FRONTEND=noninteractive
 
 
 # 1. Detect architecture
