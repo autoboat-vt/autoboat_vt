@@ -7,8 +7,8 @@ name: ROS2 Cross-Architecture Build & Release
 # These are passed directly to `colcon build --packages-ignore`.
 # ============================================================================
 env:
-  COLCON_IGNORE_PACKAGES_AMD: "sailboat_simulation autopilot sensors vesc object_detection"
-  COLCON_IGNORE_PACKAGES_ARM: "foil_dynamics rudder_dynamics sail_limits sailboat_simulation motorboat_simulation autopilot_transform wind_arrow autopilot sensors vesc object_detection"
+  COLCON_IGNORE_PACKAGES_AMD: "foil_dynamics rudder_dynamics sail_limits sailboat_simulation autopilot_transform wind_arrow autopilot sensors vesc object_detection"
+  COLCON_IGNORE_PACKAGES_ARM: "foil_dynamics rudder_dynamics sail_limits sailboat_simulation autopilot_transform wind_arrow autopilot sensors vesc object_detection"
 
 
 
