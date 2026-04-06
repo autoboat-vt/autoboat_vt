@@ -44,3 +44,6 @@ frame_logs
 
 # c++ compiler profiling traces using ninjatracing
 trace.json
+
+
+*.deb

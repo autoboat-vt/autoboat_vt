@@ -150,7 +150,6 @@ jobs:
       # We pass DEB_VERSION + DEB_ARCH as env vars so the inner shell can use them.
       #
       # Outputs (all chmod'd readable for the host runner to upload):
-      #   output_artifacts/autoboat-prebuilt-<arch>.tar.gz  (build/ + install/)
       #   output_artifacts/autoboat-vt-<arch>.deb            (install/ only, with deps)
       # -----------------------------------------------------------------------
       - name: Build ROS2 Packages, Tarball, and Debian Package
@@ -169,12 +168,9 @@ jobs:
               set -e
               source /opt/ros/humble/setup.bash
               echo "==> colcon build ignore: ${{ env.COLCON_IGNORE_PACKAGES }}"
-              colcon build --packages-ignore ${{ env.COLCON_IGNORE_PACKAGES }} --cmake-args -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=mold"
+              colcon build --packages-ignore ${{ env.COLCON_IGNORE_PACKAGES }} --cmake-args -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=mold" --install-base /opt/autoboat/install
 
-              # ── 2. Tarball (build/ + install/) ──────────────────────────────
-              echo "==> Creating tarball..."
-              mkdir -p output_artifacts
-              tar -czf "output_artifacts/autoboat-prebuilt-${DEB_ARCH}.tar.gz" build/ install/
+
 
               # ── 3. Debian package (install/ only) ───────────────────────────
               echo "==> Building .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
@@ -183,7 +179,7 @@ jobs:
               mkdir -p "${PKG_DIR}/opt/autoboat"
 
               # Copy install overlay into package tree
-              cp -r install "${PKG_DIR}/opt/autoboat/"
+              cp -r /opt/autoboat/install "${PKG_DIR}/opt/autoboat/"
 
               # Fill in version + arch placeholders in the control file template
               sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
@@ -244,7 +240,6 @@ jobs:
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
           files: |
-            output_artifacts/autoboat-prebuilt-*.tar.gz
             output_artifacts/autoboat-vt-*.deb
           generate_release_notes: true
           draft: false

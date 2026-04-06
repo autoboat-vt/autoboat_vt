@@ -43,6 +43,13 @@ target_link_libraries(xcrsf PRIVATE ${CMAKE_THREAD_LIBS_INIT} atomic)
 add_executable(rc_node src/rc_node.cpp)
 ament_target_dependencies(rc_node rclcpp std_msgs autoboat_msgs)
 target_link_libraries(rc_node xcrsf ${CMAKE_THREAD_LIBS_INIT} ${UDEV_LIB})
+
+# Make it so that the xcrsf library is packaged in with the final apt package
+install(TARGETS xcrsf
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin)
+
 install(TARGETS rc_node DESTINATION lib/${PROJECT_NAME})
 
 

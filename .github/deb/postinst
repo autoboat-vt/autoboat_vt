@@ -1,9 +1,7 @@
 #!/bin/bash
 set -e
 
-# Drop a profile.d script so the ROS2 overlay is sourced automatically
-# for every user on every login (interactive + non-interactive shells that
-# source /etc/profile.d/).
+# 1. Create the profile.d script for system-wide login shells
 cat > /etc/profile.d/autoboat-vt.sh << 'EOF'
 # Sourced automatically by /etc/profile.d — do not edit manually.
 # Installed by the autoboat-vt Debian package.
@@ -17,6 +15,26 @@ EOF
 
 chmod +x /etc/profile.d/autoboat-vt.sh
 
-echo "autoboat-vt: installed. Open a new terminal or run:"
+# 2. Automatically update the current user's .bashrc for future interactive shells
+if [ -n "$SUDO_USER" ]; then
+    USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+    BASHRC="${USER_HOME}/.bashrc"
+    SOURCE_LINE="source /etc/profile.d/autoboat-vt.sh"
+
+    if [ -f "$BASHRC" ]; then
+        if ! grep -qF "$SOURCE_LINE" "$BASHRC"; then
+            echo -e "\n# Added by autoboat-vt installation\n$SOURCE_LINE" >> "$BASHRC"
+            echo "Environment correctly configured for user: $SUDO_USER in $BASHRC"
+        fi
+    fi
+fi
+
+echo "--------------------------------------------------------"
+echo "autoboat-vt: installed successfully!"
+echo "--------------------------------------------------------"
+echo "To activate the environment in your CURRENT terminal, run:"
 echo "  source /etc/profile.d/autoboat-vt.sh"
+echo ""
+echo "Future terminals will have it enabled automatically."
 echo "Then use: ros2 run autopilot_cpp motorboat_autopilot"
+echo "--------------------------------------------------------"
