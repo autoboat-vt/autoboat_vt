@@ -93,12 +93,8 @@ RUN add-apt-repository ppa:longsleep/golang-backports -y \
     ros-humble-librealsense2* \
     ros-humble-realsense2-* \
     golang-go \
-    apt-get install -y --no-install-recommends gz-harmonic ros-humble-ros-gzharmonic \
+    gz-harmonic ros-humble-ros-gzharmonic \
     && rm -rf /var/lib/apt/lists/*
-
-    #  && if [ "$TARGETARCH" = "amd64" ]; then \
-    #       apt-get install -y --no-install-recommends gz-harmonic ros-humble-ros-gzharmonic; \
-    #     fi \
 
 
 
@@ -120,29 +116,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 
 
 
-# -------------------------------
-# Python requirements (as user)
-# -------------------------------
 
-COPY .devcontainer/required_pip_packages.txt /tmp/requirements.txt
-RUN pip install --upgrade pip
-RUN pip install packaging
-RUN pip install -r /tmp/requirements.txt
-
-# -------------------------------
-# Installation for gazebo (for simulation)
-# -------------------------------
-USER root
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-      echo "Building for x86_64. Safe to download gazebo."; \
-      apt update \
-      && apt install curl lsb-release gnupg \
-      && curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg \
-      && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] https://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null \
-      && apt update \
-      && apt install gz-harmonic -y \
-      && apt install ros-humble-ros-gzharmonic -y; \
-   fi
 USER root
 RUN cd /tmp \
    && git clone --depth 1 https://github.com/libcpr/cpr.git \
@@ -155,6 +129,18 @@ RUN cd /tmp \
 
 USER $USERNAME
    
+
+
+# -------------------------------
+# Python requirements (as user)
+# -------------------------------
+
+COPY .devcontainer/required_pip_packages.txt /tmp/requirements.txt
+RUN pip install --upgrade pip
+RUN pip install packaging
+RUN pip install -r /tmp/requirements.txt
+
+
    
 CMD ["/bin/bash"]
 # TODO and NOTE:
