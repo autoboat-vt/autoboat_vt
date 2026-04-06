@@ -862,7 +862,7 @@ class GroundStationWidget(QWidget):
 
             <ol>
             <li> If the value is None, displays "N/A".
-            <li> Otherwise, the value is rounded to 5 decimal places.
+            <li> Otherwise, the value is rounded to 1 decimal places.
             </ol>
 
             Examples
@@ -883,7 +883,7 @@ class GroundStationWidget(QWidget):
                 The formatted value.
             """
 
-            return "N/A" if data_item is None else f"{float(data_item):.5f}"
+            return "N/A" if data_item is None else f"{float(data_item):.1f}"
 
         def sailboat_mode(boat_data: dict[str, Any]) -> str:
             self.boat_data["full_autonomy_maneuver"] = constants.SailboatStates(boat_data["full_autonomy_maneuver"]).name
