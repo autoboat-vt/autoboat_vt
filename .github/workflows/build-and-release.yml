@@ -197,7 +197,7 @@ jobs:
               cp -r /opt/autoboat/install "${PKG_DIR_STD}/opt/autoboat/"
 
               # Copy ONLY the micro_ros_agent runtime (install folder)
-              cp -r /tmp/src/microros/dependencies/micro_ros_agent/install "${PKG_DIR_STD}/opt/autoboat/microros/dependencies/micro_ros_agent/"
+              cp -r /tmp/src/microros/dependencies/micro_ros_agent/install/** "${PKG_DIR_STD}/opt/autoboat/microros/dependencies/micro_ros_agent/install"
 
               # Control file + Maintainer scripts
               sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
@@ -218,7 +218,7 @@ jobs:
               mkdir -p "${PKG_DIR_UC}/opt/autoboat/microros/dependencies"
 
               # Copy everything ELSE from dependencies (Pico SDK, Agent Source, etc.)
-              mv /tmp/src/microros/dependencies/* "${PKG_DIR_UC}/opt/autoboat/microros/dependencies/"
+              mv /tmp/src/microros/dependencies/** "${PKG_DIR_UC}/opt/autoboat/microros/dependencies/"
 
               # Control file (Depends on standard package)
               sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
