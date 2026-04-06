@@ -124,9 +124,9 @@ jobs:
             *.platform=linux/${{ matrix.architecture }}
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
-            base.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}
+            base.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }},ref=vtautoboat/development_image:${{ matrix.architecture }}-cache
             base.cache-to=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache,mode=max
-            microros.cache-from=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}
+            microros.cache-from=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }},ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache
             microros.cache-to=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache,mode=max
 
 
