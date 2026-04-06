@@ -10,7 +10,15 @@ Depends: ros-humble-ros-base,
          libudev1,
          libboost-system1.74.0,
          libboost-thread1.74.0,
-         libusb-1.0-0
+         libusb-1.0-0,
+         build-essential,
+         cmake,
+         gcc-arm-none-eabi,
+         libnewlib-arm-none-eabi,
+         libusb-1.0-0-dev,
+         pkg-config,
+         git,
+         python3
 Description: Prebuilt ROS2 packages for the VT AutoBoat system
  Includes autopilot_cpp, sensors_cpp, and autoboat_msgs.
  Built for ROS2 Humble on Ubuntu 22.04.
