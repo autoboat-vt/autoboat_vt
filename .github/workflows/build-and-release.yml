@@ -1,13 +1,17 @@
 name: ROS2 Cross-Architecture Build & Release
 
+
 # ============================================================================
 # CONFIGURABLE PACKAGES
 # Edit the list below to change which packages don't get built and distributed.
 # These are passed directly to `colcon build --packages-ignore`.
 # ============================================================================
 env:
-  COLCON_IGNORE_PACKAGES: "autopilot sensors sailboat_simulation object_detection sensors vesc"
-  # COLCON_IGNORE_PACKAGES: "foil_dynamics rudder_dynamics sail_limits sailboat_simulation autopilot_transform wind_arrow"
+  COLCON_IGNORE_PACKAGES_AMD: "sailboat_simulation autopilot sensors vesc object_detection"
+  COLCON_IGNORE_PACKAGES_ARM: "foil_dynamics rudder_dynamics sail_limits sailboat_simulation motorboat_simulation autopilot_transform wind_arrow autopilot sensors vesc object_detection"
+
+
+
 
 on:
   push:
@@ -31,9 +35,11 @@ jobs:
           - architecture: amd64
             runner: ubuntu-22.04
             platform: linux/amd64
+            ignore_packages: ${{ env.COLCON_IGNORE_AMD }}
           - architecture: arm64
             runner: ubuntu-22.04-arm
             platform: linux/arm64
+            ignore_packages: ${{ env.COLCON_IGNORE_ARM }}
 
     steps:
       - name: Checkout repository
@@ -168,8 +174,8 @@ jobs:
             bash -c '
               set -e
               source /opt/ros/humble/setup.bash
-              echo "==> colcon build ignore: ${{ env.COLCON_IGNORE_PACKAGES }}"
-              colcon build --packages-ignore ${{ env.COLCON_IGNORE_PACKAGES }} --cmake-args -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=mold" --install-base /opt/autoboat/install
+              echo "==> colcon build ignore: ${{ matrix.ignore_packages }}"
+              colcon build --packages-ignore ${{ matrix.ignore_packages }} --cmake-args -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=mold" --install-base /opt/autoboat/install
               mkdir -p output_artifacts
 
 
