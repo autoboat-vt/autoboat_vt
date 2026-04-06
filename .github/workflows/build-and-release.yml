@@ -124,10 +124,14 @@ jobs:
             *.platform=linux/${{ matrix.architecture }}
             *.cache-from=type=gha,scope=${{ matrix.architecture }}
             *.cache-to=type=gha,mode=max,scope=${{ matrix.architecture }}
-            base.cache-from=["type=gha,scope=base-${{ matrix.architecture }}","type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache"]
-            base.cache-to=["type=gha,mode=max,scope=base-${{ matrix.architecture }}","type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache,mode=max"]
-            microros.cache-from=["type=gha,scope=microros-${{ matrix.architecture }}","type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache"]
-            microros.cache-to=["type=gha,mode=max,scope=microros-${{ matrix.architecture }}","type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache,mode=max"]
+            base.cache-from=type=gha,scope=base-${{ matrix.architecture }}
+            base.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache
+            base.cache-to=type=gha,mode=max,scope=base-${{ matrix.architecture }}
+            base.cache-to=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache,mode=max
+            microros.cache-from=type=gha,scope=microros-${{ matrix.architecture }}
+            microros.cache-from=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache
+            microros.cache-to=type=gha,mode=max,scope=microros-${{ matrix.architecture }}
+            microros.cache-to=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache,mode=max
 
 
 
