@@ -191,13 +191,13 @@ jobs:
               echo "==> Building standard .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
               PKG_DIR_STD=/home/ws/deb_pkg_std
               mkdir -p "${PKG_DIR_STD}/DEBIAN"
-              mkdir -p "${PKG_DIR_STD}/opt/autoboat/microros/dependencies/micro_ros_agent"
+              mkdir -p "${PKG_DIR_STD}/opt/autoboat/microros/dependencies/micro_ros_agent/install"
 
               # Copy built ROS2 nodes
               cp -r /opt/autoboat/install "${PKG_DIR_STD}/opt/autoboat/"
 
               # Copy ONLY the micro_ros_agent runtime (install folder)
-              cp -r /tmp/src/microros/dependencies/micro_ros_agent/install/** "${PKG_DIR_STD}/opt/autoboat/microros/dependencies/micro_ros_agent/install"
+              mv /tmp/src/microros/dependencies/micro_ros_agent/install/** "${PKG_DIR_STD}/opt/autoboat/microros/dependencies/micro_ros_agent/install"
 
               # Control file + Maintainer scripts
               sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
