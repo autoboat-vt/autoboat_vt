@@ -11,6 +11,22 @@ fi
 if [ -f /opt/autoboat/install/setup.bash ]; then
     source /opt/autoboat/install/setup.bash
 fi
+
+# Micro-ROS environment configuration
+export MICROROS_DIR="/opt/autoboat/microros"
+export PICO_SDK_PATH="${MICROROS_DIR}/dependencies/pico-sdk"
+export PICO_MICROROS_SDK_PATH="${MICROROS_DIR}/dependencies/micro_ros_raspberrypi_pico_sdk"
+export PICOTOOL_PATH="${MICROROS_DIR}/dependencies/picotool"
+
+# Source micro_ros_agent if it exists
+if [ -f "${MICROROS_DIR}/dependencies/micro_ros_agent/install/local_setup.bash" ]; then
+    source "${MICROROS_DIR}/dependencies/micro_ros_agent/install/local_setup.bash"
+fi
+
+# Aliases for Pico development
+alias picotool="${PICOTOOL_PATH}/build/picotool"
+alias picotool_load="sudo ${PICOTOOL_PATH}/build/picotool load"
+alias picotool_reboot="sudo ${PICOTOOL_PATH}/build/picotool reboot"
 EOF
 
 chmod +x /etc/profile.d/autoboat-vt.sh

@@ -163,7 +163,7 @@ jobs:
             -e DEB_ARCH="${{ matrix.architecture }}" \
             -e CCACHE_DIR=/home/ws/.ccache \
             -e CMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            vtautoboat/development_image:${{ matrix.architecture }} \
+            vtautoboat/development_image_microros:${{ matrix.architecture }} \
             bash -c '
               set -e
               source /opt/ros/humble/setup.bash
@@ -181,6 +181,17 @@ jobs:
 
               # Copy install overlay into package tree
               cp -r /opt/autoboat/install "${PKG_DIR}/opt/autoboat/"
+
+              # ── 4. Micro-ROS dependencies ──────────────────────────────────
+              echo "==> Packaging Micro-ROS dependencies..."
+              # The microros image has these in /tmp/src/microros/dependencies
+              # We install them to /opt/autoboat/microros/dependencies
+              mkdir -p "${PKG_DIR}/opt/autoboat/microros"
+              cp -r /tmp/src/microros/dependencies "${PKG_DIR}/opt/autoboat/microros/"
+
+              # Copy udev rules for picotool
+              mkdir -p "${PKG_DIR}/etc/udev/rules.d"
+              cp /home/ws/src/microros/dependencies/picotool/udev/60-picotool.rules "${PKG_DIR}/etc/udev/rules.d/"
 
               # Fill in version + arch placeholders in the control file template
               sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \

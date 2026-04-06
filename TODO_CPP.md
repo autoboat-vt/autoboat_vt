@@ -5,6 +5,7 @@ Make sure that the vesc driver and all of the other sensor drivers are now fully
 
 MAKE SURE TO REFACTOR GEOGRAPHIC_FUCNTION_LIBRARY LATER
 
+ADD A microros agent binary and all of the stuff required to flash stuff to microros in the final .deb package
 
 
 

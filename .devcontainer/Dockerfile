@@ -93,10 +93,12 @@ RUN add-apt-repository ppa:longsleep/golang-backports -y \
     ros-humble-librealsense2* \
     ros-humble-realsense2-* \
     golang-go \
-    && if [ "$TARGETARCH" = "amd64" ]; then \
-         apt-get install -y --no-install-recommends gz-harmonic ros-humble-ros-gzharmonic; \
-       fi \
+    apt-get install -y --no-install-recommends gz-harmonic ros-humble-ros-gzharmonic \
     && rm -rf /var/lib/apt/lists/*
+
+    #  && if [ "$TARGETARCH" = "amd64" ]; then \
+    #       apt-get install -y --no-install-recommends gz-harmonic ros-humble-ros-gzharmonic; \
+    #     fi \
 
 
 
