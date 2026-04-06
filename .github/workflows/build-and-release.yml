@@ -108,28 +108,32 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Build and Push Docker Images (Bake)
         uses: docker/bake-action@v6
+        env:
+          # Docker Bake natively reads these environment variables 
+          # to override the 'variable "NAME"' blocks in your HCL
+          ARCHITECTURE: ${{ matrix.architecture }}
+          OWNER: ${{ env.OWNER_LC }}
+          IS_OFFICIAL: ${{ github.event_name != 'pull_request' }}
+          IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          MAJOR: ${{ steps.meta.outputs.major }}
+          MINOR: ${{ steps.meta.outputs.minor }}
+          GITHUB_SHA: ${{ github.sha }}
         with:
           files: .github/workflows/docker-bake.hcl
           push: ${{ github.event_name != 'pull_request' }}
-          load: ${{ github.event_name == 'pull_request' }}
           set: |
             *.platform=linux/${{ matrix.architecture }}
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
-            *.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}
-            *.cache-from=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}
-            *.cache-to=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache,mode=max
-            *.cache-to=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache,mode=max
-        env:
-          BUILDX_BAKE_VAR_OWNER: ${{ env.OWNER_LC }}
-          BUILDX_BAKE_VAR_ARCHITECTURE: ${{ matrix.architecture }}
-          BUILDX_BAKE_VAR_VERSION: ${{ steps.meta.outputs.version }}
-          BUILDX_BAKE_VAR_MAJOR: ${{ steps.meta.outputs.major }}
-          BUILDX_BAKE_VAR_MINOR: ${{ steps.meta.outputs.minor }}
-          BUILDX_BAKE_VAR_GITHUB_SHA: ${{ github.sha }}
-          BUILDX_BAKE_VAR_IS_OFFICIAL: true
-          BUILDX_BAKE_VAR_IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
-        
+            
+            # Isolated Cache Targets (Prevents base and microros from colliding)
+            base.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}
+            base.cache-to=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache,mode=max
+            
+            microros.cache-from=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}
+            microros.cache-to=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache,mode=max
+
 
       - name: Pull Base Image for local build
         if: github.event_name != 'pull_request'
