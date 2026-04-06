@@ -2,6 +2,14 @@
 set -e
 # 0. Headless configuration
 export DEBIAN_FRONTEND=noninteractive
+export TZ=Etc/UTC
+# Pre-seed tzdata answers for debconf to ensure no interactive prompts
+echo "tzdata tzdata/Areas select Etc" | sudo debconf-set-selections 2>/dev/null || true
+echo "tzdata tzdata/Zones/Etc select UTC" | sudo debconf-set-selections 2>/dev/null || true
+# Provide /etc/timezone file which is often checked by tzdata scripts
+echo "Etc/UTC" | sudo tee /etc/timezone > /dev/null
+# Manual link as a secondary safety measure
+sudo ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime
 
 
 # 1. Detect architecture
