@@ -189,7 +189,8 @@ jobs:
               # Maintainer scripts
               cp .github/deb/postinst "${PKG_DIR}/DEBIAN/postinst"
               cp .github/deb/prerm    "${PKG_DIR}/DEBIAN/prerm"
-              chmod 0755 "${PKG_DIR}/DEBIAN/postinst" "${PKG_DIR}/DEBIAN/prerm"
+              cp .github/deb/postrm   "${PKG_DIR}/DEBIAN/postrm"
+              chmod 0755 "${PKG_DIR}/DEBIAN/postinst" "${PKG_DIR}/DEBIAN/prerm" "${PKG_DIR}/DEBIAN/postrm"
 
               dpkg-deb --build "${PKG_DIR}" "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
 
