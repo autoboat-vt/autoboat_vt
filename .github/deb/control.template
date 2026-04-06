@@ -19,9 +19,5 @@ Depends: ros-humble-ros-base,
          pkg-config,
          git,
          python3
-Description: Prebuilt ROS2 packages for the VT AutoBoat system
- Includes autopilot_cpp, sensors_cpp, and autoboat_msgs.
- Built for ROS2 Humble on Ubuntu 22.04.
- .
+Description: Prebuilt ROS2 packages for the VT AutoBoat system built for ROS2 Humble on Ubuntu 22.04.
  After installation, open a new terminal (or run: source /etc/profile.d/autoboat-vt.sh)
- then use: ros2 run autopilot_cpp motorboat_autopilot
