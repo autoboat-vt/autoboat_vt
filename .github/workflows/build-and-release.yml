@@ -201,7 +201,7 @@ jobs:
               # The microros image has these in /tmp/src/microros/dependencies
               # We install them to /opt/autoboat/microros/dependencies
               mkdir -p "${PKG_DIR}/opt/autoboat/microros"
-              cp -r /tmp/src/microros/dependencies "${PKG_DIR}/opt/autoboat/microros/"
+              mv /tmp/src/microros/dependencies/** "${PKG_DIR}/opt/autoboat/microros/dependencies/"
 
               # TODO MAKE THIS USE PROPER UDEV RULES FOR ALL DEVICES
               # # Copy udev rules for picotool
