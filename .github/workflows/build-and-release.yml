@@ -187,42 +187,53 @@ jobs:
 
 
 
-              # ── 3. Debian package (install/ only) ───────────────────────────
-              echo "==> Building .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
-              PKG_DIR=/home/ws/deb_pkg
-              mkdir -p "${PKG_DIR}/DEBIAN"
-              mkdir -p "${PKG_DIR}/opt/autoboat"
+              # ── 3. Standard Debian package (Runtime) ────────────────────────
+              echo "==> Building standard .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
+              PKG_DIR_STD=/home/ws/deb_pkg_std
+              mkdir -p "${PKG_DIR_STD}/DEBIAN"
+              mkdir -p "${PKG_DIR_STD}/opt/autoboat/microros/dependencies/micro_ros_agent"
 
-              # Copy install overlay into package tree
-              cp -r /opt/autoboat/install "${PKG_DIR}/opt/autoboat/"
+              # Copy built ROS2 nodes
+              cp -r /opt/autoboat/install "${PKG_DIR_STD}/opt/autoboat/"
 
-              # ── 4. Micro-ROS dependencies ──────────────────────────────────
-              echo "==> Packaging Micro-ROS dependencies..."
-              # The microros image has these in /tmp/src/microros/dependencies
-              # We install them to /opt/autoboat/microros/dependencies
-              mkdir -p "${PKG_DIR}/opt/autoboat/microros/dependencies"
-              mv /tmp/src/microros/dependencies/** "${PKG_DIR}/opt/autoboat/microros/dependencies/"
+              # Copy ONLY the micro_ros_agent runtime (install folder)
+              cp -r /tmp/src/microros/dependencies/micro_ros_agent/install "${PKG_DIR_STD}/opt/autoboat/microros/dependencies/micro_ros_agent/"
 
-              # TODO MAKE THIS USE PROPER UDEV RULES FOR ALL DEVICES
-              # # Copy udev rules for picotool
-              # mkdir -p "${PKG_DIR}/etc/udev/rules.d"
-              # cp /home/ws/src/microros/dependencies/picotool/udev/60-picotool.rules "${PKG_DIR}/etc/udev/rules.d/60-picotool.rules"
-
-              # Fill in version + arch placeholders in the control file template
+              # Control file + Maintainer scripts
               sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
-                .github/deb/control.template > "${PKG_DIR}/DEBIAN/control"
+                .github/deb/control.template > "${PKG_DIR_STD}/DEBIAN/control"
+              
+              cp .github/deb/postinst "${PKG_DIR_STD}/DEBIAN/postinst"
+              cp .github/deb/prerm    "${PKG_DIR_STD}/DEBIAN/prerm"
+              cp .github/deb/postrm   "${PKG_DIR_STD}/DEBIAN/postrm"
+              chmod 0755 "${PKG_DIR_STD}/DEBIAN/postinst" "${PKG_DIR_STD}/DEBIAN/prerm" "${PKG_DIR_STD}/DEBIAN/postrm"
 
-              # Maintainer scripts
-              cp .github/deb/postinst "${PKG_DIR}/DEBIAN/postinst"
-              cp .github/deb/prerm    "${PKG_DIR}/DEBIAN/prerm"
-              cp .github/deb/postrm   "${PKG_DIR}/DEBIAN/postrm"
-              chmod 0755 "${PKG_DIR}/DEBIAN/postinst" "${PKG_DIR}/DEBIAN/prerm" "${PKG_DIR}/DEBIAN/postrm"
+              dpkg-deb --build "${PKG_DIR_STD}" "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
 
-              dpkg-deb --build "${PKG_DIR}" "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
 
-              # ── 4. Fix permissions for host runner upload ───────────────────
+              # ── 4. Micro-ROS SDK Debian package (Development) ───────────────
+              echo "==> Building microros-sdk .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
+              PKG_DIR_UC=/home/ws/deb_pkg_uc
+              mkdir -p "${PKG_DIR_UC}/DEBIAN"
+              mkdir -p "${PKG_DIR_UC}/opt/autoboat/microros/dependencies"
+
+              # Copy everything ELSE from dependencies (Pico SDK, Agent Source, etc.)
+              mv /tmp/src/microros/dependencies/* "${PKG_DIR_UC}/opt/autoboat/microros/dependencies/"
+
+              # Control file (Depends on standard package)
+              sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
+                .github/deb/control-microros.template > "${PKG_DIR_UC}/DEBIAN/control"
+              
+              # Use the same post-install scripts (they are idempotent)
+              cp .github/deb/postinst "${PKG_DIR_UC}/DEBIAN/postinst"
+              cp .github/deb/prerm    "${PKG_DIR_UC}/DEBIAN/prerm"
+              cp .github/deb/postrm   "${PKG_DIR_UC}/DEBIAN/postrm"
+              chmod 0755 "${PKG_DIR_UC}/DEBIAN/postinst" "${PKG_DIR_UC}/DEBIAN/prerm" "${PKG_DIR_UC}/DEBIAN/postrm"
+
+              dpkg-deb --build "${PKG_DIR_UC}" "output_artifacts/autoboat-vt-microros-${DEB_ARCH}.deb"
+
+              # ── 5. Fix permissions for host runner upload ───────────────────
               echo "==> Fixing permissions for host runner..."
-              # Ensure the host runner can read everything in output_artifacts
               chmod -R a+rX output_artifacts/
               
               echo "==> Output artifacts:"
