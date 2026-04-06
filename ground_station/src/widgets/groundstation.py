@@ -897,7 +897,7 @@ class GroundStationWidget(QWidget):
                 f"Connection Status: {connection_status.name}\n"
                 f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
                 f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
-                f"Velocity Vector: [{self.boat_data.get('velocity_x', -69.420):.5f}, {self.boat_data.get('velocity_y', -69.420):.5f}]\n"  # noqa: E501
+                f"Velocity Vector: [{fix_formatting(self.boat_data.get('velocity_x', -69.420))}, {fix_formatting(self.boat_data.get('velocity_y', -69.420))}]\n"  # noqa: E501
                 f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
                 f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
                 f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
@@ -926,7 +926,7 @@ class GroundStationWidget(QWidget):
                 f"Connection Status: {connection_status.name}\n"
                 f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
                 f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
-                f"Velocity Vector: [{self.boat_data.get('velocity_x', -69.420):.5f}, {self.boat_data.get('velocity_y', -69.420):.5f}]\n"  # noqa: E501
+                f"Velocity Vector: [{fix_formatting(self.boat_data.get('velocity_x', -69.420))}, {fix_formatting(self.boat_data.get('velocity_y', -69.420))}]\n"  # noqa: E501
                 f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
                 f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
                 f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
