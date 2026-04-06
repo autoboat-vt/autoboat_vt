@@ -114,6 +114,7 @@ jobs:
           load: ${{ github.event_name == 'pull_request' }}
           set: |
             *.platform=linux/${{ matrix.architecture }}
+            ARCHITECTURE=${{ matrix.architecture }}
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
             *.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}
