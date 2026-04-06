@@ -35,11 +35,11 @@ jobs:
           - architecture: amd64
             runner: ubuntu-22.04
             platform: linux/amd64
-            ignore_packages: ${{ env.COLCON_IGNORE_AMD }}
+            ignore_packages: ${{ env.COLCON_IGNORE_PACKAGES_AMD }}
           - architecture: arm64
             runner: ubuntu-22.04-arm
             platform: linux/arm64
-            ignore_packages: ${{ env.COLCON_IGNORE_ARM }}
+            ignore_packages: ${{ env.COLCON_IGNORE_PACKAGE_ARM }}
 
     steps:
       - name: Checkout repository
