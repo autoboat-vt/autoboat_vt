@@ -169,6 +169,7 @@ jobs:
               source /opt/ros/humble/setup.bash
               echo "==> colcon build ignore: ${{ env.COLCON_IGNORE_PACKAGES }}"
               colcon build --packages-ignore ${{ env.COLCON_IGNORE_PACKAGES }} --cmake-args -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=mold" --install-base /opt/autoboat/install
+              mkdir -p output_artifacts
 
 
 
