@@ -36,11 +36,9 @@ jobs:
           - architecture: amd64
             runner: ubuntu-22.04
             platform: linux/amd64
-            ignore_packages: ${{ env.COLCON_IGNORE_PACKAGES_AMD }}
           - architecture: arm64
             runner: ubuntu-22.04-arm
             platform: linux/arm64
-            ignore_packages: ${{ env.COLCON_IGNORE_PACKAGES_ARM }}
 
     steps:
       - name: Checkout repository
@@ -162,6 +160,13 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Build ROS2 Packages, Tarball, and Debian Package
         run: |
+          # Determine the architecture-specific ignore list from top-level env
+          if [ "${{ matrix.architecture }}" == "amd64" ]; then
+            IGNORE_PACKAGES="${{ env.COLCON_IGNORE_PACKAGES_AMD }}"
+          else
+            IGNORE_PACKAGES="${{ env.COLCON_IGNORE_PACKAGES_ARM }}"
+          fi
+
           docker run --rm \
             --user root \
             -v ${{ github.workspace }}:/home/ws \
@@ -169,14 +174,15 @@ jobs:
             -w /home/ws \
             -e DEB_VERSION="${{ steps.meta.outputs.version }}" \
             -e DEB_ARCH="${{ matrix.architecture }}" \
+            -e IGNORE_PACKAGES="${IGNORE_PACKAGES}" \
             -e CCACHE_DIR=/home/ws/.ccache \
             -e CMAKE_CXX_COMPILER_LAUNCHER=ccache \
             vtautoboat/development_image_microros:${{ matrix.architecture }} \
             bash -c '
               set -e
               source /opt/ros/humble/setup.bash
-              echo "==> colcon build ignore: ${{ matrix.ignore_packages }}"
-              colcon build --packages-ignore ${{ matrix.ignore_packages }} --cmake-args -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=mold" --install-base /opt/autoboat/install
+              echo "==> colcon build ignore: ${IGNORE_PACKAGES}"
+              colcon build --packages-ignore ${IGNORE_PACKAGES} --cmake-args -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=mold" --install-base /opt/autoboat/install
               mkdir -p output_artifacts
 
 
