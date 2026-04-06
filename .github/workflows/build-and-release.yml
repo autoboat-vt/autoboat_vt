@@ -203,9 +203,10 @@ jobs:
               mkdir -p "${PKG_DIR}/opt/autoboat/microros"
               cp -r /tmp/src/microros/dependencies "${PKG_DIR}/opt/autoboat/microros/"
 
-              # Copy udev rules for picotool
-              mkdir -p "${PKG_DIR}/etc/udev/rules.d"
-              cp /home/ws/src/microros/dependencies/picotool/udev/60-picotool.rules "${PKG_DIR}/etc/udev/rules.d/"
+              # TODO MAKE THIS USE PROPER UDEV RULES FOR ALL DEVICES
+              # # Copy udev rules for picotool
+              # mkdir -p "${PKG_DIR}/etc/udev/rules.d"
+              # cp /home/ws/src/microros/dependencies/picotool/udev/60-picotool.rules "${PKG_DIR}/etc/udev/rules.d/60-picotool.rules"
 
               # Fill in version + arch placeholders in the control file template
               sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
