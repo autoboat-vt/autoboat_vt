@@ -109,8 +109,6 @@ jobs:
       - name: Build and Push Docker Images (Bake)
         uses: docker/bake-action@v6
         env:
-          # Docker Bake natively reads these environment variables 
-          # to override the 'variable "NAME"' blocks in your HCL
           ARCHITECTURE: ${{ matrix.architecture }}
           OWNER: ${{ env.OWNER_LC }}
           IS_OFFICIAL: ${{ github.event_name != 'pull_request' }}
@@ -126,13 +124,12 @@ jobs:
             *.platform=linux/${{ matrix.architecture }}
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
-            
-            # Isolated Cache Targets (Prevents base and microros from colliding)
             base.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}
             base.cache-to=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache,mode=max
-            
             microros.cache-from=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}
             microros.cache-to=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache,mode=max
+
+
 
 
       - name: Pull Base Image for local build
