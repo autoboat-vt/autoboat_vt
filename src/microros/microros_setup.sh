@@ -79,14 +79,16 @@ ros2 run micro_ros_setup build_agent.sh
 source install/local_setup.sh
 
 
+# Move this to the opt folder since that is where the microros dependencies should be
+sudo mv $REPOSITORY_ROOT/src/microros/dependencies /opt/autoboat/microros_dependencies
 
 # Write sources and aliases to bashrc file
 {
     echo "unset ROS_DOMAIN_ID"
-    echo "export PICO_SDK_PATH=$REPOSITORY_ROOT/src/microros/dependencies/pico-sdk"
-    echo "export PICO_MICROROS_SDK_PATH=$REPOSITORY_ROOT/src/microros/dependencies/micro_ros_raspberrypi_pico_sdk"
-    echo "export PICOTOOL_PATH=$REPOSITORY_ROOT/src/microros/dependencies/picotool"
-    echo "source $REPOSITORY_ROOT/src/microros/dependencies/micro_ros_agent/install/local_setup.bash"
+    echo "export PICO_SDK_PATH=/opt/autoboat/microros_dependencies/pico-sdk"
+    echo "export PICO_MICROROS_SDK_PATH=/opt/autoboat/microros_dependencies/micro_ros_raspberrypi_pico_sdk"
+    echo "export PICOTOOL_PATH=/opt/autoboat/microros_dependencies/picotool"
+    echo "source /opt/autoboat/microros_dependencies/micro_ros_agent/install/local_setup.bash"
     echo "alias picotool='$PICOTOOL_PATH/build/picotool'"
     echo "alias picotool_load='sudo $PICOTOOL_PATH/build/picotool load'"
     echo "alias picotool_reboot='sudo $PICOTOOL_PATH/build/picotool reboot'"

@@ -48,24 +48,13 @@ echo "source /home/ws/install/setup.bash" >> $AUTOBOAT_USER_HOME/.bashrc
 # In some cases, we can store the entire built dependencies in /tmp like for microros where we can store a package
 # of all of the dependencies that we need to work with microros
 
-# if [[ "$DEVCONTAINER_VARIANT" == "yolo" || "$DEVCONTAINER_VARIANT" == "deepstream_and_yolo" ]]; then
 
-#     # These devcontainers put the following data in the /tmp folder so all we need to do is move them so the user can see it 
-#     mv /tmp/autoboat_weights src/object_detection/object_detection/weights
-#     mv /tmp/autoboat_dataset src/object_detection/object_detection/dataset
-#     mv /tmp/autoboat_hard_images src/object_detection/object_detection/hard_images
+# if [[ "$DEVCONTAINER_VARIANT" == "microros" ]]; then
+#     rm -rf src/microros/dependencies
+#     mv /opt/autoboat/microros_dependencies src/microros
 
-#     sudo chmod -R 777 src/object_detection/object_detection 
+#     sudo chmod -R 777 src/microros
 # fi
-
-
-
-if [[ "$DEVCONTAINER_VARIANT" == "microros" ]]; then
-    rm -rf src/microros/dependencies
-    mv /tmp/src/microros/dependencies src/microros
-
-    sudo chmod -R 777 src/microros
-fi
 
 
 if [[ "$DEVCONTAINER_VARIANT" == "deepstream" || "$DEVCONTAINER_VARIANT" == "deepstream_and_yolo" ]]; then
