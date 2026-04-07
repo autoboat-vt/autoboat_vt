@@ -38,7 +38,8 @@
                 "tamasfe.even-better-toml",
                 "redhat.vscode-xml",
                 "redhat.vscode-yaml",
-                "mkxml.vscode-filesize"
+                "mkxml.vscode-filesize",
+                "github.vscode-github-actions"
             ]
         }
     },
