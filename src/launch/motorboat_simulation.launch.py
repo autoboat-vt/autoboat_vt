@@ -23,9 +23,9 @@ def generate_launch_description():
         ),
 
         Node(
-            package='autopilot_transform',
-            executable='autopilot_transform',
-            name='autopilot_transform',
+            package='simulation_transform',
+            executable='simulation_transform',
+            name='simulation_transform',
             respawn=True,
             respawn_delay=2.0,
         ),

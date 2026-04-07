@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'autopilot_transform'
+package_name = 'simulation_transform'
 
 setup(
     name=package_name,
@@ -24,7 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            "autopilot_transform = autopilot_transform.motorboat_autopilot_transform_node:main"
+            "simulation_transform = simulation_transform.motorboat_simulation_transform_node:main"
         ],
     },
 )

@@ -15,9 +15,9 @@ from .utils import cartesian_vector_to_polar, euler_from_quaternion
 class AutopilotTransformNode(Node):
 
     def __init__(self) -> None:
-        super().__init__("autopilot_transform_node")
+        super().__init__("simulation_transform_node")
 
-        self.autopilot_transform_refresh_timer = self.create_timer(0.1, self.update_ros_topics)
+        self.simulation_transform_refresh_timer = self.create_timer(0.1, self.update_ros_topics)
 
         self.velocity_publisher =  self.create_publisher(Twist, "/velocity", 10)
         self.heading_publisher = self.create_publisher(Float32, "/heading", 10)
@@ -101,7 +101,7 @@ class AutopilotTransformNode(Node):
 
 def main() -> None:
     rclpy.init()
-    autopilot_transform_node = AutopilotTransformNode()
-    rclpy.spin(autopilot_transform_node)
-    autopilot_transform_node.destroy_node()
+    simulation_transform_node = AutopilotTransformNode()
+    rclpy.spin(simulation_transform_node)
+    simulation_transform_node.destroy_node()
     rclpy.shutdown()
