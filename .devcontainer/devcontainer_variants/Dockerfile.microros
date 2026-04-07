@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libusb-1.0-0-dev \
     doxygen \
     && rm -rf /var/lib/apt/lists/*
+    # libstdc++-arm-none-eabi-newlib \
+    # libstdc++-arm-none-eabi-dev \
 
 RUN mkdir -p /tmp/autoboat_scripts
 COPY .devcontainer/devcontainer_variants/install_microros_helper_script.sh /tmp/autoboat_scripts/install_microros_helper_script.sh
