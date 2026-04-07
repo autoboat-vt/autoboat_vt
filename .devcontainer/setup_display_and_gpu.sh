@@ -31,6 +31,14 @@
 # The set -o pipefail option prevents errors in a pipeline from being masked.
 set -euo pipefail
 
+#Command line argument to assume the Jetson GPU for making custom OS
+ASSUME_GPU=false
+for arg in "$@"; do
+    case "$arg" in
+        --assume-gpu) ASSUME_GPU=true ;;
+    esac
+done
+
 
 # Make the script ask the user for their linux/ shell password
 sudo -v
@@ -185,7 +193,7 @@ setup_linux() {
 
 
 	# GPU detection
-	if command -v nvidia-smi &>/dev/null && command -v apt &> /dev/null; then
+	if [[ "$ASSUME_GPU" == true ]] || (command -v nvidia-smi &>/dev/null && command -v apt &> /dev/null); then
 		log_info "NVIDIA GPU detected."
 		setup ":0" 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"'
 

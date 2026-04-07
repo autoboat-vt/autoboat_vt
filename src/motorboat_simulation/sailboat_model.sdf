@@ -800,8 +800,8 @@ With ros2: TODO: UPDATE
         <topic>rudder</topic>
       </plugin>
 
-      <plugin filename="libRudderDynamics.so"
-      name="rudder_dynamics::RudderDynamics">
+      <plugin filename="libCustomLiftDrag.so"
+      name="custom_lift_drag::CustomLiftDrag">
         <link0>rudder_link</link0>
         <clmax>4.72</clmax>
         <cdmax>4.16</cdmax>
@@ -813,8 +813,8 @@ With ros2: TODO: UPDATE
 
       <!-- Drag on the hull parts -->
       <!-- TODO: get clmax, cdmax for hull -->
-      <plugin filename="libRudderDynamics.so"
-      name="rudder_dynamics::RudderDynamics">
+      <plugin filename="libCustomLiftDrag.so"
+      name="custom_lift_drag::CustomLiftDrag">
         <link0>left_front_link</link0>
         <link1>right_front_link</link1>
         <link2>left_back_link</link2>

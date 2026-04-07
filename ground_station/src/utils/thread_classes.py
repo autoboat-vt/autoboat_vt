@@ -144,7 +144,7 @@ class BoatStatusThreadRouter:
 
     Subclasses
     ----------
-    - ``BoatStatusFetcherThread`` -> Fetches boat status via WebSocket.
+    - ``BoatStatusFetcherThread`` -> Fetches boat status.
     """
 
     class BoatStatusFetcherThread(QThread):

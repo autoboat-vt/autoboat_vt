@@ -1,5 +1,5 @@
-#ifndef RUDDER_DYNAMICS_HH
-#define RUDDER_DYNAMICS_HH
+#ifndef CUSTOM_LIFT_DRAG_HH
+#define CUSTOM_LIFT_DRAG_HH
 
 #include <gz/sim/System.hh>
 #include <gz/sim/Model.hh>
@@ -18,16 +18,16 @@
 #include <rclcpp/rclcpp.hpp>
 #include <string>
 
-namespace rudder_dynamics
+namespace custom_lift_drag
 {
-  class RudderDynamics
+  class CustomLiftDrag
       : public gz::sim::System,
         public gz::sim::ISystemConfigure,
         public gz::sim::ISystemPreUpdate
   {
   public:
-    RudderDynamics();
-    ~RudderDynamics() override;
+    CustomLiftDrag();
+    ~CustomLiftDrag() override;
 
     // Called once when the plugin is loaded
     void Configure(const gz::sim::Entity &_entity,
