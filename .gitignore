@@ -10,6 +10,7 @@ output
 **.pt
 src/microros/dependencies/**
 .devcontainer/devcontainer_environment_variables
+.devcontainer/host_environment_variables.sh
 **.engine
 **.onnx
 **.o

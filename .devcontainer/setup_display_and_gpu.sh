@@ -31,6 +31,7 @@
 # The set -o pipefail option prevents errors in a pipeline from being masked.
 set -euo pipefail
 
+
 #Command line argument to assume the Jetson GPU for making custom OS
 ASSUME_GPU=false
 for arg in "$@"; do
@@ -48,6 +49,7 @@ sudo -v
 # -----------------------------------------------------------------------------
 OS="$(uname -s)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HOST_ENV_FILE="$SCRIPT_DIR/host_environment_variables.sh"
 ENV_FILE="$SCRIPT_DIR/devcontainer_environment_variables"
 
 
@@ -98,59 +100,68 @@ install_x11_linux() {
 
 
 
-setup() {
+write_host_environment_variables.sh() {
 	local display_value="$1"
 	shift
-	local lines=("$@")
+	local extra_lines=("$@")
 
-	if [[ -f "$ENV_FILE" ]]; then
-		log_info "Environment file $ENV_FILE already exists. Skipping."
-	else
-		log_info "Writing environment variables to $ENV_FILE"
-		{
-			echo "devcontainer_environment_variables"
-			echo
-			echo "DISPLAY=$display_value"
-			echo "USER=${USER:-unknown}"
-		} >"$ENV_FILE"
-	fi
+	log_info "Updating $HOST_ENV_FILE"
+	{
+		echo "# Host environment variables for autoboat-vt"
+		echo "export DEVCONTAINER_VARIANT=vtautoboat/development_image"
+		for line in "${extra_lines[@]}"; do
+			# Ensure it starts with export
+			if [[ "$line" =~ ^export ]]; then
+				echo "$line"
+			else
+				echo "export $line"
+			fi
+		done
+	} >"$HOST_ENV_FILE"
 
-	local shell_name
-	shell_name=$(basename "$SHELL" 2>/dev/null || echo "bash")
-	log_info "Detected shell: $shell_name"
+}
 
-	local profile_file;
-	local rc_file;
-	case "$shell_name" in
-	zsh) profile_file="$HOME/.zprofile"; rc_file="$HOME/.zshrc" ;;
-	bash) profile_file="$HOME/.bash_profile"; rc_file="$HOME/.bashrc"  ;;
-	*) log_error "Unrecognized shell environment: ${shell_name}."; exit 1;;
-	esac
+write_devcontainer_environment_variables() {
+	local display_value="$1"
 
-	log_info "Using $profile_file"
-	touch "$profile_file"
+	log_info "Updating $ENV_FILE"
+	{
+		echo "devcontainer_environment_variables"
+		echo
+		echo "DISPLAY=$display_value"
+		echo "USER=${USER:-unknown}"
+	} >"$ENV_FILE"
+}
 
-	for line in "${lines[@]}"; do
-		if ! grep -qxF "$line" "$profile_file"; then
-			echo "$line" >>"$profile_file"
-			log_info "Added '$line' to $profile_file"
+ensure_host_environment_variables.sh_are_sourced() {
+	local shell_files=(
+		"$HOME/.bashrc"
+		"$HOME/.zshrc"
+		"$HOME/.bash_profile"
+		"$HOME/.zprofile"
+		"$HOME/.profile"
+	)
+
+	local source_line="[ -f \"$HOST_ENV_FILE\" ] && . \"$HOST_ENV_FILE\""
+
+	for file in "${shell_files[@]}"; do
+		if [[ -f "$file" ]]; then
+			if ! grep -qF "$HOST_ENV_FILE" "$file"; then
+				echo -e "\n# Added by autoboat-vt setup\n$source_line" >>"$file"
+				log_info "Added sourcing to $file"
+			else
+				log_info "Sourcing already exists in $file"
+			fi
 		else
-			log_info "'$line' already exists in $profile_file"
+			# Create if it's a profile/rc we might want
+			if [[ "$file" == *".profile" || "$file" == *".bash_profile" ]]; then
+				echo -e "# Added by autoboat-vt setup\n$source_line" > "$file"
+				log_info "Created and added sourcing to $file"
+			fi
 		fi
 	done
 
-
-	log_info "Using $rc_file"
-	touch "$rc_file"
-
-	for line in "${lines[@]}"; do
-		if ! grep -qxF "$line" "$rc_file"; then
-			echo "$line" >>"$rc_file"
-			log_info "Added '$line' to $rc_file"
-		else
-			log_info "'$line' already exists in $rc_file"
-		fi
-	done
+	source $HOST_ENV_FILE
 }
 
 
@@ -195,7 +206,9 @@ setup_linux() {
 	# GPU detection
 	if [[ "$ASSUME_GPU" == true ]] || (command -v nvidia-smi &>/dev/null && command -v apt &> /dev/null); then
 		log_info "NVIDIA GPU detected."
-		setup ":0" 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"'
+		write_host_environment_variables.sh ":0" 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"'
+		write_devcontainer_environment_variables ":0"
+		ensure_host_environment_variables.sh_are_sourced
 
 		if ! command -v nvidia-ctk &>/dev/null; then
 			log_info "Installing NVIDIA Container Toolkit..."
@@ -249,9 +262,6 @@ setup_linux() {
 			fi
 			rm -f "$repo_tmp"
 
-			export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"
-			export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"
-
 			sudo apt update -qq || true
 			sudo apt install -y nvidia-container-toolkit
 			log_info "Configuring Docker runtime for NVIDIA..."
@@ -268,7 +278,9 @@ setup_linux() {
 
 	else
 		log_info "No NVIDIA GPU found. Running CPU-only mode."
-		setup ":0"
+		write_host_environment_variables.sh ":0"
+		write_devcontainer_environment_variables ":0"
+		ensure_host_environment_variables.sh_are_sourced
 	fi
 }
 
@@ -293,7 +305,9 @@ setup_macos() {
 		fi
 	fi
 
-	setup "docker.for.mac.host.internal:0"
+	write_host_environment_variables.sh "docker.for.mac.host.internal:0"
+	write_devcontainer_environment_variables "docker.for.mac.host.internal:0"
+	ensure_host_environment_variables.sh_are_sourced
 	log_warn "GPU passthrough not supported on Docker Desktop for macOS."
 }
 
@@ -302,7 +316,9 @@ setup_macos() {
 # -----------------------------------------------------------------------------
 setup_unknown() {
 	log_warn "Unsupported OS detected: $OS"
-	setup ":0"
+	write_host_environment_variables.sh ":0"
+	write_devcontainer_environment_variables ":0"
+	ensure_host_environment_variables.sh_are_sourced
 	log_warn "Running CPU-only. Display may not work properly."
 }
 
