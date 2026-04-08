@@ -95,8 +95,8 @@ install_deb() {
     local PKG_NAME=$1
     local DEB_NAME=$2
     
-    # Check if already installed
-    if dpkg -s "$PKG_NAME" >/dev/null 2>&1; then
+    # Check if actually installed (avoiding false positives from 'rc' state)
+    if dpkg-query -W -f='${Status}' "$PKG_NAME" 2>/dev/null | grep -q "ok installed"; then
         echo "==> Package '$PKG_NAME' is already installed. Skipping..."
         return 0
     fi
