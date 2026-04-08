@@ -279,7 +279,7 @@ class MotorboatAutopilotNode(Node):
         self.last_heading_received_time = time.time()
 
 
-
+    # TODO MAKE RC CONTROL THE RPM DIRECTLY
     def run_rc_control(self, joystick_right_x: float) -> float:
         """
         Formulas used: https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio.
@@ -299,6 +299,7 @@ class MotorboatAutopilotNode(Node):
 
         min_rudder_angle: float = self.autopilot_parameters["min_rudder_angle"]
         max_rudder_angle: float = self.autopilot_parameters["max_rudder_angle"]
+        
         return (((joystick_right_x - -100) * (max_rudder_angle - min_rudder_angle)) / (100 - -100)) + min_rudder_angle
 
 
@@ -316,7 +317,7 @@ class MotorboatAutopilotNode(Node):
             rudder_angle = self.motorboat_autopilot.get_optimal_rudder_angle(self.heading, self.heading_to_hold)
         
         elif self.autopilot_mode == MotorboatAutopilotMode.FULL_RC:
-            rudder_angle = self.run_rc_control(self.joystick_left_y, self.joystick_right_x)
+            rudder_angle = self.run_rc_control(self.joystick_right_x)
 
 
         return rudder_angle, rpm
