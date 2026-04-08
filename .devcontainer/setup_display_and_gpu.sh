@@ -141,26 +141,26 @@ setup_linux() {
 	log_info "Installing X11 utilities..."
 	# Installs all relevant x11 packages depending on the installed package manager and updates package cache
     if command -v apt &> /dev/null; then
-        echo "Detected Debian/Ubuntu (apt). Installing packages: x11-utils, x11-xserver-utils"
+        log_info "Detected Debian/Ubuntu (apt). Installing packages: x11-utils, x11-xserver-utils"
         sudo apt-get update -qq || true 
         sudo apt-get install -y -qq x11-utils x11-xserver-utils
         
     elif command -v dnf &> /dev/null; then
-        echo "Detected Fedora/RHEL 8+ (dnf). Installing packages: xorg-x11-utils, xorg-x11-server-utils"
+        log_info "Detected Fedora/RHEL 8+ (dnf). Installing packages: xorg-x11-utils, xorg-x11-server-utils"
         sudo dnf makecache -q
         sudo dnf install -y xorg-x11-utils xorg-x11-server-utils
         
     elif command -v yum &> /dev/null; then
-        echo "Detected RHEL/CentOS (yum). Installing packages: xorg-x11-utils, xorg-x11-server-utils"
+        log_info "Detected RHEL/CentOS (yum). Installing packages: xorg-x11-utils, xorg-x11-server-utils"
         sudo yum makecache -q
         sudo yum install -y xorg-x11-utils xorg-x11-server-utils
         
     elif command -v pacman &> /dev/null; then
-        echo "Detected Arch Linux (pacman). Installing xorg-apps group."
+        log_info "Detected Arch Linux (pacman). Installing xorg-apps group."
         sudo pacman -Syu --noconfirm xorg-apps
         
     elif command -v apk &> /dev/null; then
-        echo "Detected Alpine Linux (apk). Installing individual X11 utilities."
+        log_info "Detected Alpine Linux (apk). Installing individual X11 utilities."
         # Alpine requires specifying the exact tools normally found in the Ubuntu metapackages
         sudo apk add --update \
             xdpyinfo xev xfontsel xkill xlsatoms xlsclients xlsfonts xmessage \
@@ -168,7 +168,7 @@ setup_linux() {
 			xhost xmodmap xrandr xrdb xrefresh xset xsetroot xvidtune
         
     else
-        echo "Error: No supported package manager found. Cannot install packages automatically."
+        log_info "Error: No supported package manager found. Cannot install packages automatically."
         exit 1
     fi
 
