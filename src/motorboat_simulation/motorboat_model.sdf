@@ -627,8 +627,8 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
       </plugin>
 
       <!-- Drag on the rudder to make it function + drag on the hull parts below -->
-      <plugin filename="libRudderDynamics.so"
-      name="rudder_dynamics::RudderDynamics">
+      <plugin filename="libCustomLiftDrag.so"
+      name="custom_lift_drag::CustomLiftDrag">
         <link0>rudder_link</link0>
         <clmax>6</clmax>
         <cdmax>6</cdmax>
@@ -638,8 +638,8 @@ ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'
         <upward>0 1 0</upward>
       </plugin>
 
-       <plugin filename="libRudderDynamics.so"
-        name="rudder_dynamics::RudderDynamics">
+       <plugin filename="libCustomLiftDrag.so"
+        name="custom_lift_drag::CustomLiftDrag">
         <link0>left_front_link</link0>
         <link1>right_front_link</link1>
         <link2>left_back_link</link2>
