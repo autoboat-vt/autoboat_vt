@@ -63,46 +63,8 @@ print_separator() { echo "------------------------------------------------------
 
 
 
-install_x11_linux() {
-    # Installs all relevant x11 packages depending on the installed package manager and updates package cache
-    if command -v apt &> /dev/null; then
-        echo "Detected Debian/Ubuntu (apt). Installing packages: x11-utils, x11-xserver-utils"
-        sudo apt-get update -qq || true 
-        sudo apt-get install -y -qq x11-utils x11-xserver-utils
-        
-    elif command -v dnf &> /dev/null; then
-        echo "Detected Fedora/RHEL 8+ (dnf). Installing packages: xorg-x11-utils, xorg-x11-server-utils"
-        sudo dnf makecache -q
-        sudo dnf install -y xorg-x11-utils xorg-x11-server-utils
-        
-    elif command -v yum &> /dev/null; then
-        echo "Detected RHEL/CentOS (yum). Installing packages: xorg-x11-utils, xorg-x11-server-utils"
-        sudo yum makecache -q
-        sudo yum install -y xorg-x11-utils xorg-x11-server-utils
-        
-    elif command -v pacman &> /dev/null; then
-        echo "Detected Arch Linux (pacman). Installing xorg-apps group."
-        sudo pacman -Syu --noconfirm xorg-apps
-        
-    elif command -v apk &> /dev/null; then
-        echo "Detected Alpine Linux (apk). Installing individual X11 utilities."
-        # Alpine requires specifying the exact tools normally found in the Ubuntu metapackages
-        sudo apk add --update \
-            xdpyinfo xev xfontsel xkill xlsatoms xlsclients xlsfonts xmessage \
-			xprop xvinfo xwininfo appres editres viewres iceauth rgb sessreg xgamma \
-			xhost xmodmap xrandr xrdb xrefresh xset xsetroot xvidtune
-        
-    else
-        echo "Error: No supported package manager found. Cannot install packages automatically."
-        exit 1
-    fi
-}
-
-
 
 write_host_environment_variables.sh() {
-	local display_value="$1"
-	shift
 	local extra_lines=("$@")
 
 	log_info "Updating $HOST_ENV_FILE"
@@ -177,7 +139,38 @@ setup_linux() {
 
 	# install X11 tools
 	log_info "Installing X11 utilities..."
-	install_x11_linux
+	# Installs all relevant x11 packages depending on the installed package manager and updates package cache
+    if command -v apt &> /dev/null; then
+        echo "Detected Debian/Ubuntu (apt). Installing packages: x11-utils, x11-xserver-utils"
+        sudo apt-get update -qq || true 
+        sudo apt-get install -y -qq x11-utils x11-xserver-utils
+        
+    elif command -v dnf &> /dev/null; then
+        echo "Detected Fedora/RHEL 8+ (dnf). Installing packages: xorg-x11-utils, xorg-x11-server-utils"
+        sudo dnf makecache -q
+        sudo dnf install -y xorg-x11-utils xorg-x11-server-utils
+        
+    elif command -v yum &> /dev/null; then
+        echo "Detected RHEL/CentOS (yum). Installing packages: xorg-x11-utils, xorg-x11-server-utils"
+        sudo yum makecache -q
+        sudo yum install -y xorg-x11-utils xorg-x11-server-utils
+        
+    elif command -v pacman &> /dev/null; then
+        echo "Detected Arch Linux (pacman). Installing xorg-apps group."
+        sudo pacman -Syu --noconfirm xorg-apps
+        
+    elif command -v apk &> /dev/null; then
+        echo "Detected Alpine Linux (apk). Installing individual X11 utilities."
+        # Alpine requires specifying the exact tools normally found in the Ubuntu metapackages
+        sudo apk add --update \
+            xdpyinfo xev xfontsel xkill xlsatoms xlsclients xlsfonts xmessage \
+			xprop xvinfo xwininfo appres editres viewres iceauth rgb sessreg xgamma \
+			xhost xmodmap xrandr xrdb xrefresh xset xsetroot xvidtune
+        
+    else
+        echo "Error: No supported package manager found. Cannot install packages automatically."
+        exit 1
+    fi
 
 
 	# Load udev rules for each device and remove any autoboat udev rules that existed before
@@ -206,7 +199,7 @@ setup_linux() {
 	# GPU detection
 	if [[ "$ASSUME_GPU" == true ]] || (command -v nvidia-smi &>/dev/null && command -v apt &> /dev/null); then
 		log_info "NVIDIA GPU detected."
-		write_host_environment_variables.sh ":0" 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"'
+		write_host_environment_variables.sh 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"'
 		write_devcontainer_environment_variables ":0"
 		ensure_host_environment_variables.sh_are_sourced
 
@@ -278,7 +271,7 @@ setup_linux() {
 
 	else
 		log_info "No NVIDIA GPU found. Running CPU-only mode."
-		write_host_environment_variables.sh ":0"
+		write_host_environment_variables.sh
 		write_devcontainer_environment_variables ":0"
 		ensure_host_environment_variables.sh_are_sourced
 	fi
@@ -316,7 +309,7 @@ setup_macos() {
 # -----------------------------------------------------------------------------
 setup_unknown() {
 	log_warn "Unsupported OS detected: $OS"
-	write_host_environment_variables.sh ":0"
+	write_host_environment_variables.sh
 	write_devcontainer_environment_variables ":0"
 	ensure_host_environment_variables.sh_are_sourced
 	log_warn "Running CPU-only. Display may not work properly."
