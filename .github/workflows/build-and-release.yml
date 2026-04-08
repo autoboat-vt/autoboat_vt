@@ -332,7 +332,6 @@ jobs:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
           files: |
             output_artifacts/autoboat-vt-*.deb
-            output_artifacts/autoboat-vt-simulation-*.deb
           generate_release_notes: false
           draft: false
           
