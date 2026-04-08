@@ -59,10 +59,8 @@ rm "/tmp/${DEB_FILE}"
 
 
 echo "--------------------------------------------------------"
-echo "Installation complete!"
+echo "Autoboat Installation complete!"
 echo "--------------------------------------------------------"
 echo "Please open a NEW terminal or run:"
-echo "  source /etc/profile.d/autoboat-vt.sh"
-echo ""
-echo "Then use: ros2 run autopilot_cpp motorboat_autopilot"
+echo "  source ~/.bashrc"
 echo "--------------------------------------------------------"
