@@ -23,14 +23,51 @@ if [[ "$ARCH" != "amd64" && "$ARCH" != "arm64" ]]; then
     exit 1
 fi
 
+# 2. Argument Parsing
+INSTALL_BASE=false
+INSTALL_SIMULATION=false
+INSTALL_MICROROS=false
+SHOW_HELP=false
+
+if [[ $# -eq 0 ]]; then
+    # Default to base if no arguments provided
+    INSTALL_BASE=true
+else
+    for arg in "$@"; do
+        case $arg in
+            --base) INSTALL_BASE=true ;;
+            --simulation|--sim) INSTALL_SIMULATION=true ;;
+            --microros|--uC) INSTALL_MICROROS=true ;;
+            --all) INSTALL_BASE=true; INSTALL_SIMULATION=true; INSTALL_MICROROS=true ;;
+            --help|-h) SHOW_HELP=true ;;
+            *) echo "Unknown option: $arg"; SHOW_HELP=true ;;
+        esac
+    done
+fi
+
+if [ "$SHOW_HELP" = true ]; then
+    echo "Usage: $0 [options]"
+    echo "Options:"
+    echo "  --base         Install the base autoboat-vt package (default)"
+    echo "  --simulation   Install the simulation package (adds Gazebo repo)"
+    echo "  --microros     Install the Micro-ROS SDK package"
+    echo "  --all          Install all of the above"
+    echo "  --help, -h     Show this help message"
+    exit 0
+fi
+
 echo "--------------------------------------------------------"
 echo "Starting autoboat-vt installation for $ARCH..."
+echo "Requested packages:"
+[ "$INSTALL_BASE" = true ] && echo " - Base system (autoboatvt)"
+[ "$INSTALL_SIMULATION" = true ] && echo " - Simulation (autoboatvt-simulation)"
+[ "$INSTALL_MICROROS" = true ] && echo " - Micro-ROS SDK (autoboatvt-microros)"
 echo "--------------------------------------------------------"
 
-# 2. Add ROS 2 Repositories if missing
+# 3. Add ROS 2 Repositories if missing
 if [ ! -f /etc/apt/sources.list.d/ros2.list ]; then
     echo "==> Configuring ROS 2 repositories..."
-    sudo DEBIAN_FRONTEND=noninteractive apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl software-properties-common
+    sudo DEBIAN_FRONTEND=noninteractive apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl software-properties-common lsb-release
     sudo add-apt-repository -y universe
 
     sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
@@ -42,20 +79,60 @@ else
     echo "==> ROS 2 repositories already configured."
 fi
 
-# 3. Download the latest .deb from GitHub
-# Note: This uses the 'latest' tag we configured in the build-and-release workflow.
-DEB_FILE="autoboat-vt-${ARCH}.deb"
-DOWNLOAD_URL="https://github.com/autoboat-vt/autoboat_vt/releases/latest/download/${DEB_FILE}"
+# 4. Add OSRF Gazebo Repositories if missing (Required for simulation)
+if [ ! -f /etc/apt/sources.list.d/gazebo-stable.list ]; then
+    echo "==> Configuring OSRF Gazebo repositories..."
+    sudo curl -sSL https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
+    echo "deb [arch=$ARCH signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null
+    echo "==> Updating apt cache..."
+    sudo DEBIAN_FRONTEND=noninteractive apt-get update
+else
+    echo "==> OSRF Gazebo repositories already configured."
+fi
 
-echo "==> Downloading latest package from GitHub..."
-curl -fsSL -L -o "/tmp/${DEB_FILE}" "$DOWNLOAD_URL"
+# 5. Download and Install Packages
+install_deb() {
+    local PKG_NAME=$1
+    local DEB_NAME=$2
+    
+    # Check if already installed
+    if dpkg -s "$PKG_NAME" >/dev/null 2>&1; then
+        echo "==> Package '$PKG_NAME' is already installed. Skipping..."
+        return 0
+    fi
 
-# 4. Install the package and its dependencies
-echo "==> Installing package and resolving dependencies..."
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "/tmp/${DEB_FILE}"
+    echo "==> Installing $PKG_NAME ($DEB_NAME)..."
+    DOWNLOAD_URL="https://github.com/autoboat-vt/autoboat_vt/releases/latest/download/${DEB_NAME}"
+    
+    if ! curl -fsSL -L -o "/tmp/${DEB_NAME}" "$DOWNLOAD_URL"; then
+        echo "Error: Failed to download ${DEB_NAME} from ${DOWNLOAD_URL}"
+        return 1
+    fi
 
-# Cleanup
-rm "/tmp/${DEB_FILE}"
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "/tmp/${DEB_NAME}"
+    rm "/tmp/${DEB_NAME}"
+}
+
+# Base package is a dependency for others, but we check separately
+if [ "$INSTALL_BASE" = true ]; then
+    install_deb "autoboatvt" "autoboat-vt-${ARCH}.deb"
+fi
+
+if [ "$INSTALL_SIMULATION" = true ]; then
+    if [ "$ARCH" != "amd64" ]; then
+        echo "WARNING: Simulation package is only available for amd64. Skipping..."
+    else
+        # Ensure base is installed if requested simulation
+        install_deb "autoboatvt" "autoboat-vt-${ARCH}.deb"
+        install_deb "autoboatvt-simulation" "autoboat-vt-simulation-${ARCH}.deb"
+    fi
+fi
+
+if [ "$INSTALL_MICROROS" = true ]; then
+    # Ensure base is installed if requested microros
+    install_deb "autoboatvt" "autoboat-vt-${ARCH}.deb"
+    install_deb "autoboatvt-microros" "autoboat-vt-microros-full-${ARCH}.deb"
+fi
 
 
 echo "--------------------------------------------------------"
