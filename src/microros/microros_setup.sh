@@ -1,3 +1,8 @@
+# -----------------------
+# DEPRICATED FILE
+# -----------------------
+
+
 #!/bin/bash
 set -e
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
