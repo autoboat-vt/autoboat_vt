@@ -8,7 +8,7 @@ name: ROS2 Cross-Architecture Build & Release
 # ============================================================================
 env:
   COLCON_IGNORE_PACKAGES_AMD: "sailboat_simulation autopilot sensors vesc object_detection"
-  COLCON_IGNORE_PACKAGES_ARM: "foil_dynamics rudder_dynamics sail_limits sailboat_simulation simulation_transform wind_arrow autopilot sensors vesc object_detection"
+  COLCON_IGNORE_PACKAGES_ARM: "foil_dynamics custom_lift_drag sail_limits sailboat_simulation simulation_transform wind_arrow autopilot sensors vesc object_detection"
 
 
 
