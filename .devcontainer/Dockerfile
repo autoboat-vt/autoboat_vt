@@ -62,6 +62,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
     libxcb-xinerama0 \
     libxcb-randr0 \
     libxcb-glx0 \
+    libxtst6 \
     libxkbcommon-x11-0 \
     libxrender1 \
     libasound2 \
