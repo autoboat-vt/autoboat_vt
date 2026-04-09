@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
-# 0. Headless configuration
+
+
+
 export DEBIAN_FRONTEND=noninteractive
 export TZ=Etc/UTC
 
@@ -16,7 +18,7 @@ sudo ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime
 
 
 
-# 1. Detect architecture
+
 ARCH=$(dpkg --print-architecture)
 if [[ "$ARCH" != "amd64" && "$ARCH" != "arm64" ]]; then
     echo "Error: Unsupported architecture: $ARCH. This package only supports amd64 and arm64."
@@ -90,7 +92,10 @@ else
     echo "==> OSRF Gazebo repositories already configured."
 fi
 
-# 5. Download and Install Packages
+
+
+
+
 install_deb() {
     local PKG_NAME=$1
     local DEB_NAME=$2
@@ -133,6 +138,9 @@ if [ "$INSTALL_MICROROS" = true ]; then
     install_deb "autoboatvt" "autoboat-vt-${ARCH}.deb"
     install_deb "autoboatvt-microros" "autoboat-vt-microros-full-${ARCH}.deb"
 fi
+
+
+
 
 
 echo "--------------------------------------------------------"

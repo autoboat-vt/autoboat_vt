@@ -98,8 +98,11 @@ PKG_DIR_UC="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_uc"
 mkdir -p "${PKG_DIR_UC}/DEBIAN"
 mkdir -p "${PKG_DIR_UC}/opt/autoboat/microros_dependencies"
 
-# Copy everything ELSE from dependencies (Pico SDK, Agent Source, etc.)
-cp -r /opt/autoboat/microros_dependencies/* "${PKG_DIR_UC}/opt/autoboat/microros_dependencies/"
+# Copy dependencies to help build microros packages
+cp -r /opt/autoboat/microros_dependencies/micro_ros_raspberrypi_pico_sdk "${PKG_DIR_UC}/opt/autoboat/microros_dependencies/"
+cp -r /opt/autoboat/microros_dependencies/picotool "${PKG_DIR_UC}/opt/autoboat/microros_dependencies/"
+cp -r /opt/autoboat/microros_dependencies/pico-sdk "${PKG_DIR_UC}/opt/autoboat/microros_dependencies/"
+
 
 # Control file (Depends on standard package)
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
