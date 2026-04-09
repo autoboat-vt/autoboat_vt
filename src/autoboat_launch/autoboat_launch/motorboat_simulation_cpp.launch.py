@@ -10,14 +10,16 @@ from launch import LaunchDescription
 
 def generate_launch_description():
     ros_gz_sim_pkg_path = get_package_share_directory('ros_gz_sim')
-
     gz_launch_path = PathJoinSubstitution([ros_gz_sim_pkg_path, 'launch','gz_sim.launch.py'])
+
+    simulation_models_pkg_path = get_package_share_directory('simulation_models')
+    model_path = PathJoinSubstitution([simulation_models_pkg_path, 'models', 'motorboat_model.sdf'])
 
     return LaunchDescription([
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(gz_launch_path),
             launch_arguments={
-                'gz_args': "-s --headless-rendering -r /home/ws/src/motorboat_simulation/motorboat_model.sdf",
+                'gz_args': ["-s --headless-rendering -r ", model_path],
                 'on_exit_shutdown': 'True'
             }.items(),
         ),

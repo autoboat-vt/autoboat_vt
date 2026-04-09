@@ -56,7 +56,7 @@ if [ "${DEB_ARCH}" == "amd64" ]; then
   mkdir -p "${PKG_DIR_SIM}/DEBIAN"
   mkdir -p "${PKG_DIR_SIM}/opt/autoboat/install"
   
-  SIM_PACKAGES="foil_dynamics rudder_dynamics sail_limits simulation_transform wind_arrow"
+  SIM_PACKAGES="simulation_models custom_lift_drag foil_dynamics custom_lift_drag sail_limits simulation_transform wind_arrow"
   for PKG in $SIM_PACKAGES; do
     echo "Partitioning simulation package: ${PKG}"
     
