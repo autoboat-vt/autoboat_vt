@@ -7,10 +7,90 @@
 
 #include "hardware/pwm.h"
 #include "pico/stdlib.h"
-extern "C" {
+#include "common_libraries.h"
+//extern "C" {
 #include "FreeRTOS.h"
 #include "task.h"
+//}
+#include "main_microros_node.h"
+#include "systems.hpp"
+
+
+bool sharedReady = false;
+
+void start_rtos_main() {
+    stdio_init_all();
+    xTaskCreate(microros_task, "microros Task", 2048, NULL, 1, NULL);
+    xTaskCreate(node_task, "Node Task", 2048, NULL, 1, NULL);
+    vTaskStartScheduler();
 }
+
+void microros_task(void *params) {
+    while (true) {
+            rmw_uros_set_custom_transport(
+                true,
+                NULL,
+                pico_serial_transport_open,
+                pico_serial_transport_close,
+                pico_serial_transport_write,
+                pico_serial_transport_read
+            );
+
+            gpio_init(LED_PIN);
+            gpio_set_dir(LED_PIN, 1);
+
+            const int timeout_ms = 1000;
+            const uint8_t attempts = 120;
+            rmw_uros_ping_agent(timeout_ms, attempts);
+
+            //initialize System
+            Systems system = Systems(THESEUS);
+            system.initialize_microros();
+            system.initialize_hal();
+
+            sharedReady = true;
+
+            while (true) {
+                // Ping the agent every few seconds to check connection
+                if (rmw_uros_ping_agent(1000, 5) != RMW_RET_OK) {
+                    break;
+                }
+                
+                system.check_microros();
+                
+            }
+            
+            sharedReady = false;
+            system.cleanup();
+    }
+
+}
+
+void node_task(void *params) {
+    for(;;) {
+        while(shared_ready) {
+            application_loop();
+            vTaskDelay(pdMS_TO_TICKS(10));
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /*
 typedef struct GPIO{
@@ -56,15 +136,15 @@ void task(void *params) {
 
     for(;;) {
         gpio_put(cfg->pin, 1);
-        vTaskDelay(pdMS_TO_TICKS(cfg->o\n_ms));
+        vTaskDelay(pdMS_TO_TICKS(cfg->on_ms));
         gpio_put(cfg->pin, 0);
         vTaskDelay(pdMS_TO_TICKS(cfg->off_ms));
     }
 }
 
+
 */
-
-
+/*
 int main() {
 
     gpio_set_function(9, GPIO_FUNC_PWM);
@@ -94,3 +174,4 @@ int main() {
     }
     
 }
+*/

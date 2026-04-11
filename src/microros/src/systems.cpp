@@ -50,10 +50,10 @@ void Systems::cleanup()
   rclc_support_fini(&support);
 }
 
-void Systems::initialize_application_loop()
-{
-  rclc_timer_init_default(&application_loop_timer, &support, RCL_MS_TO_NS(1), application_loop);
-  rclc_executor_add_timer(&executor, &application_loop_timer);
+void Systems::initialize_application_loop() {
+  // Old microros based loop
+  //rclc_timer_init_default(&application_loop_timer, &support, RCL_MS_TO_NS(1), application_loop);
+  //rclc_executor_add_timer(&executor, &application_loop_timer);
 }
 
 void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)

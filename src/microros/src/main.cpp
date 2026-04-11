@@ -9,9 +9,12 @@
 // Change when adding new nodes
 #define NUMBER_OF_NODES 1
 
+int main() {
+    start_rtos_main();
+    for (;;) {}
+}
 
-
-
+/*
 int main()
 {
     //instantiate boat system
@@ -58,3 +61,4 @@ int main()
         system.cleanup();
     }
 }
+*/
