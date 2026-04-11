@@ -7,8 +7,8 @@
 // Specific device libraries
 #include "cmps14_compass_library.h"
 #include "contactor_driver_library.h"
-#include "amt22_encoder_library.h"
-#include "drv8711_stepper_motor_driver_library.h"
+#include "amt22_encoder_library.hpp"
+#include "drv8711_stepper_motor_driver_library.hpp"
 
 #include "hardware/pwm.h"
 

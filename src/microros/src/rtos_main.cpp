@@ -12,9 +12,10 @@
 #include "FreeRTOS.h"
 #include "task.h"
 //}
-#include "main_microros_node.h"
 #include "systems.hpp"
 
+void microros_task(void *params);
+void node_task(void *params);
 
 bool sharedReady = false;
 
@@ -59,7 +60,7 @@ void microros_task(void *params) {
                 system.check_microros();
                 
             }
-            
+
             sharedReady = false;
             system.cleanup();
     }
@@ -68,10 +69,10 @@ void microros_task(void *params) {
 
 void node_task(void *params) {
     for(;;) {
-        while(shared_ready) {
-            application_loop();
+        while(!sharedReady) { vTaskDelay(pdMS_TO_TICKS(10)); }
+            Systems::application_loop_step();
             vTaskDelay(pdMS_TO_TICKS(10));
-        }
+        
     }
 }
 

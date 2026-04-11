@@ -4,7 +4,7 @@
 #include "common_libraries.h"
 //#include "microros.hpp"
 #include "systems.hpp"
-
+#include "rtos_main.h"
 
 // Change when adding new nodes
 #define NUMBER_OF_NODES 1

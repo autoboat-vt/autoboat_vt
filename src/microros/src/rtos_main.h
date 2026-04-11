@@ -1,0 +1,1 @@
+void start_rtos_main();

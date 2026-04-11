@@ -55,24 +55,10 @@ add_executable(pico_microros
     src/cmps14_compass.cpp
     src/systems.cpp
     src/HAL.cpp
+    src/rtos_main.cpp
     $ENV{PICO_MICROROS_SDK_PATH}/pico_uart_transport.c
 )
 
-add_executable(pico-RTOS
-    src/rtos_main.cpp
-)
-
-target_include_directories(pico-RTOS PUBLIC /home/ws/src/microros/src)
-
-target_link_libraries(pico-RTOS
-    freertos_kernel
-    freertos_config
-    pico_stdlib
-    pico_multicore
-    hardware_spi
-    hardware_i2c
-    hardware_pwm
-)
 
 target_link_libraries(pico_microros
     pico_stdlib
@@ -81,6 +67,9 @@ target_link_libraries(pico_microros
     hardware_spi
     hardware_i2c
     hardware_pwm
+
+    freertos_kernel
+    freertos_config
 )
 
 target_include_directories(pico_microros PUBLIC
@@ -99,8 +88,7 @@ SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -ffunction-sections -fdata-sections")
 pico_enable_stdio_usb(pico_microros 1)
 pico_enable_stdio_uart(pico_microros 0)
 
-pico_enable_stdio_usb(pico-RTOS 1)
-pico_enable_stdio_uart(pico-RTOS 0)
+
 
 add_compile_definitions(PICO_UART_ENABLE_CRLF_SUPPORT=0)
 add_compile_definitions(PICO_STDIO_ENABLE_CRLF_SUPPORT=0)
@@ -108,4 +96,3 @@ add_compile_definitions(PICO_STDIO_DEFAULT_CRLF=0)
 
 # Generate UF2
 pico_add_extra_outputs(pico_microros)
-pico_add_extra_outputs(pico-RTOS)

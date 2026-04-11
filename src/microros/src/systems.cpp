@@ -61,6 +61,12 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
   (void)timer;
   (void)last_call_time;
 
+  application_loop_step();
+}
+
+void Systems::application_loop_step()
+{
+
 
 
   // -----------------------------------------------------

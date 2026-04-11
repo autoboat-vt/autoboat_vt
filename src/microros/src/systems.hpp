@@ -14,6 +14,7 @@ class Systems {
         void initalize_cores();
         
         static void application_loop(rcl_timer_t * timer, int64_t last_call_time);
+        static void application_loop_step();
         void initialize_application_loop();
         
         void initialize_microros();
