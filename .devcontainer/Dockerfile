@@ -4,83 +4,130 @@
 # In the future, I will make it so that you can modify this file and push your changes so that everyone can use it
 
 
+# NOTE: The reason why we are doing rm -rf /var/lib/apt/lists/* after every apt install is because of caching reasons
+
+
 FROM ros:humble
+LABEL org.opencontainers.image.source="https://github.com/autoboat-vt/autoboat_vt"
+
+USER root
+
+
 ARG USERNAME=autoboat_user
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
-# Create the user
-RUN groupadd --gid $USER_GID $USERNAME \
-    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
-    #
-    # [Optional] Add sudo support. Omit if you don't need to install software after connecting.
-    && apt-get update \
-    && apt-get install -y sudo \
-    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
-    && chmod 0440 /etc/sudoers.d/$USERNAME
-RUN apt-get update && apt-get upgrade -y
-RUN apt-get install -y python3-pip
-ENV SHELL /bin/bash
+ENV SHELL=/bin/bash
+ENV DEBIAN_FRONTEND=noninteractive
 
-# ********************************************************
-# * Anything else you want to do like clean up goes here *
-# ********************************************************
+# -------------------------------
+# Create user + sudo setup
+# -------------------------------
+RUN apt update \
+   && groupadd --gid $USER_GID $USERNAME \
+   && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+   && apt install -y --no-install-recommends sudo \
+   && echo "$USERNAME ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME \
+   && chmod 0440 /etc/sudoers.d/$USERNAME
 
-RUN sudo apt install ros-dev-tools -y
-RUN sudo apt install python3-opencv -y
+# -------------------------------
+# Base system updates & required tools
+# ------------------------------- 
+RUN apt install -y --no-install-recommends python3-pip cron usbutils udev nano git-lfs lsof
 
-# This is very unsafe lol but I need this to be able to access docker from inside of the dev container for the sim. 
-# Do not remove unless we are releasing this software as a product
-RUN echo "${USERNAME} ALL=(ALL) NOPASSWD: /usr/bin/chmod" >> /etc/sudoers
-RUN echo "${USERNAME} ALL=(ALL) NOPASSWD: /usr/sbin/service" >> /etc/sudoers
+# -------------------------------
+# Very unsafe sudo permissions
+# -------------------------------
+RUN echo "${USERNAME} ALL=(ALL) NOPASSWD: /usr/bin/chmod" >> /etc/sudoers \
+   && echo "${USERNAME} ALL=(ALL) NOPASSWD: /usr/sbin/service" >> /etc/sudoers
 
-# The following is to set up ubuntu repositories to download ros packages
-RUN sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-RUN sudo apt install curl
-RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
-
-# install camera ros drivers
-#RUN sudo apt install ros-humble-librealsense2* -y
-#RUN sudo apt install ros-humble-realsense2-* -y
-
-#Used to automate tasks
-RUN sudo apt-get install cron --fix-missing
-
-# MISC necessary things
-RUN sudo apt-get install usbutils --fix-missing
-RUN sudo apt-get install ros-humble-cv-bridge -y --fix-missing --fix-broken
-RUN sudo apt install udev -y --fix-missing
-RUN sudo apt install nano -y --fix-missing
+# -------------------------------
+# Install RealSense Camera
+# -------------------------------
+RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list' \
+   && apt-get install curl -y \
+   && curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add - \
+   && apt update || true \
+   && apt install ros-humble-librealsense2* -y \
+   && apt install ros-humble-realsense2-* -y \
+   && rm /etc/apt/sources.list.d/ros-latest.list
 
 
-# Required installations for new groundstation
-RUN sudo apt install golang -y --fix-missing
-RUN sudo apt-get install -y --fix-missing \
-    libx11-xcb1 \
-    libxcb1 \
-    libxcb-util1 \
-    libxcb-image0 \
-    libxcb-keysyms1 \
-    libxcb-render0 \
-    libxcb-render-util0 \
-    libxcb-shape0 \
-    libxcb-shm0 \
-    libxcb-icccm4 \
-    libxcb-sync1 \
-    libxcb-xfixes0 \
-    libxcb-xinerama0 \
-    libxcb-randr0 \
-    libxcb-glx0 \
-    libxkbcommon-x11-0 \
-    libxrender1 \
-    libasound2
+# -------------------------------
+# Install ROS/ Vision packages
+# -------------------------------
+RUN apt update \
+   && apt-get install -y --no-install-recommends ros-dev-tools python3-opencv ros-humble-vision-opencv \
+   && rm /etc/apt/sources.list.d/ros-latest.list || true
 
 
-# installations to allow the user to pull docker images from inside of this docker image
-RUN sudo apt install docker -y
-RUN sudo apt install docker.io -y
+# -------------------------------
+# Golang setup
+# -------------------------------
+RUN apt install -y --no-install-recommends software-properties-common \
+   && add-apt-repository ppa:longsleep/golang-backports -y \
+   && apt update \
+   && apt install -y --no-install-recommends golang-go
 
 
+# -------------------------------
+# X11 / GUI libraries
+# -------------------------------
+RUN apt install -y --fix-missing --no-install-recommends \
+   libx11-xcb1 \
+   libxcb1 \
+   libxcb-util1 \
+   libxcb-image0 \
+   libxcb-keysyms1 \
+   libxcb-render0 \
+   libxcb-render-util0 \
+   libxcb-shape0 \
+   libxcb-shm0 \
+   libxcb-icccm4 \
+   libxcb-sync1 \
+   libxcb-xfixes0 \
+   libxcb-xinerama0 \
+   libxcb-randr0 \
+   libxcb-glx0 \
+   libxkbcommon-x11-0 \
+   libxrender1 \
+   libasound2
+
+# -------------------------------
+# Install Docker inside Docker
+# -------------------------------
+RUN apt install -y --no-install-recommends docker docker.io
+
+
+
+# -------------------------------
+# Ensure that qt5 is installed properly so pyqt installation works
+# -------------------------------
+RUN apt-get install -y python3-pyqt5 python3-pyqt5.qtwebengine
+
+
+# -------------------------------
+# Python requirements (as user)
+# -------------------------------
 USER $USERNAME
-# [Optional] Set the default user. Omit if you want to keep the default as root.
+COPY .devcontainer/required_pip_packages.txt /tmp/requirements.txt
+RUN pip install --upgrade pip
+RUN pip install packaging
+RUN pip install -r /tmp/requirements.txt
+
+# -------------------------------
+# Installation for gazebo 
+# -------------------------------
+RUN sudo apt-get update \
+   && sudo apt-get install curl lsb-release gnupg \
+   && sudo curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg \
+   && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] https://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null \
+   && sudo apt-get update \
+   && sudo apt-get install gz-harmonic -y \
+   && sudo apt install ros-humble-ros-gzharmonic -y
+
 CMD ["/bin/bash"]
+# TODO and NOTE:
+# this is the docker file used to build the dev container. 
+# For right now, you should not modify this and if you need to add something then please ask chris. 
+# In the future, I will make it so that you can modify this file and push your changes so that everyone can use it

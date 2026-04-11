@@ -1,5 +1,5 @@
 """
-Module for syntax highlighter classes in the ground station application.
+Package for syntax highlighter classes in the ground station application.
 
 Contains:
 - BaseHighlighter: Base class for syntax highlighters.
@@ -10,5 +10,5 @@ Contains:
 __all__ = ["BaseHighlighter", "ConsoleHighlighter", "JsonHighlighter"]
 
 from .base_highlighter import BaseHighlighter
-from .json import JsonHighlighter
 from .console import ConsoleHighlighter
+from .json import JsonHighlighter
