@@ -28,6 +28,7 @@ ground_station/bin
 ground_station/go.sum
 ground_station/last_build_time.txt
 ground_station/app_data/git_ignore
+node_modules
 
 # src/object_detection
 src/object_detection/object_detection/runs/**
@@ -36,7 +37,6 @@ src/object_detection/object_detection/weights/**
 src/object_detection/object_detection/dataset/**
 src/object_detection/object_detection/dataset/**
 src/object_detection/object_detection/hard_images/**
-
 
 # frames generated from camera recorder
 frame_logs
