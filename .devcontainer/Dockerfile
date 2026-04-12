@@ -38,6 +38,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
     nano \
     git-lfs \
     lsof \
+    unzip \
     curl \
     lsb-release \
     gnupg \
@@ -137,14 +138,23 @@ USER $USERNAME
 # -------------------------------
 # Python requirements (as user)
 # -------------------------------
-
 COPY .devcontainer/required_pip_packages.txt /tmp/requirements.txt
 RUN pip install --upgrade pip
 RUN pip install packaging
 RUN pip install -r /tmp/requirements.txt
 
 
-   
+
+# -------------------------------
+# Install Bun
+# -------------------------------
+USER root
+ENV BUN_INSTALL=/home/$USERNAME/.bun
+ENV PATH=$BUN_INSTALL/bin:$PATH
+RUN curl -fsSL https://bun.sh/install | bash \
+   && bun --version
+
+
 CMD ["/bin/bash"]
 # TODO and NOTE:
 # this is the docker file used to build the dev container. 
