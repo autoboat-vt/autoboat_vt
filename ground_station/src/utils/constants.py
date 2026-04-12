@@ -150,7 +150,7 @@ JS_LIBRARIES: tuple[str, ...] = (
 
 # server ports
 ASSET_SERVER_PORT = 8000
-GO_SERVER_PORT = 3001
+GO_SERVER_PORT = 3002
 
 # url for local waypoints server
 _waypoints_server_url: str = f"http://localhost:{GO_SERVER_PORT}/waypoints"

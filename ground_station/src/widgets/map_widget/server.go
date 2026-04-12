@@ -52,7 +52,7 @@ func main() {
 
 	var handler = cors.Default().Handler(router)
 
-	var port = ":3001"
+	var port = ":3002"
 	log.Printf("[Go] Local waypoints server running at http://localhost%s\n", port)
 
 	var err = http.ListenAndServe(port, handler)
