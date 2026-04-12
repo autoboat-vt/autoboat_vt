@@ -47,8 +47,8 @@ using namespace std;
 #if BOAT_MODE == Theseus
 #define RUDDER_GAIN (float)2
 #define RUDDER_GAIN_Q (float)0.5
+#define RUDDER_MICROSTEP MicroStep1
 #define RUDDER_NUMBER_OF_STEPS_TO_CLIP_AT 50
-#define RUDDER_MICROSTEP MicroStep32
 #else
 #define RUDDER_GAIN (float)400
 #define RUDDER_GAIN_Q (float)150
@@ -62,8 +62,8 @@ using namespace std;
 
 #define WINCH_ZERO_POINT 100
 
-#define MAX_RUDDER_ANGLE 35
-#define MIN_RUDDER_ANGLE -35
+#define MAX_RUDDER_ANGLE 25
+#define MIN_RUDDER_ANGLE -25
 
 #define MAX_WINCH_ANGLE 580
 #define MIN_WINCH_ANGLE -600
@@ -74,10 +74,12 @@ using namespace std;
 #define ACCEPTABLE_RUDDER_ERROR 0.1
 #define ACCEPTABLE_WINCH_ERROR 0.5
 
-#define RUDDER_ANGLE_OFFSET -85
+#define RUDDER_ANGLE_OFFSET -40.34
 #define WINCH_ANGLE_OFFSET 0
 // #define COMPASS_OFFSET -13.7 // Magnetic Declination at WPI
-#define COMPASS_OFFSET 180
+// #define MAGNETIC_DECLINATION -13.7 // Magnetic Declination at WPI
+#define MAGNETIC_DECLINATION -8.5 //Magnetic Declination at VT
+// #define MAGNETIC_DECLINATION -10.0 //Magnetic Declination at Portsmouth
 
 const float MID_RUDDER_ANGLE = (MAX_RUDDER_ANGLE + MIN_RUDDER_ANGLE) / 2;
 const float MID_WINCH_MOTOR_ANGLE = (MAX_WINCH_ANGLE + MIN_WINCH_ANGLE) / 2;
