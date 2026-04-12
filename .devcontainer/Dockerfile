@@ -33,7 +33,7 @@ RUN apt update \
 # -------------------------------
 # Base system updates & required tools
 # ------------------------------- 
-RUN apt install -y --no-install-recommends python3-pip cron usbutils udev nano git-lfs lsof
+RUN apt install -y --no-install-recommends python3-pip cron usbutils udev nano git-lfs lsof unzip
 
 # -------------------------------
 # Very unsafe sudo permissions
@@ -69,7 +69,7 @@ RUN apt install -y --no-install-recommends software-properties-common \
    && apt update \
    && apt install -y --no-install-recommends golang-go
 
-   
+
 # -------------------------------
 # Install Bun
 # -------------------------------
