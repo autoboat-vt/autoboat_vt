@@ -1,0 +1,30 @@
+{
+    // Triangulation default parameters
+    "buffer_window_size": {
+        "type": "int",
+        "default": 300,
+        "description": "Size of the buffer window for triangulation, in frames."
+    },
+    "iou_threshold": {
+        "type": "float",
+        "default": 10.0,
+        "description": "Distance in meters between two detections to be considered the same object for triangulation."
+    },
+    "update_rate": {
+        "type": "float",
+        "default": 0.5,
+        "description": "Rate at which to update the triangulation in seconds."
+    },
+
+    // Inference default parameters. These values get overwritten by whatever values are in the config file.
+    "threshold": {
+        "type": "float",
+        "default": 0.0,
+        "description": "Confidence threshold for object detection. This default gets overwritten by the value in the config file."
+    },
+    "model_name": {
+        "type": "string",
+        "default": "",
+        "description": "Name of the model to use for object detection. This should match the name used in the config file and the engine file. This default gets overwritten by the value in the config file."
+    }
+}
