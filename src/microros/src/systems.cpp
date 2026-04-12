@@ -42,6 +42,11 @@ void Systems::initialize_hal()
   gpio_set_dir(RUDDER_MOTOR_CS_PIN, GPIO_OUT);
   gpio_pull_down(RUDDER_MOTOR_CS_PIN);
   HAL::init_rudder_stepper(&rudderStepperMotorDriver);
+
+  gpio_init(RELAY_PIN);
+  gpio_set_dir(RELAY_PIN, GPIO_OUT);
+  gpio_pull_up(RELAY_PIN);
+
 }
 
 void Systems::cleanup()
@@ -71,7 +76,7 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
     current_rudder_motor_angle -= 360.0f;
 
   float current_rudder_angle = get_rudder_angle_from_motor_angle(current_rudder_motor_angle);
-  float rudder_error = current_rudder_angle - current_rudder::desired_motor_angle;
+  float rudder_error = (current_rudder::desired_angle - current_rudder_angle);
 
   int number_of_steps_rudder = 0;
   bool rudder_step_enabled = false;
@@ -117,6 +122,6 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
   current_rudder::current_angle_msg.data = current_rudder_angle;
   rcl_publish(&current_rudder::current_rudder_angle_publisher, &current_rudder::current_angle_msg, NULL);
 
-  current_heading::heading_msg.data = (float)desired_rudder_angle; //fmodf((-compass.getBearing() / 10.0f + COMPASS_OFFSET + 360.0f), 360.0f);
+  current_heading::heading_msg.data = fmod((180-(compass.getBearing()/10.0+MAGNETIC_DECLINATION))+360,360);
   rcl_publish(&current_heading::compass_angle_publisher, &current_heading::heading_msg, NULL);
 }
