@@ -8,6 +8,7 @@
 
 
 FROM ros:humble
+LABEL org.opencontainers.image.source="https://github.com/autoboat-vt/autoboat_vt"
 
 USER root
 

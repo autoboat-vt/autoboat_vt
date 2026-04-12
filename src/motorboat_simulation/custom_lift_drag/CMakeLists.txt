@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(rudder_dynamics)
+project(custom_lift_drag)
 
 # Gazebo Harmonic uses gz-sim8 and gz-plugin2
 find_package(gz-sim8 REQUIRED)
@@ -11,10 +11,10 @@ set(GZ_SIM_VER ${gz-sim8_VERSION_MAJOR})
 set(GZ_PLUGIN_VER ${gz-plugin2_VERSION_MAJOR})
 
 # Plugin source
-add_library(RudderDynamics SHARED src/RudderDynamics.cc)
-set_property(TARGET RudderDynamics PROPERTY CXX_STANDARD 17)
+add_library(CustomLiftDrag SHARED src/CustomLiftDrag.cc)
+set_property(TARGET CustomLiftDrag PROPERTY CXX_STANDARD 17)
 
-target_link_libraries(RudderDynamics
+target_link_libraries(CustomLiftDrag
   gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
   gz-common5::gz-common5
   gz-plugin${GZ_PLUGIN_VER}::gz-plugin${GZ_PLUGIN_VER}
@@ -22,10 +22,10 @@ target_link_libraries(RudderDynamics
 
 # If using rclcpp logging or ROS2 communication
 find_package(rclcpp REQUIRED)
-target_link_libraries(RudderDynamics rclcpp::rclcpp)
+target_link_libraries(CustomLiftDrag rclcpp::rclcpp)
 
 # Optional: expose plugin install path for SDF
-install(TARGETS RudderDynamics
+install(TARGETS CustomLiftDrag
   LIBRARY DESTINATION lib
 )
 

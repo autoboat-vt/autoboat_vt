@@ -864,7 +864,7 @@ class GroundStationWidget(QWidget):
 
             <ol>
             <li> If the value is None, displays "N/A".
-            <li> Otherwise, the value is rounded to 5 decimal places.
+            <li> Otherwise, the value is rounded to 1 decimal places.
             </ol>
 
             Examples
@@ -885,7 +885,7 @@ class GroundStationWidget(QWidget):
                 The formatted value.
             """
 
-            return "N/A" if data_item is None else f"{float(data_item):.5f}"
+            return "N/A" if data_item is None else f"{float(data_item):.1f}"
 
         def sailboat_mode(boat_data: dict[str, Any]) -> str:
             self.boat_data["full_autonomy_maneuver"] = constants.SailboatStates(boat_data["full_autonomy_maneuver"]).name
@@ -899,7 +899,7 @@ class GroundStationWidget(QWidget):
                 f"Connection Status: {connection_status.name}\n"
                 f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
                 f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
-                f"Velocity Vector: [{self.boat_data.get('velocity_x', -69.420):.5f}, {self.boat_data.get('velocity_y', -69.420):.5f}]\n"  # noqa: E501
+                f"Velocity Vector: [{fix_formatting(self.boat_data.get('velocity_x', -69.420))}, {fix_formatting(self.boat_data.get('velocity_y', -69.420))}]\n"  # noqa: E501
                 f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
                 f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
                 f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
@@ -928,7 +928,7 @@ class GroundStationWidget(QWidget):
                 f"Connection Status: {connection_status.name}\n"
                 f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
                 f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
-                f"Velocity Vector: [{self.boat_data.get('velocity_x', -69.420):.5f}, {self.boat_data.get('velocity_y', -69.420):.5f}]\n"  # noqa: E501
+                f"Velocity Vector: [{fix_formatting(self.boat_data.get('velocity_x', -69.420))}, {fix_formatting(self.boat_data.get('velocity_y', -69.420))}]\n"  # noqa: E501
                 f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
                 f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
                 f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"

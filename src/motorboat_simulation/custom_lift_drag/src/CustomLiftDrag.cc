@@ -1,11 +1,11 @@
-#include "../include/RudderDynamics.hh"
+#include "../include/CustomLiftDrag.hh"
 #include <cmath>
 
-namespace rudder_dynamics
+namespace custom_lift_drag
 {
 
 /////////////////////////////////////////////////
-RudderDynamics::RudderDynamics()
+CustomLiftDrag::CustomLiftDrag()
 : rho_(1000.1),
   cp_(0, 0, 0),
   forward_(1, 0, 0),
@@ -14,14 +14,14 @@ RudderDynamics::RudderDynamics()
   clmax_(1.5),
   cdmax_(1.0)
 {
-  RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "RudderDynamics plugin constructed");
+  RCLCPP_INFO(rclcpp::get_logger("CustomLiftDrag"), "CustomLiftDrag plugin constructed");
 }
 
 /////////////////////////////////////////////////
-RudderDynamics::~RudderDynamics() = default;
+CustomLiftDrag::~CustomLiftDrag() = default;
 
 /////////////////////////////////////////////////
-void RudderDynamics::Configure(const gz::sim::Entity &_entity,
+void CustomLiftDrag::Configure(const gz::sim::Entity &_entity,
                              const std::shared_ptr<const sdf::Element> &_sdf,
                              gz::sim::EntityComponentManager &_ecm,
                              gz::sim::EventManager &)
@@ -29,7 +29,7 @@ void RudderDynamics::Configure(const gz::sim::Entity &_entity,
   model_ = gz::sim::Model(_entity);
   if (!model_.Valid(_ecm))
   {
-    RCLCPP_ERROR(rclcpp::get_logger("RudderDynamics"), "Invalid model entity");
+    RCLCPP_ERROR(rclcpp::get_logger("CustomLiftDrag"), "Invalid model entity");
     return;
   }
 
@@ -71,23 +71,23 @@ void RudderDynamics::Configure(const gz::sim::Entity &_entity,
     auto linkEntity = model_.LinkByName(_ecm, linkName);
     if (linkEntity == gz::sim::kNullEntity)
     {
-      RCLCPP_ERROR(rclcpp::get_logger("RudderDynamics"), "Link [%s] not found", linkName.c_str());
+      RCLCPP_ERROR(rclcpp::get_logger("CustomLiftDrag"), "Link [%s] not found", linkName.c_str());
     }
     else
     {
       links_.emplace_back(gz::sim::Link(linkEntity));
       links_.back().EnableVelocityChecks(_ecm);
-      RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "RudderDynamics loaded for link [%s]", linkName.c_str());
+      RCLCPP_INFO(rclcpp::get_logger("CustomLiftDrag"), "CustomLiftDrag loaded for link [%s]", linkName.c_str());
     }
   }
 
-  RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"),
-              "RudderDynamics loaded for model [%s]", modelName_.c_str());
+  RCLCPP_INFO(rclcpp::get_logger("CustomLiftDrag"),
+              "CustomLiftDrag loaded for model [%s]", modelName_.c_str());
 }
 
 
 /////////////////////////////////////////////////
-void RudderDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
+void CustomLiftDrag::PreUpdate(const gz::sim::UpdateInfo &_info,
                           gz::sim::EntityComponentManager &_ecm)
 {
   if (_info.paused)
@@ -143,30 +143,30 @@ void RudderDynamics::PreUpdate(const gz::sim::UpdateInfo &_info,
   gz::math::Vector3d drag = cd * q * area_ * dragDir;
   gz::math::Vector3d force = lift + drag;
 
-  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "Velocity: %f %f %f", vel.X(), vel.Y(), vel.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "VelocityInLDPlane: %f %f %f", velInLDPlane.X(), velInLDPlane.Y(), velInLDPlane.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "Angle: %lf", alpha);
-  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "LiftDirection: %f %f %f", liftDir.X(), liftDir.Y(), liftDir.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "DragDirection: %f %f %f", dragDir.X(), dragDir.Y(), dragDir.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "Lift: %f %f %f", lift.X(), lift.Y(), lift.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "Drag: %f %f %f", drag.X(), drag.Y(), drag.Z());
-  // RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "Force: %f %f %f\n\n", force.X(), force.Y(), force.Z());
+  // RCLCPP_INFO(rclcpp::get_logger("CustomLiftDrag"), "Velocity: %f %f %f", vel.X(), vel.Y(), vel.Z());
+  // RCLCPP_INFO(rclcpp::get_logger("CustomLiftDrag"), "VelocityInLDPlane: %f %f %f", velInLDPlane.X(), velInLDPlane.Y(), velInLDPlane.Z());
+  // RCLCPP_INFO(rclcpp::get_logger("CustomLiftDrag"), "Angle: %lf", alpha);
+  // RCLCPP_INFO(rclcpp::get_logger("CustomLiftDrag"), "LiftDirection: %f %f %f", liftDir.X(), liftDir.Y(), liftDir.Z());
+  // RCLCPP_INFO(rclcpp::get_logger("CustomLiftDrag"), "DragDirection: %f %f %f", dragDir.X(), dragDir.Y(), dragDir.Z());
+  // RCLCPP_INFO(rclcpp::get_logger("CustomLiftDrag"), "Lift: %f %f %f", lift.X(), lift.Y(), lift.Z());
+  // RCLCPP_INFO(rclcpp::get_logger("CustomLiftDrag"), "Drag: %f %f %f", drag.X(), drag.Y(), drag.Z());
+  // RCLCPP_INFO(rclcpp::get_logger("CustomLiftDrag"), "Force: %f %f %f\n\n", force.X(), force.Y(), force.Z());
 
   // Apply world force
   for (gz::sim::Link link : links_) {
     if (link.Valid(_ecm))
       link.AddWorldForce(_ecm, force);
     else
-      RCLCPP_INFO(rclcpp::get_logger("RudderDynamics"), "link failed to apply rudder.");
+      RCLCPP_INFO(rclcpp::get_logger("CustomLiftDrag"), "link failed to apply force.");
   }
 }
 
 }
 
 /////////////////////////////////////////////////
-GZ_ADD_PLUGIN(rudder_dynamics::RudderDynamics,
+GZ_ADD_PLUGIN(custom_lift_drag::CustomLiftDrag,
               gz::sim::System,
-              rudder_dynamics::RudderDynamics::ISystemConfigure,
-              rudder_dynamics::RudderDynamics::ISystemPreUpdate)
+              custom_lift_drag::CustomLiftDrag::ISystemConfigure,
+              custom_lift_drag::CustomLiftDrag::ISystemPreUpdate)
 
-GZ_ADD_PLUGIN_ALIAS(rudder_dynamics::RudderDynamics, "rudder_dynamics::RudderDynamics")
+GZ_ADD_PLUGIN_ALIAS(custom_lift_drag::CustomLiftDrag, "custom_lift_drag::CustomLiftDrag")
