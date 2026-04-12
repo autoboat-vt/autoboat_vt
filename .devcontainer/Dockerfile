@@ -69,6 +69,15 @@ RUN apt install -y --no-install-recommends software-properties-common \
    && apt update \
    && apt install -y --no-install-recommends golang-go
 
+   
+# -------------------------------
+# Install Bun
+# -------------------------------
+ENV BUN_INSTALL=/home/$USERNAME/.bun
+ENV PATH=$BUN_INSTALL/bin:$PATH
+RUN curl -fsSL https://bun.sh/install | bash \
+   && bun --version
+
 
 # -------------------------------
 # X11 / GUI libraries
