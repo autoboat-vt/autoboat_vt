@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urljoin
 
-from qtpy.QtCore import Qt, Signal
+from qtpy.QtCore import Qt, QUrl, Signal
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import (
     QCheckBox,
@@ -160,7 +160,7 @@ class GroundStationWidget(QWidget):
 
         # region middle section
         self.browser = QWebEngineView()
-        self.browser.setHtml(open(constants.HTML_MAP_PATH, encoding="utf-8").read())
+        self.browser.setUrl(QUrl(f"http://127.0.0.1:{constants.VITE_PORT}"))
         self.browser.setMinimumWidth(700)
         self.browser.setMinimumHeight(700)
 
