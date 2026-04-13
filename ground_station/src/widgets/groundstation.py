@@ -11,7 +11,6 @@ import svg
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import (
-    QCheckBox,
     QFileDialog,
     QGridLayout,
     QGroupBox,
@@ -1036,7 +1035,9 @@ class GroundStationWidget(QWidget):
             else:
             
                 # in radians
-                decision_zone_size: float = np.rad2deg(np.arcsin((tack_distance/distance_to_waypoint)*np.sin(np.deg2rad(no_sail_size/2))))
+                decision_zone_size: float = np.rad2deg(
+                    np.arcsin((tack_distance/distance_to_waypoint)*np.sin(np.deg2rad(no_sail_size/2)))
+                )
 
                 # don't think about it too hard
                 x1: float = 2 + np.cos(np.deg2rad(head - (no_sail_size / 2 - decision_zone_size / 2)))
@@ -1078,9 +1079,9 @@ class GroundStationWidget(QWidget):
             vx: float = self.boat_data.get("velocity_x", -69.420)
             vy: float = self.boat_data.get("velocity_y", -69.420)
 
-            # adjusted to be radius 2
-            x1: float = 2 + (2 * vx / speed)
-            y1: float = 2 + (2 * vy / speed)
+            radius: float = 3*speed
+            x1: float = radius + radius * vx / speed
+            y1: float = radius + radius * vy / speed
             head = heading
 
             velocity_arrow_shape: list[svg.PathData] = [
@@ -1097,9 +1098,12 @@ class GroundStationWidget(QWidget):
                 transform=velocity_arrow_transform
             )
 
-            svg_str = no_go_html.as_str() + velocity_html.as_str() + decision_zone_html.as_str()
+            svg_str = no_go_html.as_str() + decision_zone_html.as_str()
             self.browser.page().runJavaScript(
                 f"map.update_no_sail_svg('{svg_str}', {size})"
+            )
+            self.browser.page().runJavaScript(
+                f"map.update_velocity_svg('{velocity_html.as_str()}', '{size}', '{speed}')"
             )
             self.browser.page().runJavaScript(
                 f"map.update_wind_svg('{wind_html.as_str()}', {size})"
