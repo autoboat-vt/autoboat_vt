@@ -1079,9 +1079,9 @@ class GroundStationWidget(QWidget):
             vx: float = self.boat_data.get("velocity_x", -69.420)
             vy: float = self.boat_data.get("velocity_y", -69.420)
 
-            radius: float = 3*speed
-            x1: float = radius + radius * vx / speed
-            y1: float = radius + radius * vy / speed
+            radius: float = 4*speed
+            x1: float = 2 + radius * vx / speed
+            y1: float = 2 + radius * vy / speed
             head = heading
 
             velocity_arrow_shape: list[svg.PathData] = [
@@ -1103,7 +1103,7 @@ class GroundStationWidget(QWidget):
                 f"map.update_no_sail_svg('{svg_str}', {size})"
             )
             self.browser.page().runJavaScript(
-                f"map.update_velocity_svg('{velocity_html.as_str()}', '{size}', '{speed}')"
+                f"map.update_velocity_svg('{velocity_html.as_str()}', '{size}')"
             )
             self.browser.page().runJavaScript(
                 f"map.update_wind_svg('{wind_html.as_str()}', {size})"

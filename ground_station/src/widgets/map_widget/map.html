@@ -373,12 +373,19 @@
                 remove_debug_svgs() {
                     if (this.no_sail_svg != null) {
                         this.no_sail_svg.remove();
+                        this.no_sail_svg = null;
                     }
                     if (this.compass_rose_svg != null) {
                         this.compass_rose_svg.remove();
+                        this.compass_rose_svg = null;
                     }
                     if (this.wind_svg != null) {
                         this.wind_svg.remove();
+                        this.wind_svg = null;
+                    }
+                    if (this.velocity_svg != null) {
+                        this.velocity_svg.remove();
+                        this.velocity_svg = null;
                     }
                 }
 
