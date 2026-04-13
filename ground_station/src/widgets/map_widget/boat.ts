@@ -13,7 +13,6 @@ interface BoatState {
 
 export class BoatManager {
     readonly boat: BoatState = { heading: 0, location: [0, 0] };
-
     readonly marker: Marker;
 
     constructor(
