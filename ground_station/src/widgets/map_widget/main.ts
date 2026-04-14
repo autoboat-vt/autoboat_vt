@@ -6,8 +6,7 @@ import {
     type Map as LeafletMapType,
     type MapOptions,
     type Icon,
-    type LeafletMouseEvent,
-    SVG
+    type LeafletMouseEvent
 } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-rotatedmarker";
@@ -87,10 +86,7 @@ class MapInterface {
             MapInterface.getBoatIcon.bind(MapInterface)
         );
 
-        this.svgs = new SVGManager(
-            this.map,
-            this.boat
-        );
+        this.svgs = new SVGManager(this.map, this.boat);
 
         const mapTilerKey = "M9yBkV9J49pYUg5o8SGC";
         tileLayer(
