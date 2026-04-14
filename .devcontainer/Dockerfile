@@ -33,7 +33,7 @@ RUN apt update \
 # -------------------------------
 # Base system updates & required tools
 # ------------------------------- 
-RUN apt install -y --no-install-recommends python3-pip cron usbutils udev nano git-lfs lsof
+RUN apt install -y --no-install-recommends python3-pip cron usbutils udev nano git-lfs lsof unzip
 
 # -------------------------------
 # Very unsafe sudo permissions
@@ -68,6 +68,15 @@ RUN apt install -y --no-install-recommends software-properties-common \
    && add-apt-repository ppa:longsleep/golang-backports -y \
    && apt update \
    && apt install -y --no-install-recommends golang-go
+
+
+# -------------------------------
+# Install Bun
+# -------------------------------
+ENV BUN_INSTALL=/home/$USERNAME/.bun
+ENV PATH=$BUN_INSTALL/bin:$PATH
+RUN curl -fsSL https://bun.sh/install | bash \
+   && bun --version
 
 
 # -------------------------------

@@ -142,15 +142,10 @@ ONE_MS_TIMER = misc.create_timer(1)
 
 _start_time: float = time.time()
 
-JS_LIBRARIES: tuple[str, ...] = (
-    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
-    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
-    "https://cdn.jsdelivr.net/gh/bbecquet/Leaflet.RotatedMarker@master/leaflet.rotatedMarker.js",
-)
-
 # server ports
 ASSET_SERVER_PORT = 8000
 GO_SERVER_PORT = 3002
+VITE_PORT = 5173
 
 # url for local waypoints server
 _waypoints_server_url: str = f"http://localhost:{GO_SERVER_PORT}/waypoints"

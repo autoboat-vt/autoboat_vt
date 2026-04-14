@@ -1,6 +1,5 @@
 from collections.abc import Callable
 
-from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QCheckBox, QLabel, QVBoxLayout, QWidget
 
 

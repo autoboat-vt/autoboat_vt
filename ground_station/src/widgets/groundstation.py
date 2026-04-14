@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 
 import numpy as np
 import svg
-from qtpy.QtCore import Qt, Signal
+from qtpy.QtCore import Qt, QUrl, Signal
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import (
     QFileDialog,
@@ -166,7 +166,7 @@ class GroundStationWidget(QWidget):
 
         # region middle section
         self.browser = QWebEngineView()
-        self.browser.setHtml(open(constants.HTML_MAP_PATH, encoding="utf-8").read())
+        self.browser.setUrl(QUrl(f"http://127.0.0.1:{constants.VITE_PORT}"))
         self.browser.setMinimumWidth(700)
         self.browser.setMinimumHeight(700)
 
@@ -178,7 +178,7 @@ class GroundStationWidget(QWidget):
                 self.sailboat_debugging_symbols_status = True
             else:
                 self.sailboat_debugging_symbols_status = False
-                self.browser.page().runJavaScript("map.remove_debug_svgs()")
+                self.browser.page().runJavaScript("map.remove_all_svgs()")
 
         self.edit_telemetry_config_window = EditTelemetryConfigWindow(handle_waypoints_callback,
                                                                       handle_sailboat_debugging_callback)
@@ -1106,7 +1106,7 @@ class GroundStationWidget(QWidget):
                 f"map.update_velocity_svg('{velocity_html.as_str()}', '{size}')"
             )
             self.browser.page().runJavaScript(
-                f"map.update_wind_svg('{wind_html.as_str()}', {size})"
+                f"map.update_wind_svg('{wind_html.as_str()}')"
             )
 
         try:

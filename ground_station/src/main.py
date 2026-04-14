@@ -25,14 +25,9 @@ class MainWindow(QMainWindow):
 
         mimetypes.add_type("image/png", ".png")
         mimetypes.add_type("text/plain", ".txt")
-        mimetypes.add_type("text/javascript", ".js")
-        mimetypes.add_type("text/css", ".css")
 
         def handler(*args: tuple, **kwargs: dict) -> http.server.SimpleHTTPRequestHandler:
             return http.server.SimpleHTTPRequestHandler(*args, directory=constants.ASSETS_DIR.as_posix(), **kwargs)
-        
-        for link in constants.JS_LIBRARIES:
-            misc.cache_cdn_file(link, constants.ASSETS_DIR)
 
         socketserver.TCPServer.allow_reuse_address = True
         self.asset_server = socketserver.TCPServer(("", constants.ASSET_SERVER_PORT), handler)
@@ -68,15 +63,11 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event: object) -> NoReturn:
         """Handle the window close event."""
 
-        print("[Info] Shutting down servers...")
-        
+        print("[Info] Shutting down asset server...")
         if hasattr(self, "asset_server"):
             self.asset_server.shutdown()
         
-        if hasattr(self, "cdn_server"):
-            self.cdn_server.shutdown()
-        
-        print("[Info] Servers shut down.")
+        print("[Info] Closing the application...")
         event.accept()
 
     def check_instance_connection(self) -> None:
