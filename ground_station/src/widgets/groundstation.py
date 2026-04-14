@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urljoin
 
+import numpy as np
+import svg
 from qtpy.QtCore import Qt, QUrl, Signal
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import (
@@ -64,6 +66,9 @@ class GroundStationWidget(QWidget):
 
         # should we check for changes in the telemetry server waypoints?
         self.waypoints_checker_status: bool = False
+
+        # should we display sailboat debugging symbols?
+        self.sailboat_debugging_symbols_status: bool = False
 
         # should we remember the status of the user's last response to the
         # dialog that asks if the user wants to pull waypoints from the telemetry server?
@@ -168,14 +173,24 @@ class GroundStationWidget(QWidget):
         def handle_waypoints_callback(state: Qt.CheckState) -> None:
             self.waypoints_checker_status = state == Qt.CheckState.Checked
         
-        self.edit_telemetry_config_window = EditTelemetryConfigWindow(handle_waypoints_callback)
-        self.edit_telemetry_config_window.setWindowTitle("Edit Telemetry Config")
+        def handle_sailboat_debugging_callback(state: Qt.CheckState) -> None:
+            if state == Qt.CheckState.Checked:
+                self.sailboat_debugging_symbols_status = True
+            else:
+                self.sailboat_debugging_symbols_status = False
+                self.browser.page().runJavaScript("map.remove_all_svgs()")
 
+        self.edit_telemetry_config_window = EditTelemetryConfigWindow(handle_waypoints_callback,
+                                                                      handle_sailboat_debugging_callback)
+        self.edit_telemetry_config_window.setWindowTitle("Edit Telemetry Config")
+        
         self.telemetry_config_button = QPushButton("Map Appearance Config")
-        self.telemetry_config_button.setToolTip("If clicked, a popup will appear where you can alter the telemetry configuration.")
+        self.telemetry_config_button.setToolTip(
+            "If enabled, a popup will appear where you can alter the telemetry configuration.",
+        )
         self.telemetry_config_button.clicked.connect(
             lambda: self.edit_telemetry_config_window.show() or self.edit_telemetry_config_window.raise_()
-            )
+        )
 
         self.middle_layout.addWidget(self.browser, 0, 1)
         self.middle_layout.setRowStretch(0, 1)
@@ -952,6 +967,148 @@ class GroundStationWidget(QWidget):
         boat_data, connection_status = request_result
         self.boat_data = boat_data
 
+        def draw_map_diagnostics(heading: float) -> None:
+            """
+            Draw diagnostics on the map, such as no sail zone and wind direction.
+            
+            Parameters
+            ----------
+            heading
+                The heading of the boat, used to orient the diagnostics correctly on the map.
+            """
+
+            no_sail_zone_size_dict: dict[str, str | float] | None = constants.SM.read("current_autopilot_parameters").get(
+                "no_sail_zone_size"
+            )
+
+            if no_sail_zone_size_dict is None:
+                print("[Warning] `no_sail_zone_size` not found in current autopilot parameters, not drawing the no sail zone.")
+                return
+
+            no_sail_size: float = 0
+            if "current" in no_sail_zone_size_dict:
+                no_sail_size = no_sail_zone_size_dict["current"]
+            else:
+                no_sail_size = no_sail_zone_size_dict["default"]
+
+            wind_direction: float | None = self.boat_data.get("true_wind_angle")
+            if wind_direction is None:
+                print("[Warning] `true_wind_angle` not found in boat data, defaulting to 0.")
+                wind_direction = 0
+
+            head = heading + wind_direction + 180  # opposite the direction of wind
+            size = 0.2
+
+            # don't think about it too hard
+            x1: float = 2 + np.cos(np.deg2rad(head - no_sail_size / 2))
+            y1: float = 2 - np.sin(np.deg2rad(head - no_sail_size / 2))
+            x2: float = 2 + np.cos(np.deg2rad(head + no_sail_size / 2))
+            y2: float = 2 - np.sin(np.deg2rad(head + no_sail_size / 2))
+
+            no_go_path_shape: list[svg.PathData] = [
+                svg.MoveTo(2, 2),
+                svg.LineTo(x1, y1),
+                svg.Arc(1, 1, 0, 0, 0, x2, y2),
+                svg.LineTo(2, 2),
+            ]
+            no_go_html = svg.Path(d=no_go_path_shape, fill="#c9140a")
+
+            tack_distance_dict: dict[str, str | float] | None = constants.SM.read("current_autopilot_parameters").get(
+                "tack_distance"
+            )
+
+            if tack_distance_dict is None:
+                print("[Warning] `tack_distance` not found in current autopilot parameters, not drawing the no sail zone.")
+                return
+
+            tack_distance = tack_distance_dict["current"] if "current" in tack_distance_dict else tack_distance_dict["default"]
+
+            distance_to_waypoint: float | None = self.boat_data.get("distance_to_next_waypoint")
+            if distance_to_waypoint is None:
+                print("[Warning] `distance_to_next_waypoint` not found in boat data, defaulting to 200.")
+                distance_to_waypoint = 200
+            
+            if tack_distance > distance_to_waypoint:
+                # we can't draw the line!
+                decision_zone_path: list[svg.PathData] = []
+                distance_to_waypoint = 200
+            else:
+            
+                # in radians
+                decision_zone_size: float = np.rad2deg(
+                    np.arcsin((tack_distance/distance_to_waypoint)*np.sin(np.deg2rad(no_sail_size/2)))
+                )
+
+                # don't think about it too hard
+                x1: float = 2 + np.cos(np.deg2rad(head - (no_sail_size / 2 - decision_zone_size / 2)))
+                y1: float = 2 - np.sin(np.deg2rad(head - (no_sail_size / 2 - decision_zone_size / 2)))
+                x2: float = 2 + np.cos(np.deg2rad(head + (no_sail_size / 2 - decision_zone_size / 2)))
+                y2: float = 2 - np.sin(np.deg2rad(head + (no_sail_size / 2 - decision_zone_size / 2)))
+
+                decision_zone_path: list[svg.PathData] = [
+                    svg.MoveTo(2, 2),
+                    svg.LineTo(x1, y1),
+                    svg.Arc(1, 1, 0, 0, 0, x2, y2),
+                    svg.LineTo(2, 2),
+                ]
+
+            decision_zone_html = svg.Path(d=decision_zone_path, fill="pink")
+
+            wind_direction_shape: list[svg.PathData] = [
+                svg.MoveTo(1, 1),
+                svg.LineTo(
+                    1 + np.cos(np.deg2rad(heading + wind_direction)),
+                    1 - np.sin(np.deg2rad(heading + wind_direction)),
+                ),
+            ]
+            wind_html = svg.Path(
+                d=wind_direction_shape,
+                stroke="orange",
+                stroke_width="0.1",
+            )
+
+            speed: float | None = self.boat_data.get("speed")
+            if speed is None:
+                print("[Warning] `speed` not found in boat data, defaulting to 1e-3.")
+                speed = 1e-3
+
+            elif np.isclose(speed, 0.0, rtol=1e-5, atol=1e-8):
+                print("[Warning] `speed` is very close to 0, defaulting to 1e-3 to avoid division by zero.")
+                speed = 1e-3
+            
+            vx: float = self.boat_data.get("velocity_x", -69.420)
+            vy: float = self.boat_data.get("velocity_y", -69.420)
+
+            radius: float = 4*speed
+            x1: float = 2 + radius * vx / speed
+            y1: float = 2 + radius * vy / speed
+            head = heading
+
+            velocity_arrow_shape: list[svg.PathData] = [
+                svg.MoveTo(2, 2),
+                svg.LineTo(x1, y1)
+            ]
+            velocity_arrow_transform: list[svg.Transform] = [
+                svg.Rotate(-head, 2, 2),
+            ]
+            velocity_html = svg.Path(
+                d=velocity_arrow_shape,
+                stroke="black",
+                stroke_width="0.1",
+                transform=velocity_arrow_transform
+            )
+
+            svg_str = no_go_html.as_str() + decision_zone_html.as_str()
+            self.browser.page().runJavaScript(
+                f"map.update_no_sail_svg('{svg_str}', {size})"
+            )
+            self.browser.page().runJavaScript(
+                f"map.update_velocity_svg('{velocity_html.as_str()}', '{size}')"
+            )
+            self.browser.page().runJavaScript(
+                f"map.update_wind_svg('{wind_html.as_str()}')"
+            )
+
         try:
             heading = self.boat_data.get("heading")
             assert isinstance(heading, (float, int)), "heading is not a number."
@@ -977,6 +1134,9 @@ class GroundStationWidget(QWidget):
             constants.SM.write("has_telemetry_server_instance_changed", False)
 
         self.browser.page().runJavaScript(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})")
+
+        if self.sailboat_debugging_symbols_status:
+            draw_map_diagnostics(heading)
 
         if "full_autonomy_maneuver" in self.boat_data:
             telemetry_text = sailboat_mode(boat_data)

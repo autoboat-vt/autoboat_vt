@@ -15,6 +15,7 @@ import { WaypointManager } from "./waypoints";
 import { BuoyManager } from "./buoys";
 import { BoatManager } from "./boat";
 import type { LatLngTuple } from "./types";
+import { SVGManager } from "./svg";
 
 class MapInterface {
     static readonly mapOptions: MapOptions = { center: [0, 0], zoom: 13 };
@@ -33,6 +34,7 @@ class MapInterface {
     readonly waypoints: WaypointManager;
     readonly buoys: BuoyManager;
     readonly boat: BoatManager;
+    readonly svgs: SVGManager;
 
     static getIcon(color: string): Icon {
         const key = `marker-${color}`;
@@ -83,6 +85,8 @@ class MapInterface {
             this.map,
             MapInterface.getBoatIcon.bind(MapInterface)
         );
+
+        this.svgs = new SVGManager(this.map, this.boat);
 
         const mapTilerKey = "M9yBkV9J49pYUg5o8SGC";
         tileLayer(
@@ -208,6 +212,22 @@ class MapInterface {
 
     clear_buoys(): void {
         this.buoys.clear();
+    }
+
+    remove_all_svgs(): void {
+        this.svgs.removeAllSvgs();
+    }
+
+    update_no_sail_svg(innerHTML: string, size: number): void {
+        this.svgs.updateNoSailSvg(innerHTML, size);
+    }
+
+    update_velocity_svg(innerHTML: string, size: number): void {
+        this.svgs.updateVelocitySvg(innerHTML, size);
+    }
+
+    update_wind_svg(innerHTML: string) {
+        this.svgs.updateWindSvg(innerHTML);
     }
 }
 
