@@ -9,12 +9,12 @@ from urllib.parse import urljoin
 from qtpy.QtCore import Qt, QUrl, Signal
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import (
-    QCheckBox,
     QFileDialog,
     QGridLayout,
     QGroupBox,
     QLabel,
     QMessageBox,
+    QPushButton,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
@@ -27,6 +27,7 @@ from syntax_highlighters import JsonHighlighter
 from utils import constants, misc, thread_classes
 
 from widgets.popup_edit import TextEditWindow
+from widgets.popup_telemetry_config import EditTelemetryConfigWindow
 
 
 class GroundStationWidget(QWidget):
@@ -164,18 +165,21 @@ class GroundStationWidget(QWidget):
         self.browser.setMinimumWidth(700)
         self.browser.setMinimumHeight(700)
 
-        self.waypoints_checker_toggle = QCheckBox("Enable popup when waypoints change?")
-        self.waypoints_checker_toggle.setChecked(False)
-        self.waypoints_checker_toggle.setToolTip(
-            "If enabled, a popup will appear when the waypoints on the telemetry server change.",
-        )
-        self.waypoints_checker_toggle.stateChanged.connect(
-            lambda state: setattr(self, "waypoints_checker_status", state == Qt.CheckState.Checked),
-        )
+        def handle_waypoints_callback(state: Qt.CheckState) -> None:
+            self.waypoints_checker_status = state == Qt.CheckState.Checked
+        
+        self.edit_telemetry_config_window = EditTelemetryConfigWindow(handle_waypoints_callback)
+        self.edit_telemetry_config_window.setWindowTitle("Edit Telemetry Config")
+
+        self.telemetry_config_button = QPushButton("Map Appearance Config")
+        self.telemetry_config_button.setToolTip("If clicked, a popup will appear where you can alter the telemetry configuration.")
+        self.telemetry_config_button.clicked.connect(
+            lambda: self.edit_telemetry_config_window.show() or self.edit_telemetry_config_window.raise_()
+            )
 
         self.middle_layout.addWidget(self.browser, 0, 1)
         self.middle_layout.setRowStretch(0, 1)
-        self.middle_layout.addWidget(self.waypoints_checker_toggle, 1, 1, Qt.AlignCenter)
+        self.middle_layout.addWidget(self.telemetry_config_button, 1, 1, Qt.AlignCenter)
         self.middle_layout.setRowStretch(1, 0)
         self.main_layout.addLayout(self.middle_layout, 0, 1)
         # endregion middle section
