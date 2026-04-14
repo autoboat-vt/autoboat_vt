@@ -1,18 +1,43 @@
+import http.server
+import mimetypes
+import socketserver
 import sys
-import constants
-from widgets import GroundStationWidget, ConsoleOutputWidget, CameraWidget, AutopilotParamEditor
+import threading
+from typing import NoReturn
 
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
+from utils import constants, misc
+from widgets import (
+    AutopilotConfigWidget,
+    CameraWidget,
+    ConsoleOutputWidget,
+    GraphViewer,
+    GroundStationWidget,
+    InstanceHandler,
+)
 
 
 class MainWindow(QMainWindow):
-    """
-    Main window for the ground station application.
+    """Main window for the ground station application."""
 
-    Inherits
-    -------
-    `QMainWindow`
-    """
+    def start_asset_server(self) -> None:
+        """Start a quiet HTTP server for static assets."""
+
+        mimetypes.add_type("image/png", ".png")
+        mimetypes.add_type("text/plain", ".txt")
+        mimetypes.add_type("text/javascript", ".js")
+        mimetypes.add_type("text/css", ".css")
+
+        def handler(*args: tuple, **kwargs: dict) -> http.server.SimpleHTTPRequestHandler:
+            return http.server.SimpleHTTPRequestHandler(*args, directory=constants.ASSETS_DIR.as_posix(), **kwargs)
+        
+        for link in constants.JS_LIBRARIES:
+            misc.cache_cdn_file(link, constants.ASSETS_DIR)
+
+        socketserver.TCPServer.allow_reuse_address = True
+        self.asset_server = socketserver.TCPServer(("", constants.ASSET_SERVER_PORT), handler)
+        print(f"[Info] Serving HTTP assets on port {constants.ASSET_SERVER_PORT}...")
+        self.asset_server.serve_forever()
 
     def __init__(self) -> None:
         super().__init__()
@@ -23,21 +48,66 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.main_widget)
 
         try:
-            # load console first to capture any startup messages
-            self.main_widget.addTab(ConsoleOutputWidget(), "Console Output")
+            self.console_widget = ConsoleOutputWidget()
+            print(f"[Info] Starting the {self.windowTitle()}...")
+            self.instance_handler = InstanceHandler()
+            self.main_widget.addTab(self.console_widget, "Console Output")
 
-            self.main_widget.addTab(GroundStationWidget(), "Ground Station")
-            self.main_widget.addTab(AutopilotParamEditor(), "Autopilot Parameters")
-            self.main_widget.addTab(CameraWidget(), "Camera Feed")
+            if constants.SM.read("has_telemetry_server_instance_changed"):
+                self.load_main_tabs()
+
+            else:
+                self.main_widget.addTab(self.instance_handler, "Instance Handler")
+                self.check_timer = misc.copy_qtimer(constants.TEN_MS_TIMER)
+                self.check_timer.timeout.connect(self.check_instance_connection)
+                self.check_timer.start()
+
         except Exception as e:
-            print(f"Error: {e}")
-        self.main_widget.setCurrentIndex(1)
+            print(f"[Error] Failed to initialize main window: {e}")
+
+    def closeEvent(self, event: object) -> NoReturn:
+        """Handle the window close event."""
+
+        print("[Info] Shutting down servers...")
+        
+        if hasattr(self, "asset_server"):
+            self.asset_server.shutdown()
+        
+        if hasattr(self, "cdn_server"):
+            self.cdn_server.shutdown()
+        
+        print("[Info] Servers shut down.")
+        event.accept()
+
+    def check_instance_connection(self) -> None:
+        """Check if an instance connection has been established."""
+
+        if constants.SM.read("has_telemetry_server_instance_changed"):
+            self.check_timer.stop()
+            self.load_main_tabs()
+
+    def load_main_tabs(self) -> None:
+        """Load the main application tabs after an instance connection is detected."""
+
+        try:
+            self.main_widget.addTab(self.instance_handler, "Instance Handler")
+            graph_viewer = GraphViewer()
+            self.main_widget.addTab(GroundStationWidget(graph_viewer.boat_data_signal), "Ground Station")
+            self.main_widget.addTab(graph_viewer, "Graph Viewer")
+            self.main_widget.addTab(AutopilotConfigWidget(), "Autopilot Configuration")
+            self.main_widget.addTab(CameraWidget(), "Camera Feed")
+            self.main_widget.setCurrentIndex(2)
+            print("[Info] Main application tabs loaded.")
+
+        except Exception as e:
+            print(f"[Error] Failed to load main tabs: {e}")
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    constants.ICONS = constants.__get_icons()
+    constants.ICONS = misc.get_icons()
     window = MainWindow()
+    threading.Thread(target=window.start_asset_server, daemon=True).start()
     app.setStyleSheet(constants.STYLE_SHEET)
     app.setPalette(constants.PALLETTE)
     app.setStyle("Fusion")

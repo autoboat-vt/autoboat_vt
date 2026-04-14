@@ -70,9 +70,9 @@ void propeller_motor::should_propeller_motor_be_powered_callback(const void *msg
     const std_msgs__msg__Bool *should_propeller_motor_be_powered_msg = (const std_msgs__msg__Bool *)msg_in;
 
     if (should_propeller_motor_be_powered_msg->data)
-        close_contactor(CONTACTOR_DRIVER_IN_A_PIN);
+        gpio_put(RELAY_PIN, 0);
     else
-        open_contactor(CONTACTOR_DRIVER_IN_A_PIN);
+        gpio_put(RELAY_PIN, 1);
 }
 
 void propeller_motor::propeller_motor_create_subscription(rcl_node_t *microros_node)
@@ -135,7 +135,7 @@ void current_rudder::add_rudder_angle_to_executor(rclc_executor_t *executor)
 void current_rudder::desired_rudder_angle_received_callback(const void *msg_in)
 {
     const std_msgs__msg__Float32 *msg = (const std_msgs__msg__Float32 *)msg_in;
-    current_rudder::desired_angle = -(msg->data);
+    current_rudder::desired_angle = (msg->data);
 
     if (current_rudder::desired_angle > MAX_RUDDER_ANGLE)
         current_rudder::desired_angle = MAX_RUDDER_ANGLE;
@@ -206,6 +206,16 @@ void current_heading::create_heading_publisher(rcl_node_t *microros_node)
         current_heading::topic.c_str());
 }
 
+
+//-------------------DEBUG-----------------------
+void rudder_debug::create_rudder_debug_publisher(rcl_node_t *microros_node){
+        rclc_publisher_init_default(
+        &rudder_debug::rudder_debug_publisher,
+        microros_node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+        rudder_debug::debug_publisher_topic.c_str());
+}
+
 //----------------MICROROS-CLASS----------------------------------
 Microros::Microros(){
 
@@ -219,6 +229,9 @@ void Microros::set_cores(rcl_allocator_t* allocator, rclc_support_t* support, rc
     rclc_node_init_default(&this->microros_node, "microros", "", this->support);
 }
 
+void Microros::initialize_debug(){
+    rudder_debug::create_rudder_debug_publisher(&microros_node);
+}
 
 //for now the focus is on theseus, this will be updated later
 void Microros::initialize_lumpy_peripherals()

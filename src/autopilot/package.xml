@@ -2,10 +2,10 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autopilot</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="73669160+ChrisNassif@users.noreply.github.com">animated</maintainer>
-  <license>TODO: License declaration</license>
+  <version>1.0.0</version>
+  <description>Contains all of the ros2 nodes necessary to run the autopilot software and telemetry software</description>
+  <maintainer email="autoboat@vt.edu">autoboatvt</maintainer>
+  <license>http://www.apache.org/licenses/LICENSE-2.0</license>
 
   <depend>rclpy</depend>
 

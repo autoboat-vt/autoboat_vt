@@ -1,177 +1,127 @@
 #include "systems.hpp"
 
-
 static drv8711 rudderStepperMotorDriver;
 static drv8711 winchStepperMotorDriver;
 
-
-
-Systems::Systems(boat_type bt){
-    current_boat = bt;
-    initalize_cores(); //assumption is application loop will be called
-
-}
-
-void Systems::initalize_cores(){
-    rclc_support_init(&support, 0, NULL, &allocator);
-    rclc_executor_init(&executor, &support.context, 5, &allocator);
-}
-
-void Systems::initialize_microros(){
-        microros_node.set_cores(&allocator, &support, &executor);
-        //change this to rely on boat system
-        microros_node.initialize_theseus_peripherals();
-}
-
-void Systems::check_microros(){
-    rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
-}
-
-void Systems::initialize_hal(){
-    //write boat specific intialization later 
-    HAL::init_i2c();
-    HAL::init_spi();
-    HAL::init_rudder_stepper(&rudderStepperMotorDriver);
-}
-
-void Systems::cleanup(){
-    rclc_executor_fini(&executor);
-    rclc_support_fini(&support);
-}
-
-
-void Systems::initialize_application_loop(){
-    rclc_timer_init_default(&application_loop_timer, &support, RCL_MS_TO_NS(1), application_loop);
-    rclc_executor_add_timer(&executor, &application_loop_timer);
-}
-
-void Systems::application_loop(rcl_timer_t * timer, int64_t last_call_time)
+Systems::Systems(boat_type bt)
 {
+  current_boat = bt;
+  initalize_cores();  // assumption is application loop will be called
+}
 
-    (void) timer;
-    (void) last_call_time;
+void Systems::initalize_cores()
+{
+  rclc_support_init(&support, 0, NULL, &allocator);
+  rclc_executor_init(&executor, &support.context, 5, &allocator);
+}
 
-    // -----------------------------------------------------
-    // RUDDER CLOSED LOOP CONTROl
-    // -----------------------------------------------------
-    // float current_rudder_motor_angle = get_motor_angle(&rudderEncoder) + RUDDER_ANGLE_OFFSET; // motor_angle % 360
-    // if (current_rudder_motor_angle >= 180)
-    // {
-    //     current_rudder_motor_angle -= 360;
-    // }
+void Systems::initialize_microros()
+{
+  microros_node.set_cores(&allocator, &support, &executor);
+  // change this to rely on boat system
+  microros_node.initialize_theseus_peripherals();
+  Systems::initialize_debug_readers();
+}
 
-    // float current_rudder_angle = get_rudder_angle_from_motor_angle(current_rudder_motor_angle);
-    // float rudder_error = current_rudder_angle - desired_rudder_angle;
+void Systems::initialize_debug_readers()
+{
+  microros_node.initialize_debug();
+}
 
-    // int number_of_steps_rudder = 0;
-    // bool rudder_step_enabled = false;
+void Systems::check_microros()
+{
+  rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+}
 
-    // if (abs(rudder_error) > ACCEPTABLE_RUDDER_ERROR)
-    // {
-    //     rudder_step_enabled = true;
+void Systems::initialize_hal()
+{
+  // write boat specific intialization later
+  HAL::init_i2c();
+  HAL::init_spi();
+  gpio_init(RUDDER_MOTOR_CS_PIN);
+  gpio_set_dir(RUDDER_MOTOR_CS_PIN, GPIO_OUT);
+  gpio_pull_down(RUDDER_MOTOR_CS_PIN);
+  HAL::init_rudder_stepper(&rudderStepperMotorDriver);
 
-    //     if (((int)rudder_error % 360) > 0 && ((int)rudder_error % 360) < 180)
-    //         // drv8711_setDirection(&rudderStepperMotorDriver, COUNTER_CLOCKWISE);
+  gpio_init(RELAY_PIN);
+  gpio_set_dir(RELAY_PIN, GPIO_OUT);
+  gpio_pull_up(RELAY_PIN);
 
-    //     else
-    //         drv8711_setDirection(&rudderStepperMotorDriver, CLOCKWISE);
+}
 
-    //     // number_of_steps_rudder = RUDDER_GAIN * abs(rudder_error) + RUDDER_GAIN_Q * pow(abs(rudder_error), 2);
-    //     number_of_steps_rudder = (int)(abs(rudder_error) * RUDDER_GAIN / MAX_RUDDER_ERROR);
+void Systems::cleanup()
+{
+  rclc_executor_fini(&executor);
+  rclc_support_fini(&support);
+}
 
-    //     if (number_of_steps_rudder > RUDDER_NUMBER_OF_STEPS_TO_CLIP_AT)
-    //     {
-    //         number_of_steps_rudder = RUDDER_NUMBER_OF_STEPS_TO_CLIP_AT;
-    //     }
-    // }
+void Systems::initialize_application_loop()
+{
+  rclc_timer_init_default(&application_loop_timer, &support, RCL_MS_TO_NS(1), application_loop);
+  rclc_executor_add_timer(&executor, &application_loop_timer);
+}
 
-    // // -----------------------------------------------------
-    // // SAIL CLOSED LOOP CONTROl
-    // // -----------------------------------------------------
-    // int number_of_steps_winch = 0;
-    // bool winch_step_enabled = false;
+void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
+{
+  (void)timer;
+  (void)last_call_time;
 
-//Looking at here rn
-    float angle = rudderEncoder.get_motor_angle();
-    // rudderEncoder.putLow();
 
-    current_rudder::current_angle_msg.data = angle;
-    // select_chip(&rudderStepperMotorDriver);
 
-    RCCHECK(rcl_publish(&current_rudder::current_rudder_angle_publisher, &current_rudder::current_angle_msg, NULL));
+  // -----------------------------------------------------
+  // RUDDER CLOSED LOOP CONTROL
+  // -----------------------------------------------------
+  float current_rudder_motor_angle = rudderEncoder.get_motor_angle() + RUDDER_ANGLE_OFFSET;
+  if (current_rudder_motor_angle >= 180.0f)
+    current_rudder_motor_angle -= 360.0f;
 
-    //Ending the look here
-// #if BOAT_MODE == Lumpy
-//     float current_winch_angle = get_motor_angle(&winchEncoder) + WINCH_ANGLE_OFFSET + 360 * get_turn_count(&winchEncoder);
-//     float current_sail_angle = get_sail_angle_from_winch_angle(current_winch_angle);
-//     float winch_error = desired_winch_angle - current_winch_angle;
+  float current_rudder_angle = get_rudder_angle_from_motor_angle(current_rudder_motor_angle);
+  float rudder_error = (current_rudder::desired_angle - current_rudder_angle);
 
-//     // check for absurd errors, and if there is an absurd error, do nothing
-//     if (abs(winch_error) > 1000000 || winch_error != winch_error)
-//         winch_error = 0;
+  int number_of_steps_rudder = 0;
+  bool rudder_step_enabled = false;
 
-//     if (abs(winch_error) > ACCEPTABLE_WINCH_ERROR)
-//     {
-//         winch_step_enabled = true;
+  if (fabsf(rudder_error) > ACCEPTABLE_RUDDER_ERROR)
+  {
+    rudder_step_enabled = true;
 
-//         if (winch_error > 0)
-//         {
-//             drv8711_setDirection(&winchStepperMotorDriver, CLOCKWISE);
-//         }
-//         else
-//         {
-//             drv8711_setDirection(&winchStepperMotorDriver, COUNTER_CLOCKWISE);
-//         }
+    // Set direction
+    if (rudder_error > 0) {
+      drv8711_setDirection(&rudderStepperMotorDriver, CLOCKWISE);
+    }
+    else {
+      drv8711_setDirection(&rudderStepperMotorDriver, COUNTER_CLOCKWISE);
+    }
 
-//         // number of steps is some linear function that maps the error of the rudder to a number of steps we want to take per loop.
-//         // This ends up cooresponding to the speed of the rudder. The higher the rudder_error, the higher the speed of the rudder will be
-//         number_of_steps_winch = (int)(abs(winch_error) * WINCH_GAIN / MAX_WINCH_ERROR);
+    number_of_steps_rudder = (int)(abs(rudder_error) * RUDDER_GAIN / MAX_RUDDER_ERROR + RUDDER_GAIN_Q * pow(abs(rudder_error), 2));
+    if (number_of_steps_rudder > RUDDER_NUMBER_OF_STEPS_TO_CLIP_AT) {
+      number_of_steps_rudder = RUDDER_NUMBER_OF_STEPS_TO_CLIP_AT;
+    }
+  }
 
-//         if (number_of_steps_winch > WINCH_NUMBER_OF_STEPS_TO_CLIP_AT)
-//         {
-//             number_of_steps_winch = WINCH_NUMBER_OF_STEPS_TO_CLIP_AT;
-//         }
-//     }
+  // -----------------------------------------------------
+  // EXECUTE STEPPING (only rudder, no winch)
+  // -----------------------------------------------------
+  for (int i = 0; i < number_of_steps_rudder; i++)
+  {
+    gpio_put(LED_PIN, 1);
+    if (rudder_step_enabled) {
+      drv8711_step(&rudderStepperMotorDriver);
+    }
 
-//     // -----------------------------------------------------
-//     // CLOSED LOOP CONTROL STEPPING
-//     // -----------------------------------------------------
-//     int max_steps = number_of_steps_rudder;
-// #if BOAT_MODE == Lumpy
-//     if (number_of_steps_winch > max_steps)
-//         max_steps = number_of_steps_winch;
-// #endif
+    sleep_us(1000);
+  }
 
-//     for (int i = 0; i < max_steps; i++)
-//     {
-//         if (rudder_step_enabled && i < number_of_steps_rudder)
-//             drv8711_step(&rudderStepperMotorDriver);
+  // -----------------------------------------------------
+  // PUBLISH FEEDBACK
+  // -----------------------------------------------------
+  current_rudder::current_rudder_motor_angle_msg.data = current_rudder_motor_angle;
+  rcl_publish(&current_rudder::current_rudder_motor_angle_publisher, &current_rudder::current_rudder_motor_angle_msg,
+              NULL);
 
-// #if BOAT_MODE == Lumpy
-//         if (winch_step_enabled && i < number_of_steps_winch)
-//             drv8711_step(&winchStepperMotorDriver);
-// #endif
+  current_rudder::current_angle_msg.data = current_rudder_angle;
+  rcl_publish(&current_rudder::current_rudder_angle_publisher, &current_rudder::current_angle_msg, NULL);
 
-//         sleep_us(MIN_TIME_BETWEEN_MOTOR_STEPS_MICROSECONDS);
-//     }
-
-//     current_sail_angle_msg.data = current_sail_angle;
-//     current_winch_angle_msg.data = current_winch_angle;
-
-//     rcl_publish(&current_winch_angle_publisher, &current_winch_angle_msg, NULL);
-//     rcl_publish(&current_sail_angle_publisher, &current_sail_angle_msg, NULL);
-
-//     // counter clockwise from true east
-//     current_rudder_angle_msg.data = current_rudder_angle;
-//     current_rudder_motor_angle_msg.data = current_rudder_motor_angle;
-
-//     test_msg.data = rudder_error;
-
-//     rcl_publish(&test_publisher, &test_msg, NULL);
-//     rcl_publish(&current_rudder_motor_angle_publisher, &current_rudder_motor_angle_msg, NULL);
-//     rcl_publish(&current_rudder_angle_publisher, &current_rudder_angle_msg, NULL);
-        current_heading::heading_msg.data = fmod((-compass.getBearing() / 10.0 + COMPASS_OFFSET + 360), 360.0);
-
-        rcl_publish(&current_heading::compass_angle_publisher,    &current_heading::heading_msg,NULL);
-// #endif
+  current_heading::heading_msg.data = fmod((180-(compass.getBearing()/10.0+MAGNETIC_DECLINATION))+360,360);
+  rcl_publish(&current_heading::compass_angle_publisher, &current_heading::heading_msg, NULL);
 }

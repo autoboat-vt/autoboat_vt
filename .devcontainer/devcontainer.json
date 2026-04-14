@@ -1,45 +1,68 @@
 {
-    "name": "VT AutoBoat Development Container",
-    "image": "autoboatvt/autoboat_docker_dev_image",
+    "name": "VT AutoBoat Development Container v1.3.0",
+    "image": "${localEnv:DEVCONTAINER_VARIANT:vtautoboat/development_image}",
+    "initializeCommand": "bash .devcontainer/initializeCommand.sh",
+    "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
     "privileged": true,
-    "remoteUser": "",
-    "containerUser": "",
+    "remoteUser": "autoboat_user",
+    "containerUser": "autoboat_user",
     "workspaceFolder": "/home/ws",
     "workspaceMount": "source=${localWorkspaceFolder},target=/home/ws/,type=bind",
     "customizations": {
         "vscode": {
             "extensions": [
-                "ms-azuretools.vscode-docker",
+                "ms-azuretools.vscode-containers",
+                "Ranch-Hand-Robotics.rde-pack",
+                "ms-vscode.cpptools",
                 "ms-python.python",
                 "ms-python.vscode-pylance",
-                "magicstack.magicpython",
-                "ms-vscode.cpptools",
+                "golang.go",
+                "donjayamanne.python-environment-manager",
+                "ms-python.debugpy",
+                "charliermarsh.ruff",
+                "jannchie.ruff-ignore-explainer",
+                "dbaeumer.vscode-eslint",
+                "rodolphebarbanneau.python-docstring-highlighter",
                 "twxs.cmake",
                 "ms-vscode.cmake-tools",
-                "ms-iot.vscode-ros",
-                "smilerobotics.urdf",
+                "ms-vscode.makefile-tools",
+                "twixes.pypi-assistant",
+                "IBM.output-colorizer",
+                "bierner.docs-view",
+                "bierner.color-info",
+                "ms-vscode.hexeditor",
+                "chamboug.js-auto-backticks",
+                "pflannery.vscode-versionlens",
                 "yzhang.markdown-all-in-one",
-                "charliermarsh.ruff",
-                "njpwerner.autodocstring",
-                "tamasfe.even-better-toml",
                 "davidanson.vscode-markdownlint",
-                "rodolphebarbanneau.python-docstring-highlighter",
+                "tamasfe.even-better-toml",
                 "redhat.vscode-xml",
-                "redhat.vscode-yaml"
+                "redhat.vscode-yaml",
+                "mkxml.vscode-filesize"
             ]
         }
     },
     "containerEnv": {
         "ROS_AUTOMATIC_DISCOVERY_RANGE": "LOCALHOST",
-        "ROS_DOMAIN_ID": "42"
+        "ROS_DOMAIN_ID": "42",
+        "CONTAINER_OWNER_USER_NAME": "${localEnv:USER}",
+        "TZ": "${localEnv:TZ:America/New_York}"
     },
+
     "runArgs": [
         "--net=host",
+        "--platform=linux/amd64",
         "-v",
         "/dev:/dev",
         "--env-file=.devcontainer/devcontainer_environment_variables",
         "-v",
-        "/var/run/docker.sock:/var/run/docker.sock"
+        "/var/run/docker.sock:/var/run/docker.sock",
+        "${localEnv:DOCKER_GPU_RUN_ARGS:--env}",
+        "${localEnv:DOCKER_RUNTIME_RUN_ARGS:IGNORE_THIS=hi}",
+        "--name=autoboat_dev_container",
+        "--privileged"
+        // "--device=/dev/ttyACM0",
+        // "--device-cgroup-rule=c 166:* rmw"
     ],
     "mounts": [
         "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
