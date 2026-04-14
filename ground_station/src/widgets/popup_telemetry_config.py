@@ -30,7 +30,13 @@ class EditTelemetryConfigWindow(QWidget):
             "If enabled, the sailboat debugging symbols will appear on the screen.",
         )
         self.debugging_symbols_toggle.stateChanged.connect(
-            lambda state: debugging_symbols_callback(state) or self.feedback_text.setText("Updated Debugging Symbols Config.")
+            lambda state: debugging_symbols_callback(state) or self.feedback_text.setText(
+"""Updated Debugging Symbols Config.
+orange - wind
+black - velocity
+red - no-go zone
+pink - decision zone 2"""
+            )
         )
 
         self.layout.addWidget(self.waypoints_checker_toggle)
