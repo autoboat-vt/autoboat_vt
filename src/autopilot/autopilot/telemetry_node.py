@@ -22,6 +22,7 @@ from std_msgs.msg import Bool, Float32, Int32, String
 from autoboat_msgs.msg import VESCTelemetryData, WaypointList
 
 from .autopilot_library.utils.constants import (
+    HEADING_OFFSET,
     QOS_AUTOPILOT_PARAM_CONFIG_PATH,
     TELEMETRY_SERVER_URL,
     MotorboatAutopilotMode,
@@ -264,7 +265,7 @@ class TelemetryNode(Node):
             The current heading of the boat.
         """
 
-        self.heading = heading.data
+        self.heading = heading.data + HEADING_OFFSET
 
 
     def apparent_wind_vector_callback(self, apparent_wind_vector: Vector3) -> None:

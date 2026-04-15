@@ -87,6 +87,9 @@ QOS_AUTOPILOT_PARAM_CONFIG_PATH = QoSProfile(
     depth=1,
 )
 
+# TODO: FIX ON MICROROS
+HEADING_OFFSET = -26
+
 # don't put '/' at the end of the URL
 TELEMETRY_SERVER_URL = "https://vt-autoboat-telemetry.uk"
 

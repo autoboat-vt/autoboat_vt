@@ -16,6 +16,7 @@ from autoboat_msgs.msg import RCData, VESCControlData, WaypointList
 from .autopilot_library.motorboat_autopilot import MotorboatAutopilot
 from .autopilot_library.utils.constants import (
     CONFIG_DIRECTORY,
+    HEADING_OFFSET,
     QOS_AUTOPILOT_PARAM_CONFIG_PATH,
     MotorboatAutopilotMode,
     MotorboatControls,
@@ -275,7 +276,7 @@ class MotorboatAutopilotNode(Node):
 
     def heading_callback(self, heading: Float32) -> None:
         """A callback function to get the current heading of the boat."""
-        self.heading = heading.data
+        self.heading = heading.data + HEADING_OFFSET
         self.last_heading_received_time = time.time()
 
 
