@@ -89,8 +89,9 @@ class GPSPublisher(Node):
 
 
     def publish(self):
+        print("got here")
         geo = self.gps.geo_coords()
-
+        print(f"got here 2 {geo}")
         if not geo:
             return
 

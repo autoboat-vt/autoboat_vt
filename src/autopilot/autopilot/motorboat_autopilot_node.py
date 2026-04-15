@@ -350,7 +350,7 @@ class MotorboatAutopilotNode(Node):
             self.desired_heading_publisher.publish(Float32(data=0.))
 
 
-        self.desired_rudder_angle_publisher.publish(Float32(data=float(desired_rudder_angle)))
+        self.desired_rudder_angle_publisher.publish(Float32(data=float(-1 * desired_rudder_angle)))
 
 
         # Manually check whether any of the sensors have disconnecteds
@@ -388,7 +388,7 @@ class MotorboatAutopilotNode(Node):
                 vesc_control_data = VESCControlData(
                     control_type_for_vesc = "rpm",
                     desired_vesc_current = 0.0,
-                    desired_vesc_rpm = 100.0 * self.joystick_left_y,
+                    desired_vesc_rpm = -100.0 * self.joystick_left_y,
                     desired_vesc_duty_cycle = 0.0
                 )
 
@@ -398,14 +398,14 @@ class MotorboatAutopilotNode(Node):
                     control_type_for_vesc = "duty_cycle",
                     desired_vesc_current = 0.0,
                     desired_vesc_rpm = 0.0,
-                    desired_vesc_duty_cycle = self.joystick_left_y,
+                    desired_vesc_duty_cycle = -1 * self.joystick_left_y,
                 )
                 
 
             elif self.propeller_motor_control_mode == MotorboatControls.CURRENT:
                 vesc_control_data = VESCControlData(
                     control_type_for_vesc = "current",
-                    desired_vesc_current = self.joystick_left_y,
+                    desired_vesc_current = -1 * self.joystick_left_y,
                     desired_vesc_rpm = 0.0,
                     desired_vesc_duty_cycle = 0.0,
                 )
@@ -415,7 +415,7 @@ class MotorboatAutopilotNode(Node):
             vesc_control_data = VESCControlData(
                 control_type_for_vesc = "rpm",
                 desired_vesc_current = 0.0,
-                desired_vesc_rpm = desired_rpm,
+                desired_vesc_rpm = -1 * desired_rpm,
                 desired_vesc_duty_cycle = 0.0,
             )
             

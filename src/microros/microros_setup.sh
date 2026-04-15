@@ -2,7 +2,8 @@
 set -e
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 
-REPOSITORY_ROOT="/home/ws"
+#REPOSITORY_ROOT="/home/ws"
+REPOSITORY_ROOT="/home/autoboat/autoboat_vt"
 
 # Install dependencies
 sudo apt-get update || true  # continue even if this "fails" for whatever reason

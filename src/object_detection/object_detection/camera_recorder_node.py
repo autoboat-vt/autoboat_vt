@@ -26,7 +26,7 @@ class CamCorderNode(Node):
         self.CAM_LIST = {
             0: {
                 "name": self._find_camera("YUYV"),
-                "framerate": 15.,
+                "framerate": 15,
                 "format": "YUY2",
                 "input_width": 1280,
                 "input_height": 800

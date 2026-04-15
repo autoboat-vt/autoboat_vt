@@ -114,7 +114,9 @@ class VESCPublisher(Node):
         #     self.motor.set_rpm(0)
 
         # get data and store in dictionary
+        print(f"before measurements")
         measurements = self.motor.get_measurements()
+        print(f"after measurements: {measurements}, {self.missed_measurements_in_a_row}")
         # try:
         #     measurements = self.get_motor_measurements()
         # except:
