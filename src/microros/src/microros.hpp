@@ -74,7 +74,7 @@ using namespace std;
 #define ACCEPTABLE_RUDDER_ERROR 0.1
 #define ACCEPTABLE_WINCH_ERROR 0.5
 
-#define RUDDER_ANGLE_OFFSET -40.34
+#define RUDDER_ANGLE_OFFSET -127
 #define WINCH_ANGLE_OFFSET 0
 // #define COMPASS_OFFSET -13.7 // Magnetic Declination at WPI
 // #define MAGNETIC_DECLINATION -13.7 // Magnetic Declination at WPI
