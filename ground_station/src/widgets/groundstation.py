@@ -78,6 +78,7 @@ class GroundStationWidget(QWidget):
         self.one_ms_timer = misc.copy_qtimer(constants.ONE_MS_TIMER)
         self.thirty_second_timer = misc.copy_qtimer(constants.THIRTY_SECOND_TIMER)
         self.timers = [self.one_ms_timer, self.thirty_second_timer]
+        # endregion timers
 
         # region define layouts
         self.main_layout = QGridLayout()
@@ -170,21 +171,23 @@ class GroundStationWidget(QWidget):
         self.browser.setMinimumWidth(700)
         self.browser.setMinimumHeight(700)
 
+        # these callbacks must be defined in the GroundStationWidget class
+        # as they need to modify the state of the GroundStationWidget instance
         def handle_waypoints_callback(state: Qt.CheckState) -> None:
             self.waypoints_checker_status = state == Qt.CheckState.Checked
         
         def handle_sailboat_debugging_callback(state: Qt.CheckState) -> None:
             if state == Qt.CheckState.Checked:
                 self.sailboat_debugging_symbols_status = True
+            
             else:
                 self.sailboat_debugging_symbols_status = False
                 self.browser.page().runJavaScript("map.remove_all_svgs()")
 
         self.edit_telemetry_config_window = EditTelemetryConfigWindow(handle_waypoints_callback,
                                                                       handle_sailboat_debugging_callback)
-        self.edit_telemetry_config_window.setWindowTitle("Edit Telemetry Config")
         
-        self.telemetry_config_button = QPushButton("Map Appearance Config")
+        self.telemetry_config_button = QPushButton("Map Appearance Configuration")
         self.telemetry_config_button.setToolTip(
             "If enabled, a popup will appear where you can alter the telemetry configuration.",
         )
@@ -904,6 +907,7 @@ class GroundStationWidget(QWidget):
 
             return "N/A" if data_item is None else f"{float(data_item):.1f}"
 
+        # region mode dependent print functions
         def sailboat_mode(boat_data: dict[str, Any]) -> str:
             self.boat_data["full_autonomy_maneuver"] = constants.SailboatStates(boat_data["full_autonomy_maneuver"]).name
             self.boat_data["autopilot_mode"] = constants.SailboatAutopilotMode(boat_data["autopilot_mode"]).name
@@ -966,6 +970,8 @@ class GroundStationWidget(QWidget):
         
         boat_data, connection_status = request_result
         self.boat_data = boat_data
+
+        # endregion mode dependent print functions
 
         def draw_map_diagnostics(heading: float) -> None:
             """
@@ -1030,13 +1036,14 @@ class GroundStationWidget(QWidget):
             
             if tack_distance > distance_to_waypoint:
                 # we can't draw the line!
+                print("[Warning] Tack distance is greater than distance to next waypoint, not drawing the decision zone.")
                 decision_zone_path: list[svg.PathData] = []
                 distance_to_waypoint = 200
+                
             else:
-            
                 # in radians
                 decision_zone_size: float = np.rad2deg(
-                    np.arcsin((tack_distance/distance_to_waypoint)*np.sin(np.deg2rad(no_sail_size/2)))
+                    np.arcsin((tack_distance / distance_to_waypoint) * np.sin(np.deg2rad(no_sail_size / 2)))
                 )
 
                 # don't think about it too hard
@@ -1109,6 +1116,7 @@ class GroundStationWidget(QWidget):
                 f"map.update_wind_svg('{wind_html.as_str()}')"
             )
 
+        # region data validation and defaulting
         try:
             heading = self.boat_data.get("heading")
             assert isinstance(heading, (float, int)), "heading is not a number."
@@ -1132,6 +1140,8 @@ class GroundStationWidget(QWidget):
             constants.SM.write("remote_autopilot_param_hash", "")
             self.clear_waypoints()
             constants.SM.write("has_telemetry_server_instance_changed", False)
+
+        # endregion data validation and defaulting
 
         self.browser.page().runJavaScript(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})")
 
