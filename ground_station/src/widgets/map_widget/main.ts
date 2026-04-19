@@ -120,7 +120,8 @@ class MapInterface {
         this.map.on("contextmenu", (event: LeafletMouseEvent) => {
             const closestIndex = this.waypoints.findClosestIndex(
                 event.latlng.lat,
-                event.latlng.lng
+                event.latlng.lng,
+                20
             );
 
             if (closestIndex !== -1) {
@@ -133,18 +134,19 @@ class MapInterface {
      * Syncs the current waypoint list with the backend.
      */
     async syncWaypoints(waypoints: LatLngTuple[]): Promise<void> {
+        const snapshot = [...waypoints];
         try {
             const response = await fetch("http://localhost:3002/waypoints", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ waypoints })
+                body: JSON.stringify({ waypoints: snapshot })
             });
 
             if (!response.ok) {
                 console.error("Failed to sync waypoints");
             }
         } catch (error) {
-            console.error("Error syncing waypoint:", error);
+            console.error("Error syncing waypoints:", error);
         }
     }
 
@@ -184,6 +186,13 @@ class MapInterface {
 
     focus_map_on_marker(lat: number, lon: number): void {
         this.map.setView([lat, lon], this.map.getMaxZoom());
+        this.waypoints.focus(lat, lon);
+        this.lastFocusedTimestamp = performance.now();
+    }
+
+    focus_map_on_buoy(lat: number, lon: number): void {
+        this.map.setView([lat, lon], this.map.getMaxZoom());
+        this.waypoints.focus(lat, lon);
     }
 
     add_waypoint(lat: number, lon: number): void {
@@ -226,7 +235,7 @@ class MapInterface {
         this.svgs.updateVelocitySvg(innerHTML, size);
     }
 
-    update_wind_svg(innerHTML: string) {
+    update_wind_svg(innerHTML: string): void {
         this.svgs.updateWindSvg(innerHTML);
     }
 }
