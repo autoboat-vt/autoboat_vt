@@ -22,7 +22,7 @@ export class CompassControl extends Control {
 
             <!-- wind arrow -->
             <g id="wind-arrow">
-                <path d="M50 50 L50 0" stroke="orange" stroke-width="5"></path>
+                <path d="M50 50 L50 100" stroke="orange" stroke-width="5"></path>
             </g>
         </svg>`
         
