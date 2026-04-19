@@ -1,4 +1,10 @@
-import { LatLngBounds, SVGOverlay, Control, DomUtil, type Map as LeafletMap } from "leaflet";
+import {
+    LatLngBounds,
+    SVGOverlay,
+    Control,
+    DomUtil,
+    type Map as LeafletMap
+} from "leaflet";
 import type { LatLngTuple } from "./types";
 import { BoatManager } from "./boat";
 
@@ -7,11 +13,11 @@ export class CompassControl extends Control {
     private arrow_svg: SVGElement | null = null;
 
     constructor(options?: L.ControlOptions) {
-        super({ position: 'bottomleft', ...options });
+        super({ position: "bottomleft", ...options });
     }
 
     override onAdd(map: LeafletMap): HTMLElement {
-        this.compass_svg = DomUtil.create('div', 'leaflet-control');
+        this.compass_svg = DomUtil.create("div", "leaflet-control");
 
         this.compass_svg.innerHTML = `
         <svg viewBox="0 0 100 100" width="75" height="75">
@@ -24,10 +30,11 @@ export class CompassControl extends Control {
             <g id="wind-arrow">
                 <path d="M50 50 L50 100" stroke="orange" stroke-width="5"></path>
             </g>
-        </svg>`
-        
+        </svg>`;
 
-        this.arrow_svg = this.compass_svg.querySelector('#wind-arrow') as SVGElement;
+        this.arrow_svg = this.compass_svg.querySelector(
+            "#wind-arrow"
+        ) as SVGElement;
 
         return this.compass_svg;
     }
@@ -36,10 +43,7 @@ export class CompassControl extends Control {
         if (!this.arrow_svg) return;
 
         // rotate around center of SVG (50,50)
-        this.arrow_svg.setAttribute(
-        'transform',
-        `rotate(-${degrees} 50 50)`
-        );
+        this.arrow_svg.setAttribute("transform", `rotate(-${degrees} 50 50)`);
     }
 }
 
@@ -152,7 +156,6 @@ export class SVGManager {
         }
     }
 
-
     /**
      * Updates the compass svg.
      */
@@ -160,12 +163,10 @@ export class SVGManager {
         if (!this.compass_control) {
             this.compass_control = new CompassControl();
             this.map.addControl(this.compass_control);
-        }
-        else {
+        } else {
             this.compass_control.setWindDirection(degree);
         }
     }
-
 
     /**
      * Updates the velocity svg.
