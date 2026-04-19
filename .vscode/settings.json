@@ -4,6 +4,8 @@
     "ruff.showSyntaxErrors": false,
     "ruff.configurationPreference": "filesystemFirst",
     "ruff.configuration": "${workspaceFolder}/ruff.toml",
+    "prettier.configPath": "~/.config/js-format/prettierrc",
+    "prettier.requireConfig": true,
     "evenBetterToml.taplo.configFile.path": "taplo.toml",
     "evenBetterToml.schema.links": true,
     "evenBetterToml.semanticTokens": true,
@@ -13,6 +15,21 @@
         "editor.codeActionsOnSave": {
             "source.organizeImports.ruff": "explicit"
         }
+    },
+    "[css]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[html]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[json]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
     "python.autoComplete.extraPaths": [
         "/opt/ros/humble/lib/python3.10/site-packages",
@@ -68,7 +85,5 @@
         "cmps14_compass_library.h": "c",
         "amt22_encoder_library.h": "c",
         "*.def": "c"
-    },
-    "C_Cpp.errorSquiggles": "disabled",
-    "ROS2.distro": "humble"
+    }
 }
