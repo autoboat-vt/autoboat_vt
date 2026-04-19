@@ -182,6 +182,7 @@ class GroundStationWidget(QWidget):
             lambda: self.edit_telemetry_config_window.show() or self.edit_telemetry_config_window.raise_()
         )
 
+        self.test_waypoint_rng = np.random.default_rng(69420)
         self.add_500_test_waypoints_button = QPushButton("Add 500 Test Waypoints?")
         self.add_500_test_waypoints_button.clicked.connect(self.add_500_test_waypoints)
 
@@ -354,10 +355,9 @@ class GroundStationWidget(QWidget):
     def add_500_test_waypoints(self) -> None:
         """Add 500 test waypoints to the map."""
 
-        generator = np.random.default_rng(seed=69420)
         for _ in range(500):
-            latitude = generator.uniform(-90, 90)
-            longitude = generator.uniform(-180, 180)
+            latitude = self.test_waypoint_rng.uniform(-90, 90)
+            longitude = self.test_waypoint_rng.uniform(-180, 180)
             self.browser.page().runJavaScript(f"map.add_waypoint({latitude}, {longitude})")
 
         print("[Info] Added 500 test waypoints to the map, LOL.")
