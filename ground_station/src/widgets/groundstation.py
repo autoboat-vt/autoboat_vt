@@ -1044,10 +1044,10 @@ class GroundStationWidget(QWidget):
             decision_zone_html = svg.Path(d=decision_zone_path, fill="pink")
 
             wind_direction_shape: list[svg.PathData] = [
-                svg.MoveTo(1, 1),
+                svg.MoveTo(50, 50),
                 svg.LineTo(
-                    1 + np.cos(np.deg2rad(heading + wind_direction)),
-                    1 - np.sin(np.deg2rad(heading + wind_direction)),
+                    50 + 50*np.cos(np.deg2rad(heading + wind_direction)),
+                    50 - 50*np.sin(np.deg2rad(heading + wind_direction)),
                 ),
             ]
             wind_html = svg.Path(
@@ -1096,6 +1096,9 @@ class GroundStationWidget(QWidget):
             )
             self.browser.page().runJavaScript(
                 f"map.update_wind_svg('{wind_html.as_str()}')"
+            )
+            self.browser.page().runJavaScript(
+                f"map.update_compass_svg('{wind_direction}')"
             )
 
         # region data validation and defaulting

@@ -238,6 +238,10 @@ class MapInterface {
     update_wind_svg(innerHTML: string): void {
         this.svgs.updateWindSvg(innerHTML);
     }
+
+    update_compass_svg(degree: number): void {
+        this.svgs.updateCompassSvg(degree);
+    }
 }
 
 const map = new MapInterface();
