@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from functools import partial
 
 from qtpy.QtCore import Qt
@@ -25,13 +24,6 @@ from utils import constants, misc
 class EditTelemetryConfigWindow(QDialog):
     """
     A dialog for controlling which diagnostics appear on the map.
-
-    Parameters
-    ----------
-    waypoints_checker_callback
-        Called when the waypoints popup setting changes.
-    debugging_symbols_callback
-        Called when the debugging symbols setting changes.
 
     Inherits
     -------
@@ -79,11 +71,7 @@ class EditTelemetryConfigWindow(QDialog):
     }
     """
 
-    def __init__(
-        self,
-        waypoints_checker_callback: Callable[[bool], None],
-        debugging_symbols_callback: Callable[[bool], None],
-    ) -> None:
+    def __init__(self) -> None:
         super().__init__()
 
         self.setWindowTitle("Map Appearance Configuration")
@@ -118,29 +106,18 @@ class EditTelemetryConfigWindow(QDialog):
         self.feedback_text_clear_timer.setSingleShot(True)
         self.feedback_text_clear_timer.timeout.connect(self.clear_feedback_text)
 
-        self._add_feature_row(
-            row=0,
-            name="Waypoints Popup",
-            description="Show a popup when the waypoints on the telemetry server change.",
-            callback=waypoints_checker_callback,
-            feedback_text="Updated Waypoints Popup Config.",
-            checked=False,
-        )
+        map_features: dict[str, dict[str, str | bool]] = constants.SM.read("map_features")
+        for row, feature in enumerate(map_features):
+            feature_info = map_features[feature]
 
-        self._add_feature_row(
-            row=1,
-            name="Debugging Symbols",
-            description="Show sailboat debugging symbols on the map.",
-            callback=debugging_symbols_callback,
-            feedback_text=(
-                "Updated Debugging Symbols Config.\n"
-                "orange, wind\n"
-                "black, velocity\n"
-                "red, no-go zone\n"
-                "pink, decision zone 2"
-            ),
-            checked=False,
-        )
+            self._add_feature_row(
+                row=row,
+                key=feature,
+                name=feature_info["name"],
+                description=feature_info["description"],
+                feedback_text=feature_info["feedback_text"],
+                enabled=feature_info["status"],
+            )
 
         button_row = QHBoxLayout()
         self.close_button = QPushButton("Close", self)
@@ -177,11 +154,11 @@ class EditTelemetryConfigWindow(QDialog):
     def _add_feature_row(
         self,
         row: int,
+        key: str,
         name: str,
         description: str,
-        callback: Callable[[bool], None],
         feedback_text: str,
-        checked: bool,
+        enabled: bool,
     ) -> None:
         """
         Add a row to the feature table for a diagnostic feature.
@@ -194,18 +171,16 @@ class EditTelemetryConfigWindow(QDialog):
             The feature name shown in the table.
         description
             A description of the feature.
-        callback
-            Called when the feature is enabled or disabled.
         feedback_text
             The text to show in the feedback box when the feature is toggled.
-        checked
+        enabled
             Whether the feature is initially enabled.
         """
 
         name_item = FeatureInfoItem(
             name=name,
             description=description,
-            callback=callback,
+            enabled=enabled,
         )
         self.feature_table.setItem(row, 0, name_item)
 
@@ -215,10 +190,17 @@ class EditTelemetryConfigWindow(QDialog):
 
         checkbox = QCheckBox(self)
         checkbox.setStyleSheet(EditTelemetryConfigWindow.checkbox_style)
-        checkbox.setChecked(checked)
+        checkbox.setChecked(enabled)
         checkbox.setToolTip(description)
-        checkbox.toggled.connect(callback)
         checkbox.toggled.connect(partial(self.update_feedback_text, feedback_text))
+
+        def on_checkbox_toggled(checked: bool) -> None:
+            name_item.enabled = checked
+            edited_map_features = constants.SM.read("map_features")
+            edited_map_features[key]["status"] = checked
+            constants.SM.write("map_features", edited_map_features)
+
+        checkbox.toggled.connect(on_checkbox_toggled)
 
         checkbox_container = QWidget(self)
         checkbox_layout = QHBoxLayout(checkbox_container)
@@ -256,9 +238,8 @@ class FeatureInfoItem(QTableWidgetItem):
         The feature name shown in the table.
     description
         A description of the feature.
-    callback
-        Called when the feature is enabled or disabled.
-        Used to communicate with the ``GroundStation`` widget to update the telemetry configuration.
+    enabled
+        Whether the feature is initially enabled.
 
     Inherits
     -------
@@ -269,9 +250,33 @@ class FeatureInfoItem(QTableWidgetItem):
         self,
         name: str,
         description: str,
-        callback: Callable[[bool], None],
+        enabled: bool = False,
     ) -> None:
         super().__init__(name)
-        self.description = description
-        self.callback = callback
-        self.setToolTip(description)
+        self._name = name
+        self._description = description
+        self._enabled = enabled
+
+    @property
+    def name(self) -> str:
+        """The name of the diagnostic feature."""
+
+        return self._name
+        
+    @property
+    def description(self) -> str:
+        """The description of the diagnostic feature."""
+
+        return self._description
+
+    @property
+    def enabled(self) -> bool:
+        """Whether the diagnostic feature is enabled."""
+
+        return self._enabled
+    
+    @enabled.setter
+    def enabled(self, value: bool) -> None:
+        """Set whether the diagnostic feature is enabled."""
+
+        self._enabled = value

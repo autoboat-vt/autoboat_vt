@@ -60,15 +60,12 @@ class GroundStationWidget(QWidget):
         self.boat_data: dict[str, Any] = {}
         self.telemetry_data_limits: dict[str, float] = {}
 
+        # do we need to clear the sailboat diagnostics svgs on the next telemetry update?
+        self.need_to_clear_diagnostics: bool = False
+
         # should we remember the status of the user's last response to the
         # dialog that asks if the telemetry server URL should be changed?
         self.remember_telemetry_server_url_status: bool = False
-
-        # should we check for changes in the telemetry server waypoints?
-        self.waypoints_checker_status: bool = False
-
-        # should we display sailboat debugging symbols?
-        self.sailboat_debugging_symbols_status: bool = False
 
         # should we remember the status of the user's last response to the
         # dialog that asks if the user wants to pull waypoints from the telemetry server?
@@ -171,22 +168,7 @@ class GroundStationWidget(QWidget):
         self.browser.setMinimumWidth(700)
         self.browser.setMinimumHeight(700)
 
-        # these callbacks must be defined in the GroundStationWidget class
-        # as they need to modify the state of the GroundStationWidget instance
-        def handle_waypoints_callback(state: Qt.CheckState) -> None:
-            self.waypoints_checker_status = state == Qt.CheckState.Checked
-        
-        def handle_sailboat_debugging_callback(state: Qt.CheckState) -> None:
-            if state == Qt.CheckState.Checked:
-                self.sailboat_debugging_symbols_status = True
-            
-            else:
-                self.sailboat_debugging_symbols_status = False
-                self.browser.page().runJavaScript("map.remove_all_svgs()")
-
-        self.edit_telemetry_config_window = EditTelemetryConfigWindow(handle_waypoints_callback,
-                                                                      handle_sailboat_debugging_callback)
-        
+        self.edit_telemetry_config_window = EditTelemetryConfigWindow()
         self.telemetry_config_button = QPushButton("Map Appearance Configuration")
         self.telemetry_config_button.setToolTip(
             "If enabled, a popup will appear where you can alter the telemetry configuration.",
@@ -683,7 +665,7 @@ class GroundStationWidget(QWidget):
     def remote_waypoint_handler_starter(self) -> None:
         """Starts the telemetry waypoint handler thread."""
 
-        if not self.waypoints_checker_status:
+        if not constants.SM.read("map_features")["waypoints_popup"]["status"]:
             self.remember_waypoints_pull_service_status = False
             print("[Info] Waypoint checker disabled, not checking for waypoint updates.")
             return
@@ -1145,8 +1127,13 @@ class GroundStationWidget(QWidget):
 
         self.browser.page().runJavaScript(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})")
 
-        if self.sailboat_debugging_symbols_status:
+        if constants.SM.read("map_features")["sailboat_debug_symbols"]["status"]:
             draw_map_diagnostics(heading)
+            self.need_to_clear_diagnostics = True
+        
+        elif self.need_to_clear_diagnostics:
+            self.browser.page().runJavaScript("map.remove_all_svgs()")
+            self.need_to_clear_diagnostics = False
 
         if "full_autonomy_maneuver" in self.boat_data:
             telemetry_text = sailboat_mode(boat_data)

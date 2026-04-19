@@ -228,6 +228,27 @@ _telemetry_server_endpoints: dict[str, str] = dict(
     **_camera_endpoints,
 )
 
+_map_features: dict[str, dict[str, str | bool]] = {
+    "waypoints_popup": {
+        "name": "Waypoints Popup",
+        "description": "Show a popup when the waypoints on the telemetry server change.",
+        "feedback_text": "Updated Waypoints Popup Config.",
+        "status": False
+    },
+    "sailboat_debug_symbols": {
+        "name": "Sailboat Debugging Symbols",
+        "description": "Show sailboat debugging symbols on the map.",
+        "feedback_text": (
+            "Updated Debugging Symbols Config.\n"
+            "orange, wind\n"
+            "black, velocity\n"
+            "red, no-go zone\n"
+            "pink, decision zone 2"
+        ),
+        "status": False
+    }
+}
+
 STATE_FILE_CONTENTS: dict[str, Any] = {
     "start_time": _start_time,
     "telemetry_server_url": _telemetry_server_url,
@@ -239,6 +260,7 @@ STATE_FILE_CONTENTS: dict[str, Any] = {
     "telemetry_server_instance_user": "",
     "has_telemetry_server_instance_changed": _has_telemetry_server_instance_changed,
     "telemetry_server_endpoints": _telemetry_server_endpoints,
+    "map_features": _map_features,
 }
 
 try:

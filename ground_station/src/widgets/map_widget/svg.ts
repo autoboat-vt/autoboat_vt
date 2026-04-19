@@ -10,7 +10,7 @@ export class SVGManager {
 
     constructor(
         private readonly map: LeafletMap,
-        private readonly boat: BoatManager
+        private readonly boat_manager: BoatManager
     ) {}
 
     /**
@@ -44,7 +44,7 @@ export class SVGManager {
             ((bounds.getEast() - bounds.getWest()) / 2) * size;
         const height: number =
             ((bounds.getSouth() - bounds.getNorth()) / 2) * size;
-        const location: LatLngTuple = this.boat.boat.location;
+        const location: LatLngTuple = this.boat_manager.boat.location;
         const svgElementBounds: LatLngBounds = new LatLngBounds(
             [location[0] + width, location[1] + height],
             [location[0] - width, location[1] - height]
@@ -82,7 +82,7 @@ export class SVGManager {
             ((bounds.getEast() - bounds.getWest()) / 2) * size;
         const height: number =
             ((bounds.getSouth() - bounds.getNorth()) / 2) * size;
-        const location: LatLngTuple = this.boat.boat.location;
+        const location: LatLngTuple = this.boat_manager.boat.location;
         const svgElementBounds: LatLngBounds = new LatLngBounds(
             [location[0] + width, location[1] + height],
             [location[0] - width, location[1] - height]
