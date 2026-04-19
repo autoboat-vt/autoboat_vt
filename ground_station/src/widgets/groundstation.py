@@ -1018,7 +1018,6 @@ class GroundStationWidget(QWidget):
             
             if tack_distance > distance_to_waypoint:
                 # we can't draw the line!
-                print("[Warning] Tack distance is greater than distance to next waypoint, not drawing the decision zone.")
                 decision_zone_path: list[svg.PathData] = []
                 distance_to_waypoint = 200
                 
