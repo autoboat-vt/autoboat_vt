@@ -167,6 +167,11 @@ class GroundStationWidget(QWidget):
         self.browser.setUrl(QUrl(f"http://127.0.0.1:{constants.VITE_PORT}"))
         self.browser.setMinimumWidth(700)
         self.browser.setMinimumHeight(700)
+        self.middle_layout.addWidget(self.browser, 0, 1)
+        self.middle_layout.setRowStretch(0, 1)
+
+        self.middle_button_groupbox = QGroupBox()
+        self.middle_button_layout = QGridLayout()
 
         self.edit_telemetry_config_window = EditTelemetryConfigWindow()
         self.telemetry_config_button = QPushButton("Map Appearance Configuration")
@@ -177,9 +182,14 @@ class GroundStationWidget(QWidget):
             lambda: self.edit_telemetry_config_window.show() or self.edit_telemetry_config_window.raise_()
         )
 
-        self.middle_layout.addWidget(self.browser, 0, 1)
-        self.middle_layout.setRowStretch(0, 1)
-        self.middle_layout.addWidget(self.telemetry_config_button, 1, 1, Qt.AlignCenter)
+        self.add_1000_test_waypoints_button = QPushButton("Add 1000 Test Waypoints?")
+        self.add_1000_test_waypoints_button.clicked.connect(self.add_1000_test_waypoints)
+
+        self.middle_button_layout.addWidget(self.telemetry_config_button, 0, 0)
+        self.middle_button_layout.addWidget(self.add_1000_test_waypoints_button, 0, 1)
+        self.middle_button_groupbox.setLayout(self.middle_button_layout)
+
+        self.middle_layout.addWidget(self.middle_button_groupbox, 1, 1, Qt.AlignCenter)
         self.middle_layout.setRowStretch(1, 0)
         self.main_layout.addLayout(self.middle_layout, 0, 1)
         # endregion middle section
@@ -340,6 +350,18 @@ class GroundStationWidget(QWidget):
 
             except RequestException as e:
                 print(f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")
+
+    def add_1000_test_waypoints(self) -> None:
+        """Add 1000 test waypoints to the map."""
+
+        generator = np.random.default_rng(seed=69420)
+        for _ in range(1000):
+            latitude = generator.uniform(-90, 90)
+            longitude = generator.uniform(-180, 180)
+            self.browser.page().runJavaScript(f"map.add_waypoint({latitude}, {longitude})")
+
+        print("[Info] Added 1000 test waypoints to the map, LOL.")
+
 
     def pull_waypoints(self) -> None:
         """Pull waypoints from the telemetry server and add them to the map."""
