@@ -64,7 +64,7 @@ print_separator() { echo "------------------------------------------------------
 
 
 
-write_host_environment_variables.sh() {
+write_host_environment_variables() {
 	local extra_lines=("$@")
 
 	log_info "Updating $HOST_ENV_FILE"
@@ -199,7 +199,7 @@ setup_linux() {
 	# GPU detection
 	if [[ "$ASSUME_GPU" == true ]] || (command -v nvidia-smi &>/dev/null && command -v apt &> /dev/null); then
 		log_info "NVIDIA GPU detected."
-		write_host_environment_variables.sh 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"'
+		write_host_environment_variables 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"'
 		write_devcontainer_environment_variables ":0"
 		ensure_host_environment_variables.sh_are_sourced
 
@@ -271,7 +271,7 @@ setup_linux() {
 
 	else
 		log_info "No NVIDIA GPU found. Running CPU-only mode."
-		write_host_environment_variables.sh
+		write_host_environment_variables
 		write_devcontainer_environment_variables ":0"
 		ensure_host_environment_variables.sh_are_sourced
 	fi
@@ -298,7 +298,7 @@ setup_macos() {
 		fi
 	fi
 
-	write_host_environment_variables.sh "docker.for.mac.host.internal:0"
+	write_host_environment_variables "docker.for.mac.host.internal:0"
 	write_devcontainer_environment_variables "docker.for.mac.host.internal:0"
 	ensure_host_environment_variables.sh_are_sourced
 	log_warn "GPU passthrough not supported on Docker Desktop for macOS."
@@ -309,7 +309,7 @@ setup_macos() {
 # -----------------------------------------------------------------------------
 setup_unknown() {
 	log_warn "Unsupported OS detected: $OS"
-	write_host_environment_variables.sh
+	write_host_environment_variables
 	write_devcontainer_environment_variables ":0"
 	ensure_host_environment_variables.sh_are_sourced
 	log_warn "Running CPU-only. Display may not work properly."

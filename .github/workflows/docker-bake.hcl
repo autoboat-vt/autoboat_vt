@@ -57,7 +57,6 @@ target "base" {
 }
 
 target "microros" {
-  # Use the cached build of 'base' as the base for 'microros'
   contexts = {
     base = "target:base"
   }
