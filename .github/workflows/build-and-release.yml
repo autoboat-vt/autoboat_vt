@@ -111,15 +111,42 @@ jobs:
 
       # -----------------------------------------------------------------------
       # Build the CI Docker images using Docker Bake.
-      # Bake handles the dependency graph between images (e.g. Micro-ROS depends on Base)
-      # internally, ensuring 100% cache efficiency and perfect image visibility.
+      # Two variants:
+      #   PR  — GHA cache only (no Docker Hub auth, so no registry cache writes)
+      #   non-PR — Full registry cache + push (requires Docker Hub login above)
       # -----------------------------------------------------------------------
-      - name: Build and Push Docker Images (Bake)
+
+      - name: Build Docker Images (PR — GHA cache only)
+        if: github.event_name == 'pull_request'
         uses: docker/bake-action@v6
         env:
           ARCHITECTURE: ${{ matrix.architecture }}
           OWNER: ${{ env.OWNER_LC }}
-          IS_OFFICIAL: ${{ github.event_name != 'pull_request' }}
+          IS_OFFICIAL: "false"
+          IS_RELEASE: "false"
+          VERSION: ${{ steps.meta.outputs.version }}
+          MAJOR: ${{ steps.meta.outputs.major }}
+          MINOR: ${{ steps.meta.outputs.minor }}
+          GITHUB_SHA: ${{ github.sha }}
+        with:
+          files: .github/workflows/docker-bake.hcl
+          push: false
+          set: |
+            *.platform=linux/${{ matrix.architecture }}
+            *.cache-from=type=gha,scope=${{ matrix.architecture }}
+            *.cache-to=type=gha,mode=max,scope=${{ matrix.architecture }}
+            base.cache-from=type=gha,scope=base-${{ matrix.architecture }}
+            base.cache-to=type=gha,mode=max,scope=base-${{ matrix.architecture }}
+            microros.cache-from=type=gha,scope=microros-${{ matrix.architecture }}
+            microros.cache-to=type=gha,mode=max,scope=microros-${{ matrix.architecture }}
+
+      - name: Build and Push Docker Images (Bake)
+        if: github.event_name != 'pull_request'
+        uses: docker/bake-action@v6
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+          OWNER: ${{ env.OWNER_LC }}
+          IS_OFFICIAL: "true"
           IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
           VERSION: ${{ steps.meta.outputs.version }}
           MAJOR: ${{ steps.meta.outputs.major }}
@@ -127,7 +154,7 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
         with:
           files: .github/workflows/docker-bake.hcl
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           set: |
             *.platform=linux/${{ matrix.architecture }}
             *.cache-from=type=gha,scope=${{ matrix.architecture }}
