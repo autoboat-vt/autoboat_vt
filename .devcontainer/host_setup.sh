@@ -49,7 +49,7 @@ sudo -v
 # -----------------------------------------------------------------------------
 OS="$(uname -s)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HOST_ENV_FILE="$SCRIPT_DIR/host_environment_variables.sh"
+HOST_ENV_FILE="$SCRIPT_DIR/host_environment_variables"
 ENV_FILE="$SCRIPT_DIR/devcontainer_environment_variables"
 
 

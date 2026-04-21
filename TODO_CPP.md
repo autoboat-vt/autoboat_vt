@@ -17,6 +17,6 @@ REWROTE THE ENTIRE REPOSITORY TO CPP
 NOW WE HAVE A PROPER CI/CD PIPELINE
 NOW WE HAVE RELEASES AND RELEASE BINARIES
 MICROROS INSTALLATION HAS BEEN OVERHAULED (NOW DEPENDENCIES HAS BEEN MOVED TO /opt)
-setup_display_and_gpu HAS BEEN OVERHAULED WITH host_environment_variables.sh
+setup_display_and_gpu HAS BEEN OVERHAULED WITH host_environment_variables
 put launch files into their own ros2 package
-edited the simulation sdf files to motorboat_simulation/simulation_models/models so that they can be more easily grabbed in the debian package
+moved the simulation sdf files to motorboat_simulation/simulation_models/models so that they can be more easily grabbed in the debian package
