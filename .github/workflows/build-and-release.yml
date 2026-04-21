@@ -15,7 +15,7 @@ env:
 
 on:
   push:
-    branches: [ "main", "cpp" ]
+    branches: [ "main", ]
     tags:
       - 'v*'
   workflow_dispatch:
@@ -239,7 +239,7 @@ jobs:
           
           # This checks if we are pushing to branches or have a version like v1.2.3-beta
           # if so then this is marked on github as a prerelease version
-          prerelease: ${{ github.ref_name == 'main' || github.ref_name == 'cpp' || contains(github.ref, '-') }}
+          prerelease: ${{ github.ref_name == 'main' || contains(github.ref, '-') }}
           make_latest: ${{ github.ref_type == 'tag' && 'true' || 'false' }}
 
 
