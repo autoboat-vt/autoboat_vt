@@ -142,15 +142,10 @@ ONE_MS_TIMER = misc.create_timer(1)
 
 _start_time: float = time.time()
 
-JS_LIBRARIES: tuple[str, ...] = (
-    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
-    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
-    "https://cdn.jsdelivr.net/gh/bbecquet/Leaflet.RotatedMarker@master/leaflet.rotatedMarker.js",
-)
-
 # server ports
 ASSET_SERVER_PORT = 8000
 GO_SERVER_PORT = 3002
+VITE_PORT = 5173
 
 # url for local waypoints server
 _waypoints_server_url: str = f"http://localhost:{GO_SERVER_PORT}/waypoints"
@@ -233,6 +228,27 @@ _telemetry_server_endpoints: dict[str, str] = dict(
     **_camera_endpoints,
 )
 
+_map_features: dict[str, dict[str, str | bool]] = {
+    "waypoints_popup": {
+        "name": "Waypoints Popup",
+        "description": "Show a popup when the waypoints on the telemetry server change.",
+        "feedback_text": "Updated Waypoints Popup Config.",
+        "status": False
+    },
+    "sailboat_debug_symbols": {
+        "name": "Sailboat Debugging Symbols",
+        "description": "Show sailboat debugging symbols on the map.",
+        "feedback_text": (
+            "Updated Debugging Symbols Config.\n"
+            "orange, wind\n"
+            "black, velocity\n"
+            "red, no-go zone\n"
+            "pink, decision zone 2"
+        ),
+        "status": False
+    }
+}
+
 STATE_FILE_CONTENTS: dict[str, Any] = {
     "start_time": _start_time,
     "telemetry_server_url": _telemetry_server_url,
@@ -244,6 +260,7 @@ STATE_FILE_CONTENTS: dict[str, Any] = {
     "telemetry_server_instance_user": "",
     "has_telemetry_server_instance_changed": _has_telemetry_server_instance_changed,
     "telemetry_server_endpoints": _telemetry_server_endpoints,
+    "map_features": _map_features,
 }
 
 try:
@@ -260,9 +277,6 @@ try:
 
     GIT_IGNORE_DIR = Path(DATA_DIR / "git_ignore")
     os.makedirs(GIT_IGNORE_DIR, exist_ok=True)
-
-    MAP_WIDGET_DIR = Path(WIDGETS_DIR / "map_widget")
-    HTML_MAP_PATH = Path(MAP_WIDGET_DIR / "map.html")
 
     CAMERA_WIDGET_DIR = Path(WIDGETS_DIR / "camera_widget")
     HTML_CAMERA_PATH = Path(CAMERA_WIDGET_DIR / "camera.html")

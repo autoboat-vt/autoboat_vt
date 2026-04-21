@@ -1,0 +1,20 @@
+{
+    "name": "map_widget",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "serve": "vite --clearScreen false --logLevel error"
+    },
+    "dependencies": {
+        "leaflet": "^1.9.4",
+        "leaflet-rotatedmarker": "^0.2.0"
+    },
+    "devDependencies": {
+        "@types/bun": "latest",
+        "@types/geojson": "^7946.0.16",
+        "@types/leaflet": "^1.9.21",
+        "@types/leaflet-rotatedmarker": "^0.2.6",
+        "typescript": "^6.0.2",
+        "vite": "^8.0.8"
+    }
+}

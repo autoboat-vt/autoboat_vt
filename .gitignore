@@ -9,8 +9,6 @@ output
 # object detection
 **.pt
 src/microros/dependencies/**
-.devcontainer/devcontainer_environment_variables
-.devcontainer/host_environment_variables.sh
 **.engine
 **.onnx
 **.o
@@ -29,6 +27,7 @@ ground_station/bin
 ground_station/go.sum
 ground_station/last_build_time.txt
 ground_station/app_data/git_ignore
+node_modules
 
 # src/object_detection
 src/object_detection/object_detection/runs/**
@@ -37,7 +36,6 @@ src/object_detection/object_detection/weights/**
 src/object_detection/object_detection/dataset/**
 src/object_detection/object_detection/dataset/**
 src/object_detection/object_detection/hard_images/**
-
 
 # frames generated from camera recorder
 frame_logs
@@ -48,3 +46,5 @@ trace.json
 
 
 *.deb
+.devcontainer/devcontainer_environment_variables
+.devcontainer/host_environment_variables

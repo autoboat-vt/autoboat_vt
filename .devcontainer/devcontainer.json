@@ -20,6 +20,7 @@
                 "donjayamanne.python-environment-manager",
                 "ms-python.debugpy",
                 "charliermarsh.ruff",
+                "esbenp.prettier-vscode",
                 "jannchie.ruff-ignore-explainer",
                 "dbaeumer.vscode-eslint",
                 "rodolphebarbanneau.python-docstring-highlighter",
@@ -49,7 +50,6 @@
         "CONTAINER_OWNER_USER_NAME": "${localEnv:USER}",
         "TZ": "${localEnv:TZ:America/New_York}"
     },
-
     "runArgs": [
         "--net=host",
         "--platform=linux/amd64",

@@ -6,15 +6,17 @@ from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urljoin
 
-from qtpy.QtCore import Qt, Signal
+import numpy as np
+import svg
+from qtpy.QtCore import Qt, QUrl, Signal
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import (
-    QCheckBox,
     QFileDialog,
     QGridLayout,
     QGroupBox,
     QLabel,
     QMessageBox,
+    QPushButton,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
@@ -27,6 +29,7 @@ from syntax_highlighters import JsonHighlighter
 from utils import constants, misc, thread_classes
 
 from widgets.popup_edit import TextEditWindow
+from widgets.popup_telemetry_config import EditTelemetryConfigWindow
 
 
 class GroundStationWidget(QWidget):
@@ -57,12 +60,12 @@ class GroundStationWidget(QWidget):
         self.boat_data: dict[str, Any] = {}
         self.telemetry_data_limits: dict[str, float] = {}
 
+        # do we need to clear the sailboat diagnostics svgs on the next telemetry update?
+        self.need_to_clear_diagnostics: bool = False
+
         # should we remember the status of the user's last response to the
         # dialog that asks if the telemetry server URL should be changed?
         self.remember_telemetry_server_url_status: bool = False
-
-        # should we check for changes in the telemetry server waypoints?
-        self.waypoints_checker_status: bool = False
 
         # should we remember the status of the user's last response to the
         # dialog that asks if the user wants to pull waypoints from the telemetry server?
@@ -72,6 +75,7 @@ class GroundStationWidget(QWidget):
         self.one_ms_timer = misc.copy_qtimer(constants.ONE_MS_TIMER)
         self.thirty_second_timer = misc.copy_qtimer(constants.THIRTY_SECOND_TIMER)
         self.timers = [self.one_ms_timer, self.thirty_second_timer]
+        # endregion timers
 
         # region define layouts
         self.main_layout = QGridLayout()
@@ -160,22 +164,33 @@ class GroundStationWidget(QWidget):
 
         # region middle section
         self.browser = QWebEngineView()
-        self.browser.setHtml(open(constants.HTML_MAP_PATH, encoding="utf-8").read())
+        self.browser.setUrl(QUrl(f"http://127.0.0.1:{constants.VITE_PORT}"))
         self.browser.setMinimumWidth(700)
         self.browser.setMinimumHeight(700)
-
-        self.waypoints_checker_toggle = QCheckBox("Enable popup when waypoints change?")
-        self.waypoints_checker_toggle.setChecked(False)
-        self.waypoints_checker_toggle.setToolTip(
-            "If enabled, a popup will appear when the waypoints on the telemetry server change.",
-        )
-        self.waypoints_checker_toggle.stateChanged.connect(
-            lambda state: setattr(self, "waypoints_checker_status", state == Qt.CheckState.Checked),
-        )
-
         self.middle_layout.addWidget(self.browser, 0, 1)
         self.middle_layout.setRowStretch(0, 1)
-        self.middle_layout.addWidget(self.waypoints_checker_toggle, 1, 1, Qt.AlignCenter)
+
+        self.middle_button_groupbox = QGroupBox()
+        self.middle_button_layout = QGridLayout()
+
+        self.edit_telemetry_config_window = EditTelemetryConfigWindow()
+        self.telemetry_config_button = QPushButton("Map Appearance Configuration")
+        self.telemetry_config_button.setToolTip(
+            "If enabled, a popup will appear where you can alter the telemetry configuration.",
+        )
+        self.telemetry_config_button.clicked.connect(
+            lambda: self.edit_telemetry_config_window.show() or self.edit_telemetry_config_window.raise_()
+        )
+
+        self.test_waypoint_rng = np.random.default_rng(69420)
+        self.add_500_test_waypoints_button = QPushButton("Add 500 Test Waypoints?")
+        self.add_500_test_waypoints_button.clicked.connect(self.add_500_test_waypoints)
+
+        self.middle_button_layout.addWidget(self.telemetry_config_button, 0, 0)
+        self.middle_button_layout.addWidget(self.add_500_test_waypoints_button, 0, 1)
+        self.middle_button_groupbox.setLayout(self.middle_button_layout)
+
+        self.middle_layout.addWidget(self.middle_button_groupbox, 1, 1, Qt.AlignCenter)
         self.middle_layout.setRowStretch(1, 0)
         self.main_layout.addLayout(self.middle_layout, 0, 1)
         # endregion middle section
@@ -336,6 +351,17 @@ class GroundStationWidget(QWidget):
 
             except RequestException as e:
                 print(f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")
+
+    def add_500_test_waypoints(self) -> None:
+        """Add 500 test waypoints to the map."""
+
+        for _ in range(500):
+            latitude = self.test_waypoint_rng.uniform(-90, 90)
+            longitude = self.test_waypoint_rng.uniform(-180, 180)
+            self.browser.page().runJavaScript(f"map.add_waypoint({latitude}, {longitude})")
+
+        print("[Info] Added 500 test waypoints to the map, LOL.")
+
 
     def pull_waypoints(self) -> None:
         """Pull waypoints from the telemetry server and add them to the map."""
@@ -661,7 +687,7 @@ class GroundStationWidget(QWidget):
     def remote_waypoint_handler_starter(self) -> None:
         """Starts the telemetry waypoint handler thread."""
 
-        if not self.waypoints_checker_status:
+        if not constants.SM.read("map_features")["waypoints_popup"]["status"]:
             self.remember_waypoints_pull_service_status = False
             print("[Info] Waypoint checker disabled, not checking for waypoint updates.")
             return
@@ -885,6 +911,7 @@ class GroundStationWidget(QWidget):
 
             return "N/A" if data_item is None else f"{float(data_item):.1f}"
 
+        # region mode dependent print functions
         def sailboat_mode(boat_data: dict[str, Any]) -> str:
             self.boat_data["full_autonomy_maneuver"] = constants.SailboatStates(boat_data["full_autonomy_maneuver"]).name
             self.boat_data["autopilot_mode"] = constants.SailboatAutopilotMode(boat_data["autopilot_mode"]).name
@@ -948,6 +975,154 @@ class GroundStationWidget(QWidget):
         boat_data, connection_status = request_result
         self.boat_data = boat_data
 
+        # endregion mode dependent print functions
+
+        def draw_map_diagnostics(heading: float) -> None:
+            """
+            Draw diagnostics on the map, such as no sail zone and wind direction.
+            
+            Parameters
+            ----------
+            heading
+                The heading of the boat, used to orient the diagnostics correctly on the map.
+            """
+
+            no_sail_zone_size_dict: dict[str, str | float] | None = constants.SM.read("current_autopilot_parameters").get(
+                "no_sail_zone_size"
+            )
+
+            if no_sail_zone_size_dict is None:
+                print("[Warning] `no_sail_zone_size` not found in current autopilot parameters, not drawing the no sail zone.")
+                return
+
+            no_sail_size: float = 0
+            if "current" in no_sail_zone_size_dict:
+                no_sail_size = no_sail_zone_size_dict["current"]
+            else:
+                no_sail_size = no_sail_zone_size_dict["default"]
+
+            wind_direction: float | None = self.boat_data.get("true_wind_angle")
+            if wind_direction is None:
+                print("[Warning] `true_wind_angle` not found in boat data, defaulting to 0.")
+                wind_direction = 0
+
+            head = heading + wind_direction + 180  # opposite the direction of wind
+            size = 0.2
+
+            # don't think about it too hard
+            x1: float = 2 + np.cos(np.deg2rad(head - no_sail_size / 2))
+            y1: float = 2 - np.sin(np.deg2rad(head - no_sail_size / 2))
+            x2: float = 2 + np.cos(np.deg2rad(head + no_sail_size / 2))
+            y2: float = 2 - np.sin(np.deg2rad(head + no_sail_size / 2))
+
+            no_go_path_shape: list[svg.PathData] = [
+                svg.MoveTo(2, 2),
+                svg.LineTo(x1, y1),
+                svg.Arc(1, 1, 0, 0, 0, x2, y2),
+                svg.LineTo(2, 2),
+            ]
+            no_go_html = svg.Path(d=no_go_path_shape, fill="#c9140a")
+
+            tack_distance_dict: dict[str, str | float] | None = constants.SM.read("current_autopilot_parameters").get(
+                "tack_distance"
+            )
+
+            if tack_distance_dict is None:
+                print("[Warning] `tack_distance` not found in current autopilot parameters, not drawing the no sail zone.")
+                return
+
+            tack_distance = tack_distance_dict["current"] if "current" in tack_distance_dict else tack_distance_dict["default"]
+
+            distance_to_waypoint: float | None = self.boat_data.get("distance_to_next_waypoint")
+            if distance_to_waypoint is None:
+                print("[Warning] `distance_to_next_waypoint` not found in boat data, defaulting to 200.")
+                distance_to_waypoint = 200
+            
+            if tack_distance > distance_to_waypoint:
+                # we can't draw the line!
+                decision_zone_path: list[svg.PathData] = []
+                distance_to_waypoint = 200
+                
+            else:
+                # in radians
+                decision_zone_size: float = np.rad2deg(
+                    np.arcsin((tack_distance / distance_to_waypoint) * np.sin(np.deg2rad(no_sail_size / 2)))
+                )
+
+                # don't think about it too hard
+                x1: float = 2 + np.cos(np.deg2rad(head - (no_sail_size / 2 - decision_zone_size / 2)))
+                y1: float = 2 - np.sin(np.deg2rad(head - (no_sail_size / 2 - decision_zone_size / 2)))
+                x2: float = 2 + np.cos(np.deg2rad(head + (no_sail_size / 2 - decision_zone_size / 2)))
+                y2: float = 2 - np.sin(np.deg2rad(head + (no_sail_size / 2 - decision_zone_size / 2)))
+
+                decision_zone_path: list[svg.PathData] = [
+                    svg.MoveTo(2, 2),
+                    svg.LineTo(x1, y1),
+                    svg.Arc(1, 1, 0, 0, 0, x2, y2),
+                    svg.LineTo(2, 2),
+                ]
+
+            decision_zone_html = svg.Path(d=decision_zone_path, fill="pink")
+
+            wind_direction_shape: list[svg.PathData] = [
+                svg.MoveTo(50, 50),
+                svg.LineTo(
+                    50 + 50*np.cos(np.deg2rad(heading + wind_direction)),
+                    50 - 50*np.sin(np.deg2rad(heading + wind_direction)),
+                ),
+            ]
+            wind_html = svg.Path(
+                d=wind_direction_shape,
+                stroke="orange",
+                stroke_width="0.1",
+            )
+
+            speed: float | None = self.boat_data.get("speed")
+            if speed is None:
+                print("[Warning] `speed` not found in boat data, defaulting to 1e-3.")
+                speed = 1e-3
+
+            elif np.isclose(speed, 0.0, rtol=1e-5, atol=1e-8):
+                print("[Warning] `speed` is very close to 0, defaulting to 1e-3 to avoid division by zero.")
+                speed = 1e-3
+            
+            vx: float = self.boat_data.get("velocity_x", -69.420)
+            vy: float = self.boat_data.get("velocity_y", -69.420)
+
+            radius: float = 4*speed
+            x1: float = 2 + radius * vx / speed
+            y1: float = 2 + radius * vy / speed
+            head = heading
+
+            velocity_arrow_shape: list[svg.PathData] = [
+                svg.MoveTo(2, 2),
+                svg.LineTo(x1, y1)
+            ]
+            velocity_arrow_transform: list[svg.Transform] = [
+                svg.Rotate(-head, 2, 2),
+            ]
+            velocity_html = svg.Path(
+                d=velocity_arrow_shape,
+                stroke="black",
+                stroke_width="0.1",
+                transform=velocity_arrow_transform
+            )
+
+            svg_str = no_go_html.as_str() + decision_zone_html.as_str()
+            self.browser.page().runJavaScript(
+                f"map.update_no_sail_svg('{svg_str}', {size})"
+            )
+            self.browser.page().runJavaScript(
+                f"map.update_velocity_svg('{velocity_html.as_str()}', '{size}')"
+            )
+            self.browser.page().runJavaScript(
+                f"map.update_wind_svg('{wind_html.as_str()}')"
+            )
+            self.browser.page().runJavaScript(
+                f"map.update_compass_svg('{wind_direction}')"
+            )
+
+        # region data validation and defaulting
         try:
             heading = self.boat_data.get("heading")
             assert isinstance(heading, (float, int)), "heading is not a number."
@@ -972,7 +1147,17 @@ class GroundStationWidget(QWidget):
             self.clear_waypoints()
             constants.SM.write("has_telemetry_server_instance_changed", False)
 
+        # endregion data validation and defaulting
+
         self.browser.page().runJavaScript(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})")
+
+        if constants.SM.read("map_features")["sailboat_debug_symbols"]["status"]:
+            draw_map_diagnostics(heading)
+            self.need_to_clear_diagnostics = True
+        
+        elif self.need_to_clear_diagnostics:
+            self.browser.page().runJavaScript("map.remove_all_svgs()")
+            self.need_to_clear_diagnostics = False
 
         if "full_autonomy_maneuver" in self.boat_data:
             telemetry_text = sailboat_mode(boat_data)
