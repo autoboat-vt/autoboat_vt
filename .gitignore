@@ -42,4 +42,4 @@ frame_logs
 
 
 .devcontainer/devcontainer_environment_variables
-.devcontainer/host_environment_variables.sh
+.devcontainer/host_environment_variables
