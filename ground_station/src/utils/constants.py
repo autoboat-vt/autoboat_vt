@@ -278,9 +278,6 @@ try:
     GIT_IGNORE_DIR = Path(DATA_DIR / "git_ignore")
     os.makedirs(GIT_IGNORE_DIR, exist_ok=True)
 
-    MAP_WIDGET_DIR = Path(WIDGETS_DIR / "map_widget")
-    HTML_MAP_PATH = Path(MAP_WIDGET_DIR / "map.html")
-
     CAMERA_WIDGET_DIR = Path(WIDGETS_DIR / "camera_widget")
     HTML_CAMERA_PATH = Path(CAMERA_WIDGET_DIR / "camera.html")
     
