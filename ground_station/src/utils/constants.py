@@ -17,6 +17,7 @@ from qtpy.QtGui import QColor, QPalette
 from strenum import StrEnum
 
 from utils import misc
+from utils.data_logger import DataLogger
 from utils.state_manager import StateManager
 
 
@@ -249,6 +250,8 @@ _map_features: dict[str, dict[str, str | bool]] = {
     }
 }
 
+_data_logging_active: bool = False
+
 STATE_FILE_CONTENTS: dict[str, Any] = {
     "start_time": _start_time,
     "telemetry_server_url": _telemetry_server_url,
@@ -274,6 +277,7 @@ try:
     DATA_DIR = Path(TOP_LEVEL_DIR / "app_data")
     GIT_KEEP_DIR = Path(DATA_DIR / "git_keep")
     DEFAULTS_EXAMPLES_DIR = Path(GIT_KEEP_DIR / "defaults_examples")
+    ASSETS_DIR = Path(GIT_KEEP_DIR / "assets")
 
     GIT_IGNORE_DIR = Path(DATA_DIR / "git_ignore")
     os.makedirs(GIT_IGNORE_DIR, exist_ok=True)
@@ -309,29 +313,22 @@ try:
             print("[Info] Creating autopilot parameters directory...")
             os.makedirs(GIT_IGNORE_DIR / "autopilot_params")
 
-        if "boat_data" not in os.listdir(GIT_IGNORE_DIR):
-            print("[Info] Creating boat data directory...")
-            os.makedirs(GIT_IGNORE_DIR / "boat_data")
-
-        if "boat_data_bounds" not in os.listdir(GIT_IGNORE_DIR):
-            print("[Info] Creating boat data bounds directory...")
-            os.makedirs(GIT_IGNORE_DIR / "boat_data_bounds")
-
         if "buoy_data" not in os.listdir(GIT_IGNORE_DIR):
             print("[Info] Creating buoy data directory...")
             os.makedirs(GIT_IGNORE_DIR / "buoy_data")
 
-    ASSETS_DIR = Path(GIT_KEEP_DIR / "assets")
+        if "data_logs" not in os.listdir(GIT_IGNORE_DIR):
+            print("[Info] Creating data logs directory...")
+            os.makedirs(GIT_IGNORE_DIR / "data_logs")
+
     AUTOPILOT_PARAMS_DIR = Path(GIT_IGNORE_DIR / "autopilot_params")
     misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "autopilot_params", AUTOPILOT_PARAMS_DIR)
 
-    BOAT_DATA_DIR = Path(GIT_IGNORE_DIR / "boat_data")
-
-    BOAT_DATA_LIMITS_DIR = Path(GIT_IGNORE_DIR / "boat_data_bounds")
-    misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "boat_data_bounds", BOAT_DATA_LIMITS_DIR)
-
     BUOY_DATA_DIR = Path(GIT_IGNORE_DIR / "buoy_data")
     misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "buoy_data", BUOY_DATA_DIR)
+
+    DATA_LOGS_DIR = Path(GIT_IGNORE_DIR / "data_logs")
+    DL = DataLogger(DATA_LOGS_DIR / f"data_log_{int(time.time())}.csv")
 
 except Exception as e:
     raise RuntimeError(f"Initialization error: {e}") from e

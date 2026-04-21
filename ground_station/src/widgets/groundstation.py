@@ -60,6 +60,9 @@ class GroundStationWidget(QWidget):
         self.boat_data: dict[str, Any] = {}
         self.telemetry_data_limits: dict[str, float] = {}
 
+        # should we log telemetry data to a file?
+        self.should_log_data: bool = False
+
         # do we need to clear the sailboat diagnostics svgs on the next telemetry update?
         self.need_to_clear_diagnostics: bool = False
 
@@ -106,49 +109,27 @@ class GroundStationWidget(QWidget):
         self.left_text_section.setReadOnly(True)
         self.left_text_section.setText("Awaiting telemetry data...")
 
-        self.save_boat_data_button = misc.pushbutton_maker(
-            "Save Boat Data to File",
-            constants.ICONS.save,
-            self.save_boat_data,
+        self.start_data_logging_button = misc.pushbutton_maker(
+            "Start Data Logging",
+            constants.ICONS.play,
+            self.start_data_logging,
             max_width=self.left_width,
             min_height=50,
         )
 
-        self.edit_boat_data_limits_button = misc.pushbutton_maker(
-            "Edit Limits",
-            constants.ICONS.cog,
-            self.edit_boat_data_limits,
-            max_width=self.left_width // 2,
+        self.stop_data_logging_button = misc.pushbutton_maker(
+            "Stop Data Logging",
+            constants.ICONS.pause,
+            self.stop_data_logging,
+            max_width=self.left_width,
             min_height=50,
         )
-
-        self.side_buttons_layout = QVBoxLayout()
-
-        self.load_boat_data_limits_button = misc.pushbutton_maker(
-            "Load Limits from File",
-            constants.ICONS.hard_drive,
-            self.load_boat_data_limits,
-            max_width=self.left_width // 2,
-            min_height=25,
-        )
-
-        self.save_boat_data_limits_button = misc.pushbutton_maker(
-            "Save Limits to File",
-            constants.ICONS.save,
-            self.save_boat_data_limits,
-            max_width=self.left_width // 2,
-            min_height=25,
-        )
-
-        self.side_buttons_layout.addWidget(self.load_boat_data_limits_button)
-        self.side_buttons_layout.addWidget(self.save_boat_data_limits_button)
 
         self.left_button_groupbox = QGroupBox()
         self.left_button_layout = QGridLayout()
 
-        self.left_button_layout.addWidget(self.save_boat_data_button, 0, 0, 1, 2)
-        self.left_button_layout.addWidget(self.edit_boat_data_limits_button, 1, 0)
-        self.left_button_layout.addLayout(self.side_buttons_layout, 1, 1)
+        self.left_button_layout.addWidget(self.start_data_logging_button, 0, 0)
+        self.left_button_layout.addWidget(self.stop_data_logging_button, 1, 0)
         self.left_button_groupbox.setLayout(self.left_button_layout)
 
         self.left_layout.addWidget(self.left_label)
@@ -156,7 +137,7 @@ class GroundStationWidget(QWidget):
         self.left_layout.addWidget(self.left_button_groupbox)
 
         self.left_widget.setLayout(self.left_layout)
-        self.left_widget.setMaximumWidth(self.left_width)
+        self.left_widget.setMinimumWidth(self.left_width)
         # self.left_layout.setContentsMargins(0, 0, 0, self.left_width)
         self.main_layout.addWidget(self.left_widget, 0, 0)
 
@@ -352,17 +333,6 @@ class GroundStationWidget(QWidget):
             except RequestException as e:
                 print(f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")
 
-    def add_500_test_waypoints(self) -> None:
-        """Add 500 test waypoints to the map."""
-
-        for _ in range(500):
-            latitude = self.test_waypoint_rng.uniform(-90, 90)
-            longitude = self.test_waypoint_rng.uniform(-180, 180)
-            self.browser.page().runJavaScript(f"map.add_waypoint({latitude}, {longitude})")
-
-        print("[Info] Added 500 test waypoints to the map, LOL.")
-
-
     def pull_waypoints(self) -> None:
         """Pull waypoints from the telemetry server and add them to the map."""
 
@@ -402,106 +372,27 @@ class GroundStationWidget(QWidget):
         js_code = "map.clear_waypoints()"
         self.browser.page().runJavaScript(js_code)
 
-    def save_boat_data(self) -> None:
-        """
-        Saves latest entry in the ``self.boat_data`` array to a file.
+    def add_500_test_waypoints(self) -> None:
+        """Add 500 test waypoints to the map."""
 
-        Files are stored in the ``boat_data`` directory and are named ``boat_data_<timestamp>.json``
-        where ``<timestamp>`` is nanoseconds since unix epoch.
-        """
+        for _ in range(500):
+            latitude = self.test_waypoint_rng.uniform(-90, 90)
+            longitude = self.test_waypoint_rng.uniform(-180, 180)
+            self.browser.page().runJavaScript(f"map.add_waypoint({latitude}, {longitude})")
 
-        try:
-            file_path = Path(constants.BOAT_DATA_DIR / f"boat_data_{time.time_ns()}.json")
-            with open(file_path, mode="w", encoding="utf-8") as f:
-                json.dump(self.boat_data, f, indent=4)
+        print("[Info] Added 500 test waypoints to the map, LOL.")
 
-        except Exception as e:
-            print(f"[Error] Failed to save boat data: {e}")
+    def start_data_logging(self) -> None:
+        """Start logging telemetry data to a file."""
 
-        print(f"[Info] Boat data saved to {file_path}")
+        self.should_log_data = True
+        print("[Info] Data logging started.")
 
-    def edit_boat_data_limits(self) -> None:
-        """
-        Opens a text edit window to edit the telemetry data limits.
+    def stop_data_logging(self) -> None:
+        """Stop logging telemetry data to a file."""
 
-        ``self.edit_boat_data_limits_callback`` is called when the user closes or clicks the save button in the text edit window.
-        ``self.edit_boat_data_limits_callback`` recieves the text from the text edit window when the user clicks the save button,
-        otherwise it recieves the text without any changes.
-        """
-
-        try:
-            initial_config = json.dumps(self.telemetry_data_limits, indent=4)
-            self.text_edit_window = TextEditWindow(highlighter=JsonHighlighter, initial_text=initial_config)
-            self.text_edit_window.setWindowTitle("Edit Boat Data Limits")
-            self.text_edit_window.user_text_emitter.connect(self.edit_boat_data_limits_callback)
-            self.text_edit_window.show()
-
-        except Exception as e:
-            print(f"[Error] Failed to open boat data limits edit window: {e}")
-
-    def edit_boat_data_limits_callback(self, text: str) -> None:
-        """
-        Callback function for the ``edit_boat_data_limits`` function.
-
-        This function is called when the user closes the text edit window.
-        It retrieves the edited text and saves it to the ``self.telemetry_data_limits`` variable and closes the window.
-
-        Parameters
-        ----------
-        text
-            The text entered by the user in the text edit window.
-        """
-
-        try:
-            self.telemetry_data_limits = json.loads(text)
-
-        except Exception as e:
-            print(f"[Error] Failed to edit boat data limits: {e}")
-
-    def load_boat_data_limits(self) -> None:
-        """
-        Load upper and lower bounds for some of the telemetry data, if no file selected use ``default.json``.
-
-        Files are stored in the ``boat_data_bounds`` directory and are named ``boat_data_bounds_<timestamp>.json``
-        where ``<timestamp>`` is nanoseconds since unix epoch.
-        """
-
-        try:
-            chosen_file = QFileDialog.getOpenFileName(
-                self,
-                "Select Parameter File",
-                constants.BOAT_DATA_LIMITS_DIR.as_posix(),
-                "*.json",
-            )
-            if chosen_file == ("", ""):
-                chosen_file = [Path(constants.BOAT_DATA_LIMITS_DIR / "default.json")]
-            with open(chosen_file[0], mode="r", encoding="utf-8") as f:
-                self.telemetry_data_limits = json.load(f)
-
-        except Exception as e:
-            print(f"[Error] Failed to load boat data limits: {e}")
-
-        print(f"[Info] Boat data limits loaded from {chosen_file[0]}")
-
-    def save_boat_data_limits(self) -> None:
-        """
-        Save upper and lower bounds for some of the telemetry data.
-
-        Files are stored in the ``boat_data_bounds`` directory and are named ``boat_data_bounds_<timestamp>.json``
-        where ``<timestamp>`` is nanoseconds since unix epoch.
-        """
-
-        try:
-            file_path = Path(
-                constants.BOAT_DATA_LIMITS_DIR / f"boat_data_bounds_{time.time_ns()}.json",
-            )
-            with open(file_path, mode="w", encoding="utf-8") as f:
-                json.dump(self.telemetry_data_limits, f, indent=4)
-
-        except Exception as e:
-            print(f"[Error] Failed to save boat data limits: {e}")
-
-        print(f"[Info] Boat data limits saved to {file_path}")
+        self.should_log_data = False
+        print("[Info] Data logging stopped.")
 
     def edit_buoy_data(self) -> None:
         """
@@ -882,6 +773,13 @@ class GroundStationWidget(QWidget):
             - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
+        boat_data, connection_status = request_result
+        self.boat_data = boat_data
+
+        # TODO: figure out how to log dictionary without looping through each key
+        if self.should_log_data:
+            pass
+
         def fix_formatting(data_item: float | None) -> str:
             """
             Applies some formatting rules that multiple keys have in common.
@@ -971,9 +869,6 @@ class GroundStationWidget(QWidget):
                 f"Motor Temperature: {fix_formatting(self.boat_data.get('motor_temperature'))} °C\n"
                 f"VESC Temperature: {fix_formatting(self.boat_data.get('vesc_temperature'))} °C\n"
             )
-        
-        boat_data, connection_status = request_result
-        self.boat_data = boat_data
 
         # endregion mode dependent print functions
 
@@ -1067,8 +962,8 @@ class GroundStationWidget(QWidget):
             wind_direction_shape: list[svg.PathData] = [
                 svg.MoveTo(50, 50),
                 svg.LineTo(
-                    50 + 50*np.cos(np.deg2rad(heading + wind_direction)),
-                    50 - 50*np.sin(np.deg2rad(heading + wind_direction)),
+                    50 + 50 * np.cos(np.deg2rad(heading + wind_direction)),
+                    50 - 50 * np.sin(np.deg2rad(heading + wind_direction)),
                 ),
             ]
             wind_html = svg.Path(
@@ -1089,7 +984,7 @@ class GroundStationWidget(QWidget):
             vx: float = self.boat_data.get("velocity_x", -69.420)
             vy: float = self.boat_data.get("velocity_y", -69.420)
 
-            radius: float = 4*speed
+            radius: float = 4 * speed
             x1: float = 2 + radius * vx / speed
             y1: float = 2 + radius * vy / speed
             head = heading
