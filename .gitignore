@@ -9,7 +9,6 @@ output
 # object detection
 **.pt
 src/microros/dependencies/**
-.devcontainer/devcontainer_environment_variables
 **.engine
 **.onnx
 **.o
@@ -40,3 +39,7 @@ src/object_detection/object_detection/hard_images/**
 
 # frames generated from camera recorder
 frame_logs
+
+
+.devcontainer/devcontainer_environment_variables
+.devcontainer/host_environment_variables
