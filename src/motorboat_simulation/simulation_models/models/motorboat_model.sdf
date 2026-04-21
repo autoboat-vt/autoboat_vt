@@ -24,7 +24,7 @@ With ros2:
 
   0. Start the simulation (in ../launch/):
 
-    ros2 launch motorboat_simulation.launch.py
+    ros2 launch autoboat_launch motorboat_simulation.launch.py
 
   1. Move the rudder:
 
@@ -38,7 +38,7 @@ ros2 topic pub /motorboat_simulation/desired_propeller_rpm std_msgs/msg/Float64 
 
 With ROS2 autopilot node:
 0. Start the simulation (in ../launch/):
-    ros2 launch motorboat_simulation.launch.py
+    ros2 launch autoboat_launch motorboat_simulation.launch.py
 
 1. Move the rudder: 
 ros2 topic pub /desired_rudder_angle std_msgs/msg/Float64 'data: .61'

@@ -23,11 +23,11 @@ Without ros2:
 
    gz topic -t /sail_limit -m gz.msgs.Double -p 'data: 45'
 
-With ros2: TODO: UPDATE
+With ros2:
 
   0. Start the simulation (in ../launch/):
 
-    ros2 launch motorboat_simulation.launch.py
+    ros2 launch autoboat_launch motorboat_simulation.launch.py
 
   1. Move the rudder:
 

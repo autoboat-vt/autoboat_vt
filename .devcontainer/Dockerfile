@@ -1,9 +1,3 @@
-# TODO and NOTE:
-# this is the docker file used to build the dev container. 
-# For right now, you should not modify this and if you need to add something then please ask chris. 
-# In the future, I will make it so that you can modify this file and push your changes so that everyone can use it
-
-
 # NOTE: The reason why we are doing rm -rf /var/lib/apt/lists/* after every apt install is because of caching reasons
 
 
@@ -156,7 +150,3 @@ RUN curl -fsSL https://bun.sh/install | bash \
 
 
 CMD ["/bin/bash"]
-# TODO and NOTE:
-# this is the docker file used to build the dev container. 
-# For right now, you should not modify this and if you need to add something then please ask chris. 
-# In the future, I will make it so that you can modify this file and push your changes so that everyone can use it
