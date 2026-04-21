@@ -1,1 +1,1 @@
-docker build -t vtautoboat/autoboat_docker_dev_image:cpp -f .devcontainer/Dockerfile .
+docker build -t vtautoboat/development_image:temp_tag -f .devcontainer/Dockerfile .

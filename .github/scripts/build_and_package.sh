@@ -27,7 +27,7 @@ colcon build --packages-ignore ${IGNORE_PACKAGES} \
 
 mkdir -p output_artifacts
 
-# ── 3. Standard Debian package (Runtime) ────────────────────────
+# ── Standard Debian package (Runtime) ────────────────────────
 echo "==> Building standard .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
 PKG_DIR_STD="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_std"
 mkdir -p "${PKG_DIR_STD}/DEBIAN"
@@ -92,7 +92,7 @@ fi
 
 dpkg-deb --build "${PKG_DIR_STD}" "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
 
-# ── 4. Micro-ROS SDK Debian package (Development) ───────────────
+# ── Micro-ROS SDK Debian package (Development) ───────────────
 echo "==> Building microros-sdk .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
 PKG_DIR_UC="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_uc"
 mkdir -p "${PKG_DIR_UC}/DEBIAN"
@@ -116,7 +116,7 @@ chmod 0755 "${PKG_DIR_UC}/DEBIAN/postinst" "${PKG_DIR_UC}/DEBIAN/prerm" "${PKG_D
 
 dpkg-deb --build "${PKG_DIR_UC}" "output_artifacts/autoboat-vt-microros-full-${DEB_ARCH}.deb"
 
-# ── 5. Fix permissions for host runner upload ───────────────────
+# ── Fix permissions for host runner upload ───────────────────
 echo "==> Fixing permissions for host runner..."
 chmod -R a+rX output_artifacts/
 
