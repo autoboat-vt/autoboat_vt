@@ -157,7 +157,50 @@ class SailboatAutopilot:
             return SailboatManeuvers.STANDARD
 
 
+    # TODO: THIS FUNCTION WILL HAVE THE NEW TACKING LOGIC
+    def _apply_new_decision_zone_tacking_logic(
+        self,
+        current_heading: float,
+        desired_heading: float,
+        true_wind_angle: float,
+        apparent_wind_angle: float,
+        current_position: float,
+        last_tack_position: float,
+        current_tack_side: str # starboard or port
+    ) -> tuple[float, bool]:
+        """
+        TODO MAKE DOCUMENTATION A LITTLE BETTER
+        If you don't know how this works (you don't) feel free to ask Chris about this and he can explain it to you.
+        I am sorry to anyone who has to try to understand how this algorithm works. I was in your shoes once...
 
+        Parameters
+        ----------
+        current_heading
+            The direction the boat is currently facing measured in degrees counter-clockwise from true east.
+        desired_heading
+            The direction the boat wants to face measured in degrees counter-clockwise from true east.
+        true_wind_angle
+            The true wind angle in degrees measured counter-clockwise from the centerline of the boat.
+        apparent_wind_angle
+            The apparent wind angle in degrees measured counter-clockwise from the centerline of the boat.
+        
+
+        Returns
+        -------
+        tuple[float, bool]
+            A tuple with the first element being the angle that the boat should be holding measured in degrees counter-clockwise
+            from true east, and the second element being whether the boat would need to tack to reach that heading.
+        """
+
+        global_true_wind_angle = (current_heading + true_wind_angle) % 360
+        # global true up wind angle goes in the opposite direction of the global true wind angle
+        global_true_upwind_angle = (global_true_wind_angle + 180) % 360
+
+        global_apparent_wind_angle = (current_heading + apparent_wind_angle) % 360
+        # global apparent up wind angle goes in the opposite direction of the global apparent wind angle
+        global_apparent_upwind_angle = (global_apparent_wind_angle + 180) % 360
+        
+        
 
     def _apply_decision_zone_tacking_logic(
         self,
@@ -171,7 +214,9 @@ class SailboatAutopilot:
         TODO MAKE DOCUMENTATION A LITTLE BETTER
         If you don't know how this works (you don't) feel free to ask Chris about this and he can explain it to you.
         I am sorry to anyone who has to try to understand how this algorithm works. I was in your shoes once...
-
+        
+        https://autoboat-vt.github.io/documentation/ros2_packages/autopilot_package/sailboat_autopilot/
+        
         Parameters
         ----------
         current_heading
