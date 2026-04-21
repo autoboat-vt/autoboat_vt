@@ -267,12 +267,15 @@ setup_linux() {
 
 	elif command -v nvidia-smi &>/dev/null; then
 		log_warn "NVIDIA GPU Detected, but you are not running a linux distribution that supports devcontainer GPU forwarding. Running CPU-only mode."
+		write_devcontainer_environment_variables "$DISPLAY"
+		write_host_environment_variables
+		ensure_host_environment_variables.sh_are_sourced
 	
 
 	else
 		log_info "No NVIDIA GPU found. Running CPU-only mode."
 		write_host_environment_variables
-		write_devcontainer_environment_variables ":0"
+		write_devcontainer_environment_variables "$DISPLAY"
 		ensure_host_environment_variables.sh_are_sourced
 	fi
 }
