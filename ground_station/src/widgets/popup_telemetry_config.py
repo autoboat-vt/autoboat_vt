@@ -246,6 +246,12 @@ class FeatureInfoItem(QTableWidgetItem):
     ``QTableWidgetItem``
     """
 
+    __slots__ = (
+        "_name",
+        "_description",
+        "_enabled",
+    )
+
     def __init__(
         self,
         name: str,
