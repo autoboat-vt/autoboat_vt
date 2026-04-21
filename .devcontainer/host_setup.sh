@@ -157,7 +157,7 @@ setup_linux() {
         
     elif command -v pacman &> /dev/null; then
         log_info "Detected Arch Linux (pacman). Installing xorg-apps group."
-        sudo pacman -Syu --noconfirm xorg-apps
+        sudo pacman -S --noconfirm xorg-apps
         
     elif command -v apk &> /dev/null; then
         log_info "Detected Alpine Linux (apk). Installing individual X11 utilities."
