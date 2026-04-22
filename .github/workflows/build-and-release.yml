@@ -1,0 +1,333 @@
+name: ROS2 Cross-Architecture Build & Release
+
+
+# ============================================================================
+# CONFIGURABLE PACKAGES
+# Edit the list below to change which packages don't get built and distributed.
+# These are passed directly to `colcon build --packages-ignore`.
+# ============================================================================
+env:
+  COLCON_IGNORE_PACKAGES_AMD: "sailboat_simulation autopilot sensors vesc object_detection"
+  COLCON_IGNORE_PACKAGES_ARM: "foil_dynamics custom_lift_drag sail_limits sailboat_simulation simulation_transform wind_arrow autopilot sensors vesc object_detection"
+
+
+
+
+on:
+  push:
+    branches: [ "main", ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build (${{ matrix.architecture }})
+    permissions:
+      contents: write
+      packages: write
+    
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [ amd64, arm64 ]
+        include:
+          - architecture: amd64
+            runner: ubuntu-22.04
+            platform: linux/amd64
+          - architecture: arm64
+            runner: ubuntu-22.04-arm
+            platform: linux/arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create temporary .dockerignore
+        run: |
+          echo "*" > .dockerignore
+          echo "!/.devcontainer/" >> .dockerignore
+          echo "!/.devcontainer/**" >> .dockerignore
+          echo "Building with context:"
+          du -sh .devcontainer/
+
+      - name: Cache C++ Build (CCACHE)
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-release-${{ matrix.architecture }}-${{ github.sha }}
+          restore-keys: |
+            ccache-release-${{ matrix.architecture }}-
+
+      - name: Lowercase repository owner
+        run: |
+          echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> ${GITHUB_ENV}
+
+      - name: Log in to Docker Hub
+        # Only push images to the registry when pushing to the main branch.
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        # Only push images to the registry when pushing to the main branch.
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # -----------------------------------------------------------------------
+      # Compute the package version from the git tag (e.g. v1.2.3 → 1.2.3)
+      # or fall back to 0.0.0+git<sha> for non-tag builds.
+      # The version is passed into the container via an environment variable.
+      # -----------------------------------------------------------------------
+      - name: Compute package version
+        id: meta
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            # Extract Major and Minor version components
+            MAJOR=$(echo "${VERSION}" | cut -d. -f1)
+            MINOR=$(echo "${VERSION}" | cut -d. -f1,2)
+            echo "major=${MAJOR}" >> "$GITHUB_OUTPUT"
+            echo "minor=${MINOR}" >> "$GITHUB_OUTPUT"
+          else
+            VERSION="0.0.0+git$(git rev-parse --short HEAD)"
+            echo "major=0" >> "$GITHUB_OUTPUT"
+            echo "minor=0.0" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Package version: ${VERSION}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # -----------------------------------------------------------------------
+      # Build the CI Docker images using Docker Bake.
+      # Two variants:
+      #   PR  — GHA cache only (no Docker Hub auth, so no registry cache writes)
+      #   non-PR — Full registry cache + push (requires Docker Hub login above)
+      # -----------------------------------------------------------------------
+
+      - name: Build Docker Images (PR — GHA cache only)
+        if: github.event_name == 'pull_request'
+        uses: docker/bake-action@v6
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+          OWNER: ${{ env.OWNER_LC }}
+          IS_OFFICIAL: "false"
+          IS_RELEASE: "false"
+          VERSION: ${{ steps.meta.outputs.version }}
+          MAJOR: ${{ steps.meta.outputs.major }}
+          MINOR: ${{ steps.meta.outputs.minor }}
+          GITHUB_SHA: ${{ github.sha }}
+        with:
+          files: .github/workflows/docker-bake.hcl
+          push: false
+          set: |
+            *.platform=linux/${{ matrix.architecture }}
+            *.cache-from=type=gha,scope=${{ matrix.architecture }}
+            *.cache-to=type=gha,mode=max,scope=${{ matrix.architecture }}
+            base.cache-from=type=gha,scope=base-${{ matrix.architecture }}
+            base.cache-to=type=gha,mode=max,scope=base-${{ matrix.architecture }}
+            microros.cache-from=type=gha,scope=microros-${{ matrix.architecture }}
+            microros.cache-to=type=gha,mode=max,scope=microros-${{ matrix.architecture }}
+
+      - name: Build and Push Docker Images (Bake)
+        if: github.event_name != 'pull_request'
+        uses: docker/bake-action@v6
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+          OWNER: ${{ env.OWNER_LC }}
+          IS_OFFICIAL: "true"
+          IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          MAJOR: ${{ steps.meta.outputs.major }}
+          MINOR: ${{ steps.meta.outputs.minor }}
+          GITHUB_SHA: ${{ github.sha }}
+        with:
+          files: .github/workflows/docker-bake.hcl
+          push: true
+          set: |
+            *.platform=linux/${{ matrix.architecture }}
+            *.cache-from=type=gha,scope=${{ matrix.architecture }}
+            *.cache-to=type=gha,mode=max,scope=${{ matrix.architecture }}
+            base.cache-from=type=gha,scope=base-${{ matrix.architecture }}
+            base.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache
+            base.cache-to=type=gha,mode=max,scope=base-${{ matrix.architecture }}
+            base.cache-to=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache,mode=max
+            microros.cache-from=type=gha,scope=microros-${{ matrix.architecture }}
+            microros.cache-from=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache
+            microros.cache-to=type=gha,mode=max,scope=microros-${{ matrix.architecture }}
+            microros.cache-to=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache,mode=max
+
+
+
+
+      - name: Pull Base Image for local build
+        if: github.event_name != 'pull_request'
+        run: |
+          docker pull vtautoboat/development_image_microros:${{ matrix.architecture }}
+          # No need to retag, we will use the full name in the build step
+
+      # -----------------------------------------------------------------------
+      # Run colcon build AND package everything inside the container.
+      # All disk work happens inside the container (root) to avoid:
+      #   - Cross-filesystem mv failures (/tmp vs bind-mount are diff filesystems)
+      #   - Host runner (non-root) being unable to read/tar root-owned build output
+      # We pass DEB_VERSION + DEB_ARCH as env vars so the inner shell can use them.
+      #
+      # Outputs (all chmod'd readable for the host runner to upload):
+      #   output_artifacts/autoboat-vt-<arch>.deb            (install/ only, with deps)
+      # -----------------------------------------------------------------------
+      - name: Build ROS2 Packages, Tarball, and Debian Package
+        run: |
+          # Determine the architecture-specific ignore list from top-level env
+          if [ "${{ matrix.architecture }}" == "amd64" ]; then
+            IGNORE_PACKAGES="${{ env.COLCON_IGNORE_PACKAGES_AMD }}"
+          else
+            IGNORE_PACKAGES="${{ env.COLCON_IGNORE_PACKAGES_ARM }}"
+          fi
+
+          # Ensure the script is executable
+          chmod +x .github/scripts/build_and_package.sh
+
+          docker run --rm \
+            --user root \
+            -v ${{ github.workspace }}:/home/ws \
+            -v ${{ github.workspace }}/.ccache:/home/ws/.ccache \
+            -w /home/ws \
+            -e DEB_VERSION="${{ steps.meta.outputs.version }}" \
+            -e DEB_ARCH="${{ matrix.architecture }}" \
+            -e IGNORE_PACKAGES="${IGNORE_PACKAGES}" \
+            -e CCACHE_DIR=.ccache \
+            -e CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            vtautoboat/development_image_microros:${{ matrix.architecture }} \
+            bash .github/scripts/build_and_package.sh
+
+      # Upload both the .tar.gz and .deb as workflow artifacts.
+      # On every push/PR these are downloadable from the Actions tab for 5 days.
+      # On tag pushes the release job picks them up too.
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: autoboat-prebuilt-${{ matrix.architecture }}
+          path: output_artifacts/
+          # retention-days: 5
+
+
+  # ============================================================================
+  # Release job — only runs on version tag pushes (v*).
+  # Attaches both the .tar.gz and .deb for all architectures to a GitHub Release.
+  # To publish: git tag v1.0.0 && git push origin v1.0.0
+  # ============================================================================
+  release:
+    name: Create GitHub Release
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: autoboat-prebuilt-*
+          path: output_artifacts
+          merge-multiple: true
+
+      - name: Update latest tag
+        if: github.ref_type != 'tag'
+        run: |
+          git tag -f latest ${{ github.sha }}
+          git push -f origin latest
+
+      - name: List release assets
+        run: ls -lh output_artifacts/
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
+          files: |
+            output_artifacts/autoboat-vt-*.deb
+          generate_release_notes: false
+          draft: false
+          
+          # This checks if we are pushing to branches or have a version like v1.2.3-beta
+          # if so then this is marked on github as a prerelease version
+          prerelease: ${{ github.ref_name == 'main' || contains(github.ref, '-') }}
+          make_latest: ${{ github.ref_type == 'tag' && 'true' || 'false' }}
+
+
+  # ============================================================================
+  # Publish Multi-Arch Dev Image — runs after successful build.
+  # Combines the amd64 and arm64 images into a single multi-arch manifest.
+  # ============================================================================
+  publish-dev-image:
+    name: Publish Multi-Arch Dev Image (${{ matrix.variant }})
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    strategy:
+      matrix:
+        variant: [ standard, microros ]
+        include:
+          - variant: standard
+            image_repo: vtautoboat/development_image
+          - variant: microros
+            image_repo: vtautoboat/development_image_microros
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and Push Multi-Arch Manifests
+        run: |
+          OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}
+          GHCR_REPO="ghcr.io/${OWNER_LC}/${{ matrix.variant == 'standard' && 'development_image' || 'development_image_microros' }}"
+          DOCKER_HUB_REPO="vtautoboat/${{ matrix.variant == 'standard' && 'development_image' || 'development_image_microros' }}"
+
+          echo "==> Creating multi-arch manifest for ${DOCKER_HUB_REPO}:latest..."
+          docker buildx imagetools create -t ${DOCKER_HUB_REPO}:latest ${DOCKER_HUB_REPO}:amd64 ${DOCKER_HUB_REPO}:arm64
+
+          echo "==> Creating multi-arch manifest for ${GHCR_REPO}:latest..."
+          docker buildx imagetools create -t ${GHCR_REPO}:latest ${GHCR_REPO}:amd64 ${GHCR_REPO}:arm64
+
+          # Handle semantic version tags
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            MAJOR=$(echo "${VERSION}" | cut -d. -f1)
+            MINOR=$(echo "${VERSION}" | cut -d. -f1,2)
+            
+            for TAG in "v${VERSION}" "v${MINOR}" "v${MAJOR}"; do
+              echo "==> Creating multi-arch manifest for ${TAG}..."
+              docker buildx imagetools create -t ${DOCKER_HUB_REPO}:${TAG} ${DOCKER_HUB_REPO}:${TAG}-amd64 ${DOCKER_HUB_REPO}:${TAG}-arm64
+              docker buildx imagetools create -t ${GHCR_REPO}:${TAG} ${GHCR_REPO}:${TAG}-amd64 ${GHCR_REPO}:${TAG}-arm64
+            done
+          fi

@@ -41,5 +41,10 @@ src/object_detection/object_detection/hard_images/**
 frame_logs
 
 
+# c++ compiler profiling traces using ninjatracing
+trace.json
+
+
+*.deb
 .devcontainer/devcontainer_environment_variables
 .devcontainer/host_environment_variables

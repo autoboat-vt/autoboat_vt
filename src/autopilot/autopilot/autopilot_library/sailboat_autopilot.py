@@ -246,8 +246,6 @@ class SailboatAutopilot:
         # If desired heading in zone 2
         distance_to_lower_no_sail_zone = abs(get_distance_between_angles(no_sail_zone_bounds[0], current_heading))
         distance_to_upper_no_sail_zone = abs(get_distance_between_angles(no_sail_zone_bounds[1], current_heading))
-        distance_to_lower_no_sail_zone = abs(get_distance_between_angles(no_sail_zone_bounds[0], current_heading))
-        distance_to_upper_no_sail_zone = abs(get_distance_between_angles(no_sail_zone_bounds[1], current_heading))
 
         if distance_to_lower_no_sail_zone < distance_to_upper_no_sail_zone:
             return no_sail_zone_bounds[0], False  # No tack

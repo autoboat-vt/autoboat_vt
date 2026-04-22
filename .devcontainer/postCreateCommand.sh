@@ -9,9 +9,16 @@ AUTOBOAT_USER_HOME="/home/autoboat_user"
 # This is very unsafe lol but I need this to be able to access docker from inside of the dev container for the sim. 
 # Do not remove unless we are releasing this software as a product
 echo "sudo chmod 777 /var/run/docker.sock" >> $AUTOBOAT_USER_HOME/.bashrc
-echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/build/foil_dynamics/:/home/ws/build/sail_limits/:/home/ws/build/custom_lift_drag/:/home/ws/build/wind_arrow/ >> "/home/autoboat_user/.bashrc"
+echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/build/foil_dynamics/:/home/ws/build/sail_limits/:/home/ws/build/custom_lift_drag/:/home/ws/build/wind_arrow/ >> $AUTOBOAT_USER_HOME/.bashrc
+
+
 # Make sure that you can just type python and you don't have to type python3 because people will get confused
 echo 'alias python="python3"' >> $AUTOBOAT_USER_HOME/.bashrc
+
+# Make it easy to perform the proper build command
+echo 'alias build="cd /home/ws && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"' >> ~/.bashrc
+echo 'alias build_python="build --packages-ignore-regex .*cpp"' >> ~/.bashrc
+
 # Install all of the pip packages that we may have edited
 # "pip install -e" installs the packages as "editable" which just means that we can make changes in the packages
 # And you don't have to reinstall them, the changes will automatically be visible if you run another script again
@@ -28,7 +35,7 @@ source /opt/ros/humble/setup.bash
 echo "source /opt/ros/humble/setup.bash" >> $AUTOBOAT_USER_HOME/.bashrc
 source $AUTOBOAT_USER_HOME/.bashrc
 
-colcon build --symlink-install
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON --packages-ignore-regex .*cpp
 
 echo "source /home/ws/install/setup.bash" >> $AUTOBOAT_USER_HOME/.bashrc
 
@@ -42,24 +49,13 @@ echo "source /home/ws/install/setup.bash" >> $AUTOBOAT_USER_HOME/.bashrc
 # In some cases, we can store the entire built dependencies in /tmp like for microros where we can store a package
 # of all of the dependencies that we need to work with microros
 
-# if [[ "$DEVCONTAINER_VARIANT" == "yolo" || "$DEVCONTAINER_VARIANT" == "deepstream_and_yolo" ]]; then
 
-#     # These devcontainers put the following data in the /tmp folder so all we need to do is move them so the user can see it 
-#     mv /tmp/autoboat_weights src/object_detection/object_detection/weights
-#     mv /tmp/autoboat_dataset src/object_detection/object_detection/dataset
-#     mv /tmp/autoboat_hard_images src/object_detection/object_detection/hard_images
+# if [[ "$DEVCONTAINER_VARIANT" == "microros" ]]; then
+#     rm -rf src/microros/dependencies
+#     mv /opt/autoboat/microros_dependencies src/microros
 
-#     sudo chmod -R 777 src/object_detection/object_detection 
+#     sudo chmod -R 777 src/microros
 # fi
-
-
-
-if [[ "$DEVCONTAINER_VARIANT" == "microros" ]]; then
-    rm -rf src/microros/dependencies
-    mv /tmp/src/microros/dependencies src/microros
-
-    sudo chmod -R 777 src/microros
-fi
 
 
 if [[ "$DEVCONTAINER_VARIANT" == "deepstream" || "$DEVCONTAINER_VARIANT" == "deepstream_and_yolo" ]]; then

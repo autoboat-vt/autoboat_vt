@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Remove the profile.d auto-source script on uninstall / upgrade
+rm -f /etc/profile.d/autoboat-vt.sh

@@ -1,3 +1,8 @@
+# -----------------------
+# DEPRICATED FILE
+# -----------------------
+
+
 #!/bin/bash
 set -e
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
@@ -6,7 +11,8 @@ REPOSITORY_ROOT="/home/ws"
 
 # Install dependencies
 sudo apt-get update || true  # continue even if this "fails" for whatever reason
-sudo apt install -y cmake g++ gcc-arm-none-eabi doxygen libnewlib-arm-none-eabi git python3 build-essential pkg-config libusb-1.0-0-dev
+# sudo apt install -y cmake g++ gcc-arm-none-eabi doxygen libnewlib-arm-none-eabi git python3 build-essential pkg-config libusb-1.0-0-dev
+sudo apt install -y cmake g++ gcc-arm-none-eabi doxygen libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib libstdc++-arm-none-eabi-dev git python3 build-essential pkg-config libusb-1.0-0-dev
 sudo apt-get upgrade -y --allow-downgrades
 source /opt/ros/humble/setup.bash
 
@@ -79,20 +85,22 @@ ros2 run micro_ros_setup build_agent.sh
 source install/local_setup.sh
 
 
+# Move this to the opt folder since that is where the microros dependencies should be
+sudo mkdir -p /opt/autoboat/microros_dependencies
+sudo mv $REPOSITORY_ROOT/src/microros/dependencies/** /opt/autoboat/microros_dependencies
+rm -rf $REPOSITORY_ROOT/src/microros/dependencies
 
 # Write sources and aliases to bashrc file
 {
-    echo "unset ROS_DOMAIN_ID"
-    echo "export PICO_SDK_PATH=$REPOSITORY_ROOT/src/microros/dependencies/pico-sdk"
-    echo "export PICO_MICROROS_SDK_PATH=$REPOSITORY_ROOT/src/microros/dependencies/micro_ros_raspberrypi_pico_sdk"
-    echo "export PICOTOOL_PATH=$REPOSITORY_ROOT/src/microros/dependencies/picotool"
-    echo "source $REPOSITORY_ROOT/src/microros/dependencies/micro_ros_agent/install/local_setup.bash"
-    echo "alias picotool='$PICOTOOL_PATH/build/picotool'"
-    echo "alias picotool_load='sudo $PICOTOOL_PATH/build/picotool load'"
-    echo "alias picotool_reboot='sudo $PICOTOOL_PATH/build/picotool reboot'"
+  echo "unset ROS_DOMAIN_ID"
+  echo "export PICO_SDK_PATH=/opt/autoboat/microros_dependencies/pico-sdk"
+  echo "export PICO_MICROROS_SDK_PATH=/opt/autoboat/microros_dependencies/micro_ros_raspberrypi_pico_sdk"
+  echo "export PICOTOOL_PATH=/opt/autoboat/microros_dependencies/picotool"
+  echo "source /opt/autoboat/microros_dependencies/micro_ros_agent/install/local_setup.bash"
+  echo "alias picotool='$PICOTOOL_PATH/build/picotool'"
+  echo "alias picotool_load='sudo $PICOTOOL_PATH/build/picotool load'"
+  echo "alias picotool_reboot='sudo $PICOTOOL_PATH/build/picotool reboot'"
 } >> ~/.bashrc
-
-
 
 
 # Source bash
