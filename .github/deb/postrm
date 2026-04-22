@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+# Automatically remove the sourcing line from the user's .bashrc upon uninstall
+if [ -n "$SUDO_USER" ]; then
+    USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+    BASHRC="${USER_HOME}/.bashrc"
+    
+    if [ -f "$BASHRC" ]; then
+        # Remove the specific block added by the installation
+        # This removes the comment and the source line if they appear consecutively
+        sed -i '/# Added by autoboat-vt installation/,/source \/etc\/profile.d\/autoboat-vt.sh/d' "$BASHRC"
+    fi
+fi

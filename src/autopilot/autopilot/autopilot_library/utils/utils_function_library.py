@@ -170,8 +170,6 @@ def get_distance_between_positions(position1: Position, position2: Position) -> 
 
 def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float) -> bool:
     """
-    TODO Better documentation.
-
     Parameters
     ----------
     angle

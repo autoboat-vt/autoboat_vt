@@ -1014,8 +1014,9 @@ class GroundStationWidget(QWidget):
                 f"map.update_wind_svg('{wind_html.as_str()}')"
             )
             self.browser.page().runJavaScript(
-                f"map.update_compass_svg('{wind_direction}')"
+                f"map.update_compass_svg('{heading+wind_direction}')"
             )
+            print(heading+wind_direction)
 
         # region data validation and defaulting
         try:

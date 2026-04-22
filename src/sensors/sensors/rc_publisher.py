@@ -8,19 +8,21 @@ from sys import argv
 argv = argv[1:]
 
 
-import rclpy
-from rclpy.qos import qos_profile_sensor_data
+import os
 import time
+
+import psutil
+import rclpy
 import serial
+from crsf_parser import CRSFParser, PacketValidationStatus
+from crsf_parser.frames import crsf_frame
+from crsf_parser.payloads import PacketsTypes
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from serial.tools import list_ports
 from std_msgs.msg import Bool
+
 from autoboat_msgs.msg import RCData
-from rclpy.node import Node
-
-from crsf_parser.payloads import PacketsTypes
-from crsf_parser.frames import crsf_frame
-from crsf_parser import CRSFParser, PacketValidationStatus
-
 
 RC_VID = 0x0403
 RC_PID = 0x6001
@@ -49,7 +51,8 @@ class RCPublisher(Node):
 
     def __init__(self):
         super().__init__("rc_publisher")
-
+        
+        
         self.create_timer(0.3, self.timer_callback)
 
         serial_port = getPort(RC_VID, RC_PID, RC_SERIAL_NUMBER)
@@ -214,6 +217,8 @@ class RCPublisher(Node):
 
 
     def timer_callback(self):
+        # start_time = time.time()
+        
         num_unread_bytes = self.sensor_serial.in_waiting
 
         if num_unread_bytes == 0:
@@ -235,6 +240,12 @@ class RCPublisher(Node):
             return
 
         self.rc_data_publisher.publish(rc_data)
+        
+        # print(f"time used: {time.time() - start_time}")
+        # process = psutil.Process(os.getpid())
+        # ram_bytes = process.memory_info().rss  # Resident Set Size: physical memory used
+        # ram_mb = ram_bytes / (1024 ** 2)
+        # print(f"ram mb: {ram_mb}")
 
 
 

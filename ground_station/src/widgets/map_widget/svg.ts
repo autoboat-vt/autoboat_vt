@@ -28,7 +28,7 @@ export class CompassControl extends Control {
 
             <!-- wind arrow -->
             <g id="wind-arrow">
-                <path d="M50 50 L50 100" stroke="orange" stroke-width="5"></path>
+                <path d="M50 50 L100 50" stroke="orange" stroke-width="5"></path>
             </g>
         </svg>`;
 
@@ -41,9 +41,10 @@ export class CompassControl extends Control {
 
     setWindDirection(degrees: number) {
         if (!this.arrow_svg) return;
+        degrees *= -1;
 
         // rotate around center of SVG (50,50)
-        this.arrow_svg.setAttribute("transform", `rotate(-${degrees} 50 50)`);
+        this.arrow_svg.setAttribute("transform", `rotate(${degrees} 50 50)`);
     }
 }
 
