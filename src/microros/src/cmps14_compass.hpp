@@ -45,6 +45,8 @@ class cmps14 : public I2CDevice {
 
     void readMagnet(float *magnetX, float *magnetY, float *magnetZ);
 
+    void cmps14::interuptGetBearing();
+
     ~cmps14();
 
 

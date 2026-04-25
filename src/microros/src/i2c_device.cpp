@@ -31,6 +31,8 @@
         return result;
     }
     
+    
+
     //read and write byte and the base things need for everything, but each individual device will have their own 
     //methods using read and write byte in order to gather data (getGYRO())
 

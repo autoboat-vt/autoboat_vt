@@ -59,6 +59,18 @@ int8_t cmps14::getRoll() {
     return (int8_t)buffer;
 }
 
+void cmps14::interuptGetBearing(){
+    i2c0_hw->enable = 0;
+    i2c0_hw->tar    = address;
+    i2c0_hw->enable = 1;
+
+    i2c0_hw->data_cmd = BEARING_Register;
+
+    
+
+
+}
+
 //accellXYZ is never stored or sent anywhere.
 void cmps14::readAccelerator(float *accelX, float *accelY, float *accelZ) {
     uint8_t buffer[6];
