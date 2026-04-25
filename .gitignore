@@ -9,7 +9,7 @@ output
 
 # object detection
 **.pt
-src/microros/dependencies/**
+microros/dependencies/**
 **.engine
 **.onnx
 **.o
