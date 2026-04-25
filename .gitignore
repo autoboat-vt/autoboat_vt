@@ -2,6 +2,7 @@
 .python-version
 **/__pycache__/**
 build
+build_unit_tests
 install
 log
 output

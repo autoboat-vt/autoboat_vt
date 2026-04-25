@@ -1,5 +1,5 @@
 #ifndef DRV8711_STEPPER_MOTOR_DRIVER_LIBRARY_H
-#define DRV8771_STEPPER_MOTOR_DRIVER_LIBRARY_H
+#define DRV8711_STEPPER_MOTOR_DRIVER_LIBRARY_H
 
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
@@ -57,28 +57,33 @@ typedef struct {
 
 
 // PRIVATE METHODS
-static inline void select_chip(drv8711 *driver) {
+static  void select_chip(drv8711 *driver) {
     // I sentence the TI engineer who wrote the datasheet
-    // To two semesters of Coop*r for being unclear about this
+    // To two semesters of Coopr for being unclear about this
     asm volatile("nop \n nop \n nop");
-    gpio_put(driver->cs_pin, 1);  // Active High
-    asm volatile("nop \n nop \n nop");
-}
-
-static inline void deselect_chip(drv8711 *driver) {
-    asm volatile("nop \n nop \n nop");
-    gpio_put(driver->cs_pin, 0);  // Active High
+    // gpio_put(SPI_MUX_S0, driver->cs_pin & 0x01);  // Active High
+    // gpio_put(SPI_MUX_S1, (driver->cs_pin >> 1) & 0x01);  // Active High
+    // gpio_put(SPI_MUX_S2, (driver->cs_pin >> 2) & 0x01);  // Active High
+    gpio_put(RUDDER_MOTOR_CS_PIN,1);
     asm volatile("nop \n nop \n nop");
 }
-
-static inline void set_cs_pin(drv8711 *driver, uint8_t pin) {
+static  void deselect_chip(drv8711 *driver) {
+    asm volatile("nop \n nop \n nop");
+    //Corresponds to multiplexer pin 7 -- Unused
+    // gpio_put(SPI_MUX_S0,1);  // Active High
+    // gpio_put(SPI_MUX_S1, 1);  // Active High
+    // gpio_put(SPI_MUX_S2, 1);  // Active High
+        gpio_put(RUDDER_MOTOR_CS_PIN,0);
+    asm volatile("nop \n nop \n nop");
+}
+static  void set_cs_pin(drv8711 *driver, uint8_t pin) {
     driver->cs_pin = pin;
     gpio_init(pin);
     gpio_set_dir(pin, GPIO_OUT);
     gpio_put(pin, 0);
 }
 
-static inline void set_slp_pin(drv8711 *driver, uint8_t pin) {
+static  void set_slp_pin(drv8711 *driver, uint8_t pin) {
     driver->slp_pin = pin;
     gpio_init(pin);
     gpio_set_dir(pin, GPIO_OUT);
@@ -86,8 +91,8 @@ static inline void set_slp_pin(drv8711 *driver, uint8_t pin) {
 }
 
 // PUBLIC METHODS
-uint16_t drv8711_readReg(drv8711 *driver, DRV8711_registerAddress address) {
-    // Bit  0    - Read
+static  uint16_t drv8711_readReg(drv8711 *driver, DRV8711_registerAddress address) {
+// Bit  0    - Read
     // Bits 1:3  - Register address
     // Bits 4:15 - Irrelevant
     uint16_t send = (0x8 | (address & 0b111)) << 12;
@@ -104,7 +109,7 @@ uint16_t drv8711_readReg(drv8711 *driver, DRV8711_registerAddress address) {
     return whatIsRead;
 }
 
-void drv8711_writeReg(drv8711 *driver, DRV8711_registerAddress address, uint16_t value) {
+static  void drv8711_writeReg(drv8711 *driver, DRV8711_registerAddress address, uint16_t value) {
     // Bit  0    - Write
     // Bits 1:3  - Register address
     // Bits 4:15 - Data to write
@@ -115,7 +120,7 @@ void drv8711_writeReg(drv8711 *driver, DRV8711_registerAddress address, uint16_t
     deselect_chip(driver);
 }
 
-void drv8711_applySettings(drv8711 *driver) {
+static  void drv8711_applySettings(drv8711 *driver) {
     drv8711_writeReg(driver, TORQUE_REG_ADDRESS, driver->torque_reg);
     drv8711_writeReg(driver, OFF_REG_ADDRESS, driver->off_reg);
     drv8711_writeReg(driver, BLANK_REG_ADDRESS, driver->blank_reg);
@@ -126,7 +131,7 @@ void drv8711_applySettings(drv8711 *driver) {
     drv8711_writeReg(driver, CTRL_REG_ADDRESS, driver->ctrl_reg);
 }
 
-void drv8711_resetSettings(drv8711 *driver) {
+static  void drv8711_resetSettings(drv8711 *driver) {
     driver->ctrl_reg   = 0xF11; //C10
     driver->torque_reg = 0x1DF; //1FF
     driver->off_reg    = 0x030;
@@ -137,7 +142,7 @@ void drv8711_resetSettings(drv8711 *driver) {
     drv8711_applySettings(driver);
 }
 
-bool drv8711_verifySettings(drv8711 *driver) {
+static  bool drv8711_verifySettings(drv8711 *driver) {
     return drv8711_readReg(driver, CTRL_REG_ADDRESS)   == driver->ctrl_reg   &&
            drv8711_readReg(driver, TORQUE_REG_ADDRESS) ==(driver->torque_reg & ~(1 << 10)) &&
            drv8711_readReg(driver, OFF_REG_ADDRESS)    == driver->off_reg    &&
@@ -147,25 +152,25 @@ bool drv8711_verifySettings(drv8711 *driver) {
            drv8711_readReg(driver, DRIVE_REG_ADDRESS)  == driver->drive_reg;
 }
 
-void drv8711_enableDriver(drv8711 *driver) {
+static  void drv8711_enableDriver(drv8711 *driver) {
     driver->ctrl_reg |= (1 << DRV8711_ENABLE_BIT);
     drv8711_writeReg(driver, CTRL_REG_ADDRESS, driver->ctrl_reg);
 }
 
-void drv8711_disableDriver(drv8711 *driver) {
+static  void drv8711_disableDriver(drv8711 *driver) {
     driver->ctrl_reg &= ~(1 << DRV8711_ENABLE_BIT);
     drv8711_writeReg(driver, CTRL_REG_ADDRESS, driver->ctrl_reg);
 }
 
-void drv8711_setAwake(drv8711 *driver) {
+static  void drv8711_setAwake(drv8711 *driver) {
     gpio_put(driver->slp_pin, 1);
 }
 
-void drv8711_setAsleep(drv8711 *driver) {
+static  void drv8711_setAsleep(drv8711 *driver) {
     gpio_put(driver->slp_pin, 0);
 }
 
-void drv8711_setDirection(drv8711 *driver, bool direction) {
+static  void drv8711_setDirection(drv8711 *driver, bool direction) {
     // Direction is set as either alighning with DIR pin or aligning with its inverse
     // Clockwise is 1, counter-clockwise is 0 for DIR tied to ground
     if (direction) driver->ctrl_reg |= (1 << DRV8711_DIRECTION_BIT);
@@ -173,7 +178,7 @@ void drv8711_setDirection(drv8711 *driver, bool direction) {
     drv8711_writeReg(driver, CTRL_REG_ADDRESS, driver->ctrl_reg);
 }
 
-void drv8711_setCurrent(drv8711 *driver, uint16_t current) {
+static  void drv8711_setCurrent(drv8711 *driver, uint16_t current) {
     // Drawing more than 8 amps is a bad idea
     if (current > 8000) { 
         current = 8000; 
@@ -211,7 +216,7 @@ void drv8711_setCurrent(drv8711 *driver, uint16_t current) {
     drv8711_writeReg(driver, TORQUE_REG_ADDRESS, driver->torque_reg);
 }
 
-void drv8711_step(drv8711 *driver) {
+static  void drv8711_step(drv8711 *driver) {
     // Not writing into drv8711 struct because step is immediately cleared internally
     drv8711_writeReg(driver, CTRL_REG_ADDRESS, driver->ctrl_reg | (1 << DRV8711_STEP_BIT));
 }
@@ -221,7 +226,7 @@ void drv8711_step(drv8711 *driver) {
 //     drv8711_writeReg(driver, CTRL_REG_ADDRESS, driver->ctrl_reg);
 // }
 
-void drv8711_setStepMode(drv8711 *driver, DRV8711_stepMode mode)
+static  void drv8711_setStepMode(drv8711 *driver, DRV8711_stepMode mode)
   {
     // Pick 1/4 micro-step by default.
     uint8_t sm = 0b0010;
@@ -241,36 +246,36 @@ void drv8711_setStepMode(drv8711 *driver, DRV8711_stepMode mode)
     drv8711_writeReg(driver, CTRL_REG_ADDRESS, driver->ctrl_reg);
 }
 
-void drv8711_setDecayMode(drv8711 *driver, DRV8711_decayMode mode) {
+static  void drv8711_setDecayMode(drv8711 *driver, DRV8711_decayMode mode) {
     driver->decay_reg = (driver->decay_reg & 0b00011111111) | (((uint8_t)mode & 0b111) << 8);
     drv8711_writeReg(driver, DECAY_REG_ADDRESS, driver->decay_reg);
 }
 
-uint8_t drv8711_readStatus(drv8711 *driver) {
+static  uint8_t drv8711_readStatus(drv8711 *driver) {
     return drv8711_readReg(driver, STATUS_REG_ADDRESS);
 }
 
-void drv8711_clearStatus(drv8711 *driver) {
+static  void drv8711_clearStatus(drv8711 *driver) {
     drv8711_writeReg(driver, STATUS_REG_ADDRESS, 0x00);
 }
 
-uint8_t drv8711_readFaults(drv8711 *driver) {
+static  uint8_t drv8711_readFaults(drv8711 *driver) {
     return drv8711_readReg(driver, STATUS_REG_ADDRESS);
 }
 
-void drv8711_clearFaults(drv8711 *driver) {
+static  void drv8711_clearFaults(drv8711 *driver) {
     drv8711_writeReg(driver, STATUS_REG_ADDRESS, driver->status_reg & 0xF00);
 }
 
 //INCORRECT
-bool drv8711_getDirection(drv8711 *driver) {
+static  bool drv8711_getDirection(drv8711 *driver) {
     return (driver->ctrl_reg & (1 << DRV8711_DIRECTION_BIT)) != 0;
 }
 
 
 
 
-void drv8711_init(
+static void drv8711_init(
     drv8711 *driver, 
     spi_inst_t *spi_port, 
     uint8_t cs_pin,
@@ -279,22 +284,20 @@ void drv8711_init(
     DRV8711_stepMode step_mode,
     uint16_t max_winch_current
 ) {
+    driver->spi_port = spi_port;
+    set_cs_pin(driver, cs_pin);
+    set_slp_pin(driver, slp_pin);
+    drv8711_setAwake(driver);
+    sleep_ms(1000);
 
+    drv8711_resetSettings(driver);
+    drv8711_clearStatus(driver);
+    drv8711_setDecayMode(driver, decay_mode);
+    drv8711_setCurrent(driver, max_winch_current);
+    drv8711_setStepMode(driver, step_mode);
+    drv8711_enableDriver(driver);
 
-driver->spi_port = spi_port;
-set_cs_pin(driver, cs_pin);     // Pulled low by default
-set_slp_pin(driver, slp_pin);   // Pulled low by default
-sleep_ms(1000);
-
-drv8711_clearStatus(driver);
-drv8711_setDecayMode(driver, decay_mode);
-drv8711_setCurrent(driver, max_winch_current);
-drv8711_setStepMode(driver, step_mode);
-drv8711_enableDriver(driver);
-drv8711_setAwake(driver);
-
-sleep_ms(50);
-// drv8711_resetSettings(driver); // Disables DRV8711 by default
+    sleep_ms(50);
 }
 
 #endif
