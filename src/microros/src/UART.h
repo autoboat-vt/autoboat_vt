@@ -47,3 +47,7 @@ uint uart_init (uart_inst_t *uart, uint baudrate);
 //Deletes the UART Connection: 
 
 void uart_deinit (uart_inst_t *uart);
+
+//Sets the UART baud rate (The speed of which the bytes travel in):
+
+unsigned_int uart_set_baudrate (uart_inst_t *uart, uint baudrate);
