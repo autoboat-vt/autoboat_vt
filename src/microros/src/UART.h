@@ -51,3 +51,8 @@ void uart_deinit (uart_inst_t *uart);
 //Sets the UART baud rate (The speed of which the bytes travel in):
 
 unsigned_int uart_set_baudrate (uart_inst_t *uart, uint baudrate);
+
+//To-Do List: 
+// Start workring on the uart_get_hw 
+//Make the class that goes with it to ensure the flow can be stable 
+// Maybe Start of the installtion function: 

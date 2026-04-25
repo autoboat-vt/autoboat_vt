@@ -33,6 +33,7 @@ static uart_inst_t * uart_get_instance (uint num){
 //Note: incline for used for small function:
 static incline uart_hw_t * uart_get_hw (uart_inst_t *uart){
     //Gets HARDWARE number as an reference number 
+    
 
 }
 uint uart_init (uart_inst_t *uart, uint baudrate){
