@@ -13,6 +13,8 @@
 
 #define UART_RESET_NUM(uart)
 
+//defines the UART instance as 0: 
+#define uart0 ((uart_inst_t *)uart0_hw)
 
 #include <string> 
 #include <iostream> 
@@ -25,6 +27,7 @@
 enum uart_parity_t { UART_PARITY_NONE, UART_PARITY_EVEN, UART_PARITY_ODD };
 
 //Functions: 
+//------------------------
 
 // Note: uint = unsigned int 
 static unsigned int uart_get_index (uart_inst_t *uart);
