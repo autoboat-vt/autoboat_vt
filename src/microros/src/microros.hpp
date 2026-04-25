@@ -80,6 +80,7 @@ using namespace std;
 // #define MAGNETIC_DECLINATION -13.7 // Magnetic Declination at WPI
 #define MAGNETIC_DECLINATION -8.5 //Magnetic Declination at VT
 // #define MAGNETIC_DECLINATION -10.0 //Magnetic Declination at Portsmouth
+#define HEADING_OFFSET = -26
 
 const float MID_RUDDER_ANGLE = (MAX_RUDDER_ANGLE + MIN_RUDDER_ANGLE) / 2;
 const float MID_WINCH_MOTOR_ANGLE = (MAX_WINCH_ANGLE + MIN_WINCH_ANGLE) / 2;

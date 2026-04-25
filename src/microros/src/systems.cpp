@@ -122,6 +122,6 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
   current_rudder::current_angle_msg.data = current_rudder_angle;
   rcl_publish(&current_rudder::current_rudder_angle_publisher, &current_rudder::current_angle_msg, NULL);
 
-  current_heading::heading_msg.data = fmod((180-(compass.getBearing()/10.0+MAGNETIC_DECLINATION))+360,360);
+  current_heading::heading_msg.data = fmod((180-(compass.getBearing()/10.0+MAGNETIC_DECLINATION))+360,360) + HEADING_OFFSET;
   rcl_publish(&current_heading::compass_angle_publisher, &current_heading::heading_msg, NULL);
 }
