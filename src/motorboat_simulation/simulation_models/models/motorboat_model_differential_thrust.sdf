@@ -21,7 +21,7 @@ With ros2:
 
   0. Start the simulation (in ../launch/):
 
-    ros2 launch motorboat_simulation_differential_thrust.launch.py
+    ros2 launch autoboat_launch motorboat_simulation_differential_thrust.launch.py
 
   1. Propel the vehicle with differential thrust:
 
