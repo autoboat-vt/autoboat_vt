@@ -21,20 +21,25 @@ class CamCorderNode(Node):
         self.save_interval = 5 # write to the log file every 5 frames
         
         if self.get_storage_util() > self.storage_cap:
-            return
-        
+            raise OSError(f"Current disk usage is above {self.storage_cap * 100:.0f}%. Exitting")
+
+        os.makedirs("./frame_logs/", exist_ok=True)
+        count = 0
+        while os.path.exists(f"./frame_logs/run{count}"):
+            count += 1
+        self.log_file = f"./frame_logs/run{count}/frame_logs.json"
+        self.run_dir = f"./frame_logs/run{count}/frames/"
+        os.makedirs(self.run_dir, exist_ok=True)
+
         self.CAM_LIST = {
             0: {
                 "name": self._find_camera("YUYV"),
-                "framerate": 15.,
+                "framerate": 15,
                 "format": "YUY2",
                 "input_width": 1280,
                 "input_height": 800
             }
         }
-        
-        os.makedirs("./frame_logs/frames", exist_ok=True)
-        self.log_file = "./frame_logs/frame_logs.json"
         
         
         """
@@ -65,7 +70,7 @@ class CamCorderNode(Node):
 
         self.record()
 
-    def record(self):
+    def record(self) -> None:
         device = self.CAM_LIST[0]["name"]
         width = self.CAM_LIST[0]["input_width"]
         height = self.CAM_LIST[0]["input_height"]
@@ -101,7 +106,7 @@ class CamCorderNode(Node):
                 }
                 if count % 120 == 0:
                     self.get_logger().info(f"Current frame count: {count}")
-                cv2.imwrite(f'./frame_logs/frames/frame{count}.png', frame)
+                cv2.imwrite(f'{self.run_dir}frame{count:04d}.png', frame)
                 if count % self.save_interval == 1:
                     with open(self.log_file, 'w') as file:
                         file.write(json.dumps(self.frame_logs))
@@ -115,11 +120,11 @@ class CamCorderNode(Node):
             cap.release()
             cv2.destroyAllWindows()
 
-    def _find_camera(self, format: str):
-        camera_devices_output = subprocess.run(['ls', '/sys/class/video4linux/'], capture_output=True, text=True).stdout
+    def _find_camera(self, format: str) -> str:
+        camera_devices_output = subprocess.run(['ls', '/sys/class/video4linux/'], capture_output=True, text=True, check=True).stdout
         for device in camera_devices_output.splitlines():
-            if (re.search("RealSense", subprocess.run(['cat', f'/sys/class/video4linux/{device}/name'], capture_output=True, text=True).stdout) is not None):
-                if (re.search(format, subprocess.run(['v4l2-ctl', '--device', f'/dev/{device}', '--list-formats'], capture_output=True, text=True).stdout) is not None):
+            if (re.search("RealSense", subprocess.run(['cat', f'/sys/class/video4linux/{device}/name'], capture_output=True, text=True, check=True).stdout) is not None):
+                if (re.search(format, subprocess.run(['v4l2-ctl', '--device', f'/dev/{device}', '--list-formats'], capture_output=True, text=True, check=True).stdout) is not None):
                     return f"/dev/{device}"
         self.get_logger().warn(f"Could not find RealSense camera device with {format} format")
         raise OSError("Camera device not found")
@@ -140,7 +145,6 @@ class CamCorderNode(Node):
 def main():
     rclpy.init()
     cam_corder_node = CamCorderNode()
-    
     try:
         rclpy.spin(cam_corder_node)
     finally:
