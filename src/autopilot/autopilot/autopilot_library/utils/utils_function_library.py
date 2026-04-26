@@ -185,11 +185,11 @@ def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float
         If "angle" is between ```boundary1``` and ```boundary2```, then return ```True``` and if not, return ```False```.
     """
 
-    angle_rad, b1_rad, b2_rad = np.deg2rad([angle, boundary1, boundary2])
+    angle_radians, boundary1_radians, boundary2_radians = np.deg2rad([angle, boundary1, boundary2])
 
-    angle_vector = np.array([np.cos(angle_rad), np.sin(angle_rad)])
-    boundary1_vector = np.array([np.cos(b1_rad), np.sin(b1_rad)])
-    boundary2_vector = np.array([np.cos(b2_rad), np.sin(b2_rad)])
+    angle_vector = np.array([np.cos(angle_radians), np.sin(angle_radians)])
+    boundary1_vector = np.array([np.cos(boundary1_radians), np.sin(boundary1_radians)])
+    boundary2_vector = np.array([np.cos(boundary2_radians), np.sin(boundary2_radians)])
 
     # Angle is between boundaries if the sum of angles from b1->angle and angle->b2 equals b1->b2
     angle_b1_to_angle = get_angle_between_vectors(boundary1_vector, angle_vector)
@@ -241,9 +241,9 @@ def does_line_violate_no_sail_zone(
     normalized_displacement = displacement / np.linalg.norm(displacement)
 
     # The upwind angle is opposite to the wind angle (e.g., wind at 0° means upwind at 180°)
-    global_true_upwind_rad: float = np.deg2rad((global_true_wind_angle + 180) % 360)
+    global_true_upwind_radians: float = np.deg2rad((global_true_wind_angle + 180) % 360)
     up_wind_vector = np.array(
-        [np.cos(global_true_upwind_rad), np.sin(global_true_upwind_rad)],
+        [np.cos(global_true_upwind_radians), np.sin(global_true_upwind_radians)],
         dtype=np.float64,
     )
 
