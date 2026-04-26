@@ -1,5 +1,26 @@
 cmake_minimum_required(VERSION 3.8)
 
+option(BUILD_UNIT_TESTS "Build host side unit tests" OFF)
+
+if(BUILD_UNIT_TESTS)
+    # Host CLI unit tests using ROS2 and Catch2
+    project(pico_microros_tests CXX)
+    set(CMAKE_CXX_STANDARD 17)
+
+    find_package(ament_cmake REQUIRED)
+    find_package(rclcpp REQUIRED)
+    find_package(std_msgs REQUIRED)
+
+    add_executable(unit_tests src/unittests.cpp)
+    target_include_directories(unit_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    ament_target_dependencies(unit_tests rclcpp std_msgs)
+
+    enable_testing()
+    add_test(NAME unit_tests COMMAND unit_tests)
+
+    return()  # Skip Pico SDK build when building tests
+endif()
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -15,10 +36,17 @@ pico_sdk_init()
 link_directories($ENV{PICO_MICROROS_SDK_PATH}/libmicroros)
 
 add_executable(pico_microros
-    src/main.c
-
+    src/main.cpp
+    src/microros.cpp 
+    src/spi_device.cpp
+    src/amt22_encoder.cpp
+    src/i2c_device.cpp
+    src/cmps14_compass.cpp
+    src/systems.cpp
+    src/HAL.cpp
     $ENV{PICO_MICROROS_SDK_PATH}/pico_uart_transport.c
 )
+
 target_link_libraries(pico_microros
     pico_stdlib
     microros

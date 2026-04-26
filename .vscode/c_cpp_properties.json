@@ -12,7 +12,7 @@
                 "/opt/autoboat/microros_dependenciesmicro_ros_raspberrypi_pico_sdk/libmicroros/include/**",
                 "/opt/autoboat/microros_dependenciespico-sdk/src/common/pico_stdlib_headers/include/**",
                 "/opt/autoboat/microros_dependenciespico-sdk/src/common/pico_base_headers/include",
-                "${workspaceFolder}/src/microros/build/generated/pico_base",
+                "${workspaceFolder}/microros/build/generated/pico_base",
                 "/opt/autoboat/microros_dependenciesmicro_ros_raspberrypi_pico_sdk",
                 "/opt/autoboat/microros_dependenciespico-sdk/src/common/pico_time/include",
                 "/opt/autoboat/microros_dependenciespico-sdk/src/host/pico_platform/include",
