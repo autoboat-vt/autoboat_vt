@@ -62,7 +62,8 @@ class MotorboatAutopilotNode(Node):
         self.autopilot_refresh_timer = self.create_timer(autopilot_refresh_period, self.update_ros_topics)
 
         self.create_subscription(String, "/autopilot_parameters", self.autopilot_parameters_callback, 10)
-        self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10)
+        # self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10) making changes to this line below
+        self.create_subscription(WaypointList, "/waypoint_path", self.waypoints_list_callback, 10)
         self.create_subscription(NavSatFix, "/position", self.position_callback, qos_profile_sensor_data)
         self.create_subscription(Twist, "/velocity", self.velocity_callback, qos_profile_sensor_data)
         self.create_subscription(Float32, "/heading", self.heading_callback, qos_profile_sensor_data)

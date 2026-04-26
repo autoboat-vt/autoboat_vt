@@ -40,7 +40,9 @@ class PathfindingNode(Node):
         self.boatGPS=[msg.longitude,msg.latitude]
         
     def waypoint_call(self,msg: WaypointList): # function calling for waypoints once sent
+        self.get_logger().info("waypoint call")
         self.wayindex=0     # resetting the index counter when new waypoints are sent
+        self.destinations=[]
 
         # creating list of position objects
         posList=[]
@@ -92,6 +94,13 @@ class PathfindingNode(Node):
                     loc_vertices.append([int(math.floor(lon-src[0]))+lims-1,int(math.floor(lat-src[1]))+lims-1])
                 
                 local_obs.append(loc_vertices)
+
+            # turning local to matrix indices
+            for polygon in local.obs:
+                for m in range(lims*2):
+                    for n in range(lims*2):
+                        pt = Inside(m,n)
+                        matrix[m][n]=0 if pt.check(polygon) else 1
         
 
         # creating matrix
@@ -100,12 +109,6 @@ class PathfindingNode(Node):
         self.get_logger().info(str(lims-1))
         self.get_logger().info(str(xdist) + " " + str(ydist))
 
-        # adding matrices to the object
-        for polygon in local.obs:
-            for m in range(lims*2):
-                for n in range(lims*2):
-                    pt = Inside(m,n)
-                    matrix[m][n]=0 if pt.check(polygon) else 1
         
         # matrix[lims-1][lims-1]=2             this is the boat position
         # matrix[xdist][ydist]=3               this is the next waypoint position
@@ -158,10 +161,10 @@ class PathfindingNode(Node):
                 self.wayindex += 1
 
             dist=math.sqrt((self.destinations[self.wayindex-1][0]-self.boat[0])**2+(self.destinations[self.wayindex-1][1]-self.boat[1])**2)
-            self.get_logger().info("\non waypoint " + str(self.wayindex) + "\nlongitude: " + str(self.destinations[self.wayindex-1][0]) + "\nlatitude: " + str(self.destinations[self.wayindex-1][1]) + "\ndistance: " + str(dist))
+            self.get_logger().info("\non waypoint " + str(self.wayindex) + "\n boat position: " + str(self.boat) +"\nlongitude: " + str(self.destinations[self.wayindex-1][0]) + "\nlatitude: " + str(self.destinations[self.wayindex-1][1]) + "\ndistance: " + str(dist))
             if dist < 10 and self.wayindex < len(self.destinations):
                 path=self.make_path(self.boat, self.destinations[self.wayindex])
-                self.wayindex+= 1
+                self.wayindex += 1
 
         if path:
             self.get_logger().info("----------------------------sending path----------------------------------")
