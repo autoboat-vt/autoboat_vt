@@ -23,7 +23,7 @@ With ros2:
 
     ros2 launch autoboat_launch motorboat_simulation_differential_thrust.launch.py
 
-  1. Propel the vehi cle with differential thrust:
+  1. Propel the vehicle with differential thrust:
 
     ros2 topic pub /motorboat_simulation/desired_port_propeller_rpm std_msgs/msg/Float64 'data: 500'
     ros2 topic pub /motorboat_simulation/desired_starboard_propeller_rpm std_msgs/msg/Float64 'data: 500'
