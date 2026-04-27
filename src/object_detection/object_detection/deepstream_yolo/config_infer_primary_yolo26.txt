@@ -5,7 +5,7 @@ net-scale-factor=0.0039215697906911373
 model-color-format=0
 
 # This is the onnx file section.
-# Onnx files are created by running export_yolo11.py
+# Onnx files are created by running export_yolo26.py
 
 # This is the engine file section
 # Engine files are created by running the deepstream pipeline
