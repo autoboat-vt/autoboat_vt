@@ -35,7 +35,7 @@ variable "IS_RELEASE" {
 }
 
 group "default" {
-  targets = ["base", "microros"]
+  targets = ["base", "firmware"]
 }
 
 target "base" {
@@ -56,25 +56,25 @@ target "base" {
   ]
 }
 
-target "microros" {
+target "firmware" {
   contexts = {
     base = "target:base"
   }
-  dockerfile = ".devcontainer/devcontainer_variants/Dockerfile.microros"
+  dockerfile = ".devcontainer/devcontainer_variants/Dockerfile.firmware"
   platforms = ["linux/${ARCHITECTURE}"]
   args = {
     BASE_IMAGE = "base"
   }
   tags = [
-    "${IS_OFFICIAL}" == "true" ? "vtautoboat/development_image_microros:${ARCHITECTURE}" : "vtautoboat/development_image_microros:local-${ARCHITECTURE}",
-    "${IS_OFFICIAL}" == "true" ? "ghcr.io/${OWNER}/development_image_microros:${ARCHITECTURE}" : "",
-    IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image_microros:${GITHUB_SHA}" : "",
-    IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image_microros:${substr(GITHUB_SHA, 0, 7)}" : "",
-    IS_RELEASE == "true" ? "vtautoboat/development_image_microros:v${VERSION}-${ARCHITECTURE}" : "",
-    IS_RELEASE == "true" ? "vtautoboat/development_image_microros:v${MINOR}-${ARCHITECTURE}" : "",
-    IS_RELEASE == "true" ? "vtautoboat/development_image_microros:v${MAJOR}-${ARCHITECTURE}" : "",
-    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_microros:v${VERSION}-${ARCHITECTURE}" : "",
-    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_microros:v${MINOR}-${ARCHITECTURE}" : "",
-    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_microros:v${MAJOR}-${ARCHITECTURE}" : ""
+    "${IS_OFFICIAL}" == "true" ? "vtautoboat/development_image_firmware:${ARCHITECTURE}" : "vtautoboat/development_image_firmware:local-${ARCHITECTURE}",
+    "${IS_OFFICIAL}" == "true" ? "ghcr.io/${OWNER}/development_image_firmware:${ARCHITECTURE}" : "",
+    IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image_firmware:${GITHUB_SHA}" : "",
+    IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image_firmware:${substr(GITHUB_SHA, 0, 7)}" : "",
+    IS_RELEASE == "true" ? "vtautoboat/development_image_firmware:v${VERSION}-${ARCHITECTURE}" : "",
+    IS_RELEASE == "true" ? "vtautoboat/development_image_firmware:v${MINOR}-${ARCHITECTURE}" : "",
+    IS_RELEASE == "true" ? "vtautoboat/development_image_firmware:v${MAJOR}-${ARCHITECTURE}" : "",
+    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_firmware:v${VERSION}-${ARCHITECTURE}" : "",
+    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_firmware:v${MINOR}-${ARCHITECTURE}" : "",
+    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_firmware:v${MAJOR}-${ARCHITECTURE}" : ""
   ]
 }

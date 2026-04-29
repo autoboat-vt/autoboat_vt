@@ -9,34 +9,34 @@
                 "/opt/ros/humble/include/**",
                 "/usr/include/**",
                 
-                "/opt/autoboat/microros_dependenciesmicro_ros_raspberrypi_pico_sdk/libmicroros/include/**",
-                "/opt/autoboat/microros_dependenciespico-sdk/src/common/pico_stdlib_headers/include/**",
-                "/opt/autoboat/microros_dependenciespico-sdk/src/common/pico_base_headers/include",
-                "${workspaceFolder}/microros/build/generated/pico_base",
-                "/opt/autoboat/microros_dependenciesmicro_ros_raspberrypi_pico_sdk",
-                "/opt/autoboat/microros_dependenciespico-sdk/src/common/pico_time/include",
-                "/opt/autoboat/microros_dependenciespico-sdk/src/host/pico_platform/include",
-                "/opt/autoboat/microros_dependenciespico-sdk/src/host/pico_stdio/include",
-                "/opt/autoboat/microros_dependenciespico-sdk/src/host/hardware_timer/include",
-                "/opt/autoboat/microros_dependenciespico-sdk/src/host/hardware_gpio/include",
-                "/opt/autoboat/microros_dependenciespico-sdk/src/host/hardware_uart/include",
-                "/opt/autoboat/microros_dependenciespico-sdk/src/host/pico_multicore/include",
-                "/opt/autoboat/microros_dependenciespico-sdk/src/rp2_common/hardware_i2c/include",
-                "/opt/autoboat/microros_dependenciespico-sdk/src/rp2_common/hardware_base/include",
-                "/opt/autoboat/microros_dependenciespico-sdk/src/rp2040/hardware_regs/include",
-                "/opt/autoboat/microros_dependenciespico-sdk/src/rp2040/hardware_structs/include",
-                "/opt/autoboat/microros_dependenciespico-sdk/src/rp2350/hardware_structs/include",
-                "/opt/autoboat/microros_dependenciespico-sdk/src/rp2350/hardware_regs/include",
+                "/opt/autoboat/firmware_dependencies/micro_ros_raspberrypi_pico_sdk/libmicroros/include/**",
+                "/opt/autoboat/firmware_dependencies/pico-sdk/src/common/pico_stdlib_headers/include/**",
+                "/opt/autoboat/firmware_dependencies/pico-sdk/src/common/pico_base_headers/include",
+                "${workspaceFolder}/firmware/build/generated/pico_base",
+                "/opt/autoboat/firmware_dependencies/micro_ros_raspberrypi_pico_sdk",
+                "/opt/autoboat/firmware_dependencies/pico-sdk/src/common/pico_time/include",
+                "/opt/autoboat/firmware_dependencies/pico-sdk/src/host/pico_platform/include",
+                "/opt/autoboat/firmware_dependencies/pico-sdk/src/host/pico_stdio/include",
+                "/opt/autoboat/firmware_dependencies/pico-sdk/src/host/hardware_timer/include",
+                "/opt/autoboat/firmware_dependencies/pico-sdk/src/host/hardware_gpio/include",
+                "/opt/autoboat/firmware_dependencies/pico-sdk/src/host/hardware_uart/include",
+                "/opt/autoboat/firmware_dependencies/pico-sdk/src/host/pico_multicore/include",
+                "/opt/autoboat/firmware_dependencies/pico-sdk/src/rp2_common/hardware_i2c/include",
+                "/opt/autoboat/firmware_dependencies/pico-sdk/src/rp2_common/hardware_base/include",
+                "/opt/autoboat/firmware_dependencies/pico-sdk/src/rp2040/hardware_regs/include",
+                "/opt/autoboat/firmware_dependencies/pico-sdk/src/rp2040/hardware_structs/include",
+                "/opt/autoboat/firmware_dependencies/pico-sdk/src/rp2350/hardware_structs/include",
+                "/opt/autoboat/firmware_dependencies/pico-sdk/src/rp2350/hardware_regs/include",
                 "${workspaceFolder}/build/sensors_transmission/generated/pico_base"
 
                 // "${workspaceFolder}/install/autoboat_msgs/include"
                 // "${workspaceFolder}/install/autopilot_cpp/include",
                 // "${workspaceFolder}/install/sensors_cpp/include"
 
-                // "${workspaceFolder}/src/sensors_cpp/include"
+                // "${workspaceFolder}/ros_packages/sensors_cpp/include"
 
-                // "${workspaceFolder}/src/sensors_cpp/include/sensors_cpp",
-                // "${workspaceFolder}/src/sensors_cpp/include/xcrsf",
+                // "${workspaceFolder}/ros_packages/sensors_cpp/include/sensors_cpp",
+                // "${workspaceFolder}/ros_packages/sensors_cpp/include/xcrsf",
 
                 // "/opt/ros/humble/include",
 

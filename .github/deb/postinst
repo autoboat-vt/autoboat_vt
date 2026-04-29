@@ -13,14 +13,14 @@ if [ -f /opt/autoboat/install/setup.bash ]; then
 fi
 
 # Micro-ROS environment configuration
-export MICROROS_DIR="/opt/autoboat/microros_dependencies"
-export PICO_SDK_PATH="${MICROROS_DIR}/pico-sdk"
-export PICO_MICROROS_SDK_PATH="${MICROROS_DIR}/micro_ros_raspberrypi_pico_sdk"
-export PICOTOOL_PATH="${MICROROS_DIR}/picotool"
+export FIRMWARE_DEPENDENCIES_DIRECTORY="/opt/autoboat/firmware_dependencies"
+export PICO_SDK_PATH="${FIRMWARE_DEPENDENCIES_DIRECTORY}/pico-sdk"
+export PICO_MICROROS_SDK_PATH="${FIRMWARE_DEPENDENCIES_DIRECTORY}/micro_ros_raspberrypi_pico_sdk"
+export PICOTOOL_PATH="${FIRMWARE_DEPENDENCIES_DIRECTORY}/picotool"
 
 # Source micro_ros_agent if it exists
-if [ -f "${MICROROS_DIR}/micro_ros_agent/install/local_setup.bash" ]; then
-    source "${MICROROS_DIR}/micro_ros_agent/install/local_setup.bash"
+if [ -f "${FIRMWARE_DEPENDENCIES_DIRECTORY}/micro_ros_agent/install/local_setup.bash" ]; then
+    source "${FIRMWARE_DEPENDENCIES_DIRECTORY}/micro_ros_agent/install/local_setup.bash"
 fi
 
 # Aliases for Pico development

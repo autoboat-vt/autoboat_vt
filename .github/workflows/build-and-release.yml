@@ -137,8 +137,8 @@ jobs:
             *.cache-to=type=gha,mode=max,scope=${{ matrix.architecture }}
             base.cache-from=type=gha,scope=base-${{ matrix.architecture }}
             base.cache-to=type=gha,mode=max,scope=base-${{ matrix.architecture }}
-            microros.cache-from=type=gha,scope=microros-${{ matrix.architecture }}
-            microros.cache-to=type=gha,mode=max,scope=microros-${{ matrix.architecture }}
+            firmware.cache-from=type=gha,scope=firmware-${{ matrix.architecture }}
+            firmware.cache-to=type=gha,mode=max,scope=firmware-${{ matrix.architecture }}
 
       - name: Build and Push Docker Images (Bake)
         if: github.event_name != 'pull_request'
@@ -163,10 +163,10 @@ jobs:
             base.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache
             base.cache-to=type=gha,mode=max,scope=base-${{ matrix.architecture }}
             base.cache-to=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache,mode=max
-            microros.cache-from=type=gha,scope=microros-${{ matrix.architecture }}
-            microros.cache-from=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache
-            microros.cache-to=type=gha,mode=max,scope=microros-${{ matrix.architecture }}
-            microros.cache-to=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache,mode=max
+            firmware.cache-from=type=gha,scope=firmware-${{ matrix.architecture }}
+            firmware.cache-from=type=registry,ref=vtautoboat/development_image_firmware:${{ matrix.architecture }}-cache
+            firmware.cache-to=type=gha,mode=max,scope=firmware-${{ matrix.architecture }}
+            firmware.cache-to=type=registry,ref=vtautoboat/development_image_firmware:${{ matrix.architecture }}-cache,mode=max
 
 
 
@@ -174,7 +174,7 @@ jobs:
       - name: Pull Base Image for local build
         if: github.event_name != 'pull_request'
         run: |
-          docker pull vtautoboat/development_image_microros:${{ matrix.architecture }}
+          docker pull vtautoboat/development_image_firmware:${{ matrix.architecture }}
           # No need to retag, we will use the full name in the build step
 
       # -----------------------------------------------------------------------
@@ -209,7 +209,7 @@ jobs:
             -e IGNORE_PACKAGES="${IGNORE_PACKAGES}" \
             -e CCACHE_DIR=.ccache \
             -e CMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            vtautoboat/development_image_microros:${{ matrix.architecture }} \
+            vtautoboat/development_image_firmware:${{ matrix.architecture }} \
             bash .github/scripts/build_and_package.sh
 
       # Upload both the .tar.gz and .deb as workflow artifacts.
@@ -287,12 +287,12 @@ jobs:
       packages: write
     strategy:
       matrix:
-        variant: [ standard, microros ]
+        variant: [ standard, firmware ]
         include:
           - variant: standard
             image_repo: vtautoboat/development_image
-          - variant: microros
-            image_repo: vtautoboat/development_image_microros
+          - variant: firmware
+            image_repo: vtautoboat/development_image_firmware
     steps:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -310,8 +310,8 @@ jobs:
       - name: Create and Push Multi-Arch Manifests
         run: |
           OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}
-          GHCR_REPO="ghcr.io/${OWNER_LC}/${{ matrix.variant == 'standard' && 'development_image' || 'development_image_microros' }}"
-          DOCKER_HUB_REPO="vtautoboat/${{ matrix.variant == 'standard' && 'development_image' || 'development_image_microros' }}"
+          GHCR_REPO="ghcr.io/${OWNER_LC}/${{ matrix.variant == 'standard' && 'development_image' || 'development_image_firmware' }}"
+          DOCKER_HUB_REPO="vtautoboat/${{ matrix.variant == 'standard' && 'development_image' || 'development_image_firmware' }}"
 
           echo "==> Creating multi-arch manifest for ${DOCKER_HUB_REPO}:latest..."
           docker buildx imagetools create -t ${DOCKER_HUB_REPO}:latest ${DOCKER_HUB_REPO}:amd64 ${DOCKER_HUB_REPO}:arm64

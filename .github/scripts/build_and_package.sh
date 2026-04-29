@@ -31,14 +31,14 @@ mkdir -p output_artifacts
 echo "==> Building standard .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
 PKG_DIR_STD="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_std"
 mkdir -p "${PKG_DIR_STD}/DEBIAN"
-mkdir -p "${PKG_DIR_STD}/opt/autoboat/microros_dependencies/micro_ros_agent/install"
+mkdir -p "${PKG_DIR_STD}/opt/autoboat/firmware_dependencies/micro_ros_agent/install"
 
 # Copy built ROS 2 nodes
 cp -r /opt/autoboat/install "${PKG_DIR_STD}/opt/autoboat/"
 
 # Copy ONLY the micro_ros_agent runtime (install folder)
 # We use standard globbing here; double stars are often shell-dependent
-cp -r /opt/autoboat/microros_dependencies/micro_ros_agent/install/* "${PKG_DIR_STD}/opt/autoboat/microros_dependencies/micro_ros_agent/install/"
+cp -r /opt/autoboat/firmware_dependencies/micro_ros_agent/install/* "${PKG_DIR_STD}/opt/autoboat/firmware_dependencies/micro_ros_agent/install/"
 
 # Control file + Maintainer scripts
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
@@ -96,12 +96,12 @@ dpkg-deb --build "${PKG_DIR_STD}" "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
 echo "==> Building microros-sdk .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
 PKG_DIR_UC="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_uc"
 mkdir -p "${PKG_DIR_UC}/DEBIAN"
-mkdir -p "${PKG_DIR_UC}/opt/autoboat/microros_dependencies"
+mkdir -p "${PKG_DIR_UC}/opt/autoboat/firmware_dependencies"
 
 # Copy dependencies to help build microros packages
-cp -r /opt/autoboat/microros_dependencies/micro_ros_raspberrypi_pico_sdk "${PKG_DIR_UC}/opt/autoboat/microros_dependencies/"
-cp -r /opt/autoboat/microros_dependencies/picotool "${PKG_DIR_UC}/opt/autoboat/microros_dependencies/"
-cp -r /opt/autoboat/microros_dependencies/pico-sdk "${PKG_DIR_UC}/opt/autoboat/microros_dependencies/"
+cp -r /opt/autoboat/firmware_dependencies/micro_ros_raspberrypi_pico_sdk "${PKG_DIR_UC}/opt/autoboat/firmware_dependencies/"
+cp -r /opt/autoboat/firmware_dependencies/picotool "${PKG_DIR_UC}/opt/autoboat/firmware_dependencies/"
+cp -r /opt/autoboat/firmware_dependencies/pico-sdk "${PKG_DIR_UC}/opt/autoboat/firmware_dependencies/"
 
 
 # Control file (Depends on standard package)
