@@ -2,6 +2,8 @@
 
 **Current Documentation and Installation Instructions**: <https://autoboat-vt.github.io/documentation>
 
+<br>
+
 
 To install the prebuilt binaries, please run:
 
