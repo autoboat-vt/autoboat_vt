@@ -18,32 +18,32 @@ source /opt/ros/humble/setup.bash
 
 
 # Install Pico SDK if it is not currently installed
-if [ ! -d "$REPOSITORY_ROOT/src/microros/dependencies/pico-sdk" ]; then
-  git clone --recurse-submodules https://github.com/raspberrypi/pico-sdk.git $REPOSITORY_ROOT/src/microros/dependencies/pico-sdk
+if [ ! -d "$REPOSITORY_ROOT/microros/dependencies/pico-sdk" ]; then
+  git clone --recurse-submodules https://github.com/raspberrypi/pico-sdk.git $REPOSITORY_ROOT/microros/dependencies/pico-sdk
 fi
 
-export PICO_SDK_PATH=$REPOSITORY_ROOT/src/microros/dependencies/pico-sdk
+export PICO_SDK_PATH=$REPOSITORY_ROOT/microros/dependencies/pico-sdk
 
 
 
 
 # Install Microros Pico SDK if it is not currently installed
-if [ ! -d "$REPOSITORY_ROOT/src/microros/dependencies/micro_ros_raspberrypi_pico_sdk" ]; then
-  git clone -b humble https://github.com/micro-ROS/micro_ros_raspberrypi_pico_sdk.git $REPOSITORY_ROOT/src/microros/dependencies/micro_ros_raspberrypi_pico_sdk
+if [ ! -d "$REPOSITORY_ROOT/microros/dependencies/micro_ros_raspberrypi_pico_sdk" ]; then
+  git clone -b humble https://github.com/micro-ROS/micro_ros_raspberrypi_pico_sdk.git $REPOSITORY_ROOT/microros/dependencies/micro_ros_raspberrypi_pico_sdk
 fi
 
-export PICO_MICROROS_SDK_PATH=$REPOSITORY_ROOT/src/microros/dependencies/micro_ros_raspberrypi_pico_sdk
+export PICO_MICROROS_SDK_PATH=$REPOSITORY_ROOT/microros/dependencies/micro_ros_raspberrypi_pico_sdk
 
 
 
 
 # Install Picotool if it is not already installed
-if [ ! -d "$REPOSITORY_ROOT/src/microros/dependencies/picotool" ]; then
-  git clone https://github.com/raspberrypi/picotool $REPOSITORY_ROOT/src/microros/dependencies/picotool
+if [ ! -d "$REPOSITORY_ROOT/microros/dependencies/picotool" ]; then
+  git clone https://github.com/raspberrypi/picotool $REPOSITORY_ROOT/microros/dependencies/picotool
 fi
 
-cd $REPOSITORY_ROOT/src/microros/dependencies/picotool
-export PICOTOOL_PATH=$REPOSITORY_ROOT/src/microros/dependencies/picotool
+cd $REPOSITORY_ROOT/microros/dependencies/picotool
+export PICOTOOL_PATH=$REPOSITORY_ROOT/microros/dependencies/picotool
 mkdir -p build && cd build
 cmake .. && cmake --build . -j16
 
@@ -51,30 +51,30 @@ cmake .. && cmake --build . -j16
 
 
 # Create and build microros workspace
-if [ ! -d "$REPOSITORY_ROOT/src/microros/dependencies/micro_ros_agent/src/micro_ros_setup" ]; then
-  git clone -b humble https://github.com/micro-ROS/micro_ros_setup.git $REPOSITORY_ROOT/src/microros/dependencies/micro_ros_agent/src/micro_ros_setup
-  cd $REPOSITORY_ROOT/src/microros/dependencies/micro_ros_agent/src/micro_ros_setup
+if [ ! -d "$REPOSITORY_ROOT/microros/dependencies/micro_ros_agent/src/micro_ros_setup" ]; then
+  git clone -b humble https://github.com/micro-ROS/micro_ros_setup.git $REPOSITORY_ROOT/microros/dependencies/micro_ros_agent/src/micro_ros_setup
+  cd $REPOSITORY_ROOT/microros/dependencies/micro_ros_agent/src/micro_ros_setup
   git reset --hard 5abfdaa59b0f18dc152b47b564d8e27012b05ac8 # They introduced a change that broke a lot of stuff. This is the only commit that works
 fi
 
 
 
 # Update ROS dependencies
-cd $REPOSITORY_ROOT/src/microros/dependencies/micro_ros_agent
+cd $REPOSITORY_ROOT/microros/dependencies/micro_ros_agent
 sudo rosdep init && rosdep update && rosdep install --from-paths src --ignore-src -r -y
 
 
 # Clean up stale symlinks 
-find $REPOSITORY_ROOT/src/microros/dependencies/micro_ros_agent/build -type d -name "ament_cmake_python" -exec rm -rf {} + || true
-find $REPOSITORY_ROOT/src/microros/dependencies/micro_ros_agent/install -type d -name "micro_ros_msgs" -exec rm -rf {} + || true
+find $REPOSITORY_ROOT/microros/dependencies/micro_ros_agent/build -type d -name "ament_cmake_python" -exec rm -rf {} + || true
+find $REPOSITORY_ROOT/microros/dependencies/micro_ros_agent/install -type d -name "micro_ros_msgs" -exec rm -rf {} + || true
 
 # Build the micro_ros_agent package
 colcon build --symlink-install --parallel-workers 16
-source $REPOSITORY_ROOT/src/microros/dependencies/micro_ros_agent/install/local_setup.bash
+source $REPOSITORY_ROOT/microros/dependencies/micro_ros_agent/install/local_setup.bash
 
 
 # Clean up a potentially old microros firware installation
-rm -rf $REPOSITORY_ROOT/src/microros/dependencies/micro_ros_agent/firmware
+rm -rf $REPOSITORY_ROOT/microros/dependencies/micro_ros_agent/firmware
 
 # Build the microros firmware and agent
 ros2 run micro_ros_setup create_firmware_ws.sh host
@@ -87,8 +87,8 @@ source install/local_setup.sh
 
 # Move this to the opt folder since that is where the microros dependencies should be
 sudo mkdir -p /opt/autoboat/microros_dependencies
-sudo mv $REPOSITORY_ROOT/src/microros/dependencies/** /opt/autoboat/microros_dependencies
-rm -rf $REPOSITORY_ROOT/src/microros/dependencies
+sudo mv $REPOSITORY_ROOT/microros/dependencies/** /opt/autoboat/microros_dependencies
+rm -rf $REPOSITORY_ROOT/microros/dependencies
 
 # Write sources and aliases to bashrc file
 {
