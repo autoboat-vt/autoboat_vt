@@ -109,7 +109,7 @@ class TelemetryNode(Node):
         self.autopilot_mode: SailboatAutopilotMode | MotorboatAutopilotMode = None
         if self.is_sailboat_mode:
             self.autopilot_mode = SailboatAutopilotMode.DISABLED
-            self.full_autonomy_maneuver = SailboatStates.NORMAL
+            self.full_autonomy_maneuver = SailboatStates.DOWNWIND_SAILING
             self.mapping = SailboatStatusPayload.construct_mapping()
         
         elif self.is_motorboat_mode:

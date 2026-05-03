@@ -41,12 +41,13 @@ class MotorboatAutopilotMode(Enum):
 class SailboatStates(Enum):
     """An enum containing the different states that the sailboat autopilot can be in."""
 
-    NA = -1
-    NORMAL = 0
-    CW_TACKING = 1
-    CCW_TACKING = 2
-    STALL = 3
-    # JIBE = 4
+    NA = 0
+    DOWNWIND_SAILING = 1
+    PORT_TACK = 2         # On a tack where the wind vector is to the left of the boat (port and left both have 4 letters)
+    STARBOARD_TACK = 3    # On a tack where the wind vector is to the right of the boat
+    CW_TACKING = 4        # Switching tacks from starboard to port tack
+    CCW_TACKING = 5       # Switching tacks from port to staboard tack
+    STALL = 6
 
 class TelemetryStatus(StrEnum):
     """
