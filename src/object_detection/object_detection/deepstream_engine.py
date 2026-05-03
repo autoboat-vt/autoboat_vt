@@ -34,8 +34,8 @@ EARTH_RADIUS = 6378137.0  # Radius of Earth in meters
 PATH_TO_SRC_DIR = "/home/ws/src" if IS_DEV_CONTAINER else f"{os.path.expanduser('~')}/autoboat_vt/src"
 
 YOLO_CONFIG = {
-    11: f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo11.txt",
-    26: f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo26.txt"
+    11: f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/yolo11_config.txt",
+    26: f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/yolo26_config.txt"
 }
 INFERENCE = True
 if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":

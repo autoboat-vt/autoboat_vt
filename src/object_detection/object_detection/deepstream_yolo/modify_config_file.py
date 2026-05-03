@@ -10,7 +10,7 @@ if len(sys.argv) < 3:
 
 FP_VER = 16
 
-CONFIG_FILE = f'config_infer_primary_yolo{sys.argv[2]}.txt'
+CONFIG_FILE = f'yolo{sys.argv[2]}_config.txt'
 model_name = sys.argv[1]
 
 with open(CONFIG_FILE, "r") as file:

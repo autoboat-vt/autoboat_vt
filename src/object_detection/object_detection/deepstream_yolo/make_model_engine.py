@@ -27,12 +27,9 @@ else:
     IS_DEV_CONTAINER = False
 
 # Determine paths based on environment
-if IS_DEV_CONTAINER:
-    PATH_TO_SRC_DIR = "/home/ws/src"
-else:
-    PATH_TO_SRC_DIR = "/home/sailbot/autoboat_vt/src"
+PATH_TO_SRC_DIR = "/home/ws/src" if IS_DEV_CONTAINER else f"{os.path.expanduser('~')}/autoboat_vt/src"
 
-PATH_TO_YOLO_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo{sys.argv[1]}.txt"
+PATH_TO_YOLO_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/yolo{sys.argv[1]}_config.txt"
 
 # Configuration
 COMPUTE_HW = 1

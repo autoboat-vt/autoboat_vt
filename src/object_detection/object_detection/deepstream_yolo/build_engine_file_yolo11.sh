@@ -13,6 +13,10 @@ else
     IS_DEV_CONTAINER=false
 fi
 
+if [ ! -f "yolo11_config.txt" ]; then
+    cp yolo11_config_template.txt yolo11_config.txt
+fi
+
 MODEL_NAME=$1
 PT_FILE="${MODEL_NAME}.pt"
 ONNX_FILE="${MODEL_NAME}.pt.onnx"
