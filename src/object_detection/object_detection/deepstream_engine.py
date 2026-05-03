@@ -15,7 +15,8 @@ from threading import Lock
 import numpy as np
 import pyds
 from gi.repository import GLib, Gst
-from triangulation import ObjectDetection, ObjectTriangulator
+
+from .triangulation import ObjectDetection, ObjectTriangulator
 
 os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
 # os.environ['GST_DEBUG'] = "3"
@@ -61,7 +62,7 @@ class DeepStreamEngine:
     def __init__(self, buffer_window_size: int, iou_threshold: float,
                  model_name: str, threshold: float,
                  detection_callback:Callable[[dict], None],
-                 triangulation_callback:Callable[[list], None],
+                 triangulation_callback:Callable[[dict], None],
                  info_callback:Callable[[str], None],
                  warn_callback:Callable[[str], None],
                  error_callback:Callable[[str], None]) -> None:
@@ -101,7 +102,9 @@ class DeepStreamEngine:
         self.camera_K_inv = np.linalg.inv(self.camera_K)
         self.triangulator = ObjectTriangulator(camera_matrix=self.camera_K,
                                                frame_size=(self.CAM_LIST[0]["input_width"], self.CAM_LIST[0]["input_height"]),
-                                               buffer_window_size=self.parameters["buffer_window_size"])
+                                               buffer_window_size=self.parameters["buffer_window_size"],
+                                               iou_threshold=self.parameters["iou_threshold"],
+                                               logger=self.info_callback)
 
         self.current_position = {
             "latitude": 0,
@@ -112,7 +115,7 @@ class DeepStreamEngine:
             "longitude": 0
         }
         self.valid_origin_position = False
-        self.current_heading = 0 # default to true east
+        self.current_heading = 0 # default to true east. Heading is counterclockwise of true east
 
         # DeepStream Initialization
         Gst.init(None)
@@ -128,7 +131,10 @@ class DeepStreamEngine:
         self.file_lock = Lock()
         self.last_published_frame_number = -1
         with self.file_lock:
-            self.config_file_split, self.parameters["model_name"], self.parameters["threshold"] = self._read_file()
+            file_results = self._read_file(YOLO_CONFIG[self.yolo_ver])
+            self.config_file_split = file_results[0]
+            self.parameters["model_name"] = file_results[1]
+            self.parameters["threshold"] = file_results[2]
 
         self._init_pipeline()
     
@@ -317,7 +323,7 @@ class DeepStreamEngine:
         self.info_callback("Quitting pipeline\n")
         self.pipeline.set_state(Gst.State.NULL)
         self.loop.quit()
-        self.pipeline.info_callback("Pipeline stopped\n")
+        self.info_callback("Pipeline stopped\n")
     
     def _infer_probe(self, pad: Gst.Pad, info: Gst.PadProbeInfo, u_data: any) -> Gst.PadProbeReturn: # noqa: ARG002
         gst_buffer = info.get_buffer()
@@ -329,6 +335,8 @@ class DeepStreamEngine:
         msg["detection_results"] = []
         if (self.parameters["model_name"] is not None):
             msg["model_name"] = self.parameters["model_name"]
+        else:
+            msg["model_name"] = "DISABLED"
         msg["yolo_version"] = self.yolo_ver
         msg["threshold"] = self.parameters["threshold"]
 
@@ -380,6 +388,7 @@ class DeepStreamEngine:
                 obj_results["height"] = obj_meta.tracker_bbox_info.org_bbox_coords.height
                 obj_results["object_id"] = obj_meta.object_id
                 obj_results["class_id"] = obj_meta.class_id
+                obj_results["obj_label"] = obj_meta.obj_label
                 obj_results["angle_to_object"] = np.arctan((mid_x - self.CAM_LIST[0]["input_width"] * 0.5)
                                                            / self.camera_focal_px) * 180 / pi
                 msg["detection_results"].append(obj_results)
@@ -540,7 +549,9 @@ class DeepStreamEngine:
 
     def triangulate(self) -> None:
         """Runs the triangulation algorithm on the current buffer of observations and publishes the results."""
-        results = self.triangulator.triangulate()
+        if not INFERENCE or not self.valid_origin_position:
+            return
+        results = self.triangulator.triangulate(self.origin_position)
         self.triangulation_callback(results)
 
     def _read_file(self, file_name:str) -> tuple[list[str], str, float]:

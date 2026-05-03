@@ -134,13 +134,13 @@ class ObjectTriangulator:
     
     def triangulate(self, origin_position: dict) -> dict:
         """Triangulate the 3D position of all objects with buffered detections."""
-        # if (self.current_object_list.frame_number == self.last_published_frame_number):
-        #     return
         with self.triangulation_lock:
             # Make a shallow copy to avoid locking the whole triangulator during triangulation
             observations_snapshot = dict(self.observations)
 
         detections = {}
+        detections["iou_threshold"] = self.iou_threshold
+        detections["triangulation_results"] = {}
         for obj_id, obs_track in observations_snapshot.items():
             # obs_list = obs_track.detection_results
             world_pos = self._triangulate(obj_id)
@@ -148,7 +148,7 @@ class ObjectTriangulator:
                 lat = origin_position["latitude"] + (world_pos[1] / EARTH_RADIUS) * (180 / pi)
                 lon = (origin_position["longitude"] +
                       (world_pos[0] / (EARTH_RADIUS * np.cos(np.radians(origin_position["latitude"])))) * (180 / pi))
-                detections[obj_id] = {
+                detections["triangulation_results"][obj_id] = {
                     "label": obs_track.obj_label,
                     "class_id": obs_track.class_id,
                     "world_pos": world_pos,
@@ -160,6 +160,7 @@ class ObjectTriangulator:
                 self.logger(f"Object {obj_id} does not have enough observations to triangulate")
         
         self._filter_results(detections)
+        return detections
 
     def _filter_results(self, detections: dict) -> None:
         """
@@ -173,8 +174,8 @@ class ObjectTriangulator:
         # This is a list, so we can modify the original detections dict in-place without affecting the loop
         # Outer loop: i = 0->n-1
         # Inner loop: j = i+1->n, so we only compare each pair once and don't compare an object with itself
-        for obj_id_1, det1 in detections.items():
-            for obj_id_2, det2 in detections.items():
+        for obj_id_1, det1 in detections["triangulation_results"].items():
+            for obj_id_2, det2 in detections["triangulation_results"].items():
                 if obj_id_1 >= obj_id_2 or det1["class_id"] != det2["class_id"]:
                     # Don't compare the same pair twice or with different classes
                     continue
@@ -187,4 +188,4 @@ class ObjectTriangulator:
                         ids_to_delete.append(obj_id_1)
 
         for obj_id in ids_to_delete:
-            del detections[obj_id]
+            del detections["triangulation_results"][obj_id]
