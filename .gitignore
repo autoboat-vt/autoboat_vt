@@ -21,6 +21,8 @@ src/object_detection/object_detection/deepstream_yolo/label_files/**
 src/object_detection/object_detection/deepstream_yolo/engine_files/**
 src/object_detection/object_detection/deepstream_yolo/pt_files/**
 src/object_detection/object_detection/deepstream_yolo/onnx_files/**
+src/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo11.txt
+src/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo26.txt
 
 # groundstation
 pkg
