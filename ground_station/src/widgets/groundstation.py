@@ -927,11 +927,11 @@ class GroundStationWidget(QWidget):
                 f"Velocity Vector: [{fix_formatting(self.boat_data.get('velocity_x', -69.420))}, {fix_formatting(self.boat_data.get('velocity_y', -69.420))}]\n"  # noqa: E501
                 f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
                 f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
-                f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
                 f"True Wind Speed: {fix_formatting(self.boat_data.get('true_wind_speed'))} knots\n"
                 f"True Wind Angle: {fix_formatting(self.boat_data.get('true_wind_angle'))}°\n"
                 f"Apparent Wind Speed: {fix_formatting(self.boat_data.get('apparent_wind_speed'))} knots\n"
                 f"Apparent Wind Angle: {fix_formatting(self.boat_data.get('apparent_wind_angle'))}°\n"
+                f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
                 f"Desired Heading: {fix_formatting(self.boat_data.get('desired_heading'))}°\n"
                 f"Desired Sail Angle: {fix_formatting(self.boat_data.get('desired_sail_angle'))}°\n"
                 f"Current Sail Angle: {fix_formatting(self.boat_data.get('current_sail_angle'))}°\n"
@@ -1121,7 +1121,6 @@ class GroundStationWidget(QWidget):
             self.browser.page().runJavaScript(
                 f"map.update_compass_svg('{heading+wind_direction}')"
             )
-            print(heading+wind_direction)
 
         # region data validation and defaulting
         try:

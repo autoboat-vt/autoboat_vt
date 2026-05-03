@@ -477,7 +477,7 @@ class TelemetryNode(Node):
 
                 # update the ROS2 topic so that the autopilot actually knows what the new waypoints are
                 waypoints_nav_sat_fix_list = [
-                    NavSatFix(latitude=waypoint[0], longitude=waypoint[1]) for waypoint in self.current_waypoints
+                    NavSatFix(latitude=float(waypoint[0]), longitude=float(waypoint[1])) for waypoint in self.current_waypoints
                 ]
                 self.waypoints_list_publisher.publish(WaypointList(waypoints=waypoints_nav_sat_fix_list))
 

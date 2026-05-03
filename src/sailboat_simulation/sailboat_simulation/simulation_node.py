@@ -1,25 +1,24 @@
 #!usr/bin/python3
 # TODO: Implement a graceful way to handle simulation termination with the control scripts
 
-import random
-import numpy as np
-import gymnasium as gym
-import navpy
-import pandas as pd
 import math
 import os
-from gymnasium.wrappers.time_limit import TimeLimit
-from sailboat_gym import CV2DRenderer, Observation
-from .utils import *
+import random
 
-
+import gymnasium as gym
+import navpy
+import numpy as np
+import pandas as pd
 import rclpy
+from geometry_msgs.msg import Twist, Vector3
+from gymnasium.wrappers.time_limit import TimeLimit
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from std_msgs.msg import Float32, Bool
-from geometry_msgs.msg import Vector3, Twist
+from sailboat_gym import CV2DRenderer, Observation
 from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import Bool, Float32
 
+from .utils import *
 
 sim_time = 0
 
@@ -75,7 +74,8 @@ def generate_wind_upwind(_) -> np.ndarray[np.float64]:
 
 
 
-WIND_GENERATION_FUNCTION = generate_wind_real_life_data
+# WIND_GENERATION_FUNCTION = generate_wind_real_life_data
+WIND_GENERATION_FUNCTION = generate_wind
 
 
 

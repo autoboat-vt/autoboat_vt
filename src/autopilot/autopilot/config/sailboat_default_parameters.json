@@ -32,7 +32,7 @@
         "description": "If true, perform a forced jibe instead of a tack when the wind angle is too high."
     },
     "tack_distance": {
-        "default": 100.0,
+        "default": 25.0,
         "description": "Rough distance to sail before changing tacks based on dynamic tacking system. Ask Chris for more info."
     },
     "jibe_tolerance": {
