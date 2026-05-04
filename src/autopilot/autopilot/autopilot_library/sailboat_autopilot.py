@@ -163,6 +163,9 @@ class SailboatAutopilot:
     # TODO: Add hysteresis to all of the state transitions (like a schmidt trigger)
     # is_angle_between_boundaries <--- specifically look at this function and adding hysteresis to it
     # TODO: Maybe rename this to emphasize that this is basically a state machine function
+    # TODO: Add a stalled state and try to implement the following: https://www.ussailing.org/news/getting-in-and-out-of-irons/
+    # TODO: Add a state transition that if you are in the sailing downwind state and suddenly go into the no sail zone
+    # that you should cw or ccw tack to get out so you can hard over your rudder and get out of the no sail zone asap.
     def _apply_tacking_logic(
         self,
         current_heading: float, current_bearing: float,
@@ -199,10 +202,8 @@ class SailboatAutopilot:
         Returns
         -------
         tuple[float, SailboatStates]
-            TODO MAKE IT SO THIS FUNCTION ONLY RETURNS SailboatStates and have the desired heading stuff be handled elsewhere
-            
-            A tuple with the first element being the angle that the boat should be holding measured in degrees counter-clockwise
-            from true east, and the second element being The next state that the boat should .
+            A tuple with the first element being the angle that the boat wants to be holding measured in degrees counter-clockwise
+            from true east, and the second element being the next state that the boat should be in.
         """
 
         global_true_wind_angle = (current_heading + true_wind_angle) % 360
@@ -220,69 +221,66 @@ class SailboatAutopilot:
             (global_apparent_upwind_angle - self.parameters["no_sail_zone_size"] / 2) % 360,  # Clockwise bound
         )
         
+        is_waypoint_in_no_sail_zone = is_angle_between_boundaries(current_bearing, no_sail_zone_bounds[0], no_sail_zone_bounds[1])
+        
+        distance_between_heading_and_left_no_sail_zone = abs(get_distance_between_angles(current_heading, no_sail_zone_bounds[0]))
+        distance_between_heading_and_right_no_sail_zone = abs(get_distance_between_angles(current_heading, no_sail_zone_bounds[1]))
+        port_tack_is_closer = distance_between_heading_and_left_no_sail_zone > distance_between_heading_and_right_no_sail_zone
+        
         
         # If We Have Been On A Specific Tack For Too Long, Switch Tacks
         distance_from_last_tack_position = get_distance_between_positions(current_position, last_tack_position)
         if distance_from_last_tack_position > self.parameters["tack_distance"]:
             if current_state == SailboatStates.STARBOARD_TACK:
-                self.logger.info("GOT HERE7")
+                self.logger.info("BEEN ON STARBOARD TACK FOR TOO LONG. INITIATING CW TACKING")
                 current_state = SailboatStates.CW_TACKING
             
             elif current_state == SailboatStates.PORT_TACK:
                 current_state = SailboatStates.CCW_TACKING
-                self.logger.info("GOT HERE8")
+                self.logger.info("BEEN ON PORT TACK FOR TOO LONG. INITIATING CCW TACKING")
         
         
         # If We Need To Get Around The No Sail Zone To Get To The Waypoint
-        # TODO IS THIS EVEN NECESSARY
         is_bearing_around_no_sail_zone = is_angle_between_boundaries(global_true_upwind_angle, current_heading, current_bearing)
         if is_bearing_around_no_sail_zone and current_state == SailboatStates.DOWNWIND_SAILING:
             # Check Where The Boat Is Inclined To Turn And Tack In That Direction
             if self.get_optimal_rudder_angle(current_heading, current_bearing) > 0:
                 current_state = SailboatStates.CW_TACKING
-                self.logger.info("GOT HERE5")
+                self.logger.info("GET AROUND NO SAIL ZONE CLOCKWISE TACKING")
             else:
                 current_state = SailboatStates.CCW_TACKING
-                self.logger.info("GOT HERE6")
+                self.logger.info("GET AROUND NO SAIL ZONE COUNTER CLOCKWISE TACKING")
                 
-        
-        is_waypoint_in_no_sail_zone = is_angle_between_boundaries(current_bearing, no_sail_zone_bounds[0], no_sail_zone_bounds[1])
-        
-        distance_between_heading_and_left_no_sail_zone = get_distance_between_angles(current_heading, no_sail_zone_bounds[0])
-        distance_between_heading_and_left_no_sail_zone = abs(distance_between_heading_and_left_no_sail_zone)
-        
-        distance_between_heading_and_right_no_sail_zone = get_distance_between_angles(current_heading, no_sail_zone_bounds[1])
-        distance_between_heading_and_right_no_sail_zone = abs(distance_between_heading_and_right_no_sail_zone)
-        
-        port_tack_is_closer = distance_between_heading_and_left_no_sail_zone > distance_between_heading_and_right_no_sail_zone
         
         # If We Need To Transition To Tacking
         if is_waypoint_in_no_sail_zone and current_state == SailboatStates.DOWNWIND_SAILING:
             # Go To The State That Is Most Natural For The Boat
             if port_tack_is_closer:
                 current_state = SailboatStates.PORT_TACK
-                self.logger.info("GOT HERE")
+                self.logger.info("TRANSITION FROM DOWNWIND SAILING TO PORT TACK")
             else:
                 current_state = SailboatStates.STARBOARD_TACK
-                self.logger.info("GOT HERE2")
+                self.logger.info("TRANSITION FROM DOWNWIND SAILING TO STARBOARD TACK")
+
 
         # If We Are On A Specific Tack And We Are Closer To The Other Tack, Just Switch To The Other Tack
         if current_state == SailboatStates.STARBOARD_TACK and port_tack_is_closer:
             self.logger.info(f"distance between heading and left no sail zone: {distance_between_heading_and_left_no_sail_zone}")
             self.logger.info(f"distance between heading and right no sail zone: {distance_between_heading_and_right_no_sail_zone}")
-            self.logger.info("GOT HERE3")
+            self.logger.info("PORT TACK IS CLOSER, SWITCHING FROM STARBOARD TO PORT TACK")
             current_state = SailboatStates.PORT_TACK
 
         if current_state == SailboatStates.PORT_TACK and not port_tack_is_closer:
             self.logger.info(f"distance between heading and left no sail zone: {distance_between_heading_and_left_no_sail_zone}")
             self.logger.info(f"distance between heading and right no sail zone: {distance_between_heading_and_right_no_sail_zone}")
-            self.logger.info("GOT HERE4")
+            self.logger.info("STARBOARD TACK IS CLOSER, SWITCHING FROM PORT TO STARBOARD TACK")
             current_state = SailboatStates.STARBOARD_TACK
         
         
         # If We No Longer Need To Hold A Tack And Can Just Sail Straight To The Waypoint
         if not is_waypoint_in_no_sail_zone and current_state in {SailboatStates.PORT_TACK, SailboatStates.STARBOARD_TACK}:
             current_state = SailboatStates.DOWNWIND_SAILING
+            self.logger.info("NO LONGER NEED TO HOLD A TACK. NOW TRANSITIONING TO DOWNWIND SAILING")
         
         
         # If We Have Finished The Tack
@@ -291,7 +289,7 @@ class SailboatAutopilot:
             distance_to_tack_target_heading = abs(get_distance_between_angles(current_heading, tack_target_heading))
 
             if distance_to_tack_target_heading < self.parameters["tack_tolerance"]:
-                self.logger.info("GOT HERE9")
+                self.logger.info("JUST FINISHED STARBOARD TACK. NOW HOLDING STARBOARD TACK")
                 current_state = SailboatStates.STARBOARD_TACK
                 
         elif current_state == SailboatStates.CW_TACKING:
@@ -300,7 +298,7 @@ class SailboatAutopilot:
             
             if distance_to_tack_target_heading < self.parameters["tack_tolerance"]:
                 current_state = SailboatStates.PORT_TACK
-                self.logger.info("GOT HERE10")
+                self.logger.info("JUST FINISHED CW TACK. NOW HOLDING PORT TACK")
         
         
         # Handle Results For Each Of The States
