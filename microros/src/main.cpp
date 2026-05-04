@@ -1,17 +1,23 @@
 // Include the microros nodes
-#include "main_microros_node.c"
+//cd#include "boat.hpp"
+
+#include "common_libraries.h"
+//#include "microros.hpp"
+#include "systems.hpp"
+
 
 // Change when adding new nodes
 #define NUMBER_OF_NODES 1
 
-// Global microros structs
-rclc_executor_t executor_core;
-rcl_allocator_t allocator_core;
-rclc_support_t support_core;
+
 
 
 int main()
 {
+    //instantiate boat system
+    // Systems current_boat(THESEUS);
+
+
     stdio_init_all();
 
     while (true) {
@@ -27,27 +33,28 @@ int main()
         gpio_init(LED_PIN);
         gpio_set_dir(LED_PIN, 1);
 
-        allocator_core = rcl_get_default_allocator();
-
-        const int timeout_ms = 1000; 
+        const int timeout_ms = 1000;
         const uint8_t attempts = 120;
         rmw_uros_ping_agent(timeout_ms, attempts);
-        
-        rclc_support_init(&support_core, 0, NULL, &allocator_core);
-        rclc_executor_init(&executor_core, &support_core.context, 5, &allocator_core);
 
-        application_init(&allocator_core, &support_core, &executor_core);
+        //initialize System
+        Systems system = Systems(THESEUS);
+        system.initialize_microros();
+        system.initialize_hal();
+        system.initialize_application_loop();
+
+
 
         while (true) {
             // Ping the agent every few seconds to check connection
             if (rmw_uros_ping_agent(1000, 5) != RMW_RET_OK) {
                 break;
             }
-        
-            rclc_executor_spin_some(&executor_core, RCL_MS_TO_NS(100));
+            
+            system.check_microros();
+            
         }
         
-        rclc_executor_fini(&executor_core);
-        rclc_support_fini(&support_core);
+        system.cleanup();
     }
 }

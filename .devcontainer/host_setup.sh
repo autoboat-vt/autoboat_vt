@@ -200,7 +200,7 @@ setup_linux() {
 	if [[ "$ASSUME_GPU" == true ]] || (command -v nvidia-smi &>/dev/null && command -v apt &> /dev/null); then
 		log_info "NVIDIA GPU detected."
 		write_host_environment_variables 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"'
-		write_devcontainer_environment_variables ":0"
+		write_devcontainer_environment_variables "$DISPLAY"
 		ensure_host_environment_variables.sh_are_sourced
 
 		if ! command -v nvidia-ctk &>/dev/null; then
@@ -313,7 +313,7 @@ setup_macos() {
 setup_unknown() {
 	log_warn "Unsupported OS detected: $OS"
 	write_host_environment_variables
-	write_devcontainer_environment_variables ":0"
+	write_devcontainer_environment_variables "$DISPLAY"
 	ensure_host_environment_variables.sh_are_sourced
 	log_warn "Running CPU-only. Display may not work properly."
 }

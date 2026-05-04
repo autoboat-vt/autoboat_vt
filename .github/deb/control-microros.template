@@ -15,4 +15,4 @@ Description: Micro-ROS SDK and toolchain for the VT AutoBoat system
  Built for ROS2 Humble on Ubuntu 22.04.
  .
  After installation, open a new terminal (or run: source /etc/profile.d/autoboat-vt.sh)
- then you can build firmware in src/microros.
+

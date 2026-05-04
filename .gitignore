@@ -2,13 +2,14 @@
 .python-version
 **/__pycache__/**
 build
+build_unit_tests
 install
 log
 output
 
 # object detection
 **.pt
-src/microros/dependencies/**
+microros/dependencies/**
 **.engine
 **.onnx
 **.o

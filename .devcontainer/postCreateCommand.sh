@@ -41,30 +41,12 @@ echo "source /home/ws/install/setup.bash" >> $AUTOBOAT_USER_HOME/.bashrc
 
 
 
-# Move temporary files that were downloaded from each devcontainer variant
-# The reason that we have this is to make it faster to download certain repositories and dataset for each devcontainer variant
-# For instance, its far easier to just have the buoy/ boat computer vision dataset in the docker image and then just copy it
-# into your workspace than for you to just download the huge dataset yourself. It just makes things slightly easier
-
-# In some cases, we can store the entire built dependencies in /tmp like for microros where we can store a package
-# of all of the dependencies that we need to work with microros
-
-
-# if [[ "$DEVCONTAINER_VARIANT" == "microros" ]]; then
-#     rm -rf src/microros/dependencies
-#     mv /opt/autoboat/microros_dependencies src/microros
-
-#     sudo chmod -R 777 src/microros
-# fi
-
-
+# Miscellaneous things to finish setting up deepstream variant. Eventually, these should probably be added to the deepstream dockerfile.
 if [[ "$DEVCONTAINER_VARIANT" == "deepstream" || "$DEVCONTAINER_VARIANT" == "deepstream_and_yolo" ]]; then
     rm -rf ~/.cache/gstreamer-1.0/
     gst-inspect-1.0 nvstreammux
 
 fi
-
-# TODO: DELETE THESE TEMPORARY FILES FROM THE DOCKER IMAGE IF THEY HAVE ALREADY BEEN INSTALLED
 
 
 source $AUTOBOAT_USER_HOME/.bashrc
