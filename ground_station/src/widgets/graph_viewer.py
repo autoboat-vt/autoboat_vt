@@ -60,6 +60,7 @@ class GraphViewer(QWidget):
 
         self.telemetry_handler = BoatStatusThreadRouter.BoatStatusFetcherThread()
         self.telemetry_handler.response.connect(self.update_graph)
+        self.telemetry_handler.response.connect(constants.DL.write_from_qthread)
         self.telemetry_handler.start()
 
     def update_graph(self, request_result: tuple[dict[str, Any], constants.TelemetryStatus]) -> None:
@@ -283,7 +284,11 @@ class GraphSelectionDialog(QDialog):
     def available_keys(self, keys: list[str]) -> None:
         """Set the available keys for graph selection and update the checkboxes."""
 
+        if self._available_keys == keys:
+            return
+
         self._available_keys = keys
+
         for key in keys:
             if key not in self.checkboxes:
                 checkbox = QCheckBox(key.replace("_", " ").title())

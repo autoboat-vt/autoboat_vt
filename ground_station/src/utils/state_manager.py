@@ -8,14 +8,14 @@ import contextlib
 import fcntl
 import json
 from collections.abc import Generator
-from os import PathLike, fsync
-from typing import Any, TextIO
+from os import fsync
+from typing import Any, TextIO, cast
 
 from utils import constants
 
 
 @contextlib.contextmanager
-def _locked_file(path: str | PathLike[str], mode: str, lock_type: int) -> Generator[TextIO, None, None]:
+def _locked_file(path: constants.FileType, mode: str, lock_type: int) -> Generator[TextIO, None, None]:
     """
     Open a file and hold an advisory lock for the duration of the context.
 
@@ -35,6 +35,8 @@ def _locked_file(path: str | PathLike[str], mode: str, lock_type: int) -> Genera
     """
     
     with open(file=path, mode=mode, encoding="utf-8") as f:
+        f = cast("TextIO", f)
+        
         fcntl.flock(f, lock_type)
         try:
             yield f
@@ -73,8 +75,12 @@ class StateManager:
             return {}
 
         data = json.loads(content)
+
         if not isinstance(data, dict):
             raise TypeError("State file must contain a JSON object.")
+        
+        if not all(isinstance(key, str) for key in data):
+            raise TypeError("State file JSON object must only contain string keys.")
 
         return data
 

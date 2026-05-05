@@ -109,7 +109,7 @@ def get_route(route_name: str) -> str:
 
     endpoints = constants.SM.read("telemetry_server_endpoints")
 
-    if isinstance(endpoints, dict) and endpoints.get(route_name):
+    if isinstance(endpoints, dict) and endpoints.get(route_name) is not None:
         return endpoints[route_name]
     
     raise ValueError(f"Route name '{route_name}' not found in telemetry server endpoints.")

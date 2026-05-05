@@ -69,6 +69,7 @@ class TelemetryStatus(StrEnum):
     WRONG_FORMAT = auto()
 
 NumberType: TypeAlias = int | float
+FileType: TypeAlias = str | os.PathLike[str]
 
 SM = StateManager()
 
@@ -264,6 +265,8 @@ STATE_FILE_CONTENTS: dict[str, Any] = {
     "has_telemetry_server_instance_changed": _has_telemetry_server_instance_changed,
     "telemetry_server_endpoints": _telemetry_server_endpoints,
     "map_features": _map_features,
+    "data_logging_active": _data_logging_active,
+    "data_log_file_path": "",
 }
 
 try:
@@ -298,17 +301,6 @@ try:
         if "defaults_examples" not in os.listdir(GIT_KEEP_DIR):
             raise Exception("Defaults/examples directory not found, please redownload the directory from GitHub.")
         
-        if not APP_STATE_PATH.exists():
-            print("[Info] Creating app state file...")
-            APP_STATE_PATH.touch()
-            with open(APP_STATE_PATH, "w") as f:
-                json.dump({}, f, indent=4)
-
-        if json.load(open(file=APP_STATE_PATH, mode="r", encoding="utf-8")) == {}:
-            print("[Info] Initializing app state file...")
-            with open(APP_STATE_PATH, "w", encoding="utf-8") as f:
-                json.dump(STATE_FILE_CONTENTS, f, indent=4)
-        
         if "autopilot_params" not in os.listdir(GIT_IGNORE_DIR):
             print("[Info] Creating autopilot parameters directory...")
             os.makedirs(GIT_IGNORE_DIR / "autopilot_params")
@@ -321,14 +313,29 @@ try:
             print("[Info] Creating data logs directory...")
             os.makedirs(GIT_IGNORE_DIR / "data_logs")
 
+        _data_logs_dir = GIT_IGNORE_DIR / "data_logs"
+        _initial_log_file_path: str = Path(_data_logs_dir / f"data_log_{int(time.time())}.csv").as_posix()
+
+        if not APP_STATE_PATH.exists():
+            print("[Info] Creating app state file...")
+            APP_STATE_PATH.touch()
+            with open(APP_STATE_PATH, "w") as f:
+                json.dump({}, f, indent=4)
+
+        if json.load(open(file=APP_STATE_PATH, mode="r", encoding="utf-8")) == {}:
+            print("[Info] Initializing app state file...")
+            with open(APP_STATE_PATH, "w", encoding="utf-8") as f:
+                STATE_FILE_CONTENTS["data_log_file_path"] = _initial_log_file_path
+                json.dump(STATE_FILE_CONTENTS, f, indent=4)
+
     AUTOPILOT_PARAMS_DIR = Path(GIT_IGNORE_DIR / "autopilot_params")
     misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "autopilot_params", AUTOPILOT_PARAMS_DIR)
 
     BUOY_DATA_DIR = Path(GIT_IGNORE_DIR / "buoy_data")
     misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "buoy_data", BUOY_DATA_DIR)
 
-    DATA_LOGS_DIR = Path(GIT_IGNORE_DIR / "data_logs")
-    DL = DataLogger(DATA_LOGS_DIR / f"data_log_{int(time.time())}.csv")
+    DATA_LOGS_DIR = Path(_data_logs_dir)
+    DL = DataLogger()
 
 except Exception as e:
     raise RuntimeError(f"Initialization error: {e}") from e
