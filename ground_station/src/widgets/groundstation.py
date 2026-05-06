@@ -60,9 +60,6 @@ class GroundStationWidget(QWidget):
         self.boat_data: dict[str, Any] = {}
         self.telemetry_data_limits: dict[str, float] = {}
 
-        # should we log telemetry data to a file?
-        self.should_log_data: bool = False
-
         # do we need to clear the sailboat diagnostics svgs on the next telemetry update?
         self.need_to_clear_diagnostics: bool = False
 
@@ -84,24 +81,29 @@ class GroundStationWidget(QWidget):
         self.main_layout = QGridLayout()
         self.main_layout.setObjectName("main_layout")
 
+        self.left_width = 300
         self.left_layout = QVBoxLayout()
         self.left_layout.setObjectName("left_layout")
         self.left_widget = QWidget()
 
+        self.middle_width_min = 2 * self.left_width
+        self.middle_width_max = 4 * self.left_width
         self.middle_layout = QGridLayout()
         self.middle_layout.setObjectName("middle_layout")
 
+        self.right_width = self.left_width + 30
         self.right_layout = QTabWidget()
         self.right_layout.setObjectName("right_layout")
         self.right_tab1_layout = QGridLayout()
         self.right_tab2_layout = QGridLayout()
         self.right_tab1 = QWidget()
         self.right_tab2 = QWidget()
+
+        self.setMaximumWidth(self.left_width + self.middle_width_max + self.right_width)
         # endregion define layouts
 
         # region setup UI
         # region left section
-        self.left_width = 300
         self.left_label = QLabel("Telemetry Data")
         self.left_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.left_text_section = QTextEdit()
@@ -137,17 +139,18 @@ class GroundStationWidget(QWidget):
         self.left_layout.addWidget(self.left_button_groupbox)
 
         self.left_widget.setLayout(self.left_layout)
-        self.left_widget.setMinimumWidth(self.left_width)
-        # self.left_layout.setContentsMargins(0, 0, 0, self.left_width)
+        self.left_widget.setFixedWidth(self.left_width)
         self.main_layout.addWidget(self.left_widget, 0, 0)
 
         # endregion left section
 
-        # region middle section
+        # region middle sections
         self.browser = QWebEngineView()
         self.browser.setUrl(QUrl(f"http://127.0.0.1:{constants.VITE_PORT}"))
-        self.browser.setMinimumWidth(700)
-        self.browser.setMinimumHeight(700)
+        
+        self.browser.setMinimumWidth(self.middle_width_min)
+        self.browser.setMaximumWidth(self.middle_width_max)
+        
         self.middle_layout.addWidget(self.browser, 0, 1)
         self.middle_layout.setRowStretch(0, 1)
 
@@ -177,8 +180,6 @@ class GroundStationWidget(QWidget):
         # endregion middle section
 
         # region right section
-        self.right_width = 320
-
         # region tab1: waypoint data
         self.right_tab1_label = QLabel("Waypoints")
         self.right_tab1_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -273,7 +274,7 @@ class GroundStationWidget(QWidget):
 
         self.right_layout.addTab(self.right_tab1, "Waypoints")
         self.right_layout.addTab(self.right_tab2, "Buoy Data")
-        self.right_layout.setMaximumWidth(self.right_width)
+        self.right_layout.setFixedWidth(self.right_width)
         self.main_layout.addWidget(self.right_layout, 0, 2)
         # endregion right section
 
@@ -343,7 +344,14 @@ class GroundStationWidget(QWidget):
             ).json()
 
             if remote_waypoints:
-                print(f"[Info] Fetched waypoints from server: {remote_waypoints}")
+                if len(remote_waypoints) > 10:
+                    print(
+                        f"[Info] Pulled {len(remote_waypoints)} waypoints from server. "
+                        f"Displaying first 10 waypoints: {remote_waypoints[:10]}"
+                    )
+                else:
+                    print(f"[Info] Fetched waypoints from server: {remote_waypoints}")
+                
                 existing_waypoints = self.waypoints.copy()
                 self.browser.page().runJavaScript("map.clear_waypoints()")
 
@@ -385,13 +393,27 @@ class GroundStationWidget(QWidget):
     def start_data_logging(self) -> None:
         """Start logging telemetry data to a file."""
 
-        self.should_log_data = True
+        data_log_file = Path(constants.DATA_LOGS_DIR / f"data_log_{time.time_ns()}.csv")
+        data_log_file.touch(exist_ok=True)
+
+        constants.SM.write("data_log_file_path", data_log_file.as_posix())
+        constants.SM.write("data_logging_active", True)
+        self.boat_status_source.connect(constants.DL.write_from_qthread)
+
+        self.start_data_logging_button.setDisabled(True)
+        self.stop_data_logging_button.setDisabled(False)
+        
         print("[Info] Data logging started.")
 
     def stop_data_logging(self) -> None:
         """Stop logging telemetry data to a file."""
 
-        self.should_log_data = False
+        constants.SM.write("data_logging_active", False)
+        self.boat_status_source.disconnect(constants.DL.write_from_qthread)
+
+        self.start_data_logging_button.setDisabled(False)
+        self.stop_data_logging_button.setDisabled(True)
+
         print("[Info] Data logging stopped.")
 
     def edit_buoy_data(self) -> None:
@@ -775,10 +797,6 @@ class GroundStationWidget(QWidget):
 
         boat_data, connection_status = request_result
         self.boat_data = boat_data
-
-        # TODO: figure out how to log dictionary without looping through each key
-        if self.should_log_data:
-            pass
 
         def fix_formatting(data_item: float | None) -> str:
             """

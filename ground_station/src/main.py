@@ -5,6 +5,7 @@ import sys
 import threading
 from typing import NoReturn
 
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 from utils import constants, misc
 from widgets import (
@@ -36,8 +37,10 @@ class MainWindow(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("SailBussy Ground Station")
+        self.setWindowTitle(constants.WINDOW_TITLE)
         self.setGeometry(constants.WINDOW_BOX)
+        self.setMaximumSize(constants.MAX_WINDOW_SIZE)
+        self.setUnifiedTitleAndToolBarOnMac(True)
 
         self.main_widget = QTabWidget()
         self.setCentralWidget(self.main_widget)
@@ -99,10 +102,24 @@ if __name__ == "__main__":
     constants.ICONS = misc.get_icons()
     window = MainWindow()
     threading.Thread(target=window.start_asset_server, daemon=True).start()
+
     app.setStyleSheet(constants.STYLE_SHEET)
     app.setPalette(constants.PALLETTE)
     app.setStyle("Fusion")
-    app.setWindowIcon(constants.ICONS.boat)
+
+    app.setApplicationName(constants.APPLICATION_NAME)
+    app.setOrganizationName(constants.ORGANIZATION_NAME)
+
+    if constants.APP_LOGO_PATH.is_file():
+        print(f"[Info] Setting application icon from {constants.APP_LOGO_PATH}...")
+        logo_icon = QIcon(constants.APP_LOGO_PATH.as_posix())
+        app.setWindowIcon(logo_icon)
+        window.setWindowIcon(logo_icon)
+
+    else:
+        print(f"[Warning] Application logo not found at {constants.APP_LOGO_PATH}. Using default icon.")
+        app.setWindowIcon(constants.ICONS.boat)
+        window.setWindowIcon(constants.ICONS.boat)
 
     window.show()
     sys.exit(app.exec())

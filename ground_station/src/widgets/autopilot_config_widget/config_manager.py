@@ -24,6 +24,7 @@ from requests import RequestException
 from strenum import StrEnum
 from syntax_highlighters import JsonHighlighter
 from utils import constants, misc, thread_classes
+
 from widgets.popup_edit import TextEditWindow
 
 

@@ -26,6 +26,7 @@ from qtpy.QtWidgets import (
 from requests.exceptions import RequestException
 from syntax_highlighters.json import JsonHighlighter
 from utils import constants, misc
+
 from widgets.popup_edit import TextEditWindow
 
 

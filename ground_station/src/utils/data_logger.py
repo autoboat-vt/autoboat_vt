@@ -2,18 +2,47 @@
 
 from __future__ import annotations
 
-__all__ = ["DataLogger"]
+__all__ = ["DataLogEntry", "DataLogger"]
 
 import contextlib
-import csv
 import fcntl
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
+from csv import DictWriter
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from os import fsync
 from pathlib import Path
 from typing import Any, TextIO, cast
 
 from utils import constants
+
+
+@dataclass
+class DataLogEntry:
+    """Data class representing a single log entry."""
+
+    key_name: str
+    data: object
+    write_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+    def as_dict(self) -> dict[str, str]:
+        """
+        Convert the log entry to a dictionary.
+
+        Returns
+        -------
+        dict[str, str]
+            A dictionary representation of the log entry.
+        """
+
+        return {
+            "key_name": self.key_name,
+            "data": str(self.data),
+            "write_time": self.write_time.isoformat(),
+        }
+
+
+_FIELDNAMES = list(DataLogEntry.__annotations__.keys())
 
 
 @contextlib.contextmanager
@@ -46,35 +75,47 @@ def _locked_file(path: constants.FileType, mode: str, lock_type: int) -> Generat
             fcntl.flock(f, fcntl.LOCK_UN)
 
 
-class DataLogger:
-    """Class for managing the logging of data within the ground station."""
+def _load_log() -> Path:
+    """
+    Load the CSV log file, creating it with a header if it doesn't exist.
 
-    _FIELDNAMES: tuple[str, str, str] = ("write_time", "key_name", "data")
+    Returns
+    -------
+    Path
+        The path to the log file.
 
-    def __init__(self) -> None:
-        self._file_path = Path(constants.SM.read("data_log_file_path"))
+    Raises
+    ------
+    RuntimeError
+        If the log file cannot be loaded or created.
+    """
 
-        if not self._file_path.exists():
-            with _locked_file(self._file_path, "w", fcntl.LOCK_EX) as f:
-                writer = csv.DictWriter(f, fieldnames=self._FIELDNAMES, lineterminator="\n")
+    log = Path(constants.SM.read("data_log_file_path"))
+
+    if not log.exists():
+        print(f"[Info] Creating new data log file at {log}...")
+
+    try:
+        with _locked_file(path=log, mode="a+", lock_type=fcntl.LOCK_EX) as f:
+            f.seek(0, 2)
+
+            if f.tell() == 0:
+                writer = DictWriter(f, fieldnames=_FIELDNAMES, lineterminator="\n")
                 writer.writeheader()
                 f.flush()
                 fsync(f.fileno())
 
-    @property
-    def file_path(self) -> Path:
-        """
-        Get the file path of the data logger.
+    except Exception as e:
+        raise RuntimeError(f"Failed to load data log file {log}: {e}") from e
 
-        Returns
-        -------
-        Path
-            The file path of the data logger.
-        """
+    return log
 
-        return self._file_path
 
-    def write(self, key_name: str, data: object) -> None:
+class DataLogger:
+    """Class for managing the logging of data within the ground station."""
+
+    @staticmethod
+    def write(key_name: str, data: object) -> None:
         """
         Append a new log entry to the CSV file.
 
@@ -86,79 +127,57 @@ class DataLogger:
             The value associated with the key.
         """
 
-        row = {
-            "write_time": datetime.now(timezone.utc).isoformat(),
-            "key_name": key_name,
-            "data": str(data),
-        }
+        DataLogger.bulk_write([DataLogEntry(key_name=key_name, data=data)])
 
-        try:
-            with _locked_file(self._file_path, "a", fcntl.LOCK_EX) as f:
-                # if missing header
-                if f.tell() == 0:
-                    raise RuntimeError(f"Data log file {self._file_path} is missing header row.")
-
-                writer = csv.DictWriter(f, fieldnames=self._FIELDNAMES, lineterminator="\n")
-                writer.writerow(row)
-                f.flush()
-                fsync(f.fileno())
-
-        except Exception as e:
-            print(f"[Error] Failed to write to data log file {self._file_path}: {e}")
-
-    def bulk_write(self, entries: list[tuple[str, object]]) -> None:
+    @staticmethod
+    def bulk_write(entries: Iterable[tuple[str, object] | DataLogEntry]) -> None:
         """
         Append multiple log entries to the CSV file in a single operation.
 
         Parameters
         ----------
         entries
-            A list of tuples, where each tuple contains a key name and its associated data.
+            Tuples containing key names and data values, or ``DataLogEntry`` objects.
         """
 
-        write_time = datetime.now(timezone.utc).isoformat()
+        rows: list[dict[str, str]] = []
+        for entry in entries:
+            if isinstance(entry, DataLogEntry):
+                log_entry = entry
+            else:
+                key_name, data = entry
+                log_entry = DataLogEntry(key_name=key_name, data=data)
 
-        rows = [
-            {
-                "write_time": write_time,
-                "key_name": key_name,
-                "data": str(data),
-            }
-            for key_name, data in entries
-        ]
+            if not log_entry.key_name.strip():
+                print(f"[Warning] Skipping log entry with empty key name and data '{log_entry.data}'")
+                continue
 
-        try:
-            with _locked_file(self._file_path, "a", fcntl.LOCK_EX) as f:
-                # if missing header
-                if f.tell() == 0:
-                    raise RuntimeError(f"Data log file {self._file_path} is missing header row.")
+            rows.append(log_entry.as_dict())
 
-                writer = csv.DictWriter(f, fieldnames=self._FIELDNAMES, lineterminator="\n")
-                writer.writerows(rows)
-                f.flush()
-                fsync(f.fileno())
+        if not rows:
+            return
 
-        except Exception as e:
-            print(f"[Error] Failed to write to data log file {self._file_path}: {e}")
+        log_file = _load_log()
 
-    def write_from_qthread(self, request_result: tuple[dict[str, Any], constants.TelemetryStatus]) -> None:
+        with _locked_file(path=log_file, mode="a", lock_type=fcntl.LOCK_EX) as f:
+            writer = DictWriter(f, fieldnames=_FIELDNAMES, lineterminator="\n")
+            writer.writerows(rows)
+            f.flush()
+            fsync(f.fileno())
+
+    @staticmethod
+    def write_from_qthread(request_result: tuple[dict[str, Any], constants.TelemetryStatus]) -> None:
         """
-        Write log entries from a ``QThread``, which may be running in a different thread context.
+        Convenience method for writing log entries from a ``QThread``, where the data is returned as a tuple.
 
         Parameters
         ----------
         request_result
             A tuple containing:
-                - a dictionary of boat status,
-                - a ``TelemetryStatus`` enum value indicating the status of the request.
+            - a dictionary with the latest boat telemetry data.
+            - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
-        boat_status, telemetry_status = request_result
+        boat_data, _ = request_result
 
-        if telemetry_status == constants.TelemetryStatus.SUCCESS:
-            entries = [
-                (key, value)
-                for key, value in boat_status.items()
-                if key in constants.SM.read("data_log_keys")
-            ]
-            self.bulk_write(entries)
+        DataLogger.bulk_write(DataLogEntry(key_name=key, data=value) for key, value in boat_data.items())

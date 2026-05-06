@@ -14,30 +14,25 @@ class TextEditWindow(QWidget):
     """
     A simple text edit window that emits the entered text when closed.
 
-    Inherits
-    -------
-    ``QWidget``
-
     Parameters
     ----------
-    highlighter: ``Optional[QSyntaxHighlighter]``
-        An optional syntax highlighter to apply to the text edit area.
-        If not provided, no syntax highlighting will be applied.
-
-    initial_text: ``str``
-        The initial text to display in the text edit area.
-        Default is an empty string.
-
-    tab_width: ``int``
+    highlighter
+        An optional syntax highlighter to apply to the text edit area. If not provided, no syntax highlighting will be applied.
+    initial_text
+        The initial text to display in the text edit area. Default is an empty string.
+    tab_width
         The width of a tab character in spaces. Default is 4.
-
-    font_size: ``int``
+    font_size
         The font size for the text editor. Default is 14.
 
     Attributes
     ----------
     user_text_emitter: ``Signal``
         Signal emitted when the window is closed, carrying the entered text.
+
+    Inherits
+    -------
+    ``QWidget``
     """
 
     user_text_emitter = Signal(str)

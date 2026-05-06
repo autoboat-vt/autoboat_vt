@@ -44,47 +44,44 @@ def _locked_file(path: constants.FileType, mode: str, lock_type: int) -> Generat
             fcntl.flock(f, fcntl.LOCK_UN)
 
 
+def _load_state(f: TextIO) -> dict[str, Any]:
+    """
+    Load the state from the given file object.
+
+    Parameters
+    ----------
+    f
+        An open file object to read the state from.
+
+    Returns
+    -------
+    dict[str, Any]
+        The state data loaded from the file.
+
+    Raises
+    ------
+    TypeError
+        If the file does not contain a JSON object.
+    """
+
+    f.seek(0)
+    content = f.read().strip()
+    if not content:
+        return {}
+
+    data = json.loads(content)
+
+    if not isinstance(data, dict):
+        raise TypeError(f"State file must contain a JSON object. Found {type(data).__name__} instead.")
+
+    return data
+
+
 class StateManager:
     """Manage shared application state stored in a JSON file."""
 
-    __slots__ = ("_path",)
-
-    def _load_state(self, f: TextIO) -> dict[str, Any]:
-        """
-        Load the state from the given file object.
-
-        Parameters
-        ----------
-        f
-            An open file object to read the state from.
-
-        Returns
-        -------
-        dict[str, Any]
-            The state data loaded from the file.
-
-        Raises
-        ------
-        TypeError
-            If the file does not contain a JSON object.
-        """
-
-        f.seek(0)
-        content = f.read().strip()
-        if not content:
-            return {}
-
-        data = json.loads(content)
-
-        if not isinstance(data, dict):
-            raise TypeError("State file must contain a JSON object.")
-        
-        if not all(isinstance(key, str) for key in data):
-            raise TypeError("State file JSON object must only contain string keys.")
-
-        return data
-
-    def write(self, variable: str, value: Any) -> None:
+    @staticmethod
+    def write(variable: str, value: Any) -> None:
         """
         Write a variable and its value to the state file.
         
@@ -97,7 +94,7 @@ class StateManager:
         """
 
         with _locked_file(path=constants.APP_STATE_PATH, mode="r+", lock_type=fcntl.LOCK_EX) as f:
-            data = self._load_state(f)
+            data = _load_state(f)
             data[variable] = value
 
             f.seek(0)
@@ -106,7 +103,8 @@ class StateManager:
             f.flush()
             fsync(f.fileno())
 
-    def read(self, variable: str) -> Any | None:
+    @staticmethod
+    def read(variable: str) -> Any | None:
         """
         Read a variable's value from the state file.
         
@@ -122,5 +120,5 @@ class StateManager:
         """
         
         with _locked_file(path=constants.APP_STATE_PATH, mode="r", lock_type=fcntl.LOCK_SH) as f:
-            data = self._load_state(f)
+            data = _load_state(f)
             return data.get(variable)

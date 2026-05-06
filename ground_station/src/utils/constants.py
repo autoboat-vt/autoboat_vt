@@ -6,12 +6,14 @@ import os
 import time
 from enum import Enum, auto
 from pathlib import Path
+from re import M
 from types import SimpleNamespace
 from typing import Any, TypeAlias
 from urllib.parse import urljoin
 
 import requests
 import requests.adapters
+from numpy import number as np_number
 from qtpy.QtCore import QPoint, QRect, QSize, Qt
 from qtpy.QtGui import QColor, QPalette
 from strenum import StrEnum
@@ -68,7 +70,7 @@ class TelemetryStatus(StrEnum):
     FAILURE = auto()
     WRONG_FORMAT = auto()
 
-NumberType: TypeAlias = int | float
+NumberType: TypeAlias = int | float | complex | np_number
 FileType: TypeAlias = str | os.PathLike[str]
 
 SM = StateManager()
@@ -123,23 +125,23 @@ STYLE_SHEET = """
     }
 """
 
+# application window title and stuff
+WINDOW_TITLE = "Groundstation"
+APPLICATION_NAME = "Groundstation"
+ORGANIZATION_NAME = "Autoboat @ VT"
+
 # window size and box
-WINDOW_SIZE = QSize(800, 600)
+MAX_WINDOW_SIZE = QSize(1800, 1080)
+WINDOW_SIZE = QSize(1200, 800)
 WINDOW_BOX = QRect(QPoint(100, 100), WINDOW_SIZE)
 
 # timers
 THIRTY_SECOND_TIMER = misc.create_timer(30_000)
-
 TEN_SECOND_TIMER = misc.create_timer(10_000)
-
 FIVE_SECOND_TIMER = misc.create_timer(5_000)
-
 ONE_SECOND_TIMER = misc.create_timer(1_000)
-
 HALF_SECOND_TIMER = misc.create_timer(500)
-
 TEN_MS_TIMER = misc.create_timer(10)
-
 ONE_MS_TIMER = misc.create_timer(1)
 
 _start_time: float = time.time()
@@ -252,6 +254,7 @@ _map_features: dict[str, dict[str, str | bool]] = {
 }
 
 _data_logging_active: bool = False
+_initial_log_file_path: str = ""
 
 STATE_FILE_CONTENTS: dict[str, Any] = {
     "start_time": _start_time,
@@ -266,7 +269,7 @@ STATE_FILE_CONTENTS: dict[str, Any] = {
     "telemetry_server_endpoints": _telemetry_server_endpoints,
     "map_features": _map_features,
     "data_logging_active": _data_logging_active,
-    "data_log_file_path": "",
+    "data_log_file_path": _initial_log_file_path,
 }
 
 try:
@@ -279,11 +282,12 @@ try:
 
     DATA_DIR = Path(TOP_LEVEL_DIR / "app_data")
     GIT_KEEP_DIR = Path(DATA_DIR / "git_keep")
-    DEFAULTS_EXAMPLES_DIR = Path(GIT_KEEP_DIR / "defaults_examples")
-    ASSETS_DIR = Path(GIT_KEEP_DIR / "assets")
-
     GIT_IGNORE_DIR = Path(DATA_DIR / "git_ignore")
     os.makedirs(GIT_IGNORE_DIR, exist_ok=True)
+
+    DEFAULTS_EXAMPLES_DIR = Path(GIT_KEEP_DIR / "defaults_examples")
+    ASSETS_DIR = Path(GIT_KEEP_DIR / "assets")
+    APP_LOGO_PATH = Path(ASSETS_DIR / "logo.png")
 
     CAMERA_WIDGET_DIR = Path(WIDGETS_DIR / "camera_widget")
     HTML_CAMERA_PATH = Path(CAMERA_WIDGET_DIR / "camera.html")
@@ -313,9 +317,6 @@ try:
             print("[Info] Creating data logs directory...")
             os.makedirs(GIT_IGNORE_DIR / "data_logs")
 
-        _data_logs_dir = GIT_IGNORE_DIR / "data_logs"
-        _initial_log_file_path: str = Path(_data_logs_dir / f"data_log_{int(time.time())}.csv").as_posix()
-
         if not APP_STATE_PATH.exists():
             print("[Info] Creating app state file...")
             APP_STATE_PATH.touch()
@@ -325,17 +326,24 @@ try:
         if json.load(open(file=APP_STATE_PATH, mode="r", encoding="utf-8")) == {}:
             print("[Info] Initializing app state file...")
             with open(APP_STATE_PATH, "w", encoding="utf-8") as f:
-                STATE_FILE_CONTENTS["data_log_file_path"] = _initial_log_file_path
                 json.dump(STATE_FILE_CONTENTS, f, indent=4)
+
+        else:
+            raise RuntimeError(
+                f"Stale app state file found at {APP_STATE_PATH}, please delete this file "
+                "and restart the application."
+            )
+        
+    DATA_LOGS_DIR = Path(GIT_IGNORE_DIR / "data_logs")
+    os.makedirs(DATA_LOGS_DIR, exist_ok=True)
+
+    DL = DataLogger()
 
     AUTOPILOT_PARAMS_DIR = Path(GIT_IGNORE_DIR / "autopilot_params")
     misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "autopilot_params", AUTOPILOT_PARAMS_DIR)
 
     BUOY_DATA_DIR = Path(GIT_IGNORE_DIR / "buoy_data")
     misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "buoy_data", BUOY_DATA_DIR)
-
-    DATA_LOGS_DIR = Path(_data_logs_dir)
-    DL = DataLogger()
 
 except Exception as e:
     raise RuntimeError(f"Initialization error: {e}") from e

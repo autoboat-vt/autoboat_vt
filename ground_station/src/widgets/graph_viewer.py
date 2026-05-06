@@ -60,7 +60,6 @@ class GraphViewer(QWidget):
 
         self.telemetry_handler = BoatStatusThreadRouter.BoatStatusFetcherThread()
         self.telemetry_handler.response.connect(self.update_graph)
-        self.telemetry_handler.response.connect(constants.DL.write_from_qthread)
         self.telemetry_handler.start()
 
     def update_graph(self, request_result: tuple[dict[str, Any], constants.TelemetryStatus]) -> None:
