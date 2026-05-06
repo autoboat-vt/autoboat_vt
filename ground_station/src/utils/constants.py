@@ -6,7 +6,6 @@ import os
 import time
 from enum import Enum, auto
 from pathlib import Path
-from re import M
 from types import SimpleNamespace
 from typing import Any, TypeAlias
 from urllib.parse import urljoin

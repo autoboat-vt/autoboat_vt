@@ -24,6 +24,7 @@ __all__ = [
 ]
 
 import os
+import textwrap
 from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
@@ -69,6 +70,13 @@ def get_icons() -> SimpleNamespace:
         "save": qta.icon("mdi.content-save", color="white"),
         "pause": qta.icon("mdi.pause-circle", color="white"),
         "play": qta.icon("mdi.play-circle", color="white"),
+        "play_circle": qta.icon("mdi.play-circle", color="white"),
+        "play_circle_outline": qta.icon("mdi.play-circle-outline", color="white"),
+        "green_play_circle_outline": qta.icon("mdi.play-circle-outline", color="green"),
+        "stop": qta.icon("mdi.stop-circle", color="white"),
+        "stop_circle": qta.icon("mdi.stop-circle", color="white"),
+        "stop_circle_outline": qta.icon("mdi.stop-circle-outline", color="white"),
+        "red_stop_circle_outline": qta.icon("mdi.stop-circle-outline", color="red"),
         "cog": qta.icon("mdi.cog", color="white"),
         "pencil": qta.icon("ei.pencil", color="white"),
         "refresh": qta.icon("mdi.refresh", color="white"),
@@ -412,3 +420,45 @@ def create_symlinks(source_dir: Path, target_dir: Path) -> None:
             
             except Exception as e:
                 raise RuntimeError(f"Failed to create symlink for '{item.name}': {e}") from e
+
+
+def js_load_guard(js_code: str) -> str:
+    """Run JavaScript after the map API has loaded."""
+
+    indented_js_code = textwrap.indent(js_code.strip(), " " * 12)
+
+    return textwrap.dedent(
+        f"""
+        function __runAutoboatMapCodeWhenReady() {{
+            if (
+                typeof map !== "undefined" &&
+                typeof map.update_boat_location_and_heading === "function"
+            ) {{
+{indented_js_code}
+                return;
+            }}
+
+            window.__autoboatPendingMapCode = __runAutoboatMapCodeWhenReady;
+
+            if (!window.__autoboatPendingMapListenerAdded) {{
+                window.__autoboatPendingMapListenerAdded = true;
+
+                document.addEventListener(
+                    "mapLoaded",
+                    function handleMapLoaded() {{
+                        window.__autoboatPendingMapListenerAdded = false;
+
+                        if (window.__autoboatPendingMapCode) {{
+                            const pendingMapCode = window.__autoboatPendingMapCode;
+                            window.__autoboatPendingMapCode = null;
+                            pendingMapCode();
+                        }}
+                    }},
+                    {{ once: true }}
+                );
+            }}
+        }}
+
+        __runAutoboatMapCodeWhenReady();
+        """
+    ).strip()
