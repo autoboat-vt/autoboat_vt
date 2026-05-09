@@ -7,9 +7,11 @@ import numpy as np
 EARTH_RADIUS = 6378137.0 # in meters
 
 class ObjectDetection:
-    def __init__(self, frame_number:int=-1, detector_confidence:float=0.0, tracker_confidence:float=0.0,
-                 x_position:float=0.0, y_position:float=0.0, width:float=0.0, height:float=0.0, object_id:int=-1,
-                 class_id:int=-1, obj_label:str="", pose_matrix:np.ndarray=None, camera_matrix_inv:np.ndarray=None) -> None:
+    def __init__(
+      self, frame_number:int=-1, detector_confidence:float=0.0, tracker_confidence:float=0.0,
+      x_position:float=0.0, y_position:float=0.0, width:float=0.0, height:float=0.0, object_id:int=-1,
+      class_id:int=-1, obj_label:str="", pose_matrix:np.ndarray=None, camera_matrix_inv:np.ndarray=None
+    ) -> None:
         self.frame_number = frame_number
         self.detector_confidence = detector_confidence
         self.tracker_confidence = tracker_confidence
@@ -52,9 +54,11 @@ class ObjectTrack:
 
 
 class ObjectTriangulator:
-    def __init__(self, camera_matrix: np.ndarray, frame_size: tuple,
-                 buffer_window_size: int, iou_threshold: float,
-                 logger: Callable[[str], None]) -> None:
+    def __init__(
+      self, camera_matrix: np.ndarray, frame_size: tuple,
+      buffer_window_size: int, iou_threshold: float,
+      logger: Callable[[str], None]
+    ) -> None:
         self.K = camera_matrix
         self.K_inv = np.linalg.inv(camera_matrix)
         self.observations = {} # {obj_id: ObjectTrack}

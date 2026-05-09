@@ -61,12 +61,14 @@ class DeepStreamEngine:
     Ultralytics https://www.ultralytics.com/
     """
     
-    def __init__(self, buffer_window_size: int, iou_threshold: float,
-                 detection_callback:Callable[[dict], None],
-                 triangulation_callback:Callable[[dict], None],
-                 info_callback:Callable[[str], None],
-                 warn_callback:Callable[[str], None],
-                 error_callback:Callable[[str], None]) -> None:
+    def __init__(
+      self, buffer_window_size: int, iou_threshold: float,
+      detection_callback:Callable[[dict], None],
+      triangulation_callback:Callable[[dict], None],
+      info_callback:Callable[[str], None],
+      warn_callback:Callable[[str], None],
+      error_callback:Callable[[str], None]
+    ) -> None:
         self.parameters = {
             "buffer_window_size": buffer_window_size, # The number of frames to keep in the buffer for triangulation.
                                                       # Should be large enough to have multiple observations of the same object,
