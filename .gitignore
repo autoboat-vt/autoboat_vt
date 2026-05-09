@@ -17,12 +17,18 @@ microros/dependencies/**
 src/object_detection/object_detection/deepstream_yolo/ultralytics/
 src/object_detection/object_detection/deepstream_yolo/labels.txt
 src/object_detection/object_detection/frame_results/
-src/object_detection/object_detection/deepstream_yolo/label_files/**
-src/object_detection/object_detection/deepstream_yolo/engine_files/**
-src/object_detection/object_detection/deepstream_yolo/pt_files/**
-src/object_detection/object_detection/deepstream_yolo/onnx_files/**
-src/object_detection/object_detection/deepstream_yolo/yolo11_config.txt
-src/object_detection/object_detection/deepstream_yolo/yolo26_config.txt
+src/object_detection/object_detection/config/yolo11/label_files/**
+src/object_detection/object_detection/config/yolo26/label_files/**
+src/object_detection/object_detection/config/yolo11/engine_files/**
+src/object_detection/object_detection/config/yolo26/engine_files/**
+src/object_detection/object_detection/config/yolo11/pt_files/**
+src/object_detection/object_detection/config/yolo26/pt_files/**
+src/object_detection/object_detection/config/yolo11/onnx_files/**
+src/object_detection/object_detection/config/yolo26/onnx_files/**
+src/object_detection/object_detection/config/yolo11_config.txt
+src/object_detection/object_detection/config/yolo26_config.txt
+src/object_detection/object_detection/config/yolo11_config.yaml
+src/object_detection/object_detection/config/yolo26_config.yaml
 
 # groundstation
 pkg

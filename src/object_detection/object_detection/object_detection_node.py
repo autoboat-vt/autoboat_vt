@@ -24,12 +24,12 @@ from std_msgs.msg import Float32, String
 
 from autoboat_msgs.msg import ObjectDetectionResult, ObjectDetectionResultsList, TriangulationResult, TriangulationResultsList
 
-from .deepstream_engine import DeepStreamEngine
+from .cv_library.deepstream_engine import DeepStreamEngine
 
 IS_DEV_CONTAINER = re.search("/home/ws", os.getcwd()) is not None
 PATH_TO_SRC_DIR = "/home/ws/src" if IS_DEV_CONTAINER else f"{os.path.expanduser('~')}/autoboat_vt/src"
 
-PATH_TO_PARAMETERS_FILE = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/cv_default_parameters.jsonc"
+PATH_TO_PARAMETERS_FILE = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/config/cv_default_parameters.jsonc"
 
 class BuoyDetectionNode(Node):
     def __init__(self) -> None:
@@ -43,7 +43,7 @@ class BuoyDetectionNode(Node):
                                    # This is to prevent duplicate detections in triangulation.
             "update_rate": None, # How often to publish detection results in seconds. We only publish the most recent
                                  # detection for each object, so we don't need to publish every frame.
-            "model_name": None, # model name without .pt.onnx. Ex. yolo11m.pt.onnx -> yolo11m
+            "model_name": None, # model name without .onnx. Ex. yolo11m.onnx -> yolo11m
             "threshold": None # detection threshold
         }
         self._read_default_parameters()
@@ -63,8 +63,6 @@ class BuoyDetectionNode(Node):
         self.vision_engine = DeepStreamEngine(
             buffer_window_size=self.parameters["buffer_window_size"],
             iou_threshold=self.parameters["iou_threshold"],
-            model_name=self.parameters["model_name"],
-            threshold=self.parameters["threshold"],
             detection_callback=self._publish_detection_results,
             triangulation_callback=self._publish_triangulation_results,
             info_callback=self._info_callback,
@@ -147,6 +145,7 @@ class BuoyDetectionNode(Node):
         msg.model_name = detection_results["model_name"]
         msg.yolo_version = detection_results["yolo_version"]
         msg.threshold = detection_results["threshold"]
+        msg.detection_results = []
         for detection in detection_results["detection_results"]:
             detection_msg = ObjectDetectionResult()
             detection_msg.detector_confidence = detection["detector_confidence"]
@@ -159,12 +158,13 @@ class BuoyDetectionNode(Node):
             detection_msg.class_id = detection["class_id"]
             detection_msg.obj_label = detection["obj_label"]
             detection_msg.angle_to_object = detection["angle_to_object"]
-            msg.detections.append(detection_msg)
+            msg.detection_results.append(detection_msg)
         self.object_detection_results_publisher.publish(msg)
 
     def _publish_triangulation_results(self, triangulation_results: dict) -> None:
         msg = TriangulationResultsList()
         msg.iou_threshold = triangulation_results["iou_threshold"]
+        msg.triangulation_results = []
         for obj_id in triangulation_results["triangulation_results"]:
             triangulation_result_msg = TriangulationResult()
             triangulation_result_msg.object_id = obj_id
@@ -172,7 +172,7 @@ class BuoyDetectionNode(Node):
             triangulation_result_msg.label = triangulation_results["triangulation_results"][obj_id]["label"]
             triangulation_result_msg.latitude = triangulation_results["triangulation_results"][obj_id]["lat"]
             triangulation_result_msg.longitude = triangulation_results["triangulation_results"][obj_id]["lon"]
-            msg.results.append(triangulation_result_msg)
+            msg.triangulation_results.append(triangulation_result_msg)
         self.triangulation_results_publisher.publish(msg)
 
 def main() -> None:

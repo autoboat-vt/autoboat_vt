@@ -14,6 +14,7 @@ from threading import Lock
 
 import numpy as np
 import pyds
+import yaml
 from gi.repository import GLib, Gst
 
 from .triangulation import ObjectDetection, ObjectTriangulator
@@ -34,9 +35,10 @@ EARTH_RADIUS = 6378137.0  # Radius of Earth in meters
 PATH_TO_SRC_DIR = "/home/ws/src" if IS_DEV_CONTAINER else f"{os.path.expanduser('~')}/autoboat_vt/src"
 
 YOLO_CONFIG = {
-    11: f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/yolo11_config.txt",
-    26: f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/yolo26_config.txt"
+    11: f"{PATH_TO_SRC_DIR}/object_detection/object_detection/config/yolo11_config.yaml",
+    26: f"{PATH_TO_SRC_DIR}/object_detection/object_detection/config/yolo26_config.yaml"
 }
+CAMERA_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/config/camera_config.yaml"
 INFERENCE = True
 if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":
     INFERENCE = False
@@ -60,21 +62,11 @@ class DeepStreamEngine:
     """
     
     def __init__(self, buffer_window_size: int, iou_threshold: float,
-                 model_name: str, threshold: float,
                  detection_callback:Callable[[dict], None],
                  triangulation_callback:Callable[[dict], None],
                  info_callback:Callable[[str], None],
                  warn_callback:Callable[[str], None],
                  error_callback:Callable[[str], None]) -> None:
-        self.CAM_LIST = {
-            0: {
-                "name": self._find_camera("YUYV") if CAMERA else "videotestsrc",
-                "framerate": "30/1",
-                "format": "YUY2",
-                "input_width": 1280,
-                "input_height": 800
-            }
-        }
         self.parameters = {
             "buffer_window_size": buffer_window_size, # The number of frames to keep in the buffer for triangulation.
                                                       # Should be large enough to have multiple observations of the same object,
@@ -82,8 +74,8 @@ class DeepStreamEngine:
             "iou_threshold": iou_threshold, # If two detections are less than this distance apart, they are considered the same
                                             # object and the older one is deleted.
                                             # This is to prevent duplicate detections in triangulation.
-            "model_name": model_name, # model name without .pt.onnx. Ex. yolo11m.pt.onnx -> yolo11m
-            "threshold": threshold # detection threshold
+            "model_name": "", # model name without .onnx. Ex. yolo11m.onnx -> yolo11m
+            "threshold": "" # detection threshold
         }
         self.detection_callback = detection_callback
         self.triangulation_callback = triangulation_callback
@@ -91,17 +83,19 @@ class DeepStreamEngine:
         self.warn_callback = warn_callback
         self.error_callback = error_callback
 
+        self.cam_list = self._read_camera_config()
+        self.cam_list[0]["name"] = self._find_camera(self.cam_list[0]["v4l2_format"]) if CAMERA else "videotestsrc"
         self.camera_baseline = 59 # Distance between cameras in mm
         self.camera_HFOV = 90 # Horizontal Field of View in degrees (from datasheet)
 
         # Focal length of the camera is 1.93 mm or 640 px.
-        self.camera_focal_px = (self.CAM_LIST[0]["input_width"] * 0.5) / tan(self.camera_HFOV * 0.5 * pi / 180) # 640 px
-        self.camera_K = np.array([[self.camera_focal_px, 0, self.CAM_LIST[0]["input_width"] * 0.5],
-                                  [0, self.camera_focal_px, self.CAM_LIST[0]["input_height"] * 0.5],
+        self.camera_focal_px = (self.cam_list[0]["width"] * 0.5) / tan(self.camera_HFOV * 0.5 * pi / 180) # 640 px
+        self.camera_K = np.array([[self.camera_focal_px, 0, self.cam_list[0]["width"] * 0.5],
+                                  [0, self.camera_focal_px, self.cam_list[0]["height"] * 0.5],
                                   [0, 0, 1]])
         self.camera_K_inv = np.linalg.inv(self.camera_K)
         self.triangulator = ObjectTriangulator(camera_matrix=self.camera_K,
-                                               frame_size=(self.CAM_LIST[0]["input_width"], self.CAM_LIST[0]["input_height"]),
+                                               frame_size=(self.cam_list[0]["width"], self.cam_list[0]["height"]),
                                                buffer_window_size=self.parameters["buffer_window_size"],
                                                iou_threshold=self.parameters["iou_threshold"],
                                                logger=self.info_callback)
@@ -148,10 +142,10 @@ class DeepStreamEngine:
         # v4l2-ctl --device /dev/video0 --list-formats-ext
         if CAMERA:
             source0 = Gst.ElementFactory.make("v4l2src", "usb-cam-0")
-            source0.set_property('device', self.CAM_LIST[0]["name"])
+            source0.set_property('device', self.cam_list[0]["name"])
         else:
             source0 = Gst.ElementFactory.make("videotestsrc", "usb-cam-0")
-        self.info_callback(f"Opening camera device: {self.CAM_LIST[0]['name']}")
+        self.info_callback(f"Opening camera device: {self.cam_list[0]['name']}")
 
         """
         v4l2 camera settings
@@ -162,10 +156,12 @@ class DeepStreamEngine:
         """
 
         caps_source0 = Gst.ElementFactory.make('capsfilter', 'source0-caps')
-        caps_source0.set_property('caps', Gst.Caps.from_string(f'video/x-raw, width={self.CAM_LIST[0]["input_width"]},'
-                                                               f'height={self.CAM_LIST[0]["input_height"]},'
-                                                               f'format={self.CAM_LIST[0]["format"]},'
-                                                               f'framerate={self.CAM_LIST[0]["framerate"]}'))
+        caps_source0.set_property('caps', Gst.Caps.from_string(f'video/x-raw,'
+                                                               f'width={self.cam_list[0]["width"]},'
+                                                               f'height={self.cam_list[0]["height"]},'
+                                                               f'format={self.cam_list[0]["gst_format"]},'
+                                                               f'framerate={self.cam_list[0]["framerate"]}'
+                                                               ))
 
         # This is a workaround.
         # Issue with deepstream7.1 and jetpack6.2 requires compute-hw to be 1 instead of 0.
@@ -179,15 +175,18 @@ class DeepStreamEngine:
         nvvidconvsrc0 = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-src-0')
         nvvidconvsrc0.set_property('nvbuf-memory-type', MEMORY_TYPE)
         nvvidconvsrc0.set_property('compute-hw', COMPUTE_HW)
+        nvvidconvsrc0.set_property('src-crop', "0:0:640:800")
         if IS_DEV_CONTAINER:
+            # This is for ease of use. Usually we're holding the camera
             nvvidconvsrc0.set_property('flip-method', 2)
 
         caps_nvvidconvsrc0 = Gst.ElementFactory.make("capsfilter", "nvmm-caps-0")
         caps_nvvidconvsrc0.set_property(
             "caps",
             Gst.Caps.from_string(
-                f"video/x-raw(memory:NVMM), format=NV12, width={self.CAM_LIST[0]['input_width']},"
-                f"height={self.CAM_LIST[0]['input_height']}"
+                f"video/x-raw(memory:NVMM), format=NV12,"
+                f"width={self.cam_list[0]['width']},"
+                f"height={self.cam_list[0]['height']}"
             ),
         )
 
@@ -200,7 +199,7 @@ class DeepStreamEngine:
             # docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvtracker.html#nvidia-tao-reidentificationnet
             tracker.set_property("ll-lib-file", "/opt/nvidia/deepstream/deepstream-7.1/lib/libnvds_nvmultiobjecttracker.so")
             tracker.set_property('ll-config-file',
-                                 f'{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_tracker_NvDCF_perf.yml')
+                                 f'{PATH_TO_SRC_DIR}/object_detection/object_detection/config/config_tracker_NvDCF_perf.yml')
             tracker.set_property("tracking-id-reset-mode", 0)
 
         queue_multifilesink_valve = Gst.ElementFactory.make("queue", "queue-valve")
@@ -389,7 +388,7 @@ class DeepStreamEngine:
                 obj_results["object_id"] = obj_meta.object_id
                 obj_results["class_id"] = obj_meta.class_id
                 obj_results["obj_label"] = obj_meta.obj_label
-                obj_results["angle_to_object"] = np.arctan((mid_x - self.CAM_LIST[0]["input_width"] * 0.5)
+                obj_results["angle_to_object"] = np.arctan((mid_x - self.cam_list[0]["width"] * 0.5)
                                                            / self.camera_focal_px) * 180 / pi
                 msg["detection_results"].append(obj_results)
                 if (self.valid_origin_position):
@@ -498,6 +497,10 @@ class DeepStreamEngine:
 
         return pose
 
+    def _read_camera_config(self) -> dict:
+        with open(CAMERA_CONFIG, 'r') as file:
+            return yaml.safe_load(file)
+
     def _find_camera(self, camera_format: str) -> str:
         """
         This is just a way to figure out which /dev/video* is the camera<br>
@@ -566,13 +569,13 @@ class DeepStreamEngine:
         onnx_section = config_file_split[1]
         onnx_lines = onnx_section.split('\n')
         for line in onnx_lines:
-            if line.startswith('onnx-file='):
-                model = line.split('=')[-1][13:-8] # remove .pt.onnx
+            if line.strip().startswith('onnx-file: '):
+                model = line.split(': ')[-1].split('/')[-1].split('.')[0] # isolate model name without path or extension
                 break
         
         # Read threshold
         attributes_lines = config_file_split[5].split('\n')
-        threshold = float(attributes_lines[1].split('=')[-1])
+        threshold = float(attributes_lines[1].split(': ')[-1])
         return (config_file_split, model, threshold)
 
     def update_model_or_threshold(self, new_model: str | None = None, new_threshold: float | None = None) -> bool:
@@ -593,7 +596,7 @@ class DeepStreamEngine:
         if new_threshold != self.parameters["threshold"]:
             if new_threshold >= 0.0 and new_threshold <= 1.0:
                 attributes_lines = self.config_file_split[5].split('\n')
-                attributes_lines[1] = f"pre-cluster-threshold={new_threshold}"
+                attributes_lines[1] = f"    pre-cluster-threshold: {new_threshold}"
                 self.config_file_split[5] = "\n".join(attributes_lines)
                 self.parameters["threshold"] = new_threshold
                 self.info_callback(f"Updated threshold to {new_threshold}")
@@ -617,15 +620,15 @@ class DeepStreamEngine:
             if not found_model_entry:
                 split_lines = self._read_file(YOLO_CONFIG[26 if self.yolo_ver == 11 else 11])[0]
                 onnx_lines, engine_lines, labels_lines, found_model_entry = self._modify_config_lines(split_lines, new_model)
-                if found_model_entry:
+                if found_model_entry: # we found the model in the alternate config, so we can switch to that config
                     self.yolo_ver = 26 if self.yolo_ver == 11 else 11
                     attributes_lines = split_lines[5].split('\n')
-                    attributes_lines[1] = f"pre-cluster-threshold={self.parameters['threshold']}"
+                    attributes_lines[1] = f"    pre-cluster-threshold: {self.parameters['threshold']}"
                     split_lines[5] = "\n".join(attributes_lines)
                     self.config_file_split = split_lines
                     self.info_callback(f"Model entry found in alternate config, switching to Yolo{self.yolo_ver}")
                 else:
-                    self.info_callback(f"Model {new_model}.pt.onnx not found, not updating model")
+                    self.info_callback(f"Model {new_model}.onnx not found, not updating model")
                     self.file_lock.release()
             
             if found_model_entry:
@@ -647,8 +650,8 @@ class DeepStreamEngine:
         engine_lines = lines_split[2].split('\n')
         labels_lines = lines_split[3].split('\n')
         properties = lines_split[4].split('\n')
-        batch_size = int(properties[1].split('=')[-1].split(' ')[0])
-        network_mode = int(properties[2].split('=')[-1].split(' ')[0])
+        batch_size = int(properties[1].split(': ')[-1].split(' ')[0])
+        network_mode = int(properties[2].split(': ')[-1].split(' ')[0])
         match network_mode:
             case 0:
                 quantize = "fp32"
@@ -662,24 +665,24 @@ class DeepStreamEngine:
 
         found_model_entry = False
         for i in range(len(onnx_lines)):
-            if onnx_lines[i].startswith('onnx-file='):
-                onnx_lines[i] = "#" + onnx_lines[i]
-            if onnx_lines[i] == f"#onnx-file=./onnx_files/{new_model}.pt.onnx":
-                onnx_lines[i] = onnx_lines[i][1:] # uncomment line so the model can be used
+            if onnx_lines[i].strip().startswith('onnx-file: '):
+                onnx_lines[i] = "    # " + onnx_lines[i].strip()
+            if onnx_lines[i].split(': ')[-1].split('/')[-1] == f"{new_model}.onnx":
+                onnx_lines[i] = f"    {onnx_lines[i].strip()[2:]}" # uncomment line so the model can be used
                 found_model_entry = True
 
         if found_model_entry:
             for i in range(len(engine_lines)):
-                if engine_lines[i].startswith('model-engine-file='):
-                    engine_lines[i] = "#" + engine_lines[i]
-                if engine_lines[i] == f"#model-engine-file=./engine_files/{new_model}_model_b{batch_size}_gpu0_{quantize}.engine":
-                    engine_lines[i] = engine_lines[i][1:] # uncomment line so the model can be used
+                if engine_lines[i].strip().startswith('model-engine-file: '):
+                    engine_lines[i] = "    # " + engine_lines[i].strip()
+                if engine_lines[i].split(': ')[-1].split('/')[-1] == f"{new_model}_model_b{batch_size}_gpu0_{quantize}.engine":
+                    engine_lines[i] = f"    {engine_lines[i].strip()[2:]}" # uncomment line so the model can be used
 
             for i in range(len(labels_lines)):
-                if labels_lines[i].startswith('labelfile-path='):
-                    labels_lines[i] = "#" + labels_lines[i]
-                if labels_lines[i] == f"#labelfile-path=./label_files/{new_model}_labels.txt":
-                    labels_lines[i] = labels_lines[i][1:] # uncomment line so the model can be used
+                if labels_lines[i].strip().startswith('labelfile-path: '):
+                    labels_lines[i] = "    # " + labels_lines[i].strip()
+                if labels_lines[i].split(': ')[-1].split('/')[-1] == f"{new_model}_labels.txt":
+                    labels_lines[i] = f"    {labels_lines[i].strip()[2:]}" # uncomment line so the model can be used
         
         return (onnx_lines, engine_lines, labels_lines, found_model_entry)
 
