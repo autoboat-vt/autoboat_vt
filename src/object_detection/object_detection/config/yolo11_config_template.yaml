@@ -6,18 +6,12 @@ property:
 
     # This is the onnx file section.
     # Onnx files are created by running export_yolo11.py
-    onnx-file: ./yolo11/onnx_files/chris.onnx
-    #onnx-file: ./yolo11/onnx_files/yolo11s.onnx
 
     # This is the engine file section
     # Engine files are created by running the deepstream pipeline
-    model-engine-file: ./yolo11/engine_files/chris_model_b1_gpu0_fp16.engine
-    #model-engine-file: ./yolo11/engine_files/yolo11s_model_b1_gpu0_fp16.engine
 
     # This is the label file section
     # Label files are created by running export_yolo11.py
-    labelfile-path: ./yolo11/label_files/chris_labels.txt
-    #labelfile-path: ./yolo11/label_files/yolo11s_labels.txt
 
     #int8-calib-file: calib.table
     batch-size: 1 # This should equal the number of video streams

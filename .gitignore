@@ -14,11 +14,9 @@ microros/dependencies/**
 **.onnx
 **.o
 **.so
-src/object_detection/object_detection/deepstream_yolo/ultralytics/
-src/object_detection/object_detection/deepstream_yolo/labels.txt
 src/object_detection/object_detection/frame_results/
-src/object_detection/object_detection/config/yolo11/label_files/**
-src/object_detection/object_detection/config/yolo26/label_files/**
+src/object_detection/object_detection/config/yolo11/**
+src/object_detection/object_detection/config/yolo26/**
 src/object_detection/object_detection/config/yolo11/engine_files/**
 src/object_detection/object_detection/config/yolo26/engine_files/**
 src/object_detection/object_detection/config/yolo11/pt_files/**
