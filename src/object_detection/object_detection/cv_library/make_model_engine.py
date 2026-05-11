@@ -27,12 +27,9 @@ else:
     IS_DEV_CONTAINER = False
 
 # Determine paths based on environment
-if IS_DEV_CONTAINER:
-    PATH_TO_SRC_DIR = "/home/ws/src"
-else:
-    PATH_TO_SRC_DIR = "/home/sailbot/autoboat_vt/src"
+PATH_TO_SRC_DIR = "/home/ws/src" if IS_DEV_CONTAINER else f"{os.path.expanduser('~')}/autoboat_vt/src"
 
-PATH_TO_YOLO_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo{sys.argv[1]}.txt"
+PATH_TO_YOLO_CONFIG = f"{PATH_TO_SRC_DIR}/object_detection/object_detection/config/yolo{sys.argv[1]}_config.yaml"
 
 # Configuration
 COMPUTE_HW = 1
@@ -45,8 +42,8 @@ with open(PATH_TO_YOLO_CONFIG, 'r') as file:
     content = file.read()
     split_content = content.split('\n\n')
     properties = split_content[4].split('\n')
-    BATCH_SIZE = properties[1].split('=')[1].split(' ')[0]
-    network_mode = int(properties[2].split('=')[-1].split(' ')[0])
+    BATCH_SIZE = properties[1].split(': ')[1].split(' ')[0]
+    network_mode = int(properties[2].split(': ')[-1].split(' ')[0])
     match network_mode:
         case 0:
             QUANTIZE = "fp32"
@@ -258,10 +255,10 @@ def main():
 
     with open(PATH_TO_YOLO_CONFIG, "r") as f:
         for line in f:
-            if line.strip().startswith("onnx-file=") and not line.strip().startswith("#"):
-                onnx_file = line.split("=")[1].strip()
-            if line.strip().startswith("model-engine-file=") and not line.strip().startswith("#"):
-                engine_file = line.split("=")[1].strip()
+            if line.strip().startswith("onnx-file: ") and not line.strip().startswith("#"):
+                onnx_file = line.split(": ")[-1].strip()
+            if line.strip().startswith("model-engine-file: ") and not line.strip().startswith("#"):
+                engine_file = line.split(": ")[-1].strip()
 
     if onnx_file:
         onnx_path = os.path.join(CONFIG_DIRECTORY, onnx_file)
@@ -278,7 +275,7 @@ def main():
         target_engine_path = os.path.join(CONFIG_DIRECTORY, engine_file)
         # Default engine filename that DeepStream creates
         default_engine_file = f"model_b{BATCH_SIZE}_gpu0_{QUANTIZE}.engine"
-        default_engine_path = os.path.join(CONFIG_DIRECTORY, default_engine_file)
+        default_engine_path = os.path.join(f"{PATH_TO_SRC_DIR}/object_detection/object_detection/cv_library", default_engine_file)
         
         if os.path.exists(target_engine_path):
             print(f"⚠ Warning: Target engine file already exists: {engine_file}")
