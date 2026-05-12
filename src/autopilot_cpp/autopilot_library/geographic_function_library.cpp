@@ -102,15 +102,7 @@ float get_distance(double latitude1, double longitude1, double latitude2, double
 
 
 
-/**
- * Calculates the initial azimuth (bearing) from point 1 to point 2.
- * 
- * @param latitude1 Latitude of point 1 in degrees.
- * @param longitude1 Longitude of point 1 in degrees.
- * @param latitude2 Latitude of point 2 in degrees.
- * @param longitude2 Longitude of point 2 in degrees.
- * @return Azimuth in degrees, clockwise from North (0 to 360).
- */
+
 float calculate_bearing(double latitude1, double longitude1, double latitude2, double longitude2) {
    
     // Convert degrees to radians
