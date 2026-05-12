@@ -1,14 +1,14 @@
+import gzip
 import json
 import os
 import time
-from functools import partial
 from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urljoin
 
 import numpy as np
 import svg
-from qtpy.QtCore import QSize, Qt, QUrl, Signal
+from qtpy.QtCore import QSize, Qt, QUrl, Signal, Slot
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import (
     QFileDialog,
@@ -121,7 +121,7 @@ class GroundStationWidget(QWidget):
         self.start_data_logging_button.setIconSize(QSize(20, 20))
 
         self.stop_data_logging_button = misc.pushbutton_maker(
-            "Stop Data Logging",
+            "End Data Logging",
             constants.ICONS.stop_circle_outline,
             self.stop_data_logging,
             max_width=self.left_width,
@@ -148,7 +148,7 @@ class GroundStationWidget(QWidget):
 
         # region middle sections
         self.browser = QWebEngineView()
-        self.browser.setUrl(QUrl(f"http://127.0.0.1:{constants.VITE_PORT}"))
+        self.browser.setPage(constants.MAP_PAGE)
         
         self.browser.setMinimumWidth(self.middle_width_min)
         self.browser.setMaximumWidth(self.middle_width_max)
@@ -164,9 +164,7 @@ class GroundStationWidget(QWidget):
         self.telemetry_config_button.setToolTip(
             "If enabled, a popup will appear where you can alter the telemetry configuration.",
         )
-        self.telemetry_config_button.clicked.connect(
-            lambda: self.edit_telemetry_config_window.show() or self.edit_telemetry_config_window.raise_()
-        )
+        self.telemetry_config_button.clicked.connect(self.edit_telemetry_config_window.show)
 
         self.test_waypoint_rng = np.random.default_rng(69420)
         self.add_500_test_waypoints_button = QPushButton("Add 500 Test Waypoints?")
@@ -187,7 +185,9 @@ class GroundStationWidget(QWidget):
         self.right_tab1_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.right_tab1_table = QTableWidget()
         self.right_tab1_table.setMinimumWidth(self.right_width)
-        self.right_tab1_table.cellClicked.connect(partial(self.zoom_to_marker, table="waypoints"))
+        self.right_tab1_table.cellClicked.connect(
+            lambda row, _column: self.zoom_to_marker(row, table="waypoints")
+        )
         self.can_send_waypoints = True
         self.send_waypoints_button = misc.pushbutton_maker(
             "Send Waypoints",
@@ -240,7 +240,9 @@ class GroundStationWidget(QWidget):
         self.right_tab2_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.right_tab2_table = QTableWidget()
         self.right_tab2_table.setMinimumWidth(self.right_width)
-        self.right_tab2_table.cellClicked.connect(partial(self.zoom_to_marker, table="buoys"))
+        self.right_tab2_table.cellClicked.connect(
+            lambda row, _column: self.zoom_to_marker(row, table="buoys")
+        )
 
         self.edit_buoy_data_button = misc.pushbutton_maker(
             "Edit Buoy Data",
@@ -294,10 +296,12 @@ class GroundStationWidget(QWidget):
         for timer in self.timers:
             timer.start()
 
-        self.boat_status_source: Signal = boat_status_source
+        self.boat_status_source = boat_status_source
         self.boat_status_source.connect(self.update_telemetry_display)
 
     # region button functions
+
+    @Slot()
     def send_waypoints(self, test: bool = False) -> None:
         """
         Send waypoints to the server.
@@ -336,6 +340,7 @@ class GroundStationWidget(QWidget):
             except RequestException as e:
                 print(f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")
 
+    @Slot()
     def pull_waypoints(self) -> None:
         """Pull waypoints from the telemetry server and add them to the map."""
 
@@ -374,6 +379,7 @@ class GroundStationWidget(QWidget):
         except RequestException as e:
             print(f"[Error] Failed to pull waypoints. Exception: {e}")
 
+    @Slot()
     def clear_waypoints(self) -> None:
         """Clear waypoints from the table."""
 
@@ -383,6 +389,7 @@ class GroundStationWidget(QWidget):
         js_code = "map.clear_waypoints()"
         self.browser.page().runJavaScript(misc.js_load_guard(js_code))
 
+    @Slot()
     def add_500_test_waypoints(self) -> None:
         """Add 500 test waypoints to the map."""
 
@@ -393,6 +400,7 @@ class GroundStationWidget(QWidget):
 
         print("[Info] Added 500 test waypoints to the map, LOL.")
 
+    @Slot()
     def start_data_logging(self) -> None:
         """Start logging telemetry data to a file."""
 
@@ -408,6 +416,7 @@ class GroundStationWidget(QWidget):
         
         print("[Info] Data logging started.")
 
+    @Slot()
     def stop_data_logging(self) -> None:
         """Stop logging telemetry data to a file."""
 
@@ -417,8 +426,23 @@ class GroundStationWidget(QWidget):
         self.start_data_logging_button.setDisabled(False)
         self.stop_data_logging_button.setDisabled(True)
 
-        print("[Info] Data logging stopped.")
+        non_compressed_path = Path(constants.SM.read("data_log_file_path"))
+        file_size = os.path.getsize(non_compressed_path) / (1024 * 1024)
+        
+        if file_size > 20:
+            compressed_file_path = Path(constants.SM.read("data_log_file_path").replace(".csv", ".csv.gz"))
 
+            with (open(non_compressed_path, "rb") as f_in, gzip.open(compressed_file_path, "wb") as f_out):
+                f_out.writelines(f_in)
+
+            compressed_file_size = os.path.getsize(compressed_file_path) / (1024 * 1024)
+            file_size_percent_difference = (file_size - compressed_file_size) / file_size * 100
+            print(
+                f"[Info] Data logging stopped. Log file compressed to {compressed_file_path}, "
+                f"reduced file size by {file_size_percent_difference:.2f}%."
+            )
+
+    @Slot()
     def edit_buoy_data(self) -> None:
         """
         Opens a text edit window to edit the buoy data.
@@ -438,6 +462,7 @@ class GroundStationWidget(QWidget):
         except Exception as e:
             print(f"[Error] Failed to open buoy data edit window: {e}")
 
+    @Slot(str)
     def edit_buoy_data_callback(self, text: str) -> None:
         """
         Callback function for the ``edit_buoy_data`` function.
@@ -484,6 +509,7 @@ class GroundStationWidget(QWidget):
         self.right_tab2_table.resizeColumnsToContents()
         self.right_tab2_table.resizeRowsToContents()
 
+    @Slot()
     def save_buoy_data(self) -> None:
         """
         Saves latest entry in the ``self.buoys`` array to a file.
@@ -501,7 +527,8 @@ class GroundStationWidget(QWidget):
             print(f"[Error] Failed to save buoy data: {e}")
 
         print(f"[Info] Buoy data saved to {file_path}")
-
+    
+    @Slot()
     def load_buoy_data(self) -> None:
         """
         Load buoy data from the ``buoy_data`` directory, if none selected use ``default.json``.
@@ -535,11 +562,13 @@ class GroundStationWidget(QWidget):
 
         print(f"[Info] Buoy data loaded from {chosen_file[0]}")
 
+    @Slot()
     def zoom_to_boat(self) -> None:
         """Center the view on the boat's position."""
 
         self.browser.page().runJavaScript(misc.js_load_guard("map.focus_map_on_boat()"))
 
+    @Slot(int, str)
     def zoom_to_marker(self, row: int, table: Literal["waypoints", "buoys"] = "waypoints") -> None:
         """
         Center the view on the selected waypoint in the table.
@@ -600,6 +629,7 @@ class GroundStationWidget(QWidget):
 
     # region pyqt thread functions
 
+    @Slot()
     def remote_waypoint_handler_starter(self) -> None:
         """Starts the telemetry waypoint handler thread."""
 
@@ -611,12 +641,14 @@ class GroundStationWidget(QWidget):
         if not self.remote_waypoint_handler.isRunning():
             self.remote_waypoint_handler.start()
 
+    @Slot()
     def local_waypoint_handler_starter(self) -> None:
         """Starts the local waypoint handler thread."""
 
         if not self.local_waypoint_handler.isRunning():
             self.local_waypoint_handler.start()
 
+    @Slot(tuple)
     def update_waypoints_display(self, request_result: tuple[list[list[int | float]], constants.TelemetryStatus]) -> None:
         """
         Update waypoints display with waypoints fetched from the local server.
@@ -670,6 +702,7 @@ class GroundStationWidget(QWidget):
             self.right_tab1_table.resizeColumnsToContents()
             self.right_tab1_table.resizeRowsToContents()
 
+    @Slot(tuple)
     def check_telemetry_waypoints(self, request_result: tuple[list[list[int | float]], constants.TelemetryStatus]) -> None:
         """
         Check if the waypoints on the telemetry server are the same as the local waypoints.

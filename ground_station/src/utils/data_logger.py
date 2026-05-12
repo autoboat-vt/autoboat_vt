@@ -14,6 +14,8 @@ from os import fsync
 from pathlib import Path
 from typing import Any, TextIO, cast
 
+from qtpy.QtCore import Slot
+
 from utils import constants
 
 
@@ -166,6 +168,7 @@ class DataLogger:
             fsync(f.fileno())
 
     @staticmethod
+    @Slot(tuple)
     def write_from_qthread(request_result: tuple[dict[str, Any], constants.TelemetryStatus]) -> None:
         """
         Convenience method for writing log entries from a ``QThread``, where the data is returned as a tuple.

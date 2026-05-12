@@ -1,4 +1,4 @@
-from qtpy.QtCore import QEvent, QRect, QSize, Qt, Signal
+from qtpy.QtCore import QEvent, QRect, QSize, Qt, Signal, Slot
 from qtpy.QtGui import (
     QColor,
     QFontDatabase,
@@ -253,6 +253,7 @@ class TextEditWindow(QWidget):
         if self.highlighter:
             self.highlighter.rehighlight()
 
+    @Slot()
     def save(self) -> None:
         """Save current text."""
 

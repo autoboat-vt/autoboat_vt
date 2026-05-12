@@ -1,5 +1,7 @@
+# general
 .DS_Store
 .python-version
+*.pyc
 **/__pycache__/**
 build
 build_unit_tests
@@ -41,11 +43,10 @@ src/object_detection/object_detection/hard_images/**
 # frames generated from camera recorder
 frame_logs
 
-
 # c++ compiler profiling traces using ninjatracing
 trace.json
 
-
+# files generated from debian packaging
 *.deb
 .devcontainer/devcontainer_environment_variables
 .devcontainer/host_environment_variables

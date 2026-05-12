@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, Slot
 from qtpy.QtWidgets import (
     QFileDialog,
     QFrame,
@@ -137,6 +137,7 @@ class AutopilotConfigEditor(QWidget):
         self.add_parameters()
         self.update_status_label()
 
+    @Slot()
     def send_all_parameters(self) -> None:
         """Send all parameters to the telemetry endpoint."""
 
@@ -261,6 +262,7 @@ class AutopilotConfigEditor(QWidget):
         except RequestException as e:
             print(f"[Error] Failed to send all parameters: {e}")
 
+    @Slot()
     def pull_all_parameters(self) -> None:
         """Pull all parameters from the telemetry endpoint."""
 
@@ -343,6 +345,7 @@ class AutopilotConfigEditor(QWidget):
         except TypeError:
             print(f"[Error] Unexpected data format from telemetry server: {data}. Expected a dictionary of parameters.")
 
+    @Slot()
     def load_parameters_from_file(self) -> None:
         """Load parameters from a file."""
 
@@ -392,6 +395,7 @@ class AutopilotConfigEditor(QWidget):
         except Exception as e:
             print(f"[Error] Unable to load parameters from file: {e}")
 
+    @Slot()
     def save_parameters_to_file(self) -> None:
         """Save parameters to a file."""
 
@@ -437,6 +441,7 @@ class AutopilotConfigEditor(QWidget):
         self.spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
         self.params_layout.addItem(self.spacer)
 
+    @Slot(str)
     def filter_parameters(self, search_text: str = "") -> None:
         """
         Filter parameters based on search text.
@@ -611,6 +616,7 @@ class AutopilotParamWidget(QFrame):
         self.setFrameStyle(QFrame.Box | QFrame.Plain)
         self.setLineWidth(1)
 
+    @Slot()
     def send_value(self) -> None:
         """Send the current value of the parameter to the telemetry endpoint."""
 
@@ -655,6 +661,7 @@ class AutopilotParamWidget(QFrame):
         self.send_button.setEnabled(False)
         self.pull_button.setEnabled(False)
 
+    @Slot()
     def pull_value(self) -> None:
         """Pull the current value of the parameter from the telemetry endpoint."""
 
@@ -689,6 +696,7 @@ class AutopilotParamWidget(QFrame):
         self.send_button.setEnabled(False)
         self.pull_button.setEnabled(False)
 
+    @Slot()
     def reset_value(self) -> None:
         """Reset the value of the parameter to its default value."""
 
@@ -708,6 +716,7 @@ class AutopilotParamWidget(QFrame):
         self.send_button.setEnabled(True)
         self.pull_button.setEnabled(True)
 
+    @Slot()
     def update_value_from_lineedit(self) -> None:
         """
         Update value from ``QLineEdit`` input.
@@ -770,6 +779,7 @@ class AutopilotParamWidget(QFrame):
         self.pull_button.setEnabled(True)
         self.reset_button.setEnabled(True)
 
+    @Slot()
     def edit_grouped_data(self) -> None:
         """Open a text editor for editing a sequence of values."""
 
@@ -783,6 +793,7 @@ class AutopilotParamWidget(QFrame):
         except Exception as e:
             print(f"[Error] Failed to open text edit window for {self.name}: {e}")
 
+    @Slot(str)
     def edit_grouped_data_callback(self, text: str) -> None:
         """
         Callback function for the ``edit_grouped_data`` function.

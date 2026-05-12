@@ -5,7 +5,7 @@ from enum import auto
 from typing import Any
 from urllib.parse import urljoin
 
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, Slot
 from qtpy.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -217,6 +217,7 @@ class AutopilotConfigManager(QWidget):
         self.on_sort_by_changed(self.sort_by.name)
         self.timer.start()
 
+    @Slot(int)
     def on_auto_refresh_toggled(self, state: int) -> None:
         """
         Handle the auto refresh toggle state change.
@@ -232,6 +233,7 @@ class AutopilotConfigManager(QWidget):
         else:
             self.timer.stop()
 
+    @Slot()
     def on_hashes_fetched(self, request_result: tuple[list[dict[str, Any]], constants.TelemetryStatus]) -> None:
         """
         Handle the fetched hashes from the telemetry server.
@@ -298,6 +300,7 @@ class AutopilotConfigManager(QWidget):
             self.configs_container.setUpdatesEnabled(True)
             self.configs_container.update()
 
+    @Slot()
     def on_active_hash_fetched(self, request_result: tuple[str, constants.TelemetryStatus]) -> None:
         """
         Handle the fetched active configuration hash from the telemetry server.
@@ -315,6 +318,7 @@ class AutopilotConfigManager(QWidget):
         if status == constants.TelemetryStatus.SUCCESS:
             constants.SM.write("remote_autopilot_param_hash", hash_string.strip().replace('"', ""))
 
+    @Slot()
     def create_new_config(self) -> None:
         """
         Handle the create new configuration button click event.
@@ -327,6 +331,7 @@ class AutopilotConfigManager(QWidget):
         self.text_edit_window.user_text_emitter.connect(self.create_new_config_callback)
         self.text_edit_window.show()
 
+    @Slot(str)
     def create_new_config_callback(self, config_data: str) -> None:
         """
         Callback function to handle the new configuration data entered by the user.
@@ -362,6 +367,7 @@ class AutopilotConfigManager(QWidget):
 
         self.timer.start()
     
+    @Slot(str)
     def on_sort_by_changed(self, sort_method: str) -> None:
         """
         Handle the sort by dropdown change event.
@@ -388,7 +394,8 @@ class AutopilotConfigManager(QWidget):
         except ValueError:
             print(f"[Warning] Invalid sort by option: {sort_method}")
             return
-        
+
+    @Slot()
     def filter_instances(self, search_text: str) -> None:
         """
         Filter the displayed configuration widgets based on the search text.
@@ -434,12 +441,14 @@ class AutopilotConfigManager(QWidget):
         )
         self.status_label.setText(status_text)
 
+    @Slot()
     def hash_fetcher_starter(self) -> None:
         """Refresh the list of available configuration hashes from the telemetry server."""
 
         if not self.hashes_fetcher.isRunning():
             self.hashes_fetcher.start()
 
+    @Slot()
     def active_hash_fetcher_starter(self) -> None:
         """Refresh the active configuration hash from the telemetry server."""
 
@@ -565,6 +574,7 @@ class ConfigWidget(QFrame):
         self.main_layout.addLayout(self.button_layout)
         self.setLayout(self.main_layout)
 
+    @Slot()
     def on_download_clicked(self) -> None:
         """Handle the download button click event."""
 
@@ -599,6 +609,7 @@ class ConfigWidget(QFrame):
         except TypeError as e:
             print(f"[Error] Invalid data format received from server, expected `dict` but got `{data}`: {e}")
 
+    @Slot()
     def on_delete_clicked(self) -> None:
         """Handle the delete button click event."""
 
@@ -621,6 +632,7 @@ class ConfigWidget(QFrame):
         except RequestException as e:
             print(f"[Error] Failed to delete configuration: {e}")
 
+    @Slot()
     def on_description_changed(self) -> None:
         """Handle the description edit change event."""
 

@@ -1,12 +1,6 @@
-import {
-    LatLngBounds,
-    SVGOverlay,
-    Control,
-    DomUtil,
-    type Map as LeafletMap
-} from "leaflet";
+import { Control, DomUtil, LatLngBounds, type Map as LeafletMap, SVGOverlay } from "leaflet";
+import type { BoatManager } from "./boat";
 import type { LatLngTuple } from "./types";
-import { BoatManager } from "./boat";
 
 export class CompassControl extends Control {
     compass_svg: HTMLElement | null = null;
@@ -32,9 +26,7 @@ export class CompassControl extends Control {
             </g>
         </svg>`;
 
-        this.arrow_svg = this.compass_svg.querySelector(
-            "#wind-arrow"
-        ) as SVGElement;
+        this.arrow_svg = this.compass_svg.querySelector("#wind-arrow") as SVGElement;
 
         return this.compass_svg;
     }
@@ -86,34 +78,26 @@ export class SVGManager {
      */
     updateNoSailSvg(innerHTML: string, size: number): void {
         const bounds: LatLngBounds = this.map.getBounds();
-        const width: number =
-            ((bounds.getEast() - bounds.getWest()) / 2) * size;
-        const height: number =
-            ((bounds.getSouth() - bounds.getNorth()) / 2) * size;
+        const width: number = ((bounds.getEast() - bounds.getWest()) / 2) * size;
+        const height: number = ((bounds.getSouth() - bounds.getNorth()) / 2) * size;
         const location: LatLngTuple = this.boat_manager.boat.location;
         const svgElementBounds: LatLngBounds = new LatLngBounds(
             [location[0] + width, location[1] + height],
             [location[0] - width, location[1] - height]
         );
 
-        var svgElement: SVGElement | undefined = undefined;
+        var svgElement: SVGElement | undefined;
 
         if (this.no_sail_svg == null) {
-            svgElement = document.createElementNS(
-                "http://www.w3.org/2000/svg",
-                "svg"
-            );
+            svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
             svgElement.setAttribute("xmlns", "http://www.w3.org/2000/svg");
             svgElement.setAttribute("viewBox", `0 0 4 4`);
             svgElement.innerHTML = innerHTML;
-            this.no_sail_svg = new SVGOverlay(
-                svgElement,
-                svgElementBounds
-            ).addTo(this.map);
+            this.no_sail_svg = new SVGOverlay(svgElement, svgElementBounds).addTo(this.map);
         } else {
             this.no_sail_svg.setBounds(svgElementBounds);
             svgElement = this.no_sail_svg.getElement();
-            if (svgElement != undefined) {
+            if (svgElement !== undefined) {
                 svgElement.innerHTML = innerHTML;
             }
         }
@@ -124,34 +108,26 @@ export class SVGManager {
      */
     updateVelocitySvg(innerHTML: string, size: number): void {
         const bounds: LatLngBounds = this.map.getBounds();
-        const width: number =
-            ((bounds.getEast() - bounds.getWest()) / 2) * size;
-        const height: number =
-            ((bounds.getSouth() - bounds.getNorth()) / 2) * size;
+        const width: number = ((bounds.getEast() - bounds.getWest()) / 2) * size;
+        const height: number = ((bounds.getSouth() - bounds.getNorth()) / 2) * size;
         const location: LatLngTuple = this.boat_manager.boat.location;
         const svgElementBounds: LatLngBounds = new LatLngBounds(
             [location[0] + width, location[1] + height],
             [location[0] - width, location[1] - height]
         );
 
-        var svgElement: SVGElement | undefined = undefined;
+        var svgElement: SVGElement | undefined;
 
         if (this.velocity_svg == null) {
-            svgElement = document.createElementNS(
-                "http://www.w3.org/2000/svg",
-                "svg"
-            );
+            svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
             svgElement.setAttribute("xmlns", "http://www.w3.org/2000/svg");
             svgElement.setAttribute("viewBox", `0 0 4 4`);
             svgElement.innerHTML = innerHTML;
-            this.velocity_svg = new SVGOverlay(
-                svgElement,
-                svgElementBounds
-            ).addTo(this.map);
+            this.velocity_svg = new SVGOverlay(svgElement, svgElementBounds).addTo(this.map);
         } else {
             this.velocity_svg.setBounds(svgElementBounds);
             svgElement = this.velocity_svg.getElement();
-            if (svgElement != undefined) {
+            if (svgElement !== undefined) {
                 svgElement.innerHTML = innerHTML;
             }
         }
@@ -174,36 +150,24 @@ export class SVGManager {
      */
     updateWindSvg(innerHTML: string): void {
         const bounds: LatLngBounds = this.map.getBounds();
-        const lon1: number =
-            (39 / 40) * bounds.getWest() + (1 / 40) * bounds.getEast();
-        const lat1: number =
-            (37 / 40) * bounds.getSouth() + (3 / 40) * bounds.getNorth();
-        const lon2: number =
-            (35 / 40) * bounds.getWest() + (5 / 40) * bounds.getEast();
-        const lat2: number =
-            (33 / 40) * bounds.getSouth() + (7 / 40) * bounds.getNorth();
-        const svgElementBounds: LatLngBounds = new LatLngBounds(
-            [lat1, lon1],
-            [lat2, lon2]
-        );
+        const lon1: number = (39 / 40) * bounds.getWest() + (1 / 40) * bounds.getEast();
+        const lat1: number = (37 / 40) * bounds.getSouth() + (3 / 40) * bounds.getNorth();
+        const lon2: number = (35 / 40) * bounds.getWest() + (5 / 40) * bounds.getEast();
+        const lat2: number = (33 / 40) * bounds.getSouth() + (7 / 40) * bounds.getNorth();
+        const svgElementBounds: LatLngBounds = new LatLngBounds([lat1, lon1], [lat2, lon2]);
 
-        var svgElement: SVGElement | undefined = undefined;
+        var svgElement: SVGElement | undefined;
 
         if (this.wind_svg == null) {
-            svgElement = document.createElementNS(
-                "http://www.w3.org/2000/svg",
-                "svg"
-            );
+            svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
             svgElement.setAttribute("xmlns", "http://www.w3.org/2000/svg");
             svgElement.setAttribute("viewBox", `0 0 100 100`);
             svgElement.innerHTML = innerHTML;
-            this.wind_svg = new SVGOverlay(svgElement, svgElementBounds).addTo(
-                this.map
-            );
+            this.wind_svg = new SVGOverlay(svgElement, svgElementBounds).addTo(this.map);
         } else {
             this.wind_svg.setBounds(svgElementBounds);
             svgElement = this.wind_svg.getElement();
-            if (svgElement != undefined) {
+            if (svgElement !== undefined) {
                 svgElement.innerHTML = innerHTML;
             }
         }

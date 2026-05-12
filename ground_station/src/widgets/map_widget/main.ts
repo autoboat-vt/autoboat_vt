@@ -1,21 +1,21 @@
 import {
-    map as LeafletMap,
-    tileLayer,
-    icon,
     control,
-    type Map as LeafletMapType,
-    type MapOptions,
     type Icon,
-    type LeafletMouseEvent
+    icon,
+    map as LeafletMap,
+    type Map as LeafletMapType,
+    type LeafletMouseEvent,
+    type MapOptions,
+    tileLayer
 } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-rotatedmarker";
 
-import { WaypointManager } from "./waypoints";
-import { BuoyManager } from "./buoys";
 import { BoatManager } from "./boat";
-import type { LatLngTuple } from "./types";
+import { BuoyManager } from "./buoys";
 import { SVGManager } from "./svg";
+import type { LatLngTuple } from "./types";
+import { WaypointManager } from "./waypoints";
 
 class MapInterface {
     static readonly mapOptions: MapOptions = { center: [0, 0], zoom: 13 };
@@ -38,27 +38,27 @@ class MapInterface {
 
     static getIcon(color: string): Icon {
         const key = `marker-${color}`;
-        const cachedIcon = this.iconCache.get(key);
+        const cachedIcon = MapInterface.iconCache.get(key);
 
         if (cachedIcon !== undefined) {
             return cachedIcon;
         }
 
         const markerIcon = icon({
-            iconUrl: this.assetsUrl + `marker-icon-${color}.png`,
-            shadowUrl: this.assetsUrl + "marker-shadow.png",
+            iconUrl: `${MapInterface.assetsUrl}marker-icon-${color}.png`,
+            shadowUrl: `${MapInterface.assetsUrl}marker-shadow.png`,
             iconSize: [25, 41],
             iconAnchor: [12, 41],
             shadowSize: [41, 41]
         });
 
-        this.iconCache.set(key, markerIcon);
+        MapInterface.iconCache.set(key, markerIcon);
         return markerIcon;
     }
 
     static getBoatIcon(scale = 1): Icon {
         return icon({
-            iconUrl: this.assetsUrl + "boat.png",
+            iconUrl: `${MapInterface.assetsUrl}boat.png`,
             iconSize: [50 * scale, 50 * scale],
             iconAnchor: [25 * scale, 25 * scale]
         });
@@ -75,32 +75,22 @@ class MapInterface {
             this.syncWaypoints.bind(this)
         );
 
-        this.buoys = new BuoyManager(
-            this.map,
-            MapInterface.getIcon.bind(MapInterface),
-            MapInterface.buoyColor
-        );
+        this.buoys = new BuoyManager(this.map, MapInterface.getIcon.bind(MapInterface), MapInterface.buoyColor);
 
-        this.boat = new BoatManager(
-            this.map,
-            MapInterface.getBoatIcon.bind(MapInterface)
-        );
+        this.boat = new BoatManager(this.map, MapInterface.getBoatIcon.bind(MapInterface));
 
         this.svgs = new SVGManager(this.map, this.boat);
 
         const mapTilerKey = "M9yBkV9J49pYUg5o8SGC";
-        tileLayer(
-            `https://api.maptiler.com/maps/openstreetmap/{z}/{x}/{y}.jpg?key=${mapTilerKey}`,
-            {
-                minZoom: this.minZoom,
-                maxZoom: this.maxZoom,
-                tileSize: 512,
-                zoomOffset: -1,
-                attribution:
-                    '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>',
-                crossOrigin: true
-            }
-        ).addTo(this.map);
+        tileLayer(`https://api.maptiler.com/maps/openstreetmap/{z}/{x}/{y}.jpg?key=${mapTilerKey}`, {
+            minZoom: this.minZoom,
+            maxZoom: this.maxZoom,
+            tileSize: 512,
+            zoomOffset: -1,
+            attribution:
+                '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>',
+            crossOrigin: true
+        }).addTo(this.map);
 
         control.scale().addTo(this.map);
 
@@ -118,11 +108,7 @@ class MapInterface {
         });
 
         this.map.on("contextmenu", (event: LeafletMouseEvent) => {
-            const closestIndex = this.waypoints.findClosestIndex(
-                event.latlng.lat,
-                event.latlng.lng,
-                20
-            );
+            const closestIndex = this.waypoints.findClosestIndex(event.latlng.lat, event.latlng.lng, 20);
 
             if (closestIndex !== -1) {
                 this.waypoints.remove(closestIndex);
@@ -172,11 +158,7 @@ class MapInterface {
         this.boat.updateHeading(heading);
     }
 
-    update_boat_location_and_heading(
-        lat: number,
-        lon: number,
-        heading: number
-    ): void {
+    update_boat_location_and_heading(lat: number, lon: number, heading: number): void {
         this.boat.updateLocationAndHeading(lat, lon, heading);
     }
 

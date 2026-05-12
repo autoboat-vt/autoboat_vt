@@ -6,7 +6,7 @@ from urllib.parse import urljoin
 import numpy as np
 import numpy.typing as npt
 import pyqtgraph as pg
-from qtpy.QtCore import Qt, Signal
+from qtpy.QtCore import Qt, Signal, Slot
 from qtpy.QtWidgets import QCheckBox, QDialog, QGridLayout, QWidget
 from requests.exceptions import RequestException
 from utils import constants, misc
@@ -62,6 +62,7 @@ class GraphViewer(QWidget):
         self.telemetry_handler.response.connect(self.update_graph)
         self.telemetry_handler.start()
 
+    @Slot(tuple)
     def update_graph(self, request_result: tuple[dict[str, Any], constants.TelemetryStatus]) -> None:
         """Update the graphs with new telemetry data.
 
@@ -151,6 +152,7 @@ class GraphViewer(QWidget):
         except Exception as e:
             print(f"[Error] Failed to update graphs: {e}")
 
+    @Slot()
     def select_graphs(self) -> None:
         """Open a dialog to select which graphs to display."""
 
@@ -186,6 +188,7 @@ class GraphViewer(QWidget):
 
         self.graph_dialog.apply_button.clicked.connect(lambda: self.apply_graph_selection(self.graph_dialog.selected_keys))
 
+    @Slot(list)
     def apply_graph_selection(self, selected_keys: list[str]) -> None:
         """
         Apply the selected graphs to display.
@@ -297,12 +300,14 @@ class GraphSelectionDialog(QDialog):
                 col = len(self.checkboxes) % 2
                 self.layout.addWidget(checkbox, row, col)
 
+    @Slot()
     def update_checkboxes(self) -> None:
         """Update the state of the checkboxes based on the selected keys."""
 
         for key, checkbox in self.checkboxes.items():
             checkbox.setChecked(key in self.selected_keys)
 
+    @Slot()
     def on_apply_clicked(self) -> None:
         """Apply the selected graphs and close the dialog."""
 

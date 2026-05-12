@@ -10,11 +10,12 @@
         "leaflet-rotatedmarker": "^0.2.0"
     },
     "devDependencies": {
+        "@biomejs/biome": "latest",
         "@types/bun": "latest",
         "@types/geojson": "^7946.0.16",
         "@types/leaflet": "^1.9.21",
         "@types/leaflet-rotatedmarker": "^0.2.6",
-        "typescript": "^6.0.2",
-        "vite": "^8.0.8"
+        "typescript": "latest",
+        "vite": "latest"
     }
 }

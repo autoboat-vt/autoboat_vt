@@ -1,4 +1,4 @@
-import { type Icon, type Map as LeafletMap } from "leaflet";
+import type { Icon, Map as LeafletMap } from "leaflet";
 import { MarkerManager } from "./marker";
 
 export class BuoyManager extends MarkerManager {

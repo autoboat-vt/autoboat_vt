@@ -99,7 +99,9 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    constants.ICONS = misc.get_icons()
+    
+    misc.before_app_start()
+    
     window = MainWindow()
     threading.Thread(target=window.start_asset_server, daemon=True).start()
 

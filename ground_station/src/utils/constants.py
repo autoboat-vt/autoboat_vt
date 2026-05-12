@@ -13,8 +13,9 @@ from urllib.parse import urljoin
 import requests
 import requests.adapters
 from numpy import number as np_number
-from qtpy.QtCore import QPoint, QRect, QSize, Qt
+from qtpy.QtCore import QPoint, QRect, QSize, Qt, QUrl
 from qtpy.QtGui import QColor, QPalette
+from qtpy.QtWebEngineWidgets import QWebEnginePage
 from strenum import StrEnum
 
 from utils import misc
@@ -74,7 +75,7 @@ FileType: TypeAlias = str | os.PathLike[str]
 
 SM = StateManager()
 
-# see `main.py` for where this is set
+# icons will be loaded in `misc.before_app_start()` after the QApplication instance is created
 ICONS: SimpleNamespace
 
 # colors (monokai pro color scheme)
@@ -145,10 +146,14 @@ ONE_MS_TIMER = misc.create_timer(1)
 
 _start_time: float = time.time()
 
-# server ports
+# server ports and web engine page
 ASSET_SERVER_PORT = 8000
 GO_SERVER_PORT = 3002
 VITE_PORT = 5173
+
+# MAP_PAGE is set in `misc.before_app_start()` since QWebEnginePage cannot be created before that
+MAP_URL = QUrl(f"http://127.0.0.1:{VITE_PORT}")
+MAP_PAGE: QWebEnginePage
 
 # url for local waypoints server
 _waypoints_server_url: str = f"http://localhost:{GO_SERVER_PORT}/waypoints"

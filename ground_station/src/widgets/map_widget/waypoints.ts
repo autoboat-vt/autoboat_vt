@@ -1,6 +1,6 @@
-import { type Icon, type Map as LeafletMap } from "leaflet";
-import type { LatLngTuple } from "./types";
+import type { Icon, Map as LeafletMap } from "leaflet";
 import { MarkerManager } from "./marker";
+import type { LatLngTuple } from "./types";
 
 export class WaypointManager extends MarkerManager {
     readonly waypoints = this.points;
@@ -11,9 +11,7 @@ export class WaypointManager extends MarkerManager {
         getIcon: (color: string) => Icon,
         private readonly defaultColor: string,
         private readonly focusedColor: string,
-        private readonly syncWaypoints: (
-            waypoints: LatLngTuple[]
-        ) => Promise<void>
+        private readonly syncWaypoints: (waypoints: LatLngTuple[]) => Promise<void>
     ) {
         super(map, getIcon);
     }
@@ -60,8 +58,7 @@ export class WaypointManager extends MarkerManager {
         if (this.focusedWaypoint && this.focusedWaypoint !== key) {
             const previousKey = this.focusedWaypoint;
             const previousMarker = this.markers.get(previousKey);
-            const previousColor =
-                this.markerColors.get(previousKey) ?? this.defaultColor;
+            const previousColor = this.markerColors.get(previousKey) ?? this.defaultColor;
             if (previousMarker) {
                 previousMarker.setIcon(this.getIcon(previousColor));
             }
@@ -71,10 +68,7 @@ export class WaypointManager extends MarkerManager {
         waypointMarker.setIcon(this.getIcon(this.focusedColor));
     }
 
-    protected override getDisplayColor(
-        key: string,
-        storedColor: string
-    ): string {
+    protected override getDisplayColor(key: string, storedColor: string): string {
         if (this.focusedWaypoint === key) {
             return this.focusedColor;
         }
