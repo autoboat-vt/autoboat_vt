@@ -45,8 +45,8 @@ class MapInterface {
         }
 
         const markerIcon = icon({
-            iconUrl: MapInterface.assetsUrl + `marker-icon-${color}.png`,
-            shadowUrl: MapInterface.assetsUrl + "marker-shadow.png",
+            iconUrl: `${MapInterface.assetsUrl}marker-icon-${color}.png`,
+            shadowUrl: `${MapInterface.assetsUrl}marker-shadow.png`,
             iconSize: [25, 41],
             iconAnchor: [12, 41],
             shadowSize: [41, 41]
@@ -58,7 +58,7 @@ class MapInterface {
 
     static getBoatIcon(scale = 1): Icon {
         return icon({
-            iconUrl: MapInterface.assetsUrl + "boat.png",
+            iconUrl: `${MapInterface.assetsUrl}boat.png`,
             iconSize: [50 * scale, 50 * scale],
             iconAnchor: [25 * scale, 25 * scale]
         });
