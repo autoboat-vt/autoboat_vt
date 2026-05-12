@@ -1,11 +1,4 @@
-import {
-    latLng,
-    marker,
-    type Icon,
-    type LatLngExpression,
-    type Map as LeafletMap,
-    type Marker
-} from "leaflet";
+import { type Icon, type LatLngExpression, type Map as LeafletMap, latLng, type Marker, marker } from "leaflet";
 
 import type { LatLngTuple } from "./types";
 
@@ -86,7 +79,7 @@ export abstract class MarkerManager {
     }
 
     protected clearPoints(): void {
-        this.markers.forEach(pointMarker => {
+        this.markers.forEach((pointMarker) => {
             this.map.removeLayer(pointMarker);
         });
 

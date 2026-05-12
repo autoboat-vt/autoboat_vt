@@ -20,7 +20,7 @@
                 "donjayamanne.python-environment-manager",
                 "ms-python.debugpy",
                 "charliermarsh.ruff",
-                "esbenp.prettier-vscode",
+                "biomejs.biome",
                 "jannchie.ruff-ignore-explainer",
                 "dbaeumer.vscode-eslint",
                 "rodolphebarbanneau.python-docstring-highlighter",
@@ -65,7 +65,5 @@
         // "--device=/dev/ttyACM0",
         // "--device-cgroup-rule=c 166:* rmw"
     ],
-    "mounts": [
-        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
-    ]
+    "mounts": ["source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"]
 }

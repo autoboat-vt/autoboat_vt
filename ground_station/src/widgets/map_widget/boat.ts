@@ -1,9 +1,4 @@
-import {
-    marker,
-    type Icon,
-    type Map as LeafletMap,
-    type Marker
-} from "leaflet";
+import { type Icon, type Map as LeafletMap, type Marker, marker } from "leaflet";
 import type { LatLngTuple } from "./types";
 
 interface BoatState {
