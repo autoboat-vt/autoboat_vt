@@ -4,7 +4,7 @@
 const std::string DISTANCE_FUNCTION_TO_USE = "haversine";
 
 
-// haversine distance for distance between 2 points on a spheroid (approximation to an elipsoid)
+// haversine distance for distance between 2 points on a spheroid (approximation to an ellipsoid)
 // this is a less accurate distance function than vincenty since it assumes that the earth is a perfect sphere
 // https://en.wikipedia.org/wiki/Haversine_formula
 float get_distance_haversine(double latitude1, double longitude1, double latitude2, double longitude2) {
@@ -19,7 +19,7 @@ float get_distance_haversine(double latitude1, double longitude1, double latitud
 
 
 
-// Using vincentys formula to calculate the distance between 2 points on an elipsoid
+// Using vincentys formula to calculate the distance between 2 points on an ellipsoid
 // this is a more accurate distance function than haversine since it doesn't make the assumption that the earth is a perfect sphere
 // https://github.com/dariusarnold/vincentys-formula
 // https://en.wikipedia.org/wiki/Vincenty%27s_formulae 
@@ -39,15 +39,18 @@ float get_distance_vincenty(double latitude1, double longitude1, double latitude
     double longitude_1_radians = M_PI * longitude1 / 180.0;
     double longitude_2_radians = M_PI * longitude2 / 180.0;
 
-    const double reduced_latitude_1_radians = atan((1 - flattening) * tan(latitude_2_radians));
-    const double reduced_latitude_2_radians = atan((1 - flattening) * tan(latitude_1_radians));
+    const double reduced_latitude_1_radians = atan((1 - flattening) * tan(latitude_1_radians));
+    const double reduced_latitude_2_radians = atan((1 - flattening) * tan(latitude_2_radians));
 
     double longitude_difference_radians = longitude_1_radians - longitude_2_radians;
     double lambda_radians = longitude_difference_radians;
     constexpr double iteration_tolerance = 10.e-12; // iteration tolerance
     double lambda_difference = 1.;
 
-    while (abs(lambda_difference) > iteration_tolerance) {
+    int iterations = 0;
+    const int max_iterations = 200;
+
+    while (abs(lambda_difference) > iteration_tolerance && iterations < max_iterations) {
         sine_of_sigma = sqrt(pow((cos(reduced_latitude_2_radians) * sin(lambda_radians)), 2.) + pow(cos(reduced_latitude_1_radians)*sin(reduced_latitude_2_radians) - sin(reduced_latitude_1_radians)*cos(reduced_latitude_2_radians)*cos(lambda_radians), 2.));
         
         if (sine_of_sigma == 0.) {
@@ -56,9 +59,7 @@ float get_distance_vincenty(double latitude1, double longitude1, double latitude
         }
         
         cosine_of_sigma = sin(reduced_latitude_1_radians) * sin(reduced_latitude_2_radians) + cos(reduced_latitude_1_radians) * cos(reduced_latitude_2_radians) * cos(lambda_radians);
-        sigma_radians = atan(sine_of_sigma / cosine_of_sigma);
-        
-        if (sigma_radians <= 0) sigma_radians = M_PI + sigma_radians;
+        sigma_radians = atan2(sine_of_sigma, cosine_of_sigma);
         
         sine_of_alpha = (cos(reduced_latitude_1_radians) * cos(reduced_latitude_2_radians) * sin(lambda_radians)) / sine_of_sigma;
         cosine_squared_of_alpha = 1 - pow(sine_of_alpha, 2.);
@@ -74,6 +75,11 @@ float get_distance_vincenty(double latitude1, double longitude1, double latitude
         previous_lambda_radians = lambda_radians;
         lambda_radians = longitude_difference_radians + (1 - vincenty_c) * flattening * sine_of_alpha * (sigma_radians + vincenty_c * sine_of_sigma * (cosine_of_twice_sigma + vincenty_c * cosine_of_sigma * (2 * pow(cosine_of_twice_sigma, 2.) - 1)));
         lambda_difference = abs(previous_lambda_radians - lambda_radians);
+    }
+
+    if (iterations >= max_iterations) {
+        // Failed to converge (usually happens for nearly antipodal points). 
+        return std::numeric_limits<float>::quiet_NaN(); 
     }
 
     const double u_squared = cosine_squared_of_alpha * ((pow(equatorial_radius_meters, 2.) - pow(polar_radius_meters, 2.)) / pow(polar_radius_meters ,2.));
