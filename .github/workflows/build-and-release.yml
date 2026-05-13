@@ -22,7 +22,7 @@ env:
 
 on:
   push:
-    branches: [ "main", "renaming_refactoring"]
+    branches: [ "main" ]
     tags:
       - 'v*'
   pull_request:
@@ -136,7 +136,7 @@ jobs:
           MINOR: ${{ steps.meta.outputs.minor }}
           GITHUB_SHA: ${{ github.sha }}
         with:
-          files: .github/workflows/docker-bake.hcl
+          files: .github/docker-bake.hcl
           push: false
           set: |
             *.platform=linux/${{ matrix.architecture }}
@@ -144,8 +144,8 @@ jobs:
             *.cache-to=type=gha,mode=max,scope=${{ matrix.architecture }}
             base.cache-from=type=gha,scope=base-${{ matrix.architecture }}
             base.cache-to=type=gha,mode=max,scope=base-${{ matrix.architecture }}
-            microros.cache-from=type=gha,scope=microros-${{ matrix.architecture }}
-            microros.cache-to=type=gha,mode=max,scope=microros-${{ matrix.architecture }}
+            firmware.cache-from=type=gha,scope=firmware-${{ matrix.architecture }}
+            firmware.cache-to=type=gha,mode=max,scope=firmware-${{ matrix.architecture }}
 
       - name: Build and Load Docker Images (Bake)
         if: github.event_name != 'pull_request'
@@ -160,15 +160,15 @@ jobs:
           MINOR: ${{ steps.meta.outputs.minor }}
           GITHUB_SHA: ${{ github.sha }}
         with:
-          files: .github/workflows/docker-bake.hcl
+          files: .github/docker-bake.hcl
           load: true
           set: |
             *.platform=linux/${{ matrix.architecture }}
             *.cache-from=type=gha,scope=${{ matrix.architecture }}
             base.cache-from=type=gha,scope=base-${{ matrix.architecture }}
             base.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache
-            microros.cache-from=type=gha,scope=microros-${{ matrix.architecture }}
-            microros.cache-from=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache
+            firmware.cache-from=type=gha,scope=firmware-${{ matrix.architecture }}
+            firmware.cache-from=type=registry,ref=vtautoboat/development_image_firmware:${{ matrix.architecture }}-cache
 
       # -----------------------------------------------------------------------
       # Run colcon build AND package everything inside the container.
@@ -190,7 +190,7 @@ jobs:
           fi
 
           # Ensure the script is executable
-          chmod +x .github/workflows/build_and_package.sh
+          chmod +x .github/build_and_package.sh
 
           docker run --rm \
             --user root \
@@ -202,8 +202,8 @@ jobs:
             -e IGNORE_PACKAGES="${IGNORE_PACKAGES}" \
             -e CCACHE_DIR=.ccache \
             -e CMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            vtautoboat/development_image_microros:${{ matrix.architecture }} \
-            bash .github/workflows/build_and_package.sh
+            vtautoboat/development_image_firmware:${{ matrix.architecture }} \
+            bash .github/build_and_package.sh
 
       - name: Push Docker Images and Cache (Bake)
         if: github.event_name != 'pull_request'
@@ -218,7 +218,7 @@ jobs:
           MINOR: ${{ steps.meta.outputs.minor }}
           GITHUB_SHA: ${{ github.sha }}
         with:
-          files: .github/workflows/docker-bake.hcl
+          files: .github/docker-bake.hcl
           push: true
           set: |
             *.platform=linux/${{ matrix.architecture }}
@@ -228,10 +228,10 @@ jobs:
             base.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache
             base.cache-to=type=gha,mode=max,scope=base-${{ matrix.architecture }}
             base.cache-to=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache,mode=max
-            microros.cache-from=type=gha,scope=microros-${{ matrix.architecture }}
-            microros.cache-from=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache
-            microros.cache-to=type=gha,mode=max,scope=microros-${{ matrix.architecture }}
-            microros.cache-to=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache,mode=max
+            firmware.cache-from=type=gha,scope=firmware-${{ matrix.architecture }}
+            firmware.cache-from=type=registry,ref=vtautoboat/development_image_firmware:${{ matrix.architecture }}-cache
+            firmware.cache-to=type=gha,mode=max,scope=firmware-${{ matrix.architecture }}
+            firmware.cache-to=type=registry,ref=vtautoboat/development_image_firmware:${{ matrix.architecture }}-cache,mode=max
 
       # Upload both the .tar.gz and .deb as workflow artifacts.
       # On every push/PR these are downloadable from the Actions tab for 5 days.
@@ -308,12 +308,12 @@ jobs:
       packages: write
     strategy:
       matrix:
-        variant: [ standard, microros ]
+        variant: [ standard, firmware ]
         include:
           - variant: standard
             image_repo: vtautoboat/development_image
-          - variant: microros
-            image_repo: vtautoboat/development_image_microros
+          - variant: firmware
+            image_repo: vtautoboat/development_image_firmware
     steps:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -331,8 +331,8 @@ jobs:
       - name: Create and Push Multi-Arch Manifests
         run: |
           OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}
-          GHCR_REPO="ghcr.io/${OWNER_LC}/${{ matrix.variant == 'standard' && 'development_image' || 'development_image_microros' }}"
-          DOCKER_HUB_REPO="vtautoboat/${{ matrix.variant == 'standard' && 'development_image' || 'development_image_microros' }}"
+          GHCR_REPO="ghcr.io/${OWNER_LC}/${{ matrix.variant == 'standard' && 'development_image' || 'development_image_firmware' }}"
+          DOCKER_HUB_REPO="vtautoboat/${{ matrix.variant == 'standard' && 'development_image' || 'development_image_firmware' }}"
 
           echo "==> Creating multi-arch manifest for ${DOCKER_HUB_REPO}:latest..."
           docker buildx imagetools create -t ${DOCKER_HUB_REPO}:latest ${DOCKER_HUB_REPO}:amd64 ${DOCKER_HUB_REPO}:arm64
