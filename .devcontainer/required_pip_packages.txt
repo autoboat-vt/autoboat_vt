@@ -65,4 +65,4 @@ numpy==1.26.4
 docker
 ruff
 pynput
-#jetson-stats
+# jetson-stats
