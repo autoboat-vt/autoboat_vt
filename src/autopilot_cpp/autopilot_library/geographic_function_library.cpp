@@ -39,8 +39,8 @@ float get_distance_vincenty(double latitude1, double longitude1, double latitude
     double longitude_1_radians = M_PI * longitude1 / 180.0;
     double longitude_2_radians = M_PI * longitude2 / 180.0;
 
-    const double reduced_latitude_1_radians = atan((1 - flattening) * tan(latitude_2_radians));
-    const double reduced_latitude_2_radians = atan((1 - flattening) * tan(latitude_1_radians));
+    const double reduced_latitude_1_radians = atan((1 - flattening) * tan(latitude_1_radians));
+    const double reduced_latitude_2_radians = atan((1 - flattening) * tan(latitude_2_radians));
 
     double longitude_difference_radians = longitude_1_radians - longitude_2_radians;
     double lambda_radians = longitude_difference_radians;
