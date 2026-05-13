@@ -42,11 +42,11 @@ cp -r /opt/autoboat/firmware_dependencies/micro_ros_agent/install/* "${PKG_DIR_S
 
 # Control file + Maintainer scripts
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
-  .github/debian_package_files/control.template > "${PKG_DIR_STD}/DEBIAN/control"
+  .github/workflows/debian_package_files/control.template > "${PKG_DIR_STD}/DEBIAN/control"
 
-cp .github/debian_package_files/postinst "${PKG_DIR_STD}/DEBIAN/postinst"
-cp .github/debian_package_files/prerm    "${PKG_DIR_STD}/DEBIAN/prerm"
-cp .github/debian_package_files/postrm   "${PKG_DIR_STD}/DEBIAN/postrm"
+cp .github/workflows/debian_package_files/postinst "${PKG_DIR_STD}/DEBIAN/postinst"
+cp .github/workflows/debian_package_files/prerm    "${PKG_DIR_STD}/DEBIAN/prerm"
+cp .github/workflows/debian_package_files/postrm   "${PKG_DIR_STD}/DEBIAN/postrm"
 chmod 0755 "${PKG_DIR_STD}/DEBIAN/postinst" "${PKG_DIR_STD}/DEBIAN/prerm" "${PKG_DIR_STD}/DEBIAN/postrm"
 
 # ── Simulation package logic (amd64 only) ──────────────────────
@@ -85,7 +85,7 @@ if [ "${DEB_ARCH}" == "amd64" ]; then
   
   # Control file
   sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
-      .github/debian_package_files/control-simulation.template > "${PKG_DIR_SIM}/DEBIAN/control"
+      .github/workflows/debian_package_files/control-simulation.template > "${PKG_DIR_SIM}/DEBIAN/control"
   
   dpkg-deb --build "${PKG_DIR_SIM}" "output_artifacts/autoboat-vt-simulation-${DEB_ARCH}.deb"
 fi
@@ -106,12 +106,12 @@ cp -r /opt/autoboat/firmware_dependencies/pico-sdk "${PKG_DIR_UC}/opt/autoboat/f
 
 # Control file (Depends on standard package)
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
-  .github/debian_package_files/control-microros.template > "${PKG_DIR_UC}/DEBIAN/control"
+  .github/workflows/debian_package_files/control-microros.template > "${PKG_DIR_UC}/DEBIAN/control"
 
 # Use the same post-install scripts (they are idempotent)
-cp .github/debian_package_files/postinst "${PKG_DIR_UC}/DEBIAN/postinst"
-cp .github/debian_package_files/prerm    "${PKG_DIR_UC}/DEBIAN/prerm"
-cp .github/debian_package_files/postrm   "${PKG_DIR_UC}/DEBIAN/postrm"
+cp .github/workflows/debian_package_files/postinst "${PKG_DIR_UC}/DEBIAN/postinst"
+cp .github/workflows/debian_package_files/prerm    "${PKG_DIR_UC}/DEBIAN/prerm"
+cp .github/workflows/debian_package_files/postrm   "${PKG_DIR_UC}/DEBIAN/postrm"
 chmod 0755 "${PKG_DIR_UC}/DEBIAN/postinst" "${PKG_DIR_UC}/DEBIAN/prerm" "${PKG_DIR_UC}/DEBIAN/postrm"
 
 dpkg-deb --build "${PKG_DIR_UC}" "output_artifacts/autoboat-vt-microros-full-${DEB_ARCH}.deb"

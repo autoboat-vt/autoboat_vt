@@ -136,7 +136,7 @@ jobs:
           MINOR: ${{ steps.meta.outputs.minor }}
           GITHUB_SHA: ${{ github.sha }}
         with:
-          files: .github/docker-bake.hcl
+          files: .github/workflows/docker-bake.hcl
           push: false
           set: |
             *.platform=linux/${{ matrix.architecture }}
@@ -160,7 +160,7 @@ jobs:
           MINOR: ${{ steps.meta.outputs.minor }}
           GITHUB_SHA: ${{ github.sha }}
         with:
-          files: .github/docker-bake.hcl
+          files: .github/workflows/docker-bake.hcl
           load: true
           set: |
             *.platform=linux/${{ matrix.architecture }}
@@ -190,7 +190,7 @@ jobs:
           fi
 
           # Ensure the script is executable
-          chmod +x .github/build_and_package.sh
+          chmod +x .github/workflows/build_and_package.sh
 
           docker run --rm \
             --user root \
@@ -203,7 +203,7 @@ jobs:
             -e CCACHE_DIR=.ccache \
             -e CMAKE_CXX_COMPILER_LAUNCHER=ccache \
             vtautoboat/development_image_microros:${{ matrix.architecture }} \
-            bash .github/build_and_package.sh
+            bash .github/workflows/build_and_package.sh
 
       - name: Push Docker Images and Cache (Bake)
         if: github.event_name != 'pull_request'
@@ -218,7 +218,7 @@ jobs:
           MINOR: ${{ steps.meta.outputs.minor }}
           GITHUB_SHA: ${{ github.sha }}
         with:
-          files: .github/docker-bake.hcl
+          files: .github/workflows/docker-bake.hcl
           push: true
           set: |
             *.platform=linux/${{ matrix.architecture }}
