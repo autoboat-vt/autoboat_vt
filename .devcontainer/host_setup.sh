@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 
 # -----------------------------------------------------------------------------
+# This script is run on the host machine before anything related to docker is run to ensure that the
+# host machine is properly set up for GPU forwarding (which just means that the devcontainer can see
+# and access your gpu as if you were running programs on your host operating system), environment 
+# variables, display settings.
+#
+#
 # IMPORTANT NOTE
 # This script is the main thing that is limiting devcontainer compatibility with any
 # distribution of linux or operating system. Unfortunately it is really annoying to fully 

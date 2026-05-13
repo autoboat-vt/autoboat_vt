@@ -1,5 +1,13 @@
-# This file is primarily for building new docker images, and it is what the Dockerfile references when it preinstalls all of its pip packages
+# This file is what the Dockerfile references when it preinstalls all of its pip packages
 # If you would like to add a new python dependency, you should add it to this 
+
+# If you would like to learn more about python requirements.txt files please read: https://pip.pypa.io/en/stable/reference/requirements-file-format/
+# The basics are that if you run pip install -r required_pip_packages.txt, you will fully install
+# all of the python requirements given that you have the correct python version as used in the dockerfile
+# and also given that none of the python packages you currently have installed conflict with any of the python
+# packages below
+
+
 
 # Coordinate Conversions
 navpy
