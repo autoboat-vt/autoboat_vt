@@ -19,7 +19,7 @@ float get_distance_haversine(double latitude1, double longitude1, double latitud
 
 
 
-// Using vincentys formula to calculate the distance between 2 points on an elipsoid
+// Using vincentys formula to calculate the distance between 2 points on an ellipsoid
 // this is a more accurate distance function than haversine since it doesn't make the assumption that the earth is a perfect sphere
 // https://github.com/dariusarnold/vincentys-formula
 // https://en.wikipedia.org/wiki/Vincenty%27s_formulae 
