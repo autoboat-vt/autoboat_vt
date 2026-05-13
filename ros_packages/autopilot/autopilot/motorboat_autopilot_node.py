@@ -218,7 +218,7 @@ class MotorboatAutopilotNode(Node):
         for new_parameter_name, new_parameter_value in new_parameters_json.items():
             if new_parameter_name not in self.autopilot_parameters:
                 print("WARNING: Attempted to set an autopilot parameter that the autopilot doesn't know")
-                print("If you would like to make a new autopilot parameter, please edit default_parameters.yaml")
+                print("If you would like to make a new autopilot parameter, please edit motorboat_default_parameters.json")
                 continue
 
             self.autopilot_parameters[new_parameter_name] = new_parameter_value

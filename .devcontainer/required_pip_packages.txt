@@ -1,7 +1,8 @@
 # This file is what the Dockerfile references when it preinstalls all of its pip packages
 # If you would like to add a new python dependency, you should add it to this 
 
-# If you would like to learn more about python requirements.txt files please read: https://pip.pypa.io/en/stable/reference/requirements-file-format/
+# If you would like to learn more about python requirements.txt files please read: 
+# https://pip.pypa.io/en/stable/reference/requirements-file-format/
 # The basics are that if you run pip install -r required_pip_packages.txt, you will fully install
 # all of the python requirements given that you have the correct python version as used in the dockerfile
 # and also given that none of the python packages you currently have installed conflict with any of the python
@@ -16,44 +17,35 @@ utm
 geopy
 pyproj
 
+
 # Serial/ Hardware communication
 pyserial
 sparkfun-ublox-gps
-pyubx2
 crsf-parser
-spidev
+
 
 # Simulation/ RL
-gymnasium==0.28.1
-moviepy
-msgpack-python==0.5.6
-pyzmq==25.0.2
-pydantic
-multiexit
+gymnasium==0.28.1      # required only for the sailboat simulation (unless we do rl later on)
+moviepy                # required only for the sailboat simulation 
+msgpack-python==0.5.6  # required only for the sailboat simulation
+pyzmq==25.0.2          # required only for the sailboat simulation
+pydantic               # required only for the sailboat simulation
+multiexit              # required only for the sailboat simulation
+imageio-ffmpeg         # required only for the sailboat simulation
+tqdm                   # required only for the sailboat simulation
+pandas                 # required only for the sailboat simulation
+matplotlib             # required only for the sailboat simulation
+click                  # required only for the sailboat simulation
 
-# Image processing/ Object Detection
-Pillow
-imageio-ffmpeg
 
 # Telemetry/ Internet
 requests
+
 
 # Documentation
 mkdocs
 mkdocs-material
 
-# Misc
-numpy==1.26.4
-tqdm
-pandas
-docker
-matplotlib
-pydict2class
-dataclass_wizard
-click
-pympler
-ruff
-packaging
 
 
 # Groundstation
@@ -62,14 +54,15 @@ QtAwesome==1.4.0
 QtPy==2.4.3
 pyqtgraph
 jsonc-parser
-PyYAML
 pytz
 StrEnum
-python-dateutil
-idna
-charset-normalizer
-#jetson-stats
-pynput
 svg.py
 
 
+
+# Misc
+numpy==1.26.4
+docker
+ruff
+pynput
+#jetson-stats
