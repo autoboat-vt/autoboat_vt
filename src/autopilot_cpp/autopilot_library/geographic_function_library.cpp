@@ -56,9 +56,7 @@ float get_distance_vincenty(double latitude1, double longitude1, double latitude
         }
         
         cosine_of_sigma = sin(reduced_latitude_1_radians) * sin(reduced_latitude_2_radians) + cos(reduced_latitude_1_radians) * cos(reduced_latitude_2_radians) * cos(lambda_radians);
-        sigma_radians = atan(sine_of_sigma / cosine_of_sigma);
-        
-        if (sigma_radians <= 0) sigma_radians = M_PI + sigma_radians;
+        sigma_radians = atan2(sine_of_sigma, cosine_of_sigma);
         
         sine_of_alpha = (cos(reduced_latitude_1_radians) * cos(reduced_latitude_2_radians) * sin(lambda_radians)) / sine_of_sigma;
         cosine_squared_of_alpha = 1 - pow(sine_of_alpha, 2.);
