@@ -7,15 +7,22 @@ name: ROS2 Cross-Architecture Build & Release
 # These are passed directly to `colcon build --packages-ignore`.
 # ============================================================================
 env:
-  COLCON_IGNORE_PACKAGES_AMD: "sailboat_simulation autopilot sensors vesc object_detection"
-  COLCON_IGNORE_PACKAGES_ARM: "foil_dynamics custom_lift_drag sail_limits sailboat_simulation simulation_transform wind_arrow autopilot sensors vesc object_detection"
+  COLCON_IGNORE_PACKAGES_AMD: "
+    sailboat_simulation autopilot sensors vesc object_detection
+    "
+  
+  COLCON_IGNORE_PACKAGES_ARM: "
+    foil_dynamics custom_lift_drag sail_limits wind_arrow
+    sailboat_simulation simulation_transform 
+    autopilot sensors vesc object_detection
+    "
 
 
 
 
 on:
   push:
-    branches: [ "main", ]
+    branches: [ "main", "renaming_refactoring" ]
     tags:
       - 'v*'
   pull_request:
@@ -23,8 +30,27 @@ on:
   workflow_dispatch:
 
 jobs:
+  changes:
+    name: Check for Devcontainer Changes
+    runs-on: ubuntu-22.04
+    outputs:
+      devcontainer: ${{ steps.filter.outputs.devcontainer }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Check for modified paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            devcontainer:
+              - '.devcontainer/**'
+              - '.github/docker-bake.hcl'
+
   build:
     name: Build (${{ matrix.architecture }})
+    needs: changes
     permissions:
       contents: write
       packages: write
@@ -76,7 +102,6 @@ jobs:
 
       - name: Log in to GHCR
         # Only push images to the registry when pushing to the main branch.
-        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -117,7 +142,7 @@ jobs:
       # -----------------------------------------------------------------------
 
       - name: Build Docker Images (PR — GHA cache only)
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && needs.changes.outputs.devcontainer == 'true'
         uses: docker/bake-action@v6
         env:
           ARCHITECTURE: ${{ matrix.architecture }}
@@ -129,7 +154,7 @@ jobs:
           MINOR: ${{ steps.meta.outputs.minor }}
           GITHUB_SHA: ${{ github.sha }}
         with:
-          files: .github/workflows/docker-bake.hcl
+          files: .github/docker-bake.hcl
           push: false
           set: |
             *.platform=linux/${{ matrix.architecture }}
@@ -141,7 +166,7 @@ jobs:
             firmware.cache-to=type=gha,mode=max,scope=firmware-${{ matrix.architecture }}
 
       - name: Build and Push Docker Images (Bake)
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && needs.changes.outputs.devcontainer == 'true'
         uses: docker/bake-action@v6
         env:
           ARCHITECTURE: ${{ matrix.architecture }}
@@ -153,7 +178,7 @@ jobs:
           MINOR: ${{ steps.meta.outputs.minor }}
           GITHUB_SHA: ${{ github.sha }}
         with:
-          files: .github/workflows/docker-bake.hcl
+          files: .github/docker-bake.hcl
           push: true
           set: |
             *.platform=linux/${{ matrix.architecture }}
@@ -168,14 +193,17 @@ jobs:
             firmware.cache-to=type=gha,mode=max,scope=firmware-${{ matrix.architecture }}
             firmware.cache-to=type=registry,ref=vtautoboat/development_image_firmware:${{ matrix.architecture }}-cache,mode=max
 
+      - name: Pull Cached Image from GHCR (if skipped build)
+        if: needs.changes.outputs.devcontainer == 'false'
+        run: |
+          docker pull ghcr.io/${{ env.OWNER_LC }}/development_image_firmware:${{ matrix.architecture }}
+          # Retag it so the colcon build step later in the file finds the expected name
+          docker tag ghcr.io/${{ env.OWNER_LC }}/development_image_firmware:${{ matrix.architecture }} vtautoboat/development_image_firmware:${{ matrix.architecture }}
 
-
-
-      - name: Pull Base Image for local build
-        if: github.event_name != 'pull_request'
+      - name: Pull Base Image for local build (if newly built)
+        if: github.event_name != 'pull_request' && needs.changes.outputs.devcontainer == 'true'
         run: |
           docker pull vtautoboat/development_image_firmware:${{ matrix.architecture }}
-          # No need to retag, we will use the full name in the build step
 
       # -----------------------------------------------------------------------
       # Run colcon build AND package everything inside the container.
@@ -197,7 +225,7 @@ jobs:
           fi
 
           # Ensure the script is executable
-          chmod +x .github/scripts/build_and_package.sh
+          chmod +x .github/build_and_package.sh
 
           docker run --rm \
             --user root \
@@ -210,7 +238,7 @@ jobs:
             -e CCACHE_DIR=.ccache \
             -e CMAKE_CXX_COMPILER_LAUNCHER=ccache \
             vtautoboat/development_image_firmware:${{ matrix.architecture }} \
-            bash .github/scripts/build_and_package.sh
+            bash .github/build_and_package.sh
 
       # Upload both the .tar.gz and .deb as workflow artifacts.
       # On every push/PR these are downloadable from the Actions tab for 5 days.
@@ -279,8 +307,8 @@ jobs:
   # ============================================================================
   publish-dev-image:
     name: Publish Multi-Arch Dev Image (${{ matrix.variant }})
-    needs: build
-    if: github.event_name != 'pull_request'
+    needs: [build, changes]
+    if: github.event_name != 'pull_request' && needs.changes.outputs.devcontainer == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
