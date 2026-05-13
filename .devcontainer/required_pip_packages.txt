@@ -10,12 +10,12 @@
 
 
 
-# Coordinate Conversions
+# Coordinate Conversions for the autopilot
 navpy
 pygeodesy
-utm
 geopy
 pyproj
+utm                    # probably don't need this anymore maybe?
 
 
 # Serial/ Hardware communication
@@ -60,7 +60,7 @@ svg.py
 
 
 
-# Misc
+# Misc / Generally useful
 numpy==1.26.4
 docker
 ruff

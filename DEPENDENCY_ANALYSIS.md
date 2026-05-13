@@ -1,15 +1,12 @@
 **All**:
 Linux
+Bash
 Git
 Docker kind of?
 
 
-**Groundstation**:
-pyqt/ pyside
-
-
-
 **CI/CD**:
+python and c++
 Docker
 Devcontainer
 chroot
@@ -18,28 +15,33 @@ systemctl
 udev rules
 
 
+**Groundstation**:
+python
+pyqt/ pyside
+
+
+
 **Jetson Driver Development**:
+python
+ROS2
 udev rules
 
 
 
-**Simulation**: (done)
+**Simulation**:
+python
 Gazebo
 
 
 
 **Autopilot**:
+python
 ROS2
-
-Numpy
-navpy
-pygeodesy
-utm
-geopy
-pyproj
 
 
 **C++ Autopilot**:
+c++
+ROS2
 cmake
 nlohmann_json
 cpr
@@ -49,12 +51,14 @@ UDEV_LIB
 
 
 **Computer Vision**:
+Python
 Deepstream
-YOLO
+YOLO models
 
 
 
 **Firmware**:
+c++
 Microros
 Freertos
 Rp pico sdk
