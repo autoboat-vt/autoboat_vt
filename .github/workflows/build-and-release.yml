@@ -203,7 +203,7 @@ jobs:
           fi
 
           # Ensure the script is executable
-          chmod +x .github/workflows/build_and_package_ros_packages.sh
+          chmod +x .github/workflows/build_ros_packages.sh
 
           docker run --rm \
             --user root \
@@ -216,7 +216,7 @@ jobs:
             -e CCACHE_DIR=.ccache \
             -e CMAKE_CXX_COMPILER_LAUNCHER=ccache \
             vtautoboat/development_image_firmware:${{ matrix.architecture }} \
-            bash .github/workflows/build_and_package_ros_packages.sh
+            bash .github/workflows/build_ros_packages.sh
 
       # Upload both the .tar.gz and .deb as workflow artifacts.
       # On every push/PR these are downloadable from the Actions tab for 5 days.
