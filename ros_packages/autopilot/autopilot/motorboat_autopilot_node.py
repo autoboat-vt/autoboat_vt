@@ -373,58 +373,28 @@ class MotorboatAutopilotNode(Node):
             self.get_logger().info(f"has gps disconnected: {has_gps_disconnected}")
             self.get_logger().info(f"has heading disconnected: {has_heading_disconnected}")
             
-            vesc_control_data = VESCControlData(
-                control_type_for_vesc="rpm",
-                desired_vesc_current=0.0,
-                desired_vesc_rpm=0.0,
-                desired_vesc_duty_cycle=0.0
-            )
+            vesc_control_data = VESCControlData(control_type_for_vesc="rpm", control_value=0.0)
         
 
         # Now it is time to apply the RC control, check the control type, and then tell the VESC node to turn
         elif self.autopilot_mode in {MotorboatAutopilotMode.FULL_RC, MotorboatAutopilotMode.HOLD_HEADING}:
             if self.propeller_motor_control_mode == MotorboatControls.RPM:
-                vesc_control_data = VESCControlData(
-                    control_type_for_vesc = "rpm",
-                    desired_vesc_current = 0.0,
-                    desired_vesc_rpm = 100.0 * self.joystick_left_y,
-                    desired_vesc_duty_cycle = 0.0
-                )
+                vesc_control_data = VESCControlData(control_type_for_vesc="rpm", control_value=100.0*self.joystick_left_y)
 
 
             elif self.propeller_motor_control_mode == MotorboatControls.DUTY_CYCLE:
-                vesc_control_data = VESCControlData(
-                    control_type_for_vesc = "duty_cycle",
-                    desired_vesc_current = 0.0,
-                    desired_vesc_rpm = 0.0,
-                    desired_vesc_duty_cycle = self.joystick_left_y,
-                )
+                vesc_control_data = VESCControlData(control_type_for_vesc="duty_cycle", control_value=self.joystick_left_y)
                 
 
             elif self.propeller_motor_control_mode == MotorboatControls.CURRENT:
-                vesc_control_data = VESCControlData(
-                    control_type_for_vesc = "current",
-                    desired_vesc_current = self.joystick_left_y,
-                    desired_vesc_rpm = 0.0,
-                    desired_vesc_duty_cycle = 0.0,
-                )
+                vesc_control_data = VESCControlData(control_type_for_vesc="current", control_value=self.joystick_left_y)
                 
 
         elif self.autopilot_mode == MotorboatAutopilotMode.WAYPOINT_MISSION:
-            vesc_control_data = VESCControlData(
-                control_type_for_vesc = "rpm",
-                desired_vesc_current = 0.0,
-                desired_vesc_rpm = desired_rpm,
-                desired_vesc_duty_cycle = 0.0,
-            )
+            vesc_control_data = VESCControlData(control_type_for_vesc="rpm", control_value=desired_rpm)
             
         else:
-            vesc_control_data = VESCControlData(
-                control_type_for_vesc = "rpm",
-                desired_vesc_current = 0.0,
-                desired_vesc_rpm = 0.0,
-                desired_vesc_duty_cycle = 0.0,
-            )
+            vesc_control_data = VESCControlData(control_type_for_vesc="rpm", control_value=0.0)
         
         
         self.propeller_motor_control_struct_publisher.publish(vesc_control_data)

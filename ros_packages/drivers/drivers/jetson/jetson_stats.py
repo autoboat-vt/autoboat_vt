@@ -1,10 +1,8 @@
 import rclpy
-from std_msgs.msg import Float32
-from rclpy.qos import qos_profile_sensor_data
-from rclpy.node import Node
 from autoboat_msgs.msg import JetsonStats
 from jtop import jtop
-
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 
 # Here is an example of the result of jetson.stats:
 # {

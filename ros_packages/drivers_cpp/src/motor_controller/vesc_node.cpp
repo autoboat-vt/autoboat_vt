@@ -59,14 +59,14 @@ void VescNode::control_callback(const autoboat_msgs::msg::VESCControlData::Share
 
     std::vector<uint8_t> packet;
     if (msg->control_type_for_vesc == "rpm") {
-        float motorVal = msg->desired_vesc_rpm * MOTOR_POLE_PAIRS;
+        float motorVal = msg->control_value * MOTOR_POLE_PAIRS;
         packet = protocol.generateSetRPM(motorVal);
     } 
     else if (msg->control_type_for_vesc == "duty_cycle") {
-        packet = protocol.generateSetDuty(msg->desired_vesc_duty_cycle);
+        packet = protocol.generateSetDuty(msg->control_value);
     } 
     else {
-        packet = protocol.generateSetCurrent(msg->desired_vesc_current);
+        packet = protocol.generateSetCurrent(msg->control_value);
     }
 
     try {

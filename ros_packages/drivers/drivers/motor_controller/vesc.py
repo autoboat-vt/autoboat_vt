@@ -3,13 +3,12 @@ import signal
 import time
 
 import rclpy
-from pyvesc import VESC
-from pyvesc.VESC.messages import *
+from autoboat_msgs.msg import VESCControlData, VESCTelemetryData
+from pyvesc.pyvesc import VESC
+from pyvesc.pyvesc.VESC.messages import *
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from serial.tools import list_ports
-
-from autoboat_msgs.msg import VESCControlData, VESCTelemetryData
 
 MOTOR_POLE_PAIRS = 7
 
@@ -24,7 +23,7 @@ VESC_PID = 0x5740
 # VESC_SERIAL_NUMBER = "AB7IMXEU"
 
 
-def getPort(vid, pid) -> str:
+def getPort(vid: int, pid: int) -> str:
     device_list = list_ports.comports()
     for device in device_list:
         if device.vid == vid and device.pid == pid:
@@ -71,44 +70,24 @@ class VESCPublisher(Node):
 
         try:
             if msg.control_type_for_vesc == "rpm":
-                self.motorVal = msg.desired_vesc_rpm * MOTOR_POLE_PAIRS
+                self.motorVal = msg.control_value * MOTOR_POLE_PAIRS
                 self.motor.set_rpm(int(self.motorVal))
                 
             elif(msg.control_type_for_vesc == "duty_cycle"):
-                self.motorVal = msg.desired_vesc_duty_cycle
+                self.motorVal = msg.control_value
                 self.motor.set_duty_cycle(int(self.motorVal))
             
             else:
-                self.motorVal = msg.desired_vesc_current
+                self.motorVal = msg.control_value
                 self.motor.set_current(int(self.motorVal))
                 
-        except:
+        except Exception:
             self.get_logger().error("Disconnected from the VESC")
             self.destroy_node()
             rclpy.shutdown()
             os.kill(os.getpid(), signal.SIGTERM)
-
-    """
-    def ct_callback(self, msg):
-        if msg == "DUTY_CYCLE":
-            self.motorType = 1
-        if msg == "RPM":
-            self.motorType = 2
-        if msg == "CURRENT":
-            self.motorType = 3
-
-    def cv_callback(self, msg):
-        if self.motorType == 3:
-            self.motorVal = msg
-
-    def rpmv_callback(self, msg):
-        if self.motorType == 2:
-            self.motorVal = msg
-
-    def dcv_callback(self, msg):
-        if self.motorType == 1:
-            self.motorVal = msg
-    """
+            
+            
 
     def timer_callback(self):
         # if (time.time() - self.last_command_time >= 3):
@@ -139,7 +118,7 @@ class VESCPublisher(Node):
 
         rpm = measurements.rpm / MOTOR_POLE_PAIRS
         c_motor = measurements.avg_motor_current
-        motorData = {
+        motor_telemetry_data = {
             "time": time.time(),
             "rpm": measurements.rpm / MOTOR_POLE_PAIRS,
             "duty_cycle": measurements.duty_cycle_now,
@@ -156,23 +135,23 @@ class VESCPublisher(Node):
         }
 
         # write vesc data to csv file (this doesn't work with systemctl automatic startup on boot)
-        # self.csv_writer.writerow(motorData)
+        # self.csv_writer.writerow(motor_telemetry_data)
 
         # publish vesc data to topic
         self.vesc_telemetry_data_publisher.publish(
             VESCTelemetryData(
-                rpm=motorData["rpm"],
-                duty_cycle=motorData["duty_cycle"],
-                voltage_to_vesc=motorData["v_in"],
-                current_to_vesc=motorData["c_in"],
-                voltage_to_motor=motorData["v_out"],
-                avg_current_to_motor=motorData["c_motor"],
-                wattage_to_motor=motorData["motor_wattage"],
-                motor_temperature=motorData["temp_motor"],
-                vesc_temperature=motorData["temp_vesc"],
-                time_since_vesc_startup_in_ms=motorData["time_ms"],
-                amp_hours=motorData["amp_hours"],
-                amp_hours_charged=motorData["amp_hours_charged"],
+                rpm=motor_telemetry_data["rpm"],
+                duty_cycle=motor_telemetry_data["duty_cycle"],
+                voltage_to_vesc=motor_telemetry_data["v_in"],
+                current_to_vesc=motor_telemetry_data["c_in"],
+                voltage_to_motor=motor_telemetry_data["v_out"],
+                avg_current_to_motor=motor_telemetry_data["c_motor"],
+                wattage_to_motor=motor_telemetry_data["motor_wattage"],
+                motor_temperature=motor_telemetry_data["temp_motor"],
+                vesc_temperature=motor_telemetry_data["temp_vesc"],
+                time_since_vesc_startup_in_ms=motor_telemetry_data["time_ms"],
+                amp_hours=motor_telemetry_data["amp_hours"],
+                amp_hours_charged=motor_telemetry_data["amp_hours_charged"],
             )
         )
 

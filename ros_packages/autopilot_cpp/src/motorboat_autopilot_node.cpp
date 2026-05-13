@@ -256,51 +256,39 @@ void MotorboatAutopilotNode::update_ros_topics() {
     if (has_sensor_disconnected) {
         propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
             .set__control_type_for_vesc("rpm")
-            .set__desired_vesc_rpm(0.0)
-            .set__desired_vesc_current(0.0)
-            .set__desired_vesc_duty_cycle(0.0)
+            .set__control_value(0.0)
         );
     }
     else if (autopilot_mode == MotorboatAutopilotMode::Full_RC || autopilot_mode == MotorboatAutopilotMode::Hold_Heading) {
         if (propeller_motor_control_mode == MotorboatControls::RPM) {
             propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
                 .set__control_type_for_vesc("rpm")
-                .set__desired_vesc_rpm(100.0 * joystick_left_y)
-                .set__desired_vesc_current(0.0)
-                .set__desired_vesc_duty_cycle(0.0)
+                .set__control_value(100.0 * joystick_left_y)
             );
         } 
         else if (propeller_motor_control_mode == MotorboatControls::DUTY_CYCLE) {
             propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
                 .set__control_type_for_vesc("duty_cycle")
-                .set__desired_vesc_duty_cycle(joystick_left_y)
-                .set__desired_vesc_current(0.0)
-                .set__desired_vesc_rpm(0.0)
+                .set__control_value(joystick_left_y)
             );
         } 
         else if (propeller_motor_control_mode == MotorboatControls::CURRENT) {
             propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
                 .set__control_type_for_vesc("current")
-                .set__desired_vesc_current(joystick_left_y)
-                .set__desired_vesc_rpm(0.0)
-                .set__desired_vesc_duty_cycle(0.0)
+                .set__control_value(joystick_left_y)
             );
         }
     }
     else if (autopilot_mode == MotorboatAutopilotMode::Waypoint_Mission) {
         propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
             .set__control_type_for_vesc("rpm")
-            .set__desired_vesc_current(0.0)
-            .set__desired_vesc_rpm(desired_rpm)
-            .set__desired_vesc_duty_cycle(0.0)
+            .set__control_value(0.0)
         );
     }
     else {
         propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
             .set__control_type_for_vesc("rpm")
-            .set__desired_vesc_current(0.0)
-            .set__desired_vesc_rpm(0.0)
-            .set__desired_vesc_duty_cycle(0.0)
+            .set__control_value(0.0)
         );
     }
 

@@ -1,13 +1,12 @@
 import numpy as np
 import rclpy
+from autoboat_msgs.msg import VESCControlData
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float32, Float64
-
-from autoboat_msgs.msg import VESCControlData
 
 from .utils import cartesian_vector_to_polar, euler_from_quaternion
 
@@ -94,7 +93,7 @@ class AutopilotTransformNode(Node):
         
         self.heading_publisher.publish(Float32(data=yaw))
         self.desired_rudder_angle_publisher.publish(Float64(data=self.desired_rudder_angle))
-        self.propeller_rpm_publisher.publish(Float64(data=self.vesc_control_data.desired_vesc_rpm))
+        self.propeller_rpm_publisher.publish(Float64(data=self.vesc_control_data.control_value))
         self.current_rudder_angle_publisher.publish(Float32(data=current_rudder_angle))
 
 

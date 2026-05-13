@@ -1,3 +1,10 @@
+/* 
+This file is used to configure formatters and linters for html, css, javascript, typescript, etc.
+
+Please see the following for a guide on biome: https://biomejs.dev/guides/configure-biome/
+This file is a jsonc instead of a json and the only difference between the 2 is that jsonc allows comments like this!
+*/
+
 {
     "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
     "root": true,

@@ -1,11 +1,9 @@
 #!/usr/bin/python3
 
-import os
-import time
+
 from collections import deque
 
 import numpy as np
-import psutil
 import rclpy
 import serial
 from geometry_msgs.msg import Vector3
@@ -22,7 +20,7 @@ BAUD_RATE = 38400
 KNOTS_TO_METERS_PER_SECOND = 0.514444
 
 
-def getPort(vid, pid, serial_number) -> str:
+def getPort(vid: int, pid: int, serial_number: str) -> str:
     device_list = list_ports.comports()
     for device in device_list:
         print(device.serial_number)

@@ -8,12 +8,9 @@ from sys import argv
 argv = argv[1:]
 
 
-import os
-import time
-
-import psutil
 import rclpy
 import serial
+from autoboat_msgs.msg import RCData
 from crsf_parser import CRSFParser, PacketValidationStatus
 from crsf_parser.frames import crsf_frame
 from crsf_parser.payloads import PacketsTypes
@@ -21,8 +18,6 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from serial.tools import list_ports
 from std_msgs.msg import Bool
-
-from autoboat_msgs.msg import RCData
 
 RC_VID = 0x0403
 RC_PID = 0x6001

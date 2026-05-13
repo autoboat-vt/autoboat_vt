@@ -22,7 +22,7 @@ echo 'alias build_python="build --packages-ignore-regex .*cpp"' >> ~/.bashrc
 # Install all of the pip packages that we may have edited
 # "pip install -e" installs the packages as "editable" which just means that we can make changes in the packages
 # And you don't have to reinstall them, the changes will automatically be visible if you run another script again
-pip install -e /home/ws/ros_packages/drivers/motor_controller/pyvesc/
+# pip install -e /home/ws/ros_packages/drivers/motor_controller/pyvesc/
 pip install -e /home/ws/ros_packages/sailboat_simulation/sailboat_gym/
 pip install -r /home/ws/.devcontainer/required_pip_packages.txt
 

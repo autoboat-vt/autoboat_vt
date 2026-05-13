@@ -2,8 +2,7 @@
 
 # ADAPTED FROM: https://github.com/FrankBu0616/ros2_zed_f9r_gps
 
-import csv
-import time
+
 from collections import deque
 
 import numpy as np
