@@ -1,6 +1,7 @@
 **All**:
 Linux
 Git
+Docker kind of?
 
 
 **Groundstation**:
@@ -22,7 +23,7 @@ udev rules
 
 
 
-**Simulation**:
+**Simulation**: (done)
 Gazebo
 
 
