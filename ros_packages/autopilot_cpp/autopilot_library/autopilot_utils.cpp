@@ -156,35 +156,3 @@ bool does_line_segment_intersect_circle(
 }
 
 
-json yaml_to_json(const YAML::Node& node) {
-    if (node.IsScalar()) {        
-        bool b;
-        if (YAML::convert<bool>::decode(node, b)) return b;
-        
-        int64_t i;
-        if (YAML::convert<int64_t>::decode(node, i)) return i;
-        
-        float f;
-        if (YAML::convert<float>::decode(node, f)) return f;
-        
-        return node.as<std::string>();
-    }
-
-    if (node.IsSequence()) {
-        json j = json::array();
-        for (const auto& item : node) {
-            j.push_back(yaml_to_json(item));
-        }
-        return j;
-    }
-    
-    if (node.IsMap()) {
-        json j = json::object();
-        for (auto it = node.begin(); it != node.end(); ++it) {
-            j[it->first.as<std::string>()] = yaml_to_json(it->second);
-        }
-        return j;
-    }
-
-    return nullptr;
-}

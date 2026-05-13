@@ -35,7 +35,6 @@ find_package(nlohmann_json REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(autoboat_msgs REQUIRED)
 find_package(cpr REQUIRED)
-find_package(yaml-cpp REQUIRED)
 
 
 
@@ -54,13 +53,12 @@ target_include_directories(autopilot_lib PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
 ament_target_dependencies(autopilot_lib rclcpp std_msgs geometry_msgs sensor_msgs autoboat_msgs)
-target_link_libraries(autopilot_lib nlohmann_json::nlohmann_json yaml-cpp)
+target_link_libraries(autopilot_lib nlohmann_json::nlohmann_json)
 
 # Precompile heavy headers once on the library target
 target_precompile_headers(autopilot_lib PRIVATE
   <rclcpp/rclcpp.hpp>
   <nlohmann/json.hpp>
-  <yaml-cpp/yaml.h>
 )
 
 
@@ -69,7 +67,7 @@ target_precompile_headers(autopilot_lib PRIVATE
 add_executable(motorboat_autopilot src/motorboat_autopilot_node.cpp)
 target_include_directories(motorboat_autopilot PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> ${CMAKE_CURRENT_SOURCE_DIR})
 ament_target_dependencies(motorboat_autopilot rclcpp std_msgs geometry_msgs sensor_msgs autoboat_msgs)
-target_link_libraries(motorboat_autopilot autopilot_lib nlohmann_json::nlohmann_json yaml-cpp)
+target_link_libraries(motorboat_autopilot autopilot_lib nlohmann_json::nlohmann_json)
 target_precompile_headers(motorboat_autopilot REUSE_FROM autopilot_lib)
 install(TARGETS motorboat_autopilot DESTINATION lib/${PROJECT_NAME})
 
@@ -79,7 +77,7 @@ install(TARGETS motorboat_autopilot DESTINATION lib/${PROJECT_NAME})
 add_executable(sailboat_autopilot src/sailboat_autopilot_node.cpp)
 target_include_directories(sailboat_autopilot PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> ${CMAKE_CURRENT_SOURCE_DIR})
 ament_target_dependencies(sailboat_autopilot rclcpp std_msgs geometry_msgs sensor_msgs autoboat_msgs)
-target_link_libraries(sailboat_autopilot autopilot_lib nlohmann_json::nlohmann_json yaml-cpp)
+target_link_libraries(sailboat_autopilot autopilot_lib nlohmann_json::nlohmann_json)
 target_precompile_headers(sailboat_autopilot REUSE_FROM autopilot_lib)
 install(TARGETS sailboat_autopilot DESTINATION lib/${PROJECT_NAME})
 
@@ -89,7 +87,7 @@ install(TARGETS sailboat_autopilot DESTINATION lib/${PROJECT_NAME})
 add_executable(telemetry src/telemetry_node.cpp)
 target_include_directories(telemetry PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> ${CMAKE_CURRENT_SOURCE_DIR})
 ament_target_dependencies(telemetry rclcpp std_msgs geometry_msgs sensor_msgs autoboat_msgs)
-target_link_libraries(telemetry autopilot_lib nlohmann_json::nlohmann_json cpr::cpr OpenSSL::SSL OpenSSL::Crypto yaml-cpp)
+target_link_libraries(telemetry autopilot_lib nlohmann_json::nlohmann_json cpr::cpr OpenSSL::SSL OpenSSL::Crypto)
 target_precompile_headers(telemetry REUSE_FROM autopilot_lib)
 install(TARGETS telemetry DESTINATION lib/${PROJECT_NAME})
 

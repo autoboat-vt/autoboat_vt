@@ -6,7 +6,6 @@
 #include <string>
 #include <algorithm>
 #include <nlohmann/json.hpp>
-#include <yaml-cpp/yaml.h>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
 #include "geographic_function_library.hpp"
@@ -189,12 +188,3 @@ bool does_line_segment_intersect_circle(
     const std::array<float, 2>& circle_position,
     float circle_radius
 );
-
-
-
-/** 
- * @brief Helper function to convert YAML nodes to JSON objects.
- * @param node The YAML node to convert.
- * @return A JSON representation of the YAML content.
- */
-json yaml_to_json(const YAML::Node& node);

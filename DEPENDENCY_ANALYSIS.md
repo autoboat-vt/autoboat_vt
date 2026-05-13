@@ -7,15 +7,19 @@ Git
 pyqt/ pyside
 
 
+
 **CI/CD**:
 Docker
 Devcontainer
 chroot
 Github Actions
 systemctl
+udev rules
 
 
 **Jetson Driver Development**:
+udev rules
+
 
 
 **Simulation**:
@@ -35,7 +39,11 @@ pyproj
 
 
 **C++ Autopilot**:
-
+cmake
+nlohmann_json
+cpr
+ros-humble-serial-driver
+UDEV_LIB
 
 
 
@@ -49,4 +57,4 @@ YOLO
 Microros
 Freertos
 Rp pico sdk
-Cmake
+cmake

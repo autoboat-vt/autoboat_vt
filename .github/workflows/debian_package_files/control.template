@@ -4,7 +4,6 @@ Architecture: ARCH_PLACEHOLDER
 Maintainer: autoboatvt <autoboat@vt.edu>
 Depends: ros-humble-ros-base,
          ros-humble-serial-driver,
-         libyaml-cpp0.7,
          libcurl4,
          libssl3,
          libudev1,
