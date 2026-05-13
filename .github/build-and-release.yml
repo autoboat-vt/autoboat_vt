@@ -22,7 +22,7 @@ env:
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "renaming_refactoring"]
     tags:
       - 'v*'
   pull_request:
@@ -147,7 +147,7 @@ jobs:
             microros.cache-from=type=gha,scope=microros-${{ matrix.architecture }}
             microros.cache-to=type=gha,mode=max,scope=microros-${{ matrix.architecture }}
 
-      - name: Build and Push Docker Images (Bake)
+      - name: Build and Load Docker Images (Bake)
         if: github.event_name != 'pull_request'
         uses: docker/bake-action@v6
         env:
@@ -161,28 +161,14 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
         with:
           files: .github/docker-bake.hcl
-          push: true
+          load: true
           set: |
             *.platform=linux/${{ matrix.architecture }}
             *.cache-from=type=gha,scope=${{ matrix.architecture }}
-            *.cache-to=type=gha,mode=max,scope=${{ matrix.architecture }}
             base.cache-from=type=gha,scope=base-${{ matrix.architecture }}
             base.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache
-            base.cache-to=type=gha,mode=max,scope=base-${{ matrix.architecture }}
-            base.cache-to=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache,mode=max
             microros.cache-from=type=gha,scope=microros-${{ matrix.architecture }}
             microros.cache-from=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache
-            microros.cache-to=type=gha,mode=max,scope=microros-${{ matrix.architecture }}
-            microros.cache-to=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache,mode=max
-
-
-
-
-      - name: Pull Base Image for local build
-        if: github.event_name != 'pull_request'
-        run: |
-          docker pull vtautoboat/development_image_microros:${{ matrix.architecture }}
-          # No need to retag, we will use the full name in the build step
 
       # -----------------------------------------------------------------------
       # Run colcon build AND package everything inside the container.
@@ -218,6 +204,34 @@ jobs:
             -e CMAKE_CXX_COMPILER_LAUNCHER=ccache \
             vtautoboat/development_image_microros:${{ matrix.architecture }} \
             bash .github/build_and_package.sh
+
+      - name: Push Docker Images and Cache (Bake)
+        if: github.event_name != 'pull_request'
+        uses: docker/bake-action@v6
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+          OWNER: ${{ env.OWNER_LC }}
+          IS_OFFICIAL: "true"
+          IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          MAJOR: ${{ steps.meta.outputs.major }}
+          MINOR: ${{ steps.meta.outputs.minor }}
+          GITHUB_SHA: ${{ github.sha }}
+        with:
+          files: .github/docker-bake.hcl
+          push: true
+          set: |
+            *.platform=linux/${{ matrix.architecture }}
+            *.cache-from=type=gha,scope=${{ matrix.architecture }}
+            *.cache-to=type=gha,mode=max,scope=${{ matrix.architecture }}
+            base.cache-from=type=gha,scope=base-${{ matrix.architecture }}
+            base.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache
+            base.cache-to=type=gha,mode=max,scope=base-${{ matrix.architecture }}
+            base.cache-to=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache,mode=max
+            microros.cache-from=type=gha,scope=microros-${{ matrix.architecture }}
+            microros.cache-from=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache
+            microros.cache-to=type=gha,mode=max,scope=microros-${{ matrix.architecture }}
+            microros.cache-to=type=registry,ref=vtautoboat/development_image_microros:${{ matrix.architecture }}-cache,mode=max
 
       # Upload both the .tar.gz and .deb as workflow artifacts.
       # On every push/PR these are downloadable from the Actions tab for 5 days.
