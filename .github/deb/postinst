@@ -37,16 +37,15 @@ if command -v udevadm > /dev/null 2>&1; then
     udevadm control --reload-rules && udevadm trigger || true
 fi
 
-# 3. Automatically update the current user's .bashrc for future interactive shells
-if [ -n "$SUDO_USER" ]; then
-    USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
-    BASHRC="${USER_HOME}/.bashrc"
-    SOURCE_LINE="source /etc/profile.d/autoboat-vt.sh"
+# 3. Automatically update the user's .bashrc for future interactive shells
+TARGET_USER="${SUDO_USER:-$(whoami)}"
+USER_HOME=$(getent passwd "$TARGET_USER" | cut -d: -f6)
+BASHRC="${USER_HOME}/.bashrc"
+SOURCE_LINE="source /etc/profile.d/autoboat-vt.sh"
 
-    if [ -f "$BASHRC" ]; then
-        if ! grep -qF "$SOURCE_LINE" "$BASHRC"; then
-            echo -e "\n# Added by autoboat-vt installation\n$SOURCE_LINE" >> "$BASHRC"
-            echo "Environment correctly configured for user: $SUDO_USER in $BASHRC"
-        fi
+if [ -f "$BASHRC" ]; then
+    if ! grep -qF "$SOURCE_LINE" "$BASHRC"; then
+        echo -e "\n# Added by autoboat-vt installation\n$SOURCE_LINE" >> "$BASHRC"
+        echo "Environment correctly configured for user: $TARGET_USER in $BASHRC"
     fi
 fi
