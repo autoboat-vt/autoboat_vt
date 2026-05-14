@@ -40,7 +40,7 @@ else
         case $arg in
             --base) INSTALL_BASE=true ;;
             --simulation|--sim) INSTALL_SIMULATION=true ;;
-            --firmware-sdk|--firm) INSTALL_FIRMWARE_SDK=true ;;
+            --firmware-dependencies|--firm) INSTALL_FIRMWARE_SDK=true ;;
             --microros-agent|--agent) INSTALL_MICROROS_AGENT=true ;;
             --all) INSTALL_BASE=true; INSTALL_SIMULATION=true; INSTALL_FIRMWARE_SDK=true; INSTALL_MICROROS_AGENT=true ;;
             --help|-h) SHOW_HELP=true ;;
@@ -52,9 +52,9 @@ fi
 if [ "$SHOW_HELP" = true ]; then
     echo "Usage: $0 [options]"
     echo "Options:"
-    echo "  --base            Install the base autoboat-vt package (default)"
+    echo "  --base            Install the base autoboatvt package (default)"
     echo "  --simulation      Install the simulation package (adds Gazebo repo to the base installation)"
-    echo "  --firmware-sdk    Install the autoboat firmware SDK package"
+    echo "  --firmware-dependencies    Install the autoboat firmware SDK package"
     echo "  --microros-agent  Install only the microros agent runtime"
     echo "  --all             Install all of the above"
     echo "  --help, -h        Show this help message"
@@ -62,11 +62,11 @@ if [ "$SHOW_HELP" = true ]; then
 fi
 
 echo "--------------------------------------------------------"
-echo "Starting autoboat-vt installation for $ARCH..."
+echo "Starting autoboatvt installation for $ARCH..."
 echo "Requested packages:"
 [ "$INSTALL_BASE" = true ] && echo " - Base system (autoboatvt)"
 [ "$INSTALL_SIMULATION" = true ] && echo " - Simulation (autoboatvt-simulation)"
-[ "$INSTALL_FIRMWARE_SDK" = true ] && echo " - Autoboat Firmware SDK (autoboatvt-firmware-sdk)"
+[ "$INSTALL_FIRMWARE_SDK" = true ] && echo " - Autoboat Firmware SDK (autoboatvt-firmware-dependencies)"
 [ "$INSTALL_MICROROS_AGENT" = true ] && echo " - MicroROS Agent (autoboatvt-microros-agent)"
 echo "--------------------------------------------------------"
 
@@ -125,12 +125,12 @@ install_deb() {
 
 # Install agent if explicitly requested or needed as a dependency
 if [ "$INSTALL_MICROROS_AGENT" = true ] || [ "$INSTALL_BASE" = true ] || [ "$INSTALL_FIRMWARE_SDK" = true ]; then
-    install_deb "autoboatvt-microros-agent" "autoboat-vt-microros-agent-${ARCH}.deb"
+    install_deb "autoboatvt-microros-agent" "autoboatvt-microros-agent-${ARCH}.deb"
 fi
 
 # Base package
 if [ "$INSTALL_BASE" = true ]; then
-    install_deb "autoboatvt" "autoboat-vt-${ARCH}.deb"
+    install_deb "autoboatvt" "autoboatvt-${ARCH}.deb"
 fi
 
 if [ "$INSTALL_SIMULATION" = true ]; then
@@ -138,15 +138,15 @@ if [ "$INSTALL_SIMULATION" = true ]; then
         echo "WARNING: Simulation package is only available for amd64. Skipping..."
     else
         # Ensure base is installed if requested simulation
-        install_deb "autoboatvt-microros-agent" "autoboat-vt-microros-agent-${ARCH}.deb"
-        install_deb "autoboatvt" "autoboat-vt-${ARCH}.deb"
-        install_deb "autoboatvt-simulation" "autoboat-vt-simulation-${ARCH}.deb"
+        install_deb "autoboatvt-microros-agent" "autoboatvt-microros-agent-${ARCH}.deb"
+        install_deb "autoboatvt" "autoboatvt-${ARCH}.deb"
+        install_deb "autoboatvt-simulation" "autoboatvt-simulation-${ARCH}.deb"
     fi
 fi
 
 
 if [ "$INSTALL_FIRMWARE_SDK" = true ]; then
-    install_deb "autoboatvt-firmware-sdk" "autoboat-vt-firmware-sdk-${ARCH}.deb"
+    install_deb "autoboatvt-firmware-dependencies" "autoboatvt-firmware-dependencies-${ARCH}.deb"
 fi
 
 

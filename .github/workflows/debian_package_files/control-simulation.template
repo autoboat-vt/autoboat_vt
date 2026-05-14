@@ -9,4 +9,4 @@ Description: Simulation packages for the VT AutoBoat system.
  Contains Gazebo models and simulation-specific ROS2 nodes.
  Built for ROS2 Humble and Gazebo Harmonic on Ubuntu 22.04.
  .
- After installation, open a new terminal (or run: source /etc/profile.d/autoboat-vt.sh)
+ After installation, open a new terminal (or run: source /etc/profile.d/autoboatvt.sh)

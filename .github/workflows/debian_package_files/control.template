@@ -13,4 +13,4 @@ Depends: autoboatvt-microros-agent (= VERSION_PLACEHOLDER),
          libusb-1.0-0,
          python3
 Description: Prebuilt ROS2 packages for the VT AutoBoat system built for ROS2 Humble on Ubuntu 22.04.
- After installation, open a new terminal (or run: source /etc/profile.d/autoboat-vt-base.sh)
+ After installation, open a new terminal (or run: source /etc/profile.d/autoboatvt-base.sh)

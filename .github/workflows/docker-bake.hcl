@@ -3,7 +3,7 @@
 # Variables are overridden by environment variables named BUILDX_BAKE_VAR_<NAME>
 
 variable "OWNER" {
-  default = "autoboat-vt"
+  default = "autoboatvt"
 }
 
 variable "ARCHITECTURE" {
@@ -60,7 +60,7 @@ target "firmware" {
   contexts = {
     base = "target:base"
   }
-  dockerfile = ".devcontainer/devcontainer_variants/Dockerfile.firmware_sdk"
+  dockerfile = ".devcontainer/devcontainer_variants/Dockerfile.firmware_dependencies"
   platforms = ["linux/${ARCHITECTURE}"]
   args = {
     BASE_IMAGE = "base"

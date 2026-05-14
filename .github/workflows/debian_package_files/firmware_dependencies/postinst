@@ -2,9 +2,9 @@
 set -e
 
 # Create the profile.d script for Micro-ROS SDK tools
-cat > /etc/profile.d/autoboat-vt-microros.sh << 'EOF'
-# Installed by the autoboatvt-microros Debian package — do not edit manually.
-export MICROROS_DIR="/opt/autoboat/microros_dependencies"
+cat > /etc/profile.d/autoboatvt-firmware-dependencies.sh << 'EOF'
+# Installed by the autoboatvt-firmware-dependencies Debian package — do not edit manually.
+export MICROROS_DIR="/opt/autoboat/firmware_dependencies"
 export PICO_SDK_PATH="${MICROROS_DIR}/pico-sdk"
 export PICO_MICROROS_SDK_PATH="${MICROROS_DIR}/micro_ros_raspberrypi_pico_sdk"
 export PICOTOOL_PATH="${MICROROS_DIR}/picotool"
@@ -13,7 +13,7 @@ alias picotool="${PICOTOOL_PATH}/build/picotool"
 alias picotool_load="sudo ${PICOTOOL_PATH}/build/picotool load"
 alias picotool_reboot="sudo ${PICOTOOL_PATH}/build/picotool reboot"
 EOF
-chmod +x /etc/profile.d/autoboat-vt-microros.sh
+chmod +x /etc/profile.d/autoboatvt-firmware-dependencies.sh
 
 
 # Reload udev rules for picotool
@@ -28,11 +28,11 @@ USER_HOME=$(getent passwd "$TARGET_USER" | cut -d: -f6)
 BASHRC="${USER_HOME}/.bashrc"
 
 if [ -f "$BASHRC" ]; then
-    if ! grep -qF "autoboat-vt-*.sh" "$BASHRC"; then
+    if ! grep -qF "autoboatvt-*.sh" "$BASHRC"; then
         cat >> "$BASHRC" << 'BASHEOF'
 
-# Added by autoboat-vt
-for f in /etc/profile.d/autoboat-vt-*.sh; do [ -f "$f" ] && source "$f"; done
+# Added by autoboatvt
+for f in /etc/profile.d/autoboatvt-*.sh; do [ -f "$f" ] && source "$f"; done
 BASHEOF
         echo "Environment configured for user: $TARGET_USER"
     fi

@@ -96,16 +96,16 @@ if [ "${DEB_ARCH}" == "amd64" ]; then
   cp .github/deb/base/prerm "${PKG_DIR_SIM}/DEBIAN/prerm"
   chmod 0755 "${PKG_DIR_SIM}/DEBIAN/prerm"
 
-  dpkg-deb -Zzstd --build "${PKG_DIR_SIM}" "output_artifacts/autoboat-vt-simulation-${DEB_ARCH}.deb"
+  dpkg-deb -Zzstd --build "${PKG_DIR_SIM}" "output_artifacts/autoboatvt-simulation-${DEB_ARCH}.deb"
 fi
 
-dpkg-deb -Zzstd --build "${PKG_DIR_BASE}" "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
+dpkg-deb -Zzstd --build "${PKG_DIR_BASE}" "output_artifacts/autoboatvt-${DEB_ARCH}.deb"
 
 
 
 
 # Microros Agent package
-echo "==> Building firmware-sdk .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
+echo "==> Building firmware-dependencies .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
 PKG_DIR_AGENT="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_agent"
 mkdir -p "${PKG_DIR_AGENT}/DEBIAN"
 mkdir -p "${PKG_DIR_AGENT}/opt/autoboat/firmware_dependencies"
@@ -119,13 +119,13 @@ cp .github/workflows/debian_package_files/microros_agent/postinst "${PKG_DIR_AGE
 cp .github/workflows/debian_package_files/microros_agent/postrm   "${PKG_DIR_AGENT}/DEBIAN/postrm"
 chmod 0755 "${PKG_DIR_AGENT}/DEBIAN/postinst" "${PKG_DIR_AGENT}/DEBIAN/postrm"
 
-dpkg-deb -Zzstd --build "${PKG_DIR_AGENT}" "output_artifacts/autoboat-vt-microros-agent-${DEB_ARCH}.deb"
+dpkg-deb -Zzstd --build "${PKG_DIR_AGENT}" "output_artifacts/autoboatvt-microros-agent-${DEB_ARCH}.deb"
 
 
 
 
 # Firmware SDK Debian package
-echo "==> Building firmware-sdk .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
+echo "==> Building firmware-dependencies .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
 PKG_DIR_FIRMWARE="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_uc"
 mkdir -p "${PKG_DIR_FIRMWARE}/DEBIAN"
 mkdir -p "${PKG_DIR_FIRMWARE}/opt/autoboat/firmware_dependencies"
@@ -137,13 +137,13 @@ cp -r /opt/autoboat/firmware_dependencies/pico-sdk "${PKG_DIR_FIRMWARE}/opt/auto
 echo "  Firmware SDK package size before compression: $(du -sh "${PKG_DIR_FIRMWARE}" | cut -f1)"
 
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
-  .github/workflows/debian_package_files/control-firmware-sdk.template > "${PKG_DIR_FIRMWARE}/DEBIAN/control"
+  .github/workflows/debian_package_files/control-firmware-dependencies.template > "${PKG_DIR_FIRMWARE}/DEBIAN/control"
 
-cp .github/workflows/debian_package_files/firmware-sdk/postinst "${PKG_DIR_FIRMWARE}/DEBIAN/postinst"
-cp .github/workflows/debian_package_files/firmware-sdk/postrm   "${PKG_DIR_FIRMWARE}/DEBIAN/postrm"
+cp .github/workflows/debian_package_files/firmware-dependencies/postinst "${PKG_DIR_FIRMWARE}/DEBIAN/postinst"
+cp .github/workflows/debian_package_files/firmware-dependencies/postrm   "${PKG_DIR_FIRMWARE}/DEBIAN/postrm"
 chmod 0755 "${PKG_DIR_FIRMWARE}/DEBIAN/postinst" "${PKG_DIR_FIRMWARE}/DEBIAN/prerm" "${PKG_DIR_FIRMWARE}/DEBIAN/postrm"
 
-dpkg-deb --build "${PKG_DIR_FIRMWARE}" "output_artifacts/autoboat-vt-firmware-sdk-${DEB_ARCH}.deb"
+dpkg-deb --build "${PKG_DIR_FIRMWARE}" "output_artifacts/autoboatvt-firmware-dependencies-${DEB_ARCH}.deb"
 
 
 

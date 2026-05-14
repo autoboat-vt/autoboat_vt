@@ -75,7 +75,7 @@ write_host_environment_variables() {
 
 	log_info "Updating $HOST_ENV_FILE"
 	{
-		echo "# Host environment variables for autoboat-vt"
+		echo "# Host environment variables for autoboatvt"
 		echo "export DEVCONTAINER_VARIANT=vtautoboat/development_image"
 		for line in "${extra_lines[@]}"; do
 			# Ensure it starts with export
@@ -115,7 +115,7 @@ ensure_host_environment_variables_are_sourced() {
 	for file in "${shell_files[@]}"; do
 		if [[ -f "$file" ]]; then
 			if ! grep -qF "$HOST_ENV_FILE" "$file"; then
-				echo -e "\n# Added by autoboat-vt setup\n$source_line" >>"$file"
+				echo -e "\n# Added by autoboatvt setup\n$source_line" >>"$file"
 				log_info "Added sourcing to $file"
 			else
 				log_info "Sourcing already exists in $file"
@@ -123,7 +123,7 @@ ensure_host_environment_variables_are_sourced() {
 		else
 			# Create if it's a profile/rc we might want
 			if [[ "$file" == *".profile" || "$file" == *".bash_profile" ]]; then
-				echo -e "# Added by autoboat-vt setup\n$source_line" > "$file"
+				echo -e "# Added by autoboatvt setup\n$source_line" > "$file"
 				log_info "Created and added sourcing to $file"
 			fi
 		fi

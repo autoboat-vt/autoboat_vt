@@ -193,7 +193,7 @@ jobs:
       # We pass DEB_VERSION + DEB_ARCH as env vars so the inner shell can use them.
       #
       # Outputs (all chmod'd readable for the host runner to upload):
-      #   output_artifacts/autoboat-vt-<arch>.deb            (install/ only, with deps)
+      #   output_artifacts/autoboatvt-<arch>.deb            (install/ only, with deps)
       # -----------------------------------------------------------------------
       - name: Build ROS2 Packages, Tarball, and Debian Package
         run: |
@@ -273,7 +273,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
           files: |
-            output_artifacts/autoboat-vt-*.deb
+            output_artifacts/autoboatvt-*.deb
           generate_release_notes: false
           draft: false
           
