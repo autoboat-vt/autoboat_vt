@@ -24,10 +24,6 @@ RUN HOME=/home/autoboat_user bash /tmp/autoboat_scripts/install_microros_helper_
     && (find /opt/autoboat/microros_dependencies -name '.git' -type d -exec rm -rf {} + 2>/dev/null || true) \
     && (find /opt/autoboat/microros_dependencies -name 'CMakeFiles' -type d -exec rm -rf {} + 2>/dev/null || true) \
     && (find /opt/autoboat/microros_dependencies -name 'CMakeCache.txt' -delete 2>/dev/null || true) \
-    && (find /opt/autoboat/microros_dependencies -name '*.o' -delete 2>/dev/null || true) \
-    && (find /opt/autoboat/microros_dependencies -name '*.a' -delete 2>/dev/null || true) \
-    && (find /opt/autoboat/microros_dependencies -type f -executable -exec strip --strip-unneeded {} \; 2>/dev/null || true) \
-    && (find /opt/autoboat/microros_dependencies -name '*.so*' -exec strip --strip-unneeded {} \; 2>/dev/null || true) \
     && rm -rf /tmp/autoboat_scripts \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
