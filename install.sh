@@ -118,7 +118,10 @@ install_deb() {
     rm "/tmp/${DEB_NAME}"
 }
 
-# Base package is a dependency for others, but we check separately
+# Agent package is a shared dependency — install it first
+install_deb "autoboatvt-microros-agent" "autoboat-vt-microros-agent-${ARCH}.deb"
+
+# Base package
 if [ "$INSTALL_BASE" = true ]; then
     install_deb "autoboatvt" "autoboat-vt-${ARCH}.deb"
 fi
