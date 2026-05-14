@@ -46,6 +46,7 @@ sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH
   .github/workflows/debian_package_files/control.template > "${PKG_DIR_BASE}/DEBIAN/control"
 
 cp .github/workflows/debian_package_files/base/postinst "${PKG_DIR_BASE}/DEBIAN/postinst"
+cp .github/workflows/debian_package_files/base/prerm   "${PKG_DIR_BASE}/DEBIAN/prerm"
 cp .github/workflows/debian_package_files/base/postrm   "${PKG_DIR_BASE}/DEBIAN/postrm"
 chmod 0755 "${PKG_DIR_BASE}/DEBIAN/postinst" "${PKG_DIR_BASE}/DEBIAN/prerm" "${PKG_DIR_BASE}/DEBIAN/postrm"
 
@@ -92,6 +93,9 @@ if [ "${DEB_ARCH}" == "amd64" ]; then
   sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
       .github/workflows/debian_package_files/control-simulation.template > "${PKG_DIR_SIM}/DEBIAN/control"
   
+  cp .github/deb/base/prerm "${PKG_DIR_SIM}/DEBIAN/prerm"
+  chmod 0755 "${PKG_DIR_SIM}/DEBIAN/prerm"
+
   dpkg-deb -Zzstd --build "${PKG_DIR_SIM}" "output_artifacts/autoboat-vt-simulation-${DEB_ARCH}.deb"
 fi
 
