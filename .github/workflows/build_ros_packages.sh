@@ -15,6 +15,7 @@ echo "    Architecture: ${DEB_ARCH}"
 echo "    Version:      ${DEB_VERSION}"
 echo "    Ignore List:  ${IGNORE_PACKAGES}"
 
+
 # Initialize ROS 2 environment
 source /opt/ros/humble/setup.bash
 
@@ -26,32 +27,35 @@ colcon build --packages-ignore ${IGNORE_PACKAGES} \
              --cmake-args -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=mold" \
              --install-base /opt/autoboat/install
 
+
+
 mkdir -p output_artifacts
 
-# Standard Debian package (Runtime)
+
+# Build Base Debian package
 echo "==> Building standard .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
-PKG_DIR_STD="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_std"
-mkdir -p "${PKG_DIR_STD}/DEBIAN"
-mkdir -p "${PKG_DIR_STD}/opt/autoboat/firmware_dependencies/micro_ros_agent/install"
+PKG_DIR_BASE="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_std"
+mkdir -p "${PKG_DIR_BASE}/DEBIAN"
+mkdir -p "${PKG_DIR_BASE}/opt/autoboat/"
 
-# Copy built ROS 2 nodes
-cp -r /opt/autoboat/install "${PKG_DIR_STD}/opt/autoboat/"
+cp -r /opt/autoboat/install "${PKG_DIR_BASE}/opt/autoboat/"
 
-# Copy ONLY the micro_ros_agent runtime (install folder)
-# We use standard globbing here; double stars are often shell-dependent
-cp -r /opt/autoboat/firmware_dependencies/micro_ros_agent/install/* "${PKG_DIR_STD}/opt/autoboat/firmware_dependencies/micro_ros_agent/install/"
+cp -r /opt/autoboat/firmware_dependencies/micro_ros_agent/install/* "${PKG_DIR_BASE}/opt/autoboat/firmware_dependencies/micro_ros_agent/install/"
 
-# Control file + Maintainer scripts
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
-  .github/workflows/debian_package_files/control.template > "${PKG_DIR_STD}/DEBIAN/control"
+  .github/workflows/debian_package_files/control.template > "${PKG_DIR_BASE}/DEBIAN/control"
 
-cp .github/workflows/debian_package_files/postinst "${PKG_DIR_STD}/DEBIAN/postinst"
-cp .github/workflows/debian_package_files/prerm    "${PKG_DIR_STD}/DEBIAN/prerm"
-cp .github/workflows/debian_package_files/postrm   "${PKG_DIR_STD}/DEBIAN/postrm"
-chmod 0755 "${PKG_DIR_STD}/DEBIAN/postinst" "${PKG_DIR_STD}/DEBIAN/prerm" "${PKG_DIR_STD}/DEBIAN/postrm"
+cp .github/workflows/debian_package_files/base/postinst "${PKG_DIR_BASE}/DEBIAN/postinst"
+cp .github/workflows/debian_package_files/base/postrm   "${PKG_DIR_BASE}/DEBIAN/postrm"
+chmod 0755 "${PKG_DIR_BASE}/DEBIAN/postinst" "${PKG_DIR_BASE}/DEBIAN/prerm" "${PKG_DIR_BASE}/DEBIAN/postrm"
 
-# Simulation package logic (amd64 only)
+
+
+# Build Simulation package by moving all simulation files/ binaries from PKG_DIR_BASE to PKG_DIR_SIM
+# Once the simulation stuff is removed and transplanted into PKG_DIR_BASE then we can compile both packages
+# Simulation is amd64 only and if we are on arm then we don't have to worry about simulation binaries because they aren't built
 if [ "${DEB_ARCH}" == "amd64" ]; then
+
   echo "==> Building simulation .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
   PKG_DIR_SIM="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_sim"
   mkdir -p "${PKG_DIR_SIM}/DEBIAN"
@@ -62,63 +66,81 @@ if [ "${DEB_ARCH}" == "amd64" ]; then
     echo "Partitioning simulation package: ${PKG}"
     
     # Share (Launch files, models, etc.)
-    if [ -d "${PKG_DIR_STD}/opt/autoboat/install/share/${PKG}" ]; then
+    if [ -d "${PKG_DIR_BASE}/opt/autoboat/install/share/${PKG}" ]; then
       mkdir -p "${PKG_DIR_SIM}/opt/autoboat/install/share"
-      mv "${PKG_DIR_STD}/opt/autoboat/install/share/${PKG}" "${PKG_DIR_SIM}/opt/autoboat/install/share/"
+      mv "${PKG_DIR_BASE}/opt/autoboat/install/share/${PKG}" "${PKG_DIR_SIM}/opt/autoboat/install/share/"
     fi
     
     # Lib (Python executables and C++ binaries)
-    if [ -d "${PKG_DIR_STD}/opt/autoboat/install/lib/${PKG}" ]; then
+    if [ -d "${PKG_DIR_BASE}/opt/autoboat/install/lib/${PKG}" ]; then
       mkdir -p "${PKG_DIR_SIM}/opt/autoboat/install/lib"
-      mv "${PKG_DIR_STD}/opt/autoboat/install/lib/${PKG}" "${PKG_DIR_SIM}/opt/autoboat/install/lib/"
+      mv "${PKG_DIR_BASE}/opt/autoboat/install/lib/${PKG}" "${PKG_DIR_SIM}/opt/autoboat/install/lib/"
     fi
     
     # Python site-packages
-    PYTHON_SITE="${PKG_DIR_STD}/opt/autoboat/install/lib/python3.10/site-packages"
+    PYTHON_SITE="${PKG_DIR_BASE}/opt/autoboat/install/lib/python3.10/site-packages"
     if [ -d "${PYTHON_SITE}/${PKG}" ]; then
       mkdir -p "${PKG_DIR_SIM}/opt/autoboat/install/lib/python3.10/site-packages"
       mv "${PYTHON_SITE}/${PKG}" "${PKG_DIR_SIM}/opt/autoboat/install/lib/python3.10/site-packages/"
     fi
 
     # Shared Libraries (lib<pkg>.so)
-    find "${PKG_DIR_STD}/opt/autoboat/install/lib" -maxdepth 1 -name "lib${PKG}.so*" -exec mv {} "${PKG_DIR_SIM}/opt/autoboat/install/lib/" \; 2>/dev/null || true
+    find "${PKG_DIR_BASE}/opt/autoboat/install/lib" -maxdepth 1 -name "lib${PKG}.so*" -exec mv {} "${PKG_DIR_SIM}/opt/autoboat/install/lib/" \; 2>/dev/null || true
   done
   
   # Control file
   sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
       .github/workflows/debian_package_files/control-simulation.template > "${PKG_DIR_SIM}/DEBIAN/control"
   
-  dpkg-deb --build "${PKG_DIR_SIM}" "output_artifacts/autoboat-vt-simulation-${DEB_ARCH}.deb"
+  dpkg-deb -Zzstd --build "${PKG_DIR_SIM}" "output_artifacts/autoboat-vt-simulation-${DEB_ARCH}.deb"
 fi
 
-dpkg-deb --build "${PKG_DIR_STD}" "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
+dpkg-deb -Zzstd --build "${PKG_DIR_BASE}" "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
 
 
-# Micro-ROS SDK Debian package (Development)
+
+
+# Microros Agent package
 echo "==> Building firmware-sdk .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
-PKG_DIR_UC="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_uc"
-mkdir -p "${PKG_DIR_UC}/DEBIAN"
-mkdir -p "${PKG_DIR_UC}/opt/autoboat/firmware_dependencies"
+PKG_DIR_AGENT="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_agent"
+mkdir -p "${PKG_DIR_AGENT}/DEBIAN"
+mkdir -p "${PKG_DIR_AGENT}/opt/autoboat/firmware_dependencies"
 
+cp -r /opt/autoboat/firmware_dependencies/micro_ros_agent "${PKG_DIR_AGENT}/opt/autoboat/firmware_dependencies/"
 
-# Copy dependencies to help build firmware packages
-cp -r /opt/autoboat/firmware_dependencies/micro_ros_raspberrypi_pico_sdk "${PKG_DIR_UC}/opt/autoboat/firmware_dependencies/"
-cp -r /opt/autoboat/firmware_dependencies/picotool "${PKG_DIR_UC}/opt/autoboat/firmware_dependencies/"
-cp -r /opt/autoboat/firmware_dependencies/pico-sdk "${PKG_DIR_UC}/opt/autoboat/firmware_dependencies/"
-
-
-# Control file (Depends on standard package)
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
-  .github/workflows/debian_package_files/control-firmware.template > "${PKG_DIR_UC}/DEBIAN/control"
+  .github/workflows/debian_package_files/control-microros-agent.template > "${PKG_DIR_AGENT}/DEBIAN/control"
+
+cp .github/workflows/debian_package_files/microros_agent/postinst "${PKG_DIR_AGENT}/DEBIAN/postinst"
+cp .github/workflows/debian_package_files/microros_agent/postrm   "${PKG_DIR_AGENT}/DEBIAN/postrm"
+chmod 0755 "${PKG_DIR_AGENT}/DEBIAN/postinst" "${PKG_DIR_AGENT}/DEBIAN/postrm"
+
+dpkg-deb -Zzstd --build "${PKG_DIR_AGENT}" "output_artifacts/autoboat-vt-microros-agent-${DEB_ARCH}.deb"
 
 
-# Use the same post-install scripts
-cp .github/workflows/debian_package_files/postinst "${PKG_DIR_UC}/DEBIAN/postinst"
-cp .github/workflows/debian_package_files/prerm    "${PKG_DIR_UC}/DEBIAN/prerm"
-cp .github/workflows/debian_package_files/postrm   "${PKG_DIR_UC}/DEBIAN/postrm"
-chmod 0755 "${PKG_DIR_UC}/DEBIAN/postinst" "${PKG_DIR_UC}/DEBIAN/prerm" "${PKG_DIR_UC}/DEBIAN/postrm"
 
-dpkg-deb --build "${PKG_DIR_UC}" "output_artifacts/autoboat-vt-firmware-sdk-${DEB_ARCH}.deb"
+
+# Firmware SDK Debian package
+echo "==> Building firmware-sdk .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
+PKG_DIR_FIRMWARE="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_uc"
+mkdir -p "${PKG_DIR_FIRMWARE}/DEBIAN"
+mkdir -p "${PKG_DIR_FIRMWARE}/opt/autoboat/firmware_dependencies"
+
+cp -r /opt/autoboat/firmware_dependencies/micro_ros_raspberrypi_pico_sdk "${PKG_DIR_FIRMWARE}/opt/autoboat/firmware_dependencies/"
+cp -r /opt/autoboat/firmware_dependencies/picotool "${PKG_DIR_FIRMWARE}/opt/autoboat/firmware_dependencies/"
+cp -r /opt/autoboat/firmware_dependencies/pico-sdk "${PKG_DIR_FIRMWARE}/opt/autoboat/firmware_dependencies/"
+
+echo "  Firmware SDK package size before compression: $(du -sh "${PKG_DIR_FIRMWARE}" | cut -f1)"
+
+sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
+  .github/workflows/debian_package_files/control-firmware-sdk.template > "${PKG_DIR_FIRMWARE}/DEBIAN/control"
+
+cp .github/workflows/debian_package_files/firmware-sdk/postinst "${PKG_DIR_FIRMWARE}/DEBIAN/postinst"
+cp .github/workflows/debian_package_files/firmware-sdk/postrm   "${PKG_DIR_FIRMWARE}/DEBIAN/postrm"
+chmod 0755 "${PKG_DIR_FIRMWARE}/DEBIAN/postinst" "${PKG_DIR_FIRMWARE}/DEBIAN/prerm" "${PKG_DIR_FIRMWARE}/DEBIAN/postrm"
+
+dpkg-deb --build "${PKG_DIR_FIRMWARE}" "output_artifacts/autoboat-vt-firmware-sdk-${DEB_ARCH}.deb"
+
 
 
 # Fix permissions for host runner upload
@@ -127,3 +149,4 @@ chmod -R a+rX output_artifacts/
 
 echo "==> Output artifacts:"
 du -sh output_artifacts/*
+
