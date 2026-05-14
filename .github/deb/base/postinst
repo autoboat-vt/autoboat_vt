@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+
+# Create the profile.d script for the base ROS 2 workspace
+cat > /etc/profile.d/autoboat-vt-base.sh << 'EOF'
+# Installed by the autoboatvt Debian package — do not edit manually.
+if [ -f /opt/ros/humble/setup.bash ]; then
+    source /opt/ros/humble/setup.bash
+fi
+if [ -f /opt/autoboat/install/setup.bash ]; then
+    source /opt/autoboat/install/setup.bash
+fi
+EOF
+chmod +x /etc/profile.d/autoboat-vt-base.sh
+
+
+# Add generic autoboat sourcing to .bashrc
+TARGET_USER="${SUDO_USER:-$(whoami)}"
+USER_HOME=$(getent passwd "$TARGET_USER" | cut -d: -f6)
+BASHRC="${USER_HOME}/.bashrc"
+
+if [ -f "$BASHRC" ]; then
+    if ! grep -qF "autoboat-vt-*.sh" "$BASHRC"; then
+        cat >> "$BASHRC" << 'BASHEOF'
+
+# Added by autoboat-vt
+for f in /etc/profile.d/autoboat-vt-*.sh; do [ -f "$f" ] && source "$f"; done
+BASHEOF
+        echo "Environment configured for user: $TARGET_USER"
+    fi
+fi

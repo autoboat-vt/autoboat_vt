@@ -1,0 +1,34 @@
+#!/bin/bash
+set -e
+
+# Create the profile.d script for micro-ROS agent
+cat > /etc/profile.d/autoboat-vt-agent.sh << 'EOF'
+# Installed by the autoboatvt-microros-agent Debian package — do not edit manually.
+if [ -f /opt/ros/humble/setup.bash ]; then
+    source /opt/ros/humble/setup.bash
+fi
+
+export MICROROS_DIR="/opt/autoboat/microros_dependencies"
+
+if [ -f "${MICROROS_DIR}/micro_ros_agent/install/local_setup.bash" ]; then
+    source "${MICROROS_DIR}/micro_ros_agent/install/local_setup.bash"
+fi
+EOF
+chmod +x /etc/profile.d/autoboat-vt-agent.sh
+
+
+# Add generic autoboat sourcing to .bashrc
+TARGET_USER="${SUDO_USER:-$(whoami)}"
+USER_HOME=$(getent passwd "$TARGET_USER" | cut -d: -f6)
+BASHRC="${USER_HOME}/.bashrc"
+
+if [ -f "$BASHRC" ]; then
+    if ! grep -qF "autoboat-vt-*.sh" "$BASHRC"; then
+        cat >> "$BASHRC" << 'BASHEOF'
+
+# Added by autoboat-vt
+for f in /etc/profile.d/autoboat-vt-*.sh; do [ -f "$f" ] && source "$f"; done
+BASHEOF
+        echo "Environment configured for user: $TARGET_USER"
+    fi
+fi

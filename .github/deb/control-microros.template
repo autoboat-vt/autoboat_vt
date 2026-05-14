@@ -2,11 +2,11 @@ Package: autoboatvt-microros
 Version: VERSION_PLACEHOLDER
 Architecture: ARCH_PLACEHOLDER
 Maintainer: autoboatvt <autoboat@vt.edu>
-Depends: autoboatvt (= VERSION_PLACEHOLDER),
+Depends: autoboatvt-microros-agent (= VERSION_PLACEHOLDER),
          build-essential,
          cmake,
          gcc-arm-none-eabi,
-         libnewlib-arm-none-eabi,
+         libstdc++-arm-none-eabi-newlib,
          libusb-1.0-0-dev,
          pkg-config,
          git
@@ -14,5 +14,5 @@ Description: Micro-ROS SDK and toolchain for the VT AutoBoat system
  Includes Pico SDK, Micro-ROS Pico SDK, and build tools for the RP2040.
  Built for ROS2 Humble on Ubuntu 22.04.
  .
- After installation, open a new terminal (or run: source /etc/profile.d/autoboat-vt.sh)
+ After installation, open a new terminal (or run: source /etc/profile.d/autoboat-vt-microros.sh)
 

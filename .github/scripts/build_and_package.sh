@@ -27,27 +27,27 @@ colcon build --packages-ignore ${IGNORE_PACKAGES} \
 
 mkdir -p output_artifacts
 
+
+
 # ── Standard Debian package (Runtime) ────────────────────────
 echo "==> Building standard .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
 PKG_DIR_STD="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_std"
 mkdir -p "${PKG_DIR_STD}/DEBIAN"
-mkdir -p "${PKG_DIR_STD}/opt/autoboat/microros_dependencies/micro_ros_agent/install"
+mkdir -p "${PKG_DIR_STD}/opt/autoboat"
 
 # Copy built ROS 2 nodes
 cp -r /opt/autoboat/install "${PKG_DIR_STD}/opt/autoboat/"
-
-# Copy ONLY the micro_ros_agent runtime (install folder)
-# We use standard globbing here; double stars are often shell-dependent
-cp -r /opt/autoboat/microros_dependencies/micro_ros_agent/install/* "${PKG_DIR_STD}/opt/autoboat/microros_dependencies/micro_ros_agent/install/"
 
 # Control file + Maintainer scripts
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
   .github/deb/control.template > "${PKG_DIR_STD}/DEBIAN/control"
 
-cp .github/deb/postinst "${PKG_DIR_STD}/DEBIAN/postinst"
-cp .github/deb/prerm    "${PKG_DIR_STD}/DEBIAN/prerm"
-cp .github/deb/postrm   "${PKG_DIR_STD}/DEBIAN/postrm"
+cp .github/deb/base/postinst "${PKG_DIR_STD}/DEBIAN/postinst"
+cp .github/deb/base/prerm      "${PKG_DIR_STD}/DEBIAN/prerm"
+cp .github/deb/base/postrm   "${PKG_DIR_STD}/DEBIAN/postrm"
 chmod 0755 "${PKG_DIR_STD}/DEBIAN/postinst" "${PKG_DIR_STD}/DEBIAN/prerm" "${PKG_DIR_STD}/DEBIAN/postrm"
+
+
 
 # ── Simulation package logic (amd64 only) ──────────────────────
 if [ "${DEB_ARCH}" == "amd64" ]; then
@@ -86,35 +86,64 @@ if [ "${DEB_ARCH}" == "amd64" ]; then
   # Control file
   sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
       .github/deb/control-simulation.template > "${PKG_DIR_SIM}/DEBIAN/control"
+      
+  cp .github/deb/base/prerm "${PKG_DIR_SIM}/DEBIAN/prerm"
+  chmod 0755 "${PKG_DIR_SIM}/DEBIAN/prerm"
   
-  dpkg-deb --build "${PKG_DIR_SIM}" "output_artifacts/autoboat-vt-simulation-${DEB_ARCH}.deb"
+  dpkg-deb -Zzstd --build "${PKG_DIR_SIM}" "output_artifacts/autoboat-vt-simulation-${DEB_ARCH}.deb"
 fi
 
-dpkg-deb --build "${PKG_DIR_STD}" "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
+dpkg-deb -Zzstd --build "${PKG_DIR_STD}" "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
 
-# ── Micro-ROS SDK Debian package (Development) ───────────────
+
+
+# ── Micro-ROS Agent Debian package ────────────────────────────
+echo "==> Building microros-agent .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
+PKG_DIR_AGENT="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_agent"
+mkdir -p "${PKG_DIR_AGENT}/DEBIAN"
+mkdir -p "${PKG_DIR_AGENT}/opt/autoboat/microros_dependencies"
+
+# Copy the micro_ros_agent workspace
+cp -r /opt/autoboat/microros_dependencies/micro_ros_agent "${PKG_DIR_AGENT}/opt/autoboat/microros_dependencies/"
+
+# Control file
+sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
+  .github/deb/control-microros-agent.template > "${PKG_DIR_AGENT}/DEBIAN/control"
+
+cp .github/deb/microros_agent/postinst "${PKG_DIR_AGENT}/DEBIAN/postinst"
+cp .github/deb/microros_agent/postrm   "${PKG_DIR_AGENT}/DEBIAN/postrm"
+chmod 0755 "${PKG_DIR_AGENT}/DEBIAN/postinst" "${PKG_DIR_AGENT}/DEBIAN/postrm"
+
+dpkg-deb -Zzstd --build "${PKG_DIR_AGENT}" "output_artifacts/autoboat-vt-microros-agent-${DEB_ARCH}.deb"
+
+
+
+# ── Micro-ROS SDK Debian package (Standalone Development) ────
 echo "==> Building microros-sdk .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
 PKG_DIR_UC="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_uc"
 mkdir -p "${PKG_DIR_UC}/DEBIAN"
 mkdir -p "${PKG_DIR_UC}/opt/autoboat/microros_dependencies"
 
-# Copy dependencies to help build microros packages
+# Copy SDK dependencies for building microros packages (agent provided by autoboatvt-microros-agent)
 cp -r /opt/autoboat/microros_dependencies/micro_ros_raspberrypi_pico_sdk "${PKG_DIR_UC}/opt/autoboat/microros_dependencies/"
 cp -r /opt/autoboat/microros_dependencies/picotool "${PKG_DIR_UC}/opt/autoboat/microros_dependencies/"
 cp -r /opt/autoboat/microros_dependencies/pico-sdk "${PKG_DIR_UC}/opt/autoboat/microros_dependencies/"
 
+echo "  Microros package size before compression: $(du -sh "${PKG_DIR_UC}" | cut -f1)"
 
-# Control file (Depends on standard package)
+# Control file (standalone — no dependency on autoboatvt)
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
   .github/deb/control-microros.template > "${PKG_DIR_UC}/DEBIAN/control"
 
-# Use the same post-install scripts (they are idempotent)
-cp .github/deb/postinst "${PKG_DIR_UC}/DEBIAN/postinst"
-cp .github/deb/prerm    "${PKG_DIR_UC}/DEBIAN/prerm"
-cp .github/deb/postrm   "${PKG_DIR_UC}/DEBIAN/postrm"
-chmod 0755 "${PKG_DIR_UC}/DEBIAN/postinst" "${PKG_DIR_UC}/DEBIAN/prerm" "${PKG_DIR_UC}/DEBIAN/postrm"
+# Package-specific maintainer scripts
+cp .github/deb/microros/postinst "${PKG_DIR_UC}/DEBIAN/postinst"
+cp .github/deb/microros/postrm   "${PKG_DIR_UC}/DEBIAN/postrm"
+chmod 0755 "${PKG_DIR_UC}/DEBIAN/postinst" "${PKG_DIR_UC}/DEBIAN/postrm"
 
-dpkg-deb --build "${PKG_DIR_UC}" "output_artifacts/autoboat-vt-microros-full-${DEB_ARCH}.deb"
+# Use zstd compression (dramatically faster than default xz, similar ratio)
+dpkg-deb -Zzstd --build "${PKG_DIR_UC}" "output_artifacts/autoboat-vt-microros-full-${DEB_ARCH}.deb"
+
+
 
 # ── Fix permissions for host runner upload ───────────────────
 echo "==> Fixing permissions for host runner..."
@@ -122,3 +151,4 @@ chmod -R a+rX output_artifacts/
 
 echo "==> Output artifacts:"
 du -sh output_artifacts/*
+
