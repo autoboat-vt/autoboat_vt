@@ -23,33 +23,46 @@ from utils.data_logger import DataLogger
 from utils.state_manager import StateManager
 
 
-class SailboatAutopilotMode(Enum):
-    """An enum containing the different modes that the sailboat autopilot can be in."""
+class StrictMatchEnums:
+    """
+    These enums MUST match those in `autopilot_vt/src/autopilot/autopilot/autopilot_library/utils/constants.py` exactly.
 
-    DISABLED = 0
-    FULL_RC = 1
-    HOLD_BEST_SAIL = 2
-    HOLD_HEADING = 3
-    HOLD_HEADING_AND_BEST_SAIL = 4
-    WAYPOINT_MISSION = 5
+    If you change any of these, you MUST change the corresponding one in the autopilot repository as well, and vice versa.
 
-class MotorboatAutopilotMode(Enum):
-    """An enum containing the different modes that the motorboat autopilot can be in."""
+    Contains
+    --------
+    - ``SailboatAutopilotMode``
+    - ``MotorboatAutopilotMode``
+    - ``SailboatStates``
+    """
 
-    DISABLED = 0
-    FULL_RC = 1
-    HOLD_HEADING = 2
-    WAYPOINT_MISSION = 3
+    class SailboatAutopilotMode(Enum):
+        """An enum containing the different modes that the sailboat autopilot can be in."""
 
-class SailboatStates(Enum):
-    """An enum containing the different states that the sailboat autopilot can be in."""
+        DISABLED = 0
+        FULL_RC = 1
+        HOLD_BEST_SAIL = 2
+        HOLD_HEADING = 3
+        HOLD_HEADING_AND_BEST_SAIL = 4
+        WAYPOINT_MISSION = 5
 
-    NA = -1
-    NORMAL = 0
-    CW_TACKING = 1
-    CCW_TACKING = 2
-    STALL = 3
-    # JIBE = 4
+    class MotorboatAutopilotMode(Enum):
+        """An enum containing the different modes that the motorboat autopilot can be in."""
+
+        DISABLED = 0
+        FULL_RC = 1
+        HOLD_HEADING = 2
+        WAYPOINT_MISSION = 3
+
+    class SailboatStates(Enum):
+        """An enum containing the different states that the sailboat autopilot can be in."""
+
+        NA = -1
+        NORMAL = 0
+        CW_TACKING = 1
+        CCW_TACKING = 2
+        STALL = 3
+        # JIBE = 4
 
 class TelemetryStatus(StrEnum):
     """
@@ -75,7 +88,7 @@ FileType: TypeAlias = str | os.PathLike[str]
 
 SM = StateManager()
 
-# icons will be loaded in `misc.before_app_start()` after the QApplication instance is created
+# see `main.py` for where this is set
 ICONS: SimpleNamespace
 
 # colors (monokai pro color scheme)
@@ -146,17 +159,19 @@ ONE_MS_TIMER = misc.create_timer(1)
 
 _start_time: float = time.time()
 
-# server ports and web engine page
+# server ports
 ASSET_SERVER_PORT = 8000
-GO_SERVER_PORT = 3002
+MAP_SERVER_PORT = 3002
 VITE_PORT = 5173
 
-# MAP_PAGE is set in `misc.before_app_start()` since QWebEnginePage cannot be created before that
+# url for local vite server hosting the map
 MAP_URL = QUrl(f"http://127.0.0.1:{VITE_PORT}")
+
+# see `main.py` for where this is set
 MAP_PAGE: QWebEnginePage
 
 # url for local waypoints server
-_waypoints_server_url: str = f"http://localhost:{GO_SERVER_PORT}/waypoints"
+_waypoints_server_url: str = f"http://localhost:{MAP_SERVER_PORT}/waypoints"
 
 TELEMETRY_TIMEOUT_SECONDS = 10
 TELEMETRY_RETRY_ATTEMPTS = 3

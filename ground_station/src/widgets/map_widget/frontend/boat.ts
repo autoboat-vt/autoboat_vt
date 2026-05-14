@@ -7,8 +7,8 @@ interface BoatState {
 }
 
 export class BoatManager {
-    readonly boat: BoatState = { heading: 0, location: [0, 0] };
-    readonly marker: Marker;
+    private readonly boat: BoatState = { heading: 0, location: [0, 0] };
+    private marker: Marker;
 
     constructor(
         private readonly map: LeafletMap,
@@ -28,28 +28,30 @@ export class BoatManager {
         this.map.setView(this.boat.location, this.map.getMaxZoom());
     }
 
-    /**
-     * Updates the boat location.
-     */
-    updateLocation(lat: number, lon: number): void {
+    setLocation(lat: number, lon: number): void {
         this.boat.location = [lat, lon];
         this.marker.setLatLng(this.boat.location);
     }
 
-    /**
-     * Updates the boat heading.
-     */
-    updateHeading(heading: number): void {
+    getLocation(): LatLngTuple {
+        return this.boat.location;
+    }
+
+    setHeading(heading: number): void {
         this.boat.heading = heading;
         this.marker.setRotationAngle(90 - heading);
+    }
+
+    getHeading(): number {
+        return this.boat.heading;
     }
 
     /**
      * Updates both boat location and heading.
      */
-    updateLocationAndHeading(lat: number, lon: number, heading: number): void {
-        this.updateLocation(lat, lon);
-        this.updateHeading(heading);
+    setLocationAndHeading(lat: number, lon: number, heading: number): void {
+        this.setLocation(lat, lon);
+        this.setHeading(heading);
     }
 
     /**

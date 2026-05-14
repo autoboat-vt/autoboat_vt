@@ -21,9 +21,6 @@ class MapInterface {
     static readonly mapOptions: MapOptions = { center: [0, 0], zoom: 13 };
     static readonly iconCache = new Map<string, Icon>();
     static readonly assetsUrl = "http://localhost:8000/";
-    static readonly buoyColor = "orange";
-    static readonly waypointColor = "blue";
-    static readonly focusedWaypointColor = "violet";
 
     lastFocusedTimestamp = performance.now();
     readonly minZoom = 5;
@@ -31,12 +28,12 @@ class MapInterface {
 
     map: LeafletMapType;
 
-    readonly waypoints: WaypointManager;
-    readonly buoys: BuoyManager;
-    readonly boat: BoatManager;
-    readonly svgs: SVGManager;
+    readonly waypoint_manager: WaypointManager;
+    readonly buoy_manager: BuoyManager;
+    readonly boat_manager: BoatManager;
+    readonly svg_manager: SVGManager;
 
-    static getIcon(color: string): Icon {
+    static getMarkerIcon(color: string): Icon {
         const key = `marker-${color}`;
         const cachedIcon = MapInterface.iconCache.get(key);
 
@@ -66,20 +63,14 @@ class MapInterface {
 
     constructor() {
         this.map = LeafletMap("map", MapInterface.mapOptions);
-
-        this.waypoints = new WaypointManager(
+        this.waypoint_manager = new WaypointManager(
             this.map,
-            MapInterface.getIcon.bind(MapInterface),
-            MapInterface.waypointColor,
-            MapInterface.focusedWaypointColor,
+            MapInterface.getMarkerIcon.bind(MapInterface),
             this.syncWaypoints.bind(this)
         );
-
-        this.buoys = new BuoyManager(this.map, MapInterface.getIcon.bind(MapInterface), MapInterface.buoyColor);
-
-        this.boat = new BoatManager(this.map, MapInterface.getBoatIcon.bind(MapInterface));
-
-        this.svgs = new SVGManager(this.map, this.boat);
+        this.buoy_manager = new BuoyManager(this.map, MapInterface.getMarkerIcon.bind(MapInterface));
+        this.boat_manager = new BoatManager(this.map, MapInterface.getBoatIcon.bind(MapInterface));
+        this.svg_manager = new SVGManager(this.map);
 
         const mapTilerKey = "M9yBkV9J49pYUg5o8SGC";
         tileLayer(`https://api.maptiler.com/maps/openstreetmap/{z}/{x}/{y}.jpg?key=${mapTilerKey}`, {
@@ -104,14 +95,15 @@ class MapInterface {
         });
 
         this.map.on("click", (event: LeafletMouseEvent) => {
-            this.waypoints.add(event.latlng.lat, event.latlng.lng);
+            this.waypoint_manager.add(event.latlng.lat, event.latlng.lng);
         });
 
+        // contextmenu is right click
         this.map.on("contextmenu", (event: LeafletMouseEvent) => {
-            const closestIndex = this.waypoints.findClosestIndex(event.latlng.lat, event.latlng.lng, 20);
+            const closestIndex = this.waypoint_manager.findClosestIndex(event.latlng.lat, event.latlng.lng);
 
             if (closestIndex !== -1) {
-                this.waypoints.remove(closestIndex);
+                this.waypoint_manager.remove(closestIndex);
             }
         });
     }
@@ -140,89 +132,89 @@ class MapInterface {
      * Clears waypoint focus after the map has moved for long enough.
      */
     handleMapMove(): void {
-        if (!this.waypoints.focusedWaypoint) {
+        if (!this.waypoint_manager.focusedWaypoint) {
             return;
         }
 
         const diff = performance.now() - this.lastFocusedTimestamp;
         if (diff > 500) {
-            this.waypoints.unfocus();
+            this.waypoint_manager.unfocus();
         }
     }
 
     update_boat_location(lat: number, lon: number): void {
-        this.boat.updateLocation(lat, lon);
+        this.boat_manager.setLocation(lat, lon);
     }
 
     update_boat_heading(heading: number): void {
-        this.boat.updateHeading(heading);
+        this.boat_manager.setHeading(heading);
     }
 
     update_boat_location_and_heading(lat: number, lon: number, heading: number): void {
-        this.boat.updateLocationAndHeading(lat, lon, heading);
+        this.boat_manager.setLocationAndHeading(lat, lon, heading);
     }
 
     focus_map_on_boat(): void {
-        this.boat.focus();
+        this.boat_manager.focus();
     }
 
     focus_map_on_marker(lat: number, lon: number): void {
         this.map.setView([lat, lon], this.map.getMaxZoom());
-        this.waypoints.focus(lat, lon);
+        this.waypoint_manager.focus(lat, lon);
         this.lastFocusedTimestamp = performance.now();
     }
 
     focus_map_on_buoy(lat: number, lon: number): void {
         this.map.setView([lat, lon], this.map.getMaxZoom());
-        this.waypoints.focus(lat, lon);
+        this.waypoint_manager.focus(lat, lon);
     }
 
     add_waypoint(lat: number, lon: number): void {
-        this.waypoints.add(lat, lon);
+        this.waypoint_manager.add(lat, lon);
     }
 
     remove_waypoint(index: number): void {
-        this.waypoints.remove(index);
+        this.waypoint_manager.remove(index);
     }
 
     change_color_waypoints(color: string): void {
-        this.waypoints.changeColor(color);
+        this.waypoint_manager.changeColor(color);
     }
 
     clear_waypoints(): void {
-        this.waypoints.clear();
+        this.waypoint_manager.clear();
     }
 
     add_buoy(lat: number, lon: number): void {
-        this.buoys.add(lat, lon);
+        this.buoy_manager.add(lat, lon);
     }
 
     remove_buoy(index: number): void {
-        this.buoys.remove(index);
+        this.buoy_manager.remove(index);
     }
 
     clear_buoys(): void {
-        this.buoys.clear();
+        this.buoy_manager.clear();
     }
 
     remove_all_svgs(): void {
-        this.svgs.removeAllSvgs();
+        this.svg_manager.removeAllSvgs();
     }
 
     update_no_sail_svg(innerHTML: string, size: number): void {
-        this.svgs.updateNoSailSvg(innerHTML, size);
+        this.svg_manager.updateNoSailSvg(innerHTML, size, this.boat_manager.getLocation());
     }
 
     update_velocity_svg(innerHTML: string, size: number): void {
-        this.svgs.updateVelocitySvg(innerHTML, size);
+        this.svg_manager.updateVelocitySvg(innerHTML, size, this.boat_manager.getLocation());
     }
 
     update_wind_svg(innerHTML: string): void {
-        this.svgs.updateWindSvg(innerHTML);
+        this.svg_manager.updateWindSvg(innerHTML);
     }
 
     update_compass_svg(degree: number): void {
-        this.svgs.updateCompassSvg(degree);
+        this.svg_manager.updateCompassSvg(degree);
     }
 }
 

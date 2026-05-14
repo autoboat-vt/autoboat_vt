@@ -33,7 +33,6 @@ from typing import TypeVar
 import qtawesome as qta
 from qtpy.QtCore import QTimer
 from qtpy.QtGui import QIcon
-from qtpy.QtWebEngineWidgets import QWebEnginePage
 from qtpy.QtWidgets import QCheckBox, QInputDialog, QMessageBox, QPushButton
 from requests import RequestException
 
@@ -95,13 +94,6 @@ def get_icons() -> SimpleNamespace:
         )
 
     return SimpleNamespace(**icons)
-
-def before_app_start() -> None:
-    """Perform necessary setup after the ``QApplication`` instance is created but before the main window is shown."""
-
-    constants.ICONS = get_icons()
-    constants.MAP_PAGE = QWebEnginePage()
-    constants.MAP_PAGE.load(constants.MAP_URL)
 
 def get_route(route_name: str) -> str:
     """

@@ -12,7 +12,7 @@ export abstract class MarkerManager {
         protected readonly getIcon: (color: string) => Icon
     ) {}
 
-    findClosestIndex(lat: number, lon: number, maxDistanceMeters = 10): number {
+    findClosestIndex(lat: number, lon: number): number {
         let closestIndex = -1;
         let closestDistance = Number.POSITIVE_INFINITY;
         const target = latLng(lat, lon);
@@ -20,7 +20,7 @@ export abstract class MarkerManager {
         this.points.forEach((point, index) => {
             const distance = target.distanceTo(latLng(point[0], point[1]));
 
-            if (distance < closestDistance && distance < maxDistanceMeters) {
+            if (distance < closestDistance) {
                 closestIndex = index;
                 closestDistance = distance;
             }
@@ -34,7 +34,7 @@ export abstract class MarkerManager {
     }
 
     protected makeKey(lat: number, lon: number): string {
-        return `${lat.toFixed(6)},${lon.toFixed(6)}`;
+        return `${lat * lon}`;
     }
 
     protected addPoint(lat: number, lon: number, color: string): void {

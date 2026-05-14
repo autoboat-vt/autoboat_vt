@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 
 import numpy as np
 import svg
-from qtpy.QtCore import QSize, Qt, QUrl, Signal, Slot
+from qtpy.QtCore import QSize, Qt, Signal, Slot
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import (
     QFileDialog,
@@ -867,8 +867,10 @@ class GroundStationWidget(QWidget):
 
         # region mode dependent print functions
         def sailboat_mode(boat_data: dict[str, Any]) -> str:
-            self.boat_data["full_autonomy_maneuver"] = constants.SailboatStates(boat_data["full_autonomy_maneuver"]).name
-            self.boat_data["autopilot_mode"] = constants.SailboatAutopilotMode(boat_data["autopilot_mode"]).name
+            self.boat_data["full_autonomy_maneuver"] = constants.StrictMatchEnums.SailboatStates(
+                boat_data["full_autonomy_maneuver"]
+            ).name
+            self.boat_data["autopilot_mode"] = constants.StrictMatchEnums.SailboatAutopilotMode(boat_data["autopilot_mode"]).name
 
             return (
                 "Position: "
@@ -897,7 +899,7 @@ class GroundStationWidget(QWidget):
 
 
         def motorboat_mode(boat_data: dict[str, Any]) -> str:
-            self.boat_data["autopilot_mode"] = constants.MotorboatAutopilotMode(boat_data["autopilot_mode"]).name
+            self.boat_data["autopilot_mode"] = constants.StrictMatchEnums.MotorboatAutopilotMode(boat_data["autopilot_mode"]).name
 
             return (
                 "Position: "

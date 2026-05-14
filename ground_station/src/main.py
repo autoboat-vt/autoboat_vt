@@ -6,16 +6,11 @@ import threading
 from typing import NoReturn
 
 from qtpy.QtGui import QIcon
+from qtpy.QtWebEngineWidgets import QWebEnginePage
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 from utils import constants, misc
-from widgets import (
-    AutopilotConfigWidget,
-    CameraWidget,
-    ConsoleOutputWidget,
-    GraphViewer,
-    GroundStationWidget,
-    InstanceHandler,
-)
+from widgets import AutopilotConfigWidget, CameraWidget, ConsoleOutputWidget, GraphViewer, GroundStationWidget, InstanceHandler
+from widgets.map_widget import server as map_server
 
 
 class MainWindow(QMainWindow):
@@ -35,12 +30,23 @@ class MainWindow(QMainWindow):
         print(f"[Info] Serving HTTP assets on port {constants.ASSET_SERVER_PORT}...")
         self.asset_server.serve_forever()
 
+    def start_map_server(self) -> None:
+        """Start the local map widget server."""
+
+        try:
+            map_server.run()
+        except OSError as exc:
+            print(f"[Error] Failed to start map server on port {constants.MAP_SERVER_PORT}: {exc}")
+
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(constants.WINDOW_TITLE)
         self.setGeometry(constants.WINDOW_BOX)
         self.setMaximumSize(constants.MAX_WINDOW_SIZE)
         self.setUnifiedTitleAndToolBarOnMac(True)
+
+        constants.MAP_PAGE = QWebEnginePage()
+        constants.MAP_PAGE.load(constants.MAP_URL)
 
         self.main_widget = QTabWidget()
         self.setCentralWidget(self.main_widget)
@@ -69,7 +75,7 @@ class MainWindow(QMainWindow):
         print("[Info] Shutting down asset server...")
         if hasattr(self, "asset_server"):
             self.asset_server.shutdown()
-        
+
         print("[Info] Closing the application...")
         event.accept()
 
@@ -99,11 +105,11 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    
-    misc.before_app_start()
+    constants.ICONS = misc.get_icons()
     
     window = MainWindow()
     threading.Thread(target=window.start_asset_server, daemon=True).start()
+    threading.Thread(target=window.start_map_server, daemon=True).start()
 
     app.setStyleSheet(constants.STYLE_SHEET)
     app.setPalette(constants.PALLETTE)

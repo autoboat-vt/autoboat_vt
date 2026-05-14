@@ -16,7 +16,6 @@
                 "ms-vscode.cpptools",
                 "ms-python.python",
                 "ms-python.vscode-pylance",
-                "golang.go",
                 "donjayamanne.python-environment-manager",
                 "ms-python.debugpy",
                 "charliermarsh.ruff",

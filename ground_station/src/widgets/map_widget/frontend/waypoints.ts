@@ -3,21 +3,21 @@ import { MarkerManager } from "./marker";
 import type { LatLngTuple } from "./types";
 
 export class WaypointManager extends MarkerManager {
+    static readonly defaultColor = "blue";
+    static readonly focusedColor = "violet";
     readonly waypoints = this.points;
     focusedWaypoint: string | null = null;
 
     constructor(
         map: LeafletMap,
         getIcon: (color: string) => Icon,
-        private readonly defaultColor: string,
-        private readonly focusedColor: string,
         private readonly syncWaypoints: (waypoints: LatLngTuple[]) => Promise<void>
     ) {
         super(map, getIcon);
     }
 
     add(lat: number, lon: number): void {
-        this.addPoint(lat, lon, this.defaultColor);
+        this.addPoint(lat, lon, WaypointManager.defaultColor);
     }
 
     remove(index: number): void {
@@ -38,7 +38,7 @@ export class WaypointManager extends MarkerManager {
         }
         const key = this.focusedWaypoint;
         const waypointMarker = this.markers.get(key);
-        const storedColor = this.markerColors.get(key) ?? this.defaultColor;
+        const storedColor = this.markerColors.get(key) ?? WaypointManager.defaultColor;
 
         if (waypointMarker) {
             waypointMarker.setIcon(this.getIcon(storedColor));
@@ -58,19 +58,19 @@ export class WaypointManager extends MarkerManager {
         if (this.focusedWaypoint && this.focusedWaypoint !== key) {
             const previousKey = this.focusedWaypoint;
             const previousMarker = this.markers.get(previousKey);
-            const previousColor = this.markerColors.get(previousKey) ?? this.defaultColor;
+            const previousColor = this.markerColors.get(previousKey) ?? WaypointManager.defaultColor;
             if (previousMarker) {
                 previousMarker.setIcon(this.getIcon(previousColor));
             }
         }
 
         this.focusedWaypoint = key;
-        waypointMarker.setIcon(this.getIcon(this.focusedColor));
+        waypointMarker.setIcon(this.getIcon(WaypointManager.focusedColor));
     }
 
     protected override getDisplayColor(key: string, storedColor: string): string {
         if (this.focusedWaypoint === key) {
-            return this.focusedColor;
+            return WaypointManager.focusedColor;
         }
         return storedColor;
     }
