@@ -27,6 +27,8 @@ colcon build --packages-ignore ${IGNORE_PACKAGES} \
 
 mkdir -p output_artifacts
 
+echo "Current time is $(date +'%Y-%m-%d %H:%M:%S')"
+
 # ── Standard Debian package (Runtime) ────────────────────────
 echo "==> Building standard .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
 PKG_DIR_STD="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_std"
@@ -48,6 +50,8 @@ cp .github/deb/postinst "${PKG_DIR_STD}/DEBIAN/postinst"
 cp .github/deb/prerm    "${PKG_DIR_STD}/DEBIAN/prerm"
 cp .github/deb/postrm   "${PKG_DIR_STD}/DEBIAN/postrm"
 chmod 0755 "${PKG_DIR_STD}/DEBIAN/postinst" "${PKG_DIR_STD}/DEBIAN/prerm" "${PKG_DIR_STD}/DEBIAN/postrm"
+
+echo "Current time is $(date +'%Y-%m-%d %H:%M:%S')"
 
 # ── Simulation package logic (amd64 only) ──────────────────────
 if [ "${DEB_ARCH}" == "amd64" ]; then
@@ -92,6 +96,8 @@ fi
 
 dpkg-deb --build "${PKG_DIR_STD}" "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
 
+echo "Current time is $(date +'%Y-%m-%d %H:%M:%S')"
+
 # ── Micro-ROS SDK Debian package (Development) ───────────────
 echo "==> Building microros-sdk .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
 PKG_DIR_UC="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_uc"
@@ -116,9 +122,13 @@ chmod 0755 "${PKG_DIR_UC}/DEBIAN/postinst" "${PKG_DIR_UC}/DEBIAN/prerm" "${PKG_D
 
 dpkg-deb --build "${PKG_DIR_UC}" "output_artifacts/autoboat-vt-microros-full-${DEB_ARCH}.deb"
 
+echo "Current time is $(date +'%Y-%m-%d %H:%M:%S')"
+
 # ── Fix permissions for host runner upload ───────────────────
 echo "==> Fixing permissions for host runner..."
 chmod -R a+rX output_artifacts/
 
 echo "==> Output artifacts:"
 du -sh output_artifacts/*
+
+echo "Current time is $(date +'%Y-%m-%d %H:%M:%S')"

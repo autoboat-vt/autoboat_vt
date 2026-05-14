@@ -176,6 +176,9 @@ jobs:
         run: |
           docker pull vtautoboat/development_image_microros:${{ matrix.architecture }}
           # No need to retag, we will use the full name in the build step
+      
+      - name: Echo current time
+        run: echo "Current time is $(date +'%Y-%m-%d %H:%M:%S')"
 
       # -----------------------------------------------------------------------
       # Run colcon build AND package everything inside the container.
@@ -211,6 +214,10 @@ jobs:
             -e CMAKE_CXX_COMPILER_LAUNCHER=ccache \
             vtautoboat/development_image_microros:${{ matrix.architecture }} \
             bash .github/scripts/build_and_package.sh
+      
+
+      - name: Echo current time
+        run: echo "Current time is $(date +'%Y-%m-%d %H:%M:%S')"
 
       # Upload both the .tar.gz and .deb as workflow artifacts.
       # On every push/PR these are downloadable from the Actions tab for 5 days.
@@ -221,6 +228,10 @@ jobs:
           name: autoboat-prebuilt-${{ matrix.architecture }}
           path: output_artifacts/
           # retention-days: 5
+
+      - name: Echo current time
+        run: echo "Current time is $(date +'%Y-%m-%d %H:%M:%S')"
+
 
 
   # ============================================================================
