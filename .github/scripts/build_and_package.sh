@@ -42,10 +42,9 @@ cp -r /opt/autoboat/install "${PKG_DIR_STD}/opt/autoboat/"
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
   .github/deb/control.template > "${PKG_DIR_STD}/DEBIAN/control"
 
-cp .github/deb/postinst "${PKG_DIR_STD}/DEBIAN/postinst"
-cp .github/deb/prerm    "${PKG_DIR_STD}/DEBIAN/prerm"
-cp .github/deb/postrm   "${PKG_DIR_STD}/DEBIAN/postrm"
-chmod 0755 "${PKG_DIR_STD}/DEBIAN/postinst" "${PKG_DIR_STD}/DEBIAN/prerm" "${PKG_DIR_STD}/DEBIAN/postrm"
+cp .github/deb/base/postinst "${PKG_DIR_STD}/DEBIAN/postinst"
+cp .github/deb/base/postrm   "${PKG_DIR_STD}/DEBIAN/postrm"
+chmod 0755 "${PKG_DIR_STD}/DEBIAN/postinst" "${PKG_DIR_STD}/DEBIAN/postrm"
 
 
 
@@ -107,10 +106,9 @@ cp -r /opt/autoboat/microros_dependencies/micro_ros_agent "${PKG_DIR_AGENT}/opt/
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
   .github/deb/control-microros-agent.template > "${PKG_DIR_AGENT}/DEBIAN/control"
 
-cp .github/deb/postinst "${PKG_DIR_AGENT}/DEBIAN/postinst"
-cp .github/deb/prerm    "${PKG_DIR_AGENT}/DEBIAN/prerm"
-cp .github/deb/postrm   "${PKG_DIR_AGENT}/DEBIAN/postrm"
-chmod 0755 "${PKG_DIR_AGENT}/DEBIAN/postinst" "${PKG_DIR_AGENT}/DEBIAN/prerm" "${PKG_DIR_AGENT}/DEBIAN/postrm"
+cp .github/deb/microros_agent/postinst "${PKG_DIR_AGENT}/DEBIAN/postinst"
+cp .github/deb/microros_agent/postrm   "${PKG_DIR_AGENT}/DEBIAN/postrm"
+chmod 0755 "${PKG_DIR_AGENT}/DEBIAN/postinst" "${PKG_DIR_AGENT}/DEBIAN/postrm"
 
 dpkg-deb -Zzstd --build "${PKG_DIR_AGENT}" "output_artifacts/autoboat-vt-microros-agent-${DEB_ARCH}.deb"
 
@@ -133,11 +131,10 @@ echo "  Microros package size before compression: $(du -sh "${PKG_DIR_UC}" | cut
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
   .github/deb/control-microros.template > "${PKG_DIR_UC}/DEBIAN/control"
 
-# Use the same post-install scripts (they are idempotent)
-cp .github/deb/postinst "${PKG_DIR_UC}/DEBIAN/postinst"
-cp .github/deb/prerm    "${PKG_DIR_UC}/DEBIAN/prerm"
-cp .github/deb/postrm   "${PKG_DIR_UC}/DEBIAN/postrm"
-chmod 0755 "${PKG_DIR_UC}/DEBIAN/postinst" "${PKG_DIR_UC}/DEBIAN/prerm" "${PKG_DIR_UC}/DEBIAN/postrm"
+# Package-specific maintainer scripts
+cp .github/deb/microros/postinst "${PKG_DIR_UC}/DEBIAN/postinst"
+cp .github/deb/microros/postrm   "${PKG_DIR_UC}/DEBIAN/postrm"
+chmod 0755 "${PKG_DIR_UC}/DEBIAN/postinst" "${PKG_DIR_UC}/DEBIAN/postrm"
 
 # Use zstd compression (dramatically faster than default xz, similar ratio)
 dpkg-deb -Zzstd --build "${PKG_DIR_UC}" "output_artifacts/autoboat-vt-microros-full-${DEB_ARCH}.deb"
