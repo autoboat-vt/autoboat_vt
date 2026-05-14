@@ -29,6 +29,7 @@ fi
 INSTALL_BASE=false
 INSTALL_SIMULATION=false
 INSTALL_MICROROS=false
+INSTALL_AGENT=false
 SHOW_HELP=false
 
 if [[ $# -eq 0 ]]; then
@@ -40,7 +41,8 @@ else
             --base) INSTALL_BASE=true ;;
             --simulation|--sim) INSTALL_SIMULATION=true ;;
             --microros|--uC) INSTALL_MICROROS=true ;;
-            --all) INSTALL_BASE=true; INSTALL_SIMULATION=true; INSTALL_MICROROS=true ;;
+            --microros-agent|--agent) INSTALL_AGENT=true ;;
+            --all) INSTALL_BASE=true; INSTALL_SIMULATION=true; INSTALL_MICROROS=true; INSTALL_AGENT=true ;;
             --help|-h) SHOW_HELP=true ;;
             *) echo "Unknown option: $arg"; SHOW_HELP=true ;;
         esac
@@ -50,11 +52,12 @@ fi
 if [ "$SHOW_HELP" = true ]; then
     echo "Usage: $0 [options]"
     echo "Options:"
-    echo "  --base         Install the base autoboat-vt package (default)"
-    echo "  --simulation   Install the simulation package (adds Gazebo repo)"
-    echo "  --microros     Install the Micro-ROS SDK package"
-    echo "  --all          Install all of the above"
-    echo "  --help, -h     Show this help message"
+    echo "  --base            Install the base autoboat-vt package (default)"
+    echo "  --simulation      Install the simulation package (adds Gazebo repo)"
+    echo "  --microros        Install the Micro-ROS SDK package"
+    echo "  --microros-agent  Install only the Micro-ROS Agent runtime"
+    echo "  --all             Install all of the above"
+    echo "  --help, -h        Show this help message"
     exit 0
 fi
 
@@ -64,6 +67,7 @@ echo "Requested packages:"
 [ "$INSTALL_BASE" = true ] && echo " - Base system (autoboatvt)"
 [ "$INSTALL_SIMULATION" = true ] && echo " - Simulation (autoboatvt-simulation)"
 [ "$INSTALL_MICROROS" = true ] && echo " - Micro-ROS SDK (autoboatvt-microros)"
+[ "$INSTALL_AGENT" = true ] && echo " - Micro-ROS Agent (autoboatvt-microros-agent)"
 echo "--------------------------------------------------------"
 
 # 3. Add ROS 2 Repositories if missing
@@ -118,8 +122,10 @@ install_deb() {
     rm "/tmp/${DEB_NAME}"
 }
 
-# Agent package is a shared dependency — install it first
-install_deb "autoboatvt-microros-agent" "autoboat-vt-microros-agent-${ARCH}.deb"
+# Install agent if explicitly requested or needed as a dependency
+if [ "$INSTALL_AGENT" = true ] || [ "$INSTALL_BASE" = true ] || [ "$INSTALL_MICROROS" = true ]; then
+    install_deb "autoboatvt-microros-agent" "autoboat-vt-microros-agent-${ARCH}.deb"
+fi
 
 # Base package
 if [ "$INSTALL_BASE" = true ]; then
@@ -131,14 +137,13 @@ if [ "$INSTALL_SIMULATION" = true ]; then
         echo "WARNING: Simulation package is only available for amd64. Skipping..."
     else
         # Ensure base is installed if requested simulation
+        install_deb "autoboatvt-microros-agent" "autoboat-vt-microros-agent-${ARCH}.deb"
         install_deb "autoboatvt" "autoboat-vt-${ARCH}.deb"
         install_deb "autoboatvt-simulation" "autoboat-vt-simulation-${ARCH}.deb"
     fi
 fi
 
 if [ "$INSTALL_MICROROS" = true ]; then
-    # Ensure base is installed if requested microros
-    install_deb "autoboatvt" "autoboat-vt-${ARCH}.deb"
     install_deb "autoboatvt-microros" "autoboat-vt-microros-full-${ARCH}.deb"
 fi
 
