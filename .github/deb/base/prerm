@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+# Clean up pycache directories before package removal to prevent dpkg warnings
+if [ "$1" = "remove" ] || [ "$1" = "purge" ] || [ "$1" = "upgrade" ]; then
+    if [ -d "/opt/autoboat/install" ]; then
+        find /opt/autoboat/install -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+    fi
+fi
+
+exit 0
