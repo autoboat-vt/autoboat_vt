@@ -9,6 +9,7 @@ set -e
 # - DEB_ARCH: The target architecture (amd64 or arm64)
 # - IGNORE_PACKAGES: Space-separated list of colcon packages to ignore
 
+
 echo "==> Build Environment Info:"
 echo "    Architecture: ${DEB_ARCH}"
 echo "    Version:      ${DEB_VERSION}"
@@ -27,7 +28,7 @@ colcon build --packages-ignore ${IGNORE_PACKAGES} \
 
 mkdir -p output_artifacts
 
-# ── Standard Debian package (Runtime) ────────────────────────
+# Standard Debian package (Runtime)
 echo "==> Building standard .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
 PKG_DIR_STD="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_std"
 mkdir -p "${PKG_DIR_STD}/DEBIAN"
@@ -49,7 +50,7 @@ cp .github/workflows/debian_package_files/prerm    "${PKG_DIR_STD}/DEBIAN/prerm"
 cp .github/workflows/debian_package_files/postrm   "${PKG_DIR_STD}/DEBIAN/postrm"
 chmod 0755 "${PKG_DIR_STD}/DEBIAN/postinst" "${PKG_DIR_STD}/DEBIAN/prerm" "${PKG_DIR_STD}/DEBIAN/postrm"
 
-# ── Simulation package logic (amd64 only) ──────────────────────
+# Simulation package logic (amd64 only)
 if [ "${DEB_ARCH}" == "amd64" ]; then
   echo "==> Building simulation .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
   PKG_DIR_SIM="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_sim"
@@ -92,11 +93,13 @@ fi
 
 dpkg-deb --build "${PKG_DIR_STD}" "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
 
-# ── Micro-ROS SDK Debian package (Development) ───────────────
+
+# Micro-ROS SDK Debian package (Development)
 echo "==> Building firmware-sdk .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
 PKG_DIR_UC="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_uc"
 mkdir -p "${PKG_DIR_UC}/DEBIAN"
 mkdir -p "${PKG_DIR_UC}/opt/autoboat/firmware_dependencies"
+
 
 # Copy dependencies to help build firmware packages
 cp -r /opt/autoboat/firmware_dependencies/micro_ros_raspberrypi_pico_sdk "${PKG_DIR_UC}/opt/autoboat/firmware_dependencies/"
@@ -108,15 +111,17 @@ cp -r /opt/autoboat/firmware_dependencies/pico-sdk "${PKG_DIR_UC}/opt/autoboat/f
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
   .github/workflows/debian_package_files/control-firmware.template > "${PKG_DIR_UC}/DEBIAN/control"
 
-# Use the same post-install scripts (they are idempotent)
+
+# Use the same post-install scripts
 cp .github/workflows/debian_package_files/postinst "${PKG_DIR_UC}/DEBIAN/postinst"
 cp .github/workflows/debian_package_files/prerm    "${PKG_DIR_UC}/DEBIAN/prerm"
 cp .github/workflows/debian_package_files/postrm   "${PKG_DIR_UC}/DEBIAN/postrm"
 chmod 0755 "${PKG_DIR_UC}/DEBIAN/postinst" "${PKG_DIR_UC}/DEBIAN/prerm" "${PKG_DIR_UC}/DEBIAN/postrm"
 
-dpkg-deb --build "${PKG_DIR_UC}" "output_artifacts/autoboat-vt-firmware-full-${DEB_ARCH}.deb"
+dpkg-deb --build "${PKG_DIR_UC}" "output_artifacts/autoboat-vt-firmware-sdk-${DEB_ARCH}.deb"
 
-# ── Fix permissions for host runner upload ───────────────────
+
+# Fix permissions for host runner upload
 echo "==> Fixing permissions for host runner..."
 chmod -R a+rX output_artifacts/
 

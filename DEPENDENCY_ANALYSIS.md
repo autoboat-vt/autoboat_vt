@@ -39,7 +39,7 @@ python
 ROS2
 
 
-**C++ Autopilot**:
+**C++ Autopilot/ Drivers**:
 c++
 ROS2
 cmake
