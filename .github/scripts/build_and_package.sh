@@ -33,6 +33,7 @@ mkdir -p output_artifacts
 echo "==> Building standard .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
 PKG_DIR_STD="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_std"
 mkdir -p "${PKG_DIR_STD}/DEBIAN"
+mkdir -p "${PKG_DIR_STD}/opt/autoboat"
 
 # Copy built ROS 2 nodes
 cp -r /opt/autoboat/install "${PKG_DIR_STD}/opt/autoboat/"
