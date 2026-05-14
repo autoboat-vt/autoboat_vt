@@ -2,7 +2,8 @@ Package: autoboatvt
 Version: VERSION_PLACEHOLDER
 Architecture: ARCH_PLACEHOLDER
 Maintainer: autoboatvt <autoboat@vt.edu>
-Depends: ros-humble-ros-base,
+Depends: autoboatvt-microros-agent (= VERSION_PLACEHOLDER),
+         ros-humble-ros-base,
          ros-humble-serial-driver,
          libyaml-cpp0.7,
          libcurl4,

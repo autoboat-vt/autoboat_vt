@@ -2,11 +2,11 @@ Package: autoboatvt-microros
 Version: VERSION_PLACEHOLDER
 Architecture: ARCH_PLACEHOLDER
 Maintainer: autoboatvt <autoboat@vt.edu>
-Depends: autoboatvt (= VERSION_PLACEHOLDER),
+Depends: autoboatvt-microros-agent (= VERSION_PLACEHOLDER),
          build-essential,
          cmake,
          gcc-arm-none-eabi,
-         libnewlib-arm-none-eabi,
+         libstdc++-arm-none-eabi-newlib,
          libusb-1.0-0-dev,
          pkg-config,
          git

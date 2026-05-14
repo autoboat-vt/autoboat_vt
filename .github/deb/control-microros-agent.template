@@ -1,0 +1,8 @@
+Package: autoboatvt-microros-agent
+Version: VERSION_PLACEHOLDER
+Architecture: ARCH_PLACEHOLDER
+Maintainer: autoboatvt <autoboat@vt.edu>
+Description: Micro-ROS Agent runtime for the VT AutoBoat system
+ Provides the micro_ros_agent ROS 2 workspace used to communicate
+ with RP2040-based microcontrollers over serial/UDP.
+ Built for ROS2 Humble on Ubuntu 22.04.
