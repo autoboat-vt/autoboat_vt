@@ -25,10 +25,6 @@ src/object_detection/object_detection/deepstream_yolo/pt_files/**
 src/object_detection/object_detection/deepstream_yolo/onnx_files/**
 
 # groundstation
-pkg
-ground_station/bin
-ground_station/go.sum
-ground_station/last_build_time.txt
 ground_station/app_data/git_ignore
 node_modules
 
