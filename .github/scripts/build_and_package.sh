@@ -91,10 +91,10 @@ if [ "${DEB_ARCH}" == "amd64" ]; then
   sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
       .github/deb/control-simulation.template > "${PKG_DIR_SIM}/DEBIAN/control"
   
-  dpkg-deb --build "${PKG_DIR_SIM}" "output_artifacts/autoboat-vt-simulation-${DEB_ARCH}.deb"
+  dpkg-deb -Zzstd --build "${PKG_DIR_SIM}" "output_artifacts/autoboat-vt-simulation-${DEB_ARCH}.deb"
 fi
 
-dpkg-deb --build "${PKG_DIR_STD}" "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
+dpkg-deb -Zzstd --build "${PKG_DIR_STD}" "output_artifacts/autoboat-vt-${DEB_ARCH}.deb"
 
 echo "Current time is $(date +'%Y-%m-%d %H:%M:%S')"
 
@@ -109,6 +109,7 @@ cp -r /opt/autoboat/microros_dependencies/micro_ros_raspberrypi_pico_sdk "${PKG_
 cp -r /opt/autoboat/microros_dependencies/picotool "${PKG_DIR_UC}/opt/autoboat/microros_dependencies/"
 cp -r /opt/autoboat/microros_dependencies/pico-sdk "${PKG_DIR_UC}/opt/autoboat/microros_dependencies/"
 
+echo "  Microros package size before compression: $(du -sh "${PKG_DIR_UC}" | cut -f1)"
 
 # Control file (Depends on standard package)
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
@@ -120,7 +121,8 @@ cp .github/deb/prerm    "${PKG_DIR_UC}/DEBIAN/prerm"
 cp .github/deb/postrm   "${PKG_DIR_UC}/DEBIAN/postrm"
 chmod 0755 "${PKG_DIR_UC}/DEBIAN/postinst" "${PKG_DIR_UC}/DEBIAN/prerm" "${PKG_DIR_UC}/DEBIAN/postrm"
 
-dpkg-deb --build "${PKG_DIR_UC}" "output_artifacts/autoboat-vt-microros-full-${DEB_ARCH}.deb"
+# Use zstd compression (dramatically faster than default xz, similar ratio)
+dpkg-deb -Zzstd --build "${PKG_DIR_UC}" "output_artifacts/autoboat-vt-microros-full-${DEB_ARCH}.deb"
 
 echo "Current time is $(date +'%Y-%m-%d %H:%M:%S')"
 

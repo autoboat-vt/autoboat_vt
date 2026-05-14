@@ -19,8 +19,18 @@ COPY .devcontainer/devcontainer_variants/install_microros_helper_script.sh /tmp/
 # Create a sudo shim to allow the script to execute sudo commands as root during build
 RUN echo '#!/bin/sh\nexec "$@"' > /usr/local/bin/sudo && chmod +x /usr/local/bin/sudo
 
-# Run the script with HOME set to the user's home so .bashrc etc. go to the right place
-RUN HOME=/home/autoboat_user bash /tmp/autoboat_scripts/install_microros_helper_script.sh
+# Run the script, then clean up build artifacts and .git history in a single layer
+# to prevent Docker from persisting the intermediate bloat
+RUN HOME=/home/autoboat_user bash /tmp/autoboat_scripts/install_microros_helper_script.sh \
+    && (find /opt/autoboat/microros_dependencies -name '.git' -type d -exec rm -rf {} + 2>/dev/null || true) \
+    && (find /opt/autoboat/microros_dependencies -name 'CMakeFiles' -type d -exec rm -rf {} + 2>/dev/null || true) \
+    && (find /opt/autoboat/microros_dependencies -name 'CMakeCache.txt' -delete 2>/dev/null || true) \
+    && (find /opt/autoboat/microros_dependencies -name '*.o' -delete 2>/dev/null || true) \
+    && (find /opt/autoboat/microros_dependencies -name '*.a' -delete 2>/dev/null || true) \
+    && (find /opt/autoboat/microros_dependencies -type f -executable -exec strip --strip-unneeded {} \; 2>/dev/null || true) \
+    && (find /opt/autoboat/microros_dependencies -name '*.so*' -exec strip --strip-unneeded {} \; 2>/dev/null || true) \
+    && rm -rf /tmp/autoboat_scripts \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Fix permissions and clean up
 RUN chown -R autoboat_user:autoboat_user /home/autoboat_user && rm /usr/local/bin/sudo
