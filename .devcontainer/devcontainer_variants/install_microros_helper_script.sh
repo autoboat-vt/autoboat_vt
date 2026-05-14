@@ -73,14 +73,6 @@ source "$MICROROS_DIRECTORY/micro_ros_agent/install/local_setup.bash"
 rm -rf "$MICROROS_DIRECTORY/micro_ros_agent/firmware"
 
 
-# Build the microros firmware and agent
-ros2 run micro_ros_setup create_firmware_ws.sh host
-ros2 run micro_ros_setup build_firmware.sh
-source install/local_setup.bash
-ros2 run micro_ros_setup create_agent_ws.sh
-ros2 run micro_ros_setup build_agent.sh
-source install/local_setup.sh ros2 run
-
 
 
 # Write sources and aliases to bashrc file
