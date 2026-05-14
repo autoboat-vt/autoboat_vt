@@ -7,8 +7,7 @@ MICROROS_DIRECTORY="/opt/autoboat/microros_dependencies"
 mkdir -p $MICROROS_DIRECTORY
 
 
-# Dependencies are installed in the Dockerfile layer for better caching.
-# Only source ROS here.
+sudo apt-get update
 source /opt/ros/humble/setup.bash
 
 
