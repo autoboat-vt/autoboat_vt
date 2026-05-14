@@ -3,7 +3,7 @@
 <package format="3">
   <name>firmware</name>
   <version>1.0.0</version>
-  <description>Contains all of the microros firmware code for autoboat's PCB</description>
+  <description>Contains all of the firmware code for autoboat's PCB</description>
   <maintainer email="autoboat@vt.edu">autoboatvt</maintainer>
   <license>http://www.apache.org/licenses/LICENSE-2.0</license>
 

@@ -28,7 +28,7 @@ fi
 # 2. Argument Parsing
 INSTALL_BASE=false
 INSTALL_SIMULATION=false
-INSTALL_MICROROS=false
+INSTALL_FIRMWARE_SDK=false
 SHOW_HELP=false
 
 if [[ $# -eq 0 ]]; then
@@ -39,8 +39,8 @@ else
         case $arg in
             --base) INSTALL_BASE=true ;;
             --simulation|--sim) INSTALL_SIMULATION=true ;;
-            --microros|--uC) INSTALL_MICROROS=true ;;
-            --all) INSTALL_BASE=true; INSTALL_SIMULATION=true; INSTALL_MICROROS=true ;;
+            --firmware-sdk|--firm) INSTALL_FIRMWARE_SDK=true ;;
+            --all) INSTALL_BASE=true; INSTALL_SIMULATION=true; INSTALL_FIRMWARE_SDK=true ;;
             --help|-h) SHOW_HELP=true ;;
             *) echo "Unknown option: $arg"; SHOW_HELP=true ;;
         esac
@@ -50,11 +50,11 @@ fi
 if [ "$SHOW_HELP" = true ]; then
     echo "Usage: $0 [options]"
     echo "Options:"
-    echo "  --base         Install the base autoboat-vt package (default)"
-    echo "  --simulation   Install the simulation package (adds Gazebo repo)"
-    echo "  --microros     Install the Micro-ROS SDK package"
-    echo "  --all          Install all of the above"
-    echo "  --help, -h     Show this help message"
+    echo "  --base           Install the base autoboat-vt package (default)"
+    echo "  --simulation     Install the simulation package (adds Gazebo repo)"
+    echo "  --firmware-sdk   Install the Micro-ROS SDK package"
+    echo "  --all            Install all of the above"
+    echo "  --help, -h       Show this help message"
     exit 0
 fi
 
@@ -63,7 +63,7 @@ echo "Starting autoboat-vt installation for $ARCH..."
 echo "Requested packages:"
 [ "$INSTALL_BASE" = true ] && echo " - Base system (autoboatvt)"
 [ "$INSTALL_SIMULATION" = true ] && echo " - Simulation (autoboatvt-simulation)"
-[ "$INSTALL_MICROROS" = true ] && echo " - Micro-ROS SDK (autoboatvt-microros)"
+[ "$INSTALL_FIRMWARE_SDK" = true ] && echo " - Micro-ROS SDK (autoboatvt-microros)"
 echo "--------------------------------------------------------"
 
 # 3. Add ROS 2 Repositories if missing
@@ -133,10 +133,11 @@ if [ "$INSTALL_SIMULATION" = true ]; then
     fi
 fi
 
-if [ "$INSTALL_MICROROS" = true ]; then
+
+if [ "$INSTALL_FIRMWARE_SDK" = true ]; then
     # Ensure base is installed if requested microros
     install_deb "autoboatvt" "autoboat-vt-${ARCH}.deb"
-    install_deb "autoboatvt-microros" "autoboat-vt-microros-full-${ARCH}.deb"
+    install_deb "autoboatvt-firmware-sdk" "autoboat-vt-firmware-sdk-${ARCH}.deb"
 fi
 
 
