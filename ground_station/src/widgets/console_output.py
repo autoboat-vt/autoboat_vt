@@ -2,7 +2,7 @@ import sys
 from datetime import datetime
 
 import pytz
-from qtpy.QtCore import QThread, Signal
+from qtpy.QtCore import QThread, Signal, Slot
 from qtpy.QtGui import QCloseEvent, QTextCursor
 from qtpy.QtWidgets import QTextEdit, QVBoxLayout, QWidget
 from syntax_highlighters import ConsoleHighlighter
@@ -84,6 +84,7 @@ class ConsoleOutputWidget(QWidget):
         self.stdout_stream.text_written.connect(self.append_text)
         self.stderr_stream.text_written.connect(self.append_text)
 
+    @Slot(str)
     def append_text(self, text: str) -> None:
         """
         Append text to the console output widget only.
@@ -103,7 +104,7 @@ class ConsoleOutputWidget(QWidget):
 
             self.console_output.setTextCursor(cursor)
             self.console_output.ensureCursorVisible()
-
+    
     def closeEvent(self, event: QCloseEvent) -> None:
         """
         Restore original streams when widget is closed.

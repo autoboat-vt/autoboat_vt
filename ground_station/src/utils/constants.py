@@ -12,41 +12,57 @@ from urllib.parse import urljoin
 
 import requests
 import requests.adapters
-from qtpy.QtCore import QPoint, QRect, QSize, Qt
+from numpy import number as np_number
+from qtpy.QtCore import QPoint, QRect, QSize, Qt, QUrl
 from qtpy.QtGui import QColor, QPalette
+from qtpy.QtWebEngineWidgets import QWebEnginePage
 from strenum import StrEnum
 
 from utils import misc
+from utils.data_logger import DataLogger
 from utils.state_manager import StateManager
 
 
-class SailboatAutopilotMode(Enum):
-    """An enum containing the different modes that the sailboat autopilot can be in."""
+class StrictMatchEnums:
+    """
+    These enums MUST match those in `autopilot_vt/src/autopilot/autopilot/autopilot_library/utils/constants.py` exactly.
 
-    DISABLED = 0
-    FULL_RC = 1
-    HOLD_BEST_SAIL = 2
-    HOLD_HEADING = 3
-    HOLD_HEADING_AND_BEST_SAIL = 4
-    WAYPOINT_MISSION = 5
+    If you change any of these, you MUST change the corresponding one in the autopilot repository as well, and vice versa.
 
-class MotorboatAutopilotMode(Enum):
-    """An enum containing the different modes that the motorboat autopilot can be in."""
+    Contains
+    --------
+    - ``SailboatAutopilotMode``
+    - ``MotorboatAutopilotMode``
+    - ``SailboatStates``
+    """
 
-    DISABLED = 0
-    FULL_RC = 1
-    HOLD_HEADING = 2
-    WAYPOINT_MISSION = 3
+    class SailboatAutopilotMode(Enum):
+        """An enum containing the different modes that the sailboat autopilot can be in."""
 
-class SailboatStates(Enum):
-    """An enum containing the different states that the sailboat autopilot can be in."""
+        DISABLED = 0
+        FULL_RC = 1
+        HOLD_BEST_SAIL = 2
+        HOLD_HEADING = 3
+        HOLD_HEADING_AND_BEST_SAIL = 4
+        WAYPOINT_MISSION = 5
 
-    NA = -1
-    NORMAL = 0
-    CW_TACKING = 1
-    CCW_TACKING = 2
-    STALL = 3
-    # JIBE = 4
+    class MotorboatAutopilotMode(Enum):
+        """An enum containing the different modes that the motorboat autopilot can be in."""
+
+        DISABLED = 0
+        FULL_RC = 1
+        HOLD_HEADING = 2
+        WAYPOINT_MISSION = 3
+
+    class SailboatStates(Enum):
+        """An enum containing the different states that the sailboat autopilot can be in."""
+
+        NA = -1
+        NORMAL = 0
+        CW_TACKING = 1
+        CCW_TACKING = 2
+        STALL = 3
+        # JIBE = 4
 
 class TelemetryStatus(StrEnum):
     """
@@ -67,7 +83,8 @@ class TelemetryStatus(StrEnum):
     FAILURE = auto()
     WRONG_FORMAT = auto()
 
-NumberType: TypeAlias = int | float
+NumberType: TypeAlias = int | float | complex | np_number
+FileType: TypeAlias = str | os.PathLike[str]
 
 SM = StateManager()
 
@@ -121,34 +138,40 @@ STYLE_SHEET = """
     }
 """
 
+# application window title and stuff
+WINDOW_TITLE = "Groundstation"
+APPLICATION_NAME = "Groundstation"
+ORGANIZATION_NAME = "Autoboat @ VT"
+
 # window size and box
-WINDOW_SIZE = QSize(800, 600)
+MAX_WINDOW_SIZE = QSize(1800, 1080)
+WINDOW_SIZE = QSize(1200, 800)
 WINDOW_BOX = QRect(QPoint(100, 100), WINDOW_SIZE)
 
 # timers
 THIRTY_SECOND_TIMER = misc.create_timer(30_000)
-
 TEN_SECOND_TIMER = misc.create_timer(10_000)
-
 FIVE_SECOND_TIMER = misc.create_timer(5_000)
-
 ONE_SECOND_TIMER = misc.create_timer(1_000)
-
 HALF_SECOND_TIMER = misc.create_timer(500)
-
 TEN_MS_TIMER = misc.create_timer(10)
-
 ONE_MS_TIMER = misc.create_timer(1)
 
 _start_time: float = time.time()
 
 # server ports
 ASSET_SERVER_PORT = 8000
-GO_SERVER_PORT = 3002
+MAP_SERVER_PORT = 3002
 VITE_PORT = 5173
 
+# url for local vite server hosting the map
+MAP_URL = QUrl(f"http://127.0.0.1:{VITE_PORT}")
+
+# see `main.py` for where this is set
+MAP_PAGE: QWebEnginePage
+
 # url for local waypoints server
-_waypoints_server_url: str = f"http://localhost:{GO_SERVER_PORT}/waypoints"
+_waypoints_server_url: str = f"http://localhost:{MAP_SERVER_PORT}/waypoints"
 
 TELEMETRY_TIMEOUT_SECONDS = 10
 TELEMETRY_RETRY_ATTEMPTS = 3
@@ -249,6 +272,9 @@ _map_features: dict[str, dict[str, str | bool]] = {
     }
 }
 
+_data_logging_active: bool = False
+_initial_log_file_path: str = ""
+
 STATE_FILE_CONTENTS: dict[str, Any] = {
     "start_time": _start_time,
     "telemetry_server_url": _telemetry_server_url,
@@ -261,6 +287,8 @@ STATE_FILE_CONTENTS: dict[str, Any] = {
     "has_telemetry_server_instance_changed": _has_telemetry_server_instance_changed,
     "telemetry_server_endpoints": _telemetry_server_endpoints,
     "map_features": _map_features,
+    "data_logging_active": _data_logging_active,
+    "data_log_file_path": _initial_log_file_path,
 }
 
 try:
@@ -273,10 +301,12 @@ try:
 
     DATA_DIR = Path(TOP_LEVEL_DIR / "app_data")
     GIT_KEEP_DIR = Path(DATA_DIR / "git_keep")
-    DEFAULTS_EXAMPLES_DIR = Path(GIT_KEEP_DIR / "defaults_examples")
-
     GIT_IGNORE_DIR = Path(DATA_DIR / "git_ignore")
     os.makedirs(GIT_IGNORE_DIR, exist_ok=True)
+
+    DEFAULTS_EXAMPLES_DIR = Path(GIT_KEEP_DIR / "defaults_examples")
+    ASSETS_DIR = Path(GIT_KEEP_DIR / "assets")
+    APP_LOGO_PATH = Path(ASSETS_DIR / "logo.png")
 
     CAMERA_WIDGET_DIR = Path(WIDGETS_DIR / "camera_widget")
     HTML_CAMERA_PATH = Path(CAMERA_WIDGET_DIR / "camera.html")
@@ -294,6 +324,18 @@ try:
         if "defaults_examples" not in os.listdir(GIT_KEEP_DIR):
             raise Exception("Defaults/examples directory not found, please redownload the directory from GitHub.")
         
+        if "autopilot_params" not in os.listdir(GIT_IGNORE_DIR):
+            print("[Info] Creating autopilot parameters directory...")
+            os.makedirs(GIT_IGNORE_DIR / "autopilot_params")
+
+        if "buoy_data" not in os.listdir(GIT_IGNORE_DIR):
+            print("[Info] Creating buoy data directory...")
+            os.makedirs(GIT_IGNORE_DIR / "buoy_data")
+
+        if "data_logs" not in os.listdir(GIT_IGNORE_DIR):
+            print("[Info] Creating data logs directory...")
+            os.makedirs(GIT_IGNORE_DIR / "data_logs")
+
         if not APP_STATE_PATH.exists():
             print("[Info] Creating app state file...")
             APP_STATE_PATH.touch()
@@ -304,31 +346,20 @@ try:
             print("[Info] Initializing app state file...")
             with open(APP_STATE_PATH, "w", encoding="utf-8") as f:
                 json.dump(STATE_FILE_CONTENTS, f, indent=4)
+
+        else:
+            raise RuntimeError(
+                f"Stale app state file found at {APP_STATE_PATH}, please delete this file "
+                "and restart the application."
+            )
         
-        if "autopilot_params" not in os.listdir(GIT_IGNORE_DIR):
-            print("[Info] Creating autopilot parameters directory...")
-            os.makedirs(GIT_IGNORE_DIR / "autopilot_params")
+    DATA_LOGS_DIR = Path(GIT_IGNORE_DIR / "data_logs")
+    os.makedirs(DATA_LOGS_DIR, exist_ok=True)
 
-        if "boat_data" not in os.listdir(GIT_IGNORE_DIR):
-            print("[Info] Creating boat data directory...")
-            os.makedirs(GIT_IGNORE_DIR / "boat_data")
+    DL = DataLogger()
 
-        if "boat_data_bounds" not in os.listdir(GIT_IGNORE_DIR):
-            print("[Info] Creating boat data bounds directory...")
-            os.makedirs(GIT_IGNORE_DIR / "boat_data_bounds")
-
-        if "buoy_data" not in os.listdir(GIT_IGNORE_DIR):
-            print("[Info] Creating buoy data directory...")
-            os.makedirs(GIT_IGNORE_DIR / "buoy_data")
-
-    ASSETS_DIR = Path(GIT_KEEP_DIR / "assets")
     AUTOPILOT_PARAMS_DIR = Path(GIT_IGNORE_DIR / "autopilot_params")
     misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "autopilot_params", AUTOPILOT_PARAMS_DIR)
-
-    BOAT_DATA_DIR = Path(GIT_IGNORE_DIR / "boat_data")
-
-    BOAT_DATA_LIMITS_DIR = Path(GIT_IGNORE_DIR / "boat_data_bounds")
-    misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "boat_data_bounds", BOAT_DATA_LIMITS_DIR)
 
     BUOY_DATA_DIR = Path(GIT_IGNORE_DIR / "buoy_data")
     misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "buoy_data", BUOY_DATA_DIR)

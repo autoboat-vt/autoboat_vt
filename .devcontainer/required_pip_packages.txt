@@ -8,14 +8,14 @@ utm
 geopy
 pyproj
 
-# Serial/ Hardware communication
+# Serial / Hardware communication
 pyserial
 sparkfun-ublox-gps
 pyubx2
 crsf-parser
 spidev
 
-# Simulation/ RL
+# Simulation / RL
 gymnasium==0.28.1
 moviepy
 msgpack-python==0.5.6
@@ -23,12 +23,26 @@ pyzmq==25.0.2
 pydantic
 multiexit
 
-# Image processing/ Object Detection
+# Image processing / Object Detection
 Pillow
 imageio-ffmpeg
 
-# Telemetry/ Internet
+# Telemetry / Internet
 requests
+
+# Groundstation
+urllib3
+QtAwesome
+QtPy
+pyside6
+pyqtgraph
+PyYAML
+pytz
+StrEnum
+python-dateutil
+idna
+charset-normalizer
+svg.py
 
 # Documentation
 mkdocs
@@ -46,22 +60,3 @@ click
 pympler
 ruff
 packaging
-
-
-# Groundstation
-urllib3
-QtAwesome==1.4.0
-QtPy==2.4.3
-pyqtgraph
-jsonc-parser
-PyYAML
-pytz
-StrEnum
-python-dateutil
-idna
-charset-normalizer
-#jetson-stats
-pynput
-svg.py
-
-
