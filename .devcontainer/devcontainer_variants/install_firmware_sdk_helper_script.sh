@@ -12,13 +12,8 @@ source /opt/ros/humble/setup.bash
 
 
 # Install Pico SDK if it is not currently installed
-<<<<<<< HEAD
 if [ ! -d "$FIRMWARE_DEPENDENCIES_DIRECTORY/pico-sdk" ]; then
-  git clone --recurse-submodules https://github.com/raspberrypi/pico-sdk.git "$FIRMWARE_DEPENDENCIES_DIRECTORY/pico-sdk"
-=======
-if [ ! -d "$MICROROS_DIRECTORY/pico-sdk" ]; then
-  git clone --depth 1 --recurse-submodules https://github.com/raspberrypi/pico-sdk.git "$MICROROS_DIRECTORY/pico-sdk"
->>>>>>> main
+  git clone --depth 1 --recurse-submodules https://github.com/raspberrypi/pico-sdk.git "$FIRMWARE_DEPENDENCIES_DIRECTORY/pico-sdk"
 fi
 
 export PICO_SDK_PATH="$FIRMWARE_DEPENDENCIES_DIRECTORY/pico-sdk"
@@ -27,13 +22,8 @@ export PICO_SDK_PATH="$FIRMWARE_DEPENDENCIES_DIRECTORY/pico-sdk"
 
 
 # Install Microros Pico SDK if it is not currently installed
-<<<<<<< HEAD
 if [ ! -d "$FIRMWARE_DEPENDENCIES_DIRECTORY/micro_ros_raspberrypi_pico_sdk" ]; then
-  git clone -b humble https://github.com/micro-ROS/micro_ros_raspberrypi_pico_sdk.git "$FIRMWARE_DEPENDENCIES_DIRECTORY/micro_ros_raspberrypi_pico_sdk"
-=======
-if [ ! -d "$MICROROS_DIRECTORY/micro_ros_raspberrypi_pico_sdk" ]; then
-  git clone --depth 1 -b humble https://github.com/micro-ROS/micro_ros_raspberrypi_pico_sdk.git "$MICROROS_DIRECTORY/micro_ros_raspberrypi_pico_sdk"
->>>>>>> main
+  git clone --depth 1 -b humble https://github.com/micro-ROS/micro_ros_raspberrypi_pico_sdk.git "$FIRMWARE_DEPENDENCIES_DIRECTORY/micro_ros_raspberrypi_pico_sdk"
 fi
 
 export PICO_MICROROS_SDK_PATH="$FIRMWARE_DEPENDENCIES_DIRECTORY/micro_ros_raspberrypi_pico_sdk"
@@ -42,13 +32,8 @@ export PICO_MICROROS_SDK_PATH="$FIRMWARE_DEPENDENCIES_DIRECTORY/micro_ros_raspbe
 
 
 # Install Picotool if it is not already installed
-<<<<<<< HEAD
 if [ ! -d "$FIRMWARE_DEPENDENCIES_DIRECTORY/picotool" ]; then
-  git clone https://github.com/raspberrypi/picotool "$FIRMWARE_DEPENDENCIES_DIRECTORY/picotool"
-=======
-if [ ! -d "$MICROROS_DIRECTORY/picotool" ]; then
-  git clone --depth 1 https://github.com/raspberrypi/picotool "$MICROROS_DIRECTORY/picotool"
->>>>>>> main
+  git clone --depth 1 https://github.com/raspberrypi/picotool "$FIRMWARE_DEPENDENCIES_DIRECTORY/picotool"
 fi
 
 cd "$FIRMWARE_DEPENDENCIES_DIRECTORY/picotool"
@@ -60,16 +45,10 @@ cmake .. && cmake --build . -j16
 
 
 # Create and build microros workspace
-<<<<<<< HEAD
 if [ ! -d "$FIRMWARE_DEPENDENCIES_DIRECTORY/micro_ros_agent/src/micro_ros_setup" ]; then
   git clone -b humble https://github.com/micro-ROS/micro_ros_setup.git "$FIRMWARE_DEPENDENCIES_DIRECTORY/micro_ros_agent/src/micro_ros_setup"
   cd "$FIRMWARE_DEPENDENCIES_DIRECTORY/micro_ros_agent/src/micro_ros_setup"
-=======
-if [ ! -d "$MICROROS_DIRECTORY/micro_ros_agent/src/micro_ros_setup" ]; then
-  git clone -b humble https://github.com/micro-ROS/micro_ros_setup.git "$MICROROS_DIRECTORY/micro_ros_agent/src/micro_ros_setup"
-  cd "$MICROROS_DIRECTORY/micro_ros_agent/src/micro_ros_setup"
   git fetch --depth 1 origin 5abfdaa59b0f18dc152b47b564d8e27012b05ac8
->>>>>>> main
   git reset --hard 5abfdaa59b0f18dc152b47b564d8e27012b05ac8 # They introduced a change that broke a lot of stuff. This is the only commit that works
 fi
 

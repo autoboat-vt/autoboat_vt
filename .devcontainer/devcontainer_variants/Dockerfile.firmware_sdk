@@ -13,14 +13,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /tmp/autoboat_scripts
-COPY .devcontainer/devcontainer_variants/install_microros_helper_script.sh /tmp/autoboat_scripts/install_microros_helper_script.sh
+COPY .devcontainer/devcontainer_variants/install_firmware_sdk_helper_script.sh /tmp/autoboat_scripts/install_firmware_sdk_helper_script.sh
 
 # Create a sudo shim to allow the script to execute sudo commands as root during build
 RUN echo '#!/bin/sh\nexec "$@"' > /usr/local/bin/sudo && chmod +x /usr/local/bin/sudo
 
 # Run the script, then clean up build artifacts and .git history in a single layer
 # to prevent Docker from persisting the intermediate bloat
-RUN HOME=/home/autoboat_user bash /tmp/autoboat_scripts/install_microros_helper_script.sh \
+RUN HOME=/home/autoboat_user bash /tmp/autoboat_scripts/install_firmware_sdk_helper_script.sh \
     && (find /opt/autoboat/microros_dependencies -name '.git' -type d -exec rm -rf {} + 2>/dev/null || true) \
     && (find /opt/autoboat/microros_dependencies -name 'CMakeFiles' -type d -exec rm -rf {} + 2>/dev/null || true) \
     && (find /opt/autoboat/microros_dependencies -name 'CMakeCache.txt' -delete 2>/dev/null || true) \
@@ -33,7 +33,7 @@ RUN chown -R autoboat_user:autoboat_user /home/autoboat_user && rm /usr/local/bi
 USER autoboat_user
 
 
-RUN echo "export DEVCONTAINER_VARIANT=microros" >> ~/.bashrc
+RUN echo "export DEVCONTAINER_VARIANT=firmware_sdk" >> ~/.bashrc
 
 
 CMD ["/bin/bash"]

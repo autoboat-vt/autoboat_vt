@@ -60,7 +60,7 @@ target "firmware" {
   contexts = {
     base = "target:base"
   }
-  dockerfile = ".devcontainer/devcontainer_variants/Dockerfile.firmware"
+  dockerfile = ".devcontainer/devcontainer_variants/Dockerfile.firmware_sdk"
   platforms = ["linux/${ARCHITECTURE}"]
   args = {
     BASE_IMAGE = "base"
