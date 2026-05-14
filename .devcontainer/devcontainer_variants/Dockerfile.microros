@@ -6,12 +6,11 @@ USER root
 # Install toolchain and dependencies (move from script to Dockerfile for better layering)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc-arm-none-eabi \
-    libnewlib-arm-none-eabi \
+    build-essential \
+    libstdc++-arm-none-eabi-newlib \
     libusb-1.0-0-dev \
     doxygen \
     && rm -rf /var/lib/apt/lists/*
-    # libstdc++-arm-none-eabi-newlib \
-    # libstdc++-arm-none-eabi-dev \
 
 RUN mkdir -p /tmp/autoboat_scripts
 COPY .devcontainer/devcontainer_variants/install_microros_helper_script.sh /tmp/autoboat_scripts/install_microros_helper_script.sh

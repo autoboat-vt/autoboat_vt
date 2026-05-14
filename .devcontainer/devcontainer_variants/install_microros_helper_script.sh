@@ -13,7 +13,7 @@ source /opt/ros/humble/setup.bash
 
 # Install Pico SDK if it is not currently installed
 if [ ! -d "$MICROROS_DIRECTORY/pico-sdk" ]; then
-  git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/raspberrypi/pico-sdk.git "$MICROROS_DIRECTORY/pico-sdk"
+  git clone --depth 1 --recurse-submodules https://github.com/raspberrypi/pico-sdk.git "$MICROROS_DIRECTORY/pico-sdk"
 fi
 
 export PICO_SDK_PATH="$MICROROS_DIRECTORY/pico-sdk"
