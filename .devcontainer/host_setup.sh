@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 
 # -----------------------------------------------------------------------------
+# This script is run on the host machine before anything related to docker is run to ensure that the
+# host machine is properly set up for GPU forwarding (which just means that the devcontainer can see
+# and access your gpu as if you were running programs on your host operating system), environment 
+# variables, display settings.
+#
+#
 # IMPORTANT NOTE
 # This script is the main thing that is limiting devcontainer compatibility with any
 # distribution of linux or operating system. Unfortunately it is really annoying to fully 
@@ -69,8 +75,8 @@ write_host_environment_variables() {
 
 	log_info "Updating $HOST_ENV_FILE"
 	{
-		echo "# Host environment variables for autoboat-vt"
-		echo "export DEVCONTAINER_VARIANT=vtautoboat/development_image"
+		echo "# Host environment variables for autoboatvt"
+		echo "export DEVCONTAINER_VARIANT=vtautoboat/development_image_base"
 		for line in "${extra_lines[@]}"; do
 			# Ensure it starts with export
 			if [[ "$line" =~ ^export ]]; then
@@ -95,7 +101,7 @@ write_devcontainer_environment_variables() {
 	} >"$ENV_FILE"
 }
 
-ensure_host_environment_variables.sh_are_sourced() {
+ensure_host_environment_variables_are_sourced() {
 	local shell_files=(
 		"$HOME/.bashrc"
 		"$HOME/.zshrc"
@@ -109,7 +115,7 @@ ensure_host_environment_variables.sh_are_sourced() {
 	for file in "${shell_files[@]}"; do
 		if [[ -f "$file" ]]; then
 			if ! grep -qF "$HOST_ENV_FILE" "$file"; then
-				echo -e "\n# Added by autoboat-vt setup\n$source_line" >>"$file"
+				echo -e "\n# Added by autoboatvt setup\n$source_line" >>"$file"
 				log_info "Added sourcing to $file"
 			else
 				log_info "Sourcing already exists in $file"
@@ -117,7 +123,7 @@ ensure_host_environment_variables.sh_are_sourced() {
 		else
 			# Create if it's a profile/rc we might want
 			if [[ "$file" == *".profile" || "$file" == *".bash_profile" ]]; then
-				echo -e "# Added by autoboat-vt setup\n$source_line" > "$file"
+				echo -e "# Added by autoboatvt setup\n$source_line" > "$file"
 				log_info "Created and added sourcing to $file"
 			fi
 		fi
@@ -201,7 +207,7 @@ setup_linux() {
 		log_info "NVIDIA GPU detected."
 		write_host_environment_variables 'export DOCKER_GPU_RUN_ARGS="--runtime=nvidia"' 'export DOCKER_RUNTIME_RUN_ARGS="--gpus=all"'
 		write_devcontainer_environment_variables "$DISPLAY"
-		ensure_host_environment_variables.sh_are_sourced
+		ensure_host_environment_variables_are_sourced
 
 		if ! command -v nvidia-ctk &>/dev/null; then
 			log_info "Installing NVIDIA Container Toolkit..."
@@ -269,14 +275,14 @@ setup_linux() {
 		log_warn "NVIDIA GPU Detected, but you are not running a linux distribution that supports devcontainer GPU forwarding. Running CPU-only mode."
 		write_devcontainer_environment_variables "$DISPLAY"
 		write_host_environment_variables
-		ensure_host_environment_variables.sh_are_sourced
+		ensure_host_environment_variables_are_sourced
 	
 
 	else
 		log_info "No NVIDIA GPU found. Running CPU-only mode."
 		write_host_environment_variables
 		write_devcontainer_environment_variables "$DISPLAY"
-		ensure_host_environment_variables.sh_are_sourced
+		ensure_host_environment_variables_are_sourced
 	fi
 }
 
@@ -303,7 +309,7 @@ setup_macos() {
 
 	write_host_environment_variables "docker.for.mac.host.internal:0"
 	write_devcontainer_environment_variables "docker.for.mac.host.internal:0"
-	ensure_host_environment_variables.sh_are_sourced
+	ensure_host_environment_variables_are_sourced
 	log_warn "GPU passthrough not supported on Docker Desktop for macOS."
 }
 
@@ -314,7 +320,7 @@ setup_unknown() {
 	log_warn "Unsupported OS detected: $OS"
 	write_host_environment_variables
 	write_devcontainer_environment_variables "$DISPLAY"
-	ensure_host_environment_variables.sh_are_sourced
+	ensure_host_environment_variables_are_sourced
 	log_warn "Running CPU-only. Display may not work properly."
 }
 

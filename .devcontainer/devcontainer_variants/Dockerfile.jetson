@@ -1,1 +1,1 @@
-FROM vtautoboat/development_image:latest
+FROM vtautoboat/development_image_base:latest

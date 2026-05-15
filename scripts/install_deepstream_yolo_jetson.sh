@@ -60,7 +60,7 @@ pip3 install ./pyds-1.2.0-*.whl
 
 # Compile the deepstream_yolo library
 echo -e "\n\nCompiling deepstream_yolo library\n\n"
-cd ~/autoboat_vt/src/object_detection/object_detection/deepstream_yolo/
+cd ~/autoboat_vt/ros_packages/object_detection/object_detection/deepstream_yolo/
 export CUDA_VER=12.6
 make -C nvdsinfer_custom_impl_Yolo clean && make -C nvdsinfer_custom_impl_Yolo
 

@@ -1,3 +1,8 @@
+# This file is primarily used to configure Ruff.
+# Ruff is the formatter and linter that we use in this codebase for all of our python code.
+
+# If you would like to read more about Ruff configuration then please see the following: https://docs.astral.sh/ruff/configuration/#__tabbed_1_2
+
 # top level
 indent-width      = 4
 line-length       = 130
@@ -19,6 +24,8 @@ logger-objects     = ["rclpy.impl.rcutils_logger.RcutilsLogger"]
 select    = ["ALL"]
 unfixable = ["F401"]
 
+
+# Here are all of the linting rules to ignore
 ignore = [
     "ANN401",
     "BLE001",

@@ -79,7 +79,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
     && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------
-# Install RealSense / OSRF Gazebo / Golang (Separate due to repos)
+# Install RealSense / OSRF Gazebo (Separate due to repos)
 # -------------------------------
 RUN add-apt-repository ppa:longsleep/golang-backports -y \
     && curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add - \
@@ -88,7 +88,6 @@ RUN add-apt-repository ppa:longsleep/golang-backports -y \
     && apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-librealsense2* \
     ros-humble-realsense2-* \
-    golang-go \
     && if [ "$TARGETARCH" = "amd64" ]; then \
          apt-get install -y --no-install-recommends gz-harmonic ros-humble-ros-gzharmonic; \
        fi \
@@ -134,7 +133,6 @@ USER $USERNAME
 # -------------------------------
 COPY .devcontainer/required_pip_packages.txt /tmp/requirements.txt
 RUN pip install --upgrade pip
-RUN pip install packaging
 RUN pip install -r /tmp/requirements.txt
 
 

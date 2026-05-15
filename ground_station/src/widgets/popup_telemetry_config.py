@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from functools import partial
-
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, Slot
 from qtpy.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -192,8 +190,11 @@ class EditTelemetryConfigWindow(QDialog):
         checkbox.setStyleSheet(EditTelemetryConfigWindow.checkbox_style)
         checkbox.setChecked(enabled)
         checkbox.setToolTip(description)
-        checkbox.toggled.connect(partial(self.update_feedback_text, feedback_text))
+        checkbox.toggled.connect(
+            lambda _checked, text=feedback_text: self.update_feedback_text(text)
+        )
 
+        @Slot(bool)
         def on_checkbox_toggled(checked: bool) -> None:
             name_item.enabled = checked
             edited_map_features = constants.SM.read("map_features")
@@ -210,6 +211,7 @@ class EditTelemetryConfigWindow(QDialog):
 
         self.feature_table.setCellWidget(row, 2, checkbox_container)
 
+    @Slot(str)
     def update_feedback_text(self, text: str) -> None:
         """
         Update the feedback text in the dialog.
@@ -222,7 +224,8 @@ class EditTelemetryConfigWindow(QDialog):
 
         self.feedback_text.setPlainText(text)
         self.feedback_text_clear_timer.start()
-
+    
+    @Slot()
     def clear_feedback_text(self) -> None:
         """Clear the feedback text, resetting it to the default message."""
 

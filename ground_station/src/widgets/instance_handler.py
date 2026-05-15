@@ -9,7 +9,7 @@ from enum import auto
 from typing import Any
 from urllib.parse import urljoin
 
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, Slot
 from qtpy.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -280,13 +280,15 @@ class InstanceHandler(QWidget):
         self.timer.timeout.connect(self.update_instances_starter)
         self.instance_fetcher.response.connect(self.update_instances)
         self.timer.start()
-
+    
+    @Slot()
     def update_instances_starter(self) -> None:
         """Start the instance fetcher thread."""
 
         if not self.instance_fetcher.isRunning():
             self.instance_fetcher.start()
 
+    @Slot(tuple)
     def update_instances(self, request_result: tuple[list[dict], constants.TelemetryStatus]) -> None:
         """
         Update the instance widgets based on the fetched instances.
@@ -431,6 +433,7 @@ class InstanceHandler(QWidget):
         self.instances_container.setUpdatesEnabled(True)
         self.instances_container.update()
 
+    @Slot()
     def create_new_instance(self) -> None:
         """Create a new instance on the telemetry server."""
 
@@ -452,6 +455,7 @@ class InstanceHandler(QWidget):
         except ValueError as e:
             print(f"[Error] Failed to create instance widget: {e}")
 
+    @Slot()
     def delete_all_instances(self) -> None:
         """Delete all instances from the telemetry server."""
 
@@ -471,6 +475,7 @@ class InstanceHandler(QWidget):
         except RequestException as e:
             print(f"[Error] Failed to delete all instances: {e}")
 
+    @Slot(str)
     def filter_instances(self, text: str) -> None:
         """
         Filter the displayed instances based on the search text.
@@ -491,6 +496,7 @@ class InstanceHandler(QWidget):
 
         self.update_status_label()
 
+    @Slot(str)
     def on_sort_by_changed(self, sort_method: str) -> None:
         """
         Handle the sort by dropdown change event.
@@ -687,6 +693,7 @@ class InstanceWidget(QFrame):
         self.main_layout.addLayout(self.button_layout)
         self.setLayout(self.main_layout)
 
+    @Slot()
     def on_instance_name_changed(self) -> None:
         """Handle the instance name change event."""
 
@@ -707,6 +714,7 @@ class InstanceWidget(QFrame):
             self.instance_name_edit.setText(self.instance_identifier)
             print("[Info] Reverted instance name change as it was empty or unchanged.")
 
+    @Slot()
     def on_connect_clicked(self) -> None:
         """Handle the connect button click event."""
 
@@ -726,7 +734,8 @@ class InstanceWidget(QFrame):
 
             except RequestException as e:
                 print(f"[Error] Failed to connect to instance #{self.instance_id}: {e}")
-
+    
+    @Slot()
     def on_delete_clicked(self) -> None:
         """Handle the delete button click event."""
 
