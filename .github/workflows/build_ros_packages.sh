@@ -124,7 +124,7 @@ dpkg-deb -Zzstd --build "${PKG_DIR_AGENT}" "output_artifacts/autoboatvt-microros
 
 # Firmware SDK Debian package
 echo "==> Building firmware-dependencies .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
-PKG_DIR_FIRMWARE="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_uc"
+PKG_DIR_FIRMWARE="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_firmware"
 mkdir -p "${PKG_DIR_FIRMWARE}/DEBIAN"
 mkdir -p "${PKG_DIR_FIRMWARE}/opt/autoboat/firmware_dependencies"
 
@@ -138,6 +138,7 @@ sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH
   .github/workflows/debian_package_files/control-firmware-dependencies.template > "${PKG_DIR_FIRMWARE}/DEBIAN/control"
 
 cp .github/workflows/debian_package_files/firmware_dependencies/postinst "${PKG_DIR_FIRMWARE}/DEBIAN/postinst"
+cp .github/workflows/debian_package_files/firmware_dependencies/prerm   "${PKG_DIR_FIRMWARE}/DEBIAN/prerm"
 cp .github/workflows/debian_package_files/firmware_dependencies/postrm   "${PKG_DIR_FIRMWARE}/DEBIAN/postrm"
 chmod 0755 "${PKG_DIR_FIRMWARE}/DEBIAN/postinst" "${PKG_DIR_FIRMWARE}/DEBIAN/prerm" "${PKG_DIR_FIRMWARE}/DEBIAN/postrm"
 
