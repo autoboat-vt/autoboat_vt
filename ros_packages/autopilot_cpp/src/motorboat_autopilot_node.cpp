@@ -214,7 +214,7 @@ void MotorboatAutopilotNode::update_ros_topics() {
     // TODO LOOK INTO WHY WE ARE SENDING THIS AT ALL FOR THE MOTORBOAT AUTOPILOT NODE
     full_autonomy_maneuver_publisher->publish(std_msgs::msg::UInt8().set__data(255));
 
-    // Calculate and Publish Rudder Angle
+    // Calculate Rudder Angle and Desired RPM based on Autopilot
     auto [desired_rudder_angle, desired_rpm] = step();
     
 
@@ -282,7 +282,7 @@ void MotorboatAutopilotNode::update_ros_topics() {
     else if (autopilot_mode == MotorboatAutopilotMode::Waypoint_Mission) {
         propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
             .set__control_type_for_vesc("rpm")
-            .set__control_value(0.0)
+            .set__control_value(desired_rpm)
         );
     }
     else {
