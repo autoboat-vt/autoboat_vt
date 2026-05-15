@@ -10,4 +10,3 @@ To install the prebuilt binaries for deployment, please run:
 ```bash
 curl -sSL https://raw.githubusercontent.com/autoboat-vt/autoboat_vt/main/install.sh | sudo bash
 ```
-
