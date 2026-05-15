@@ -21,7 +21,7 @@ env:
 
 on:
   push:
-    branches: [ "main", ]
+    branches: [ "main", "renaming_refactoring"]
     tags:
       - 'v*'
   pull_request:
