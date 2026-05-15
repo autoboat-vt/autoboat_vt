@@ -20,6 +20,6 @@ setup(
     description="Contains a ros2 compatible version of the usv sim lsa sailboat simulation",
     license="http://www.apache.org/licenses/LICENSE-2.0",
     entry_points={
-        "console_scripts": ["simulation = sailboat_simulation.simulation_node:main"],
+        "console_scripts": ["simulation = old_sailboat_simulation.simulation_node:main"],
     },
 )
