@@ -135,10 +135,10 @@ cp -r /opt/autoboat/firmware_dependencies/pico-sdk "${PKG_DIR_FIRMWARE}/opt/auto
 echo "  Firmware SDK package size before compression: $(du -sh "${PKG_DIR_FIRMWARE}" | cut -f1)"
 
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
-  .github/workflows/debian_package_files/control-firmware-dependencies.template > "${PKG_DIR_FIRMWARE}/DEBIAN/control"
+  .github/workflows/debian_package_files/control-firmware_dependencies.template > "${PKG_DIR_FIRMWARE}/DEBIAN/control"
 
-cp .github/workflows/debian_package_files/firmware-dependencies/postinst "${PKG_DIR_FIRMWARE}/DEBIAN/postinst"
-cp .github/workflows/debian_package_files/firmware-dependencies/postrm   "${PKG_DIR_FIRMWARE}/DEBIAN/postrm"
+cp .github/workflows/debian_package_files/firmware_dependencies/postinst "${PKG_DIR_FIRMWARE}/DEBIAN/postinst"
+cp .github/workflows/debian_package_files/firmware_dependencies/postrm   "${PKG_DIR_FIRMWARE}/DEBIAN/postrm"
 chmod 0755 "${PKG_DIR_FIRMWARE}/DEBIAN/postinst" "${PKG_DIR_FIRMWARE}/DEBIAN/prerm" "${PKG_DIR_FIRMWARE}/DEBIAN/postrm"
 
 dpkg-deb --build "${PKG_DIR_FIRMWARE}" "output_artifacts/autoboatvt-firmware-dependencies-${DEB_ARCH}.deb"
