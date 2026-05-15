@@ -4,7 +4,8 @@ project(autopilot_cpp)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Generate compile_commands.json for IDE support (clangd, etc.)
+# Generate compile_commands.json to allow the IDE to have proper intellisense
+# https://code.visualstudio.com/docs/cpp/configure-intellisense#_compilecommandsjson-file
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Use ccache if available (huge incremental build speedup)
@@ -34,7 +35,20 @@ find_package(sensor_msgs REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(autoboat_msgs REQUIRED)
-find_package(cpr REQUIRED)
+
+
+
+# FetchContent: cpr
+include(FetchContent)
+
+set(CPR_USE_SYSTEM_CURL ON CACHE BOOL "Use system curl" FORCE)
+
+FetchContent_Declare(
+  cpr
+  GIT_REPOSITORY https://github.com/libcpr/cpr.git
+  GIT_TAG        1.14.2
+)
+FetchContent_MakeAvailable(cpr)
 
 
 
