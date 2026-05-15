@@ -5,7 +5,7 @@ moved src to ros_packages
 
 Still need to do:
 
-Add READMEs to ros_packages, groundstation, scripts, and firmware folder to explain what they all do
+TODO test that the second part of the postinst scripts actually work
 Update all of the documentation
 Rename sailboat_simulation package to deprecated_sailboat_simulation
 Update output package name to autoboatvt-firmware-dependencies instead of autoboatvt-firmware-dependencies-full

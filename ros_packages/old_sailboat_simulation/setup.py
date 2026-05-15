@@ -2,7 +2,7 @@ from glob import glob
 
 from setuptools import find_packages, setup
 
-package_name = "sailboat_simulation"
+package_name = "old_sailboat_simulation"
 
 setup(
     name=package_name,

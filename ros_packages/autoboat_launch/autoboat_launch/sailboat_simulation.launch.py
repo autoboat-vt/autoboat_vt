@@ -23,9 +23,9 @@ def generate_launch_description():
                 output="log"
             ),
             Node(
-                package="sailboat_simulation",
+                package="old_sailboat_simulation",
                 executable="simulation",
-                name="sailboat_simulation",
+                name="old_sailboat_simulation",
                 respawn=True,
                 respawn_delay=2.0,
                 output="screen",

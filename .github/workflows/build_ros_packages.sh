@@ -62,7 +62,7 @@ if [ "${DEB_ARCH}" == "amd64" ]; then
   mkdir -p "${PKG_DIR_SIM}/DEBIAN"
   mkdir -p "${PKG_DIR_SIM}/opt/autoboat/install"
   
-  SIM_PACKAGES="simulation_models custom_lift_drag foil_dynamics custom_lift_drag sail_limits simulation_transform wind_arrow"
+  SIM_PACKAGES="simulation_models custom_lift_drag foil_dynamics sail_limits simulation_transform wind_arrow"
   for PKG in $SIM_PACKAGES; do
     echo "Partitioning simulation package: ${PKG}"
     
@@ -105,7 +105,7 @@ dpkg-deb -Zzstd --build "${PKG_DIR_BASE}" "output_artifacts/autoboatvt-${DEB_ARC
 
 
 # Microros Agent package
-echo "==> Building firmware-dependencies .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
+echo "==> Building microros-agent .deb package (v${DEB_VERSION} ${DEB_ARCH})..."
 PKG_DIR_AGENT="${REPOSITORY_ROOT_DIRECTORY}/deb_pkg_agent"
 mkdir -p "${PKG_DIR_AGENT}/DEBIAN"
 mkdir -p "${PKG_DIR_AGENT}/opt/autoboat/firmware_dependencies"
