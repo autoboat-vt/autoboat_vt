@@ -52,12 +52,12 @@ fi
 if [ "$SHOW_HELP" = true ]; then
     echo "Usage: $0 [options]"
     echo "Options:"
-    echo "  --base            Install the base autoboatvt package (default)"
-    echo "  --simulation      Install the simulation package (adds Gazebo repo to the base installation)"
+    echo "  --base                     Install the base autoboatvt package (default)"
+    echo "  --simulation               Install the simulation package (adds Gazebo repo to the base installation)"
     echo "  --firmware-dependencies    Install the autoboat firmware SDK package"
-    echo "  --microros-agent  Install only the microros agent runtime"
-    echo "  --all             Install all of the above"
-    echo "  --help, -h        Show this help message"
+    echo "  --microros-agent           Install only the microros agent runtime"
+    echo "  --all                      Install all of the above"
+    echo "  --help, -h                 Show this help message"
     exit 0
 fi
 
