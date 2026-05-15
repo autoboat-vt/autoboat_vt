@@ -65,6 +65,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
     ccache \
     mold \
     libcurl4-openssl-dev \
+    libcpr-dev \
     nlohmann-json3-dev \
     ros-humble-serial-driver \
     ros-humble-asio-cmake-module \
@@ -112,21 +113,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 
 
 
-
-
-USER root
-RUN cd /tmp \
-   && git clone --depth 1 https://github.com/libcpr/cpr.git \
-   && cd cpr \
-   && mkdir build && cd build \
-   && cmake .. -DCPR_USE_SYSTEM_CURL=ON \
-   && cmake --build . --parallel \
-   && cmake --install . \
-   && cd / && rm -rf /tmp/cpr
-
 USER $USERNAME
-   
-
 
 # -------------------------------
 # Python requirements (as user)
