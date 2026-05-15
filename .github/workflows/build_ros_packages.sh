@@ -40,8 +40,6 @@ mkdir -p "${PKG_DIR_BASE}/opt/autoboat/"
 
 cp -r /opt/autoboat/install "${PKG_DIR_BASE}/opt/autoboat/"
 
-cp -r /opt/autoboat/firmware_dependencies/micro_ros_agent/install/* "${PKG_DIR_BASE}/opt/autoboat/firmware_dependencies/micro_ros_agent/install/"
-
 sed -e "s/VERSION_PLACEHOLDER/${DEB_VERSION}/" -e "s/ARCH_PLACEHOLDER/${DEB_ARCH}/" \
   .github/workflows/debian_package_files/control.template > "${PKG_DIR_BASE}/DEBIAN/control"
 
