@@ -11,30 +11,30 @@ output
 
 # object detection
 **.pt
-microros/dependencies/**
+firmware/dependencies/**
 **.engine
 **.onnx
 **.o
 **.so
-src/object_detection/object_detection/deepstream_yolo/ultralytics/
-src/object_detection/object_detection/deepstream_yolo/labels.txt
-src/object_detection/object_detection/frame_results/
-src/object_detection/object_detection/deepstream_yolo/label_files/**
-src/object_detection/object_detection/deepstream_yolo/engine_files/**
-src/object_detection/object_detection/deepstream_yolo/pt_files/**
-src/object_detection/object_detection/deepstream_yolo/onnx_files/**
+ros_packages/object_detection/object_detection/deepstream_yolo/ultralytics/
+ros_packages/object_detection/object_detection/deepstream_yolo/labels.txt
+ros_packages/object_detection/object_detection/frame_results/
+ros_packages/object_detection/object_detection/deepstream_yolo/label_files/**
+ros_packages/object_detection/object_detection/deepstream_yolo/engine_files/**
+ros_packages/object_detection/object_detection/deepstream_yolo/pt_files/**
+ros_packages/object_detection/object_detection/deepstream_yolo/onnx_files/**
 
 # groundstation
 ground_station/app_data/git_ignore
 node_modules
 
-# src/object_detection
-src/object_detection/object_detection/runs/**
-src/object_detection/object_detection/test_results/**
-src/object_detection/object_detection/weights/**
-src/object_detection/object_detection/dataset/**
-src/object_detection/object_detection/dataset/**
-src/object_detection/object_detection/hard_images/**
+# ros_packages/object_detection
+ros_packages/object_detection/object_detection/runs/**
+ros_packages/object_detection/object_detection/test_results/**
+ros_packages/object_detection/object_detection/weights/**
+ros_packages/object_detection/object_detection/dataset/**
+ros_packages/object_detection/object_detection/dataset/**
+ros_packages/object_detection/object_detection/hard_images/**
 
 # frames generated from camera recorder
 frame_logs

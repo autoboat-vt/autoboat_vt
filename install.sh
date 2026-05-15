@@ -25,11 +25,11 @@ if [[ "$ARCH" != "amd64" && "$ARCH" != "arm64" ]]; then
     exit 1
 fi
 
-# 2. Argument Parsing
+# Argument Parsing
 INSTALL_BASE=false
 INSTALL_SIMULATION=false
-INSTALL_MICROROS=false
-INSTALL_AGENT=false
+INSTALL_MICROROS_AGENT=false
+INSTALL_FIRMWARE_SDK=false
 SHOW_HELP=false
 
 if [[ $# -eq 0 ]]; then
@@ -40,9 +40,9 @@ else
         case $arg in
             --base) INSTALL_BASE=true ;;
             --simulation|--sim) INSTALL_SIMULATION=true ;;
-            --microros|--uC) INSTALL_MICROROS=true ;;
-            --microros-agent|--agent) INSTALL_AGENT=true ;;
-            --all) INSTALL_BASE=true; INSTALL_SIMULATION=true; INSTALL_MICROROS=true; INSTALL_AGENT=true ;;
+            --firmware-dependencies|--firm) INSTALL_FIRMWARE_SDK=true ;;
+            --microros-agent|--agent) INSTALL_MICROROS_AGENT=true ;;
+            --all) INSTALL_BASE=true; INSTALL_SIMULATION=true; INSTALL_FIRMWARE_SDK=true; INSTALL_MICROROS_AGENT=true ;;
             --help|-h) SHOW_HELP=true ;;
             *) echo "Unknown option: $arg"; SHOW_HELP=true ;;
         esac
@@ -52,25 +52,25 @@ fi
 if [ "$SHOW_HELP" = true ]; then
     echo "Usage: $0 [options]"
     echo "Options:"
-    echo "  --base            Install the base autoboat-vt package (default)"
-    echo "  --simulation      Install the simulation package (adds Gazebo repo)"
-    echo "  --microros        Install the Micro-ROS SDK package"
-    echo "  --microros-agent  Install only the Micro-ROS Agent runtime"
+    echo "  --base            Install the base autoboatvt package (default)"
+    echo "  --simulation      Install the simulation package (adds Gazebo repo to the base installation)"
+    echo "  --firmware-dependencies    Install the autoboat firmware SDK package"
+    echo "  --microros-agent  Install only the microros agent runtime"
     echo "  --all             Install all of the above"
     echo "  --help, -h        Show this help message"
     exit 0
 fi
 
 echo "--------------------------------------------------------"
-echo "Starting autoboat-vt installation for $ARCH..."
+echo "Starting autoboatvt installation for $ARCH..."
 echo "Requested packages:"
 [ "$INSTALL_BASE" = true ] && echo " - Base system (autoboatvt)"
 [ "$INSTALL_SIMULATION" = true ] && echo " - Simulation (autoboatvt-simulation)"
-[ "$INSTALL_MICROROS" = true ] && echo " - Micro-ROS SDK (autoboatvt-microros)"
-[ "$INSTALL_AGENT" = true ] && echo " - Micro-ROS Agent (autoboatvt-microros-agent)"
+[ "$INSTALL_FIRMWARE_SDK" = true ] && echo " - Autoboat Firmware SDK (autoboatvt-firmware-dependencies)"
+[ "$INSTALL_MICROROS_AGENT" = true ] && echo " - MicroROS Agent (autoboatvt-microros-agent)"
 echo "--------------------------------------------------------"
 
-# 3. Add ROS 2 Repositories if missing
+# Add ROS 2 Repositories if missing
 if [ ! -f /etc/apt/sources.list.d/ros2.list ]; then
     echo "==> Configuring ROS 2 repositories..."
     sudo DEBIAN_FRONTEND=noninteractive apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl software-properties-common lsb-release
@@ -85,7 +85,7 @@ else
     echo "==> ROS 2 repositories already configured."
 fi
 
-# 4. Add OSRF Gazebo Repositories if missing (Required for simulation)
+# Add OSRF Gazebo Repositories if missing (Required for simulation)
 if [ ! -f /etc/apt/sources.list.d/gazebo-stable.list ]; then
     echo "==> Configuring OSRF Gazebo repositories..."
     sudo curl -sSL https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
@@ -122,14 +122,15 @@ install_deb() {
     rm "/tmp/${DEB_NAME}"
 }
 
+
 # Install agent if explicitly requested or needed as a dependency
-if [ "$INSTALL_AGENT" = true ] || [ "$INSTALL_BASE" = true ] || [ "$INSTALL_MICROROS" = true ]; then
-    install_deb "autoboatvt-microros-agent" "autoboat-vt-microros-agent-${ARCH}.deb"
+if [ "$INSTALL_MICROROS_AGENT" = true ] || [ "$INSTALL_BASE" = true ] || [ "$INSTALL_FIRMWARE_SDK" = true ]; then
+    install_deb "autoboatvt-microros-agent" "autoboatvt-microros-agent-${ARCH}.deb"
 fi
 
 # Base package
 if [ "$INSTALL_BASE" = true ]; then
-    install_deb "autoboatvt" "autoboat-vt-${ARCH}.deb"
+    install_deb "autoboatvt" "autoboatvt-${ARCH}.deb"
 fi
 
 if [ "$INSTALL_SIMULATION" = true ]; then
@@ -137,14 +138,15 @@ if [ "$INSTALL_SIMULATION" = true ]; then
         echo "WARNING: Simulation package is only available for amd64. Skipping..."
     else
         # Ensure base is installed if requested simulation
-        install_deb "autoboatvt-microros-agent" "autoboat-vt-microros-agent-${ARCH}.deb"
-        install_deb "autoboatvt" "autoboat-vt-${ARCH}.deb"
-        install_deb "autoboatvt-simulation" "autoboat-vt-simulation-${ARCH}.deb"
+        install_deb "autoboatvt-microros-agent" "autoboatvt-microros-agent-${ARCH}.deb"
+        install_deb "autoboatvt" "autoboatvt-${ARCH}.deb"
+        install_deb "autoboatvt-simulation" "autoboatvt-simulation-${ARCH}.deb"
     fi
 fi
 
-if [ "$INSTALL_MICROROS" = true ]; then
-    install_deb "autoboatvt-microros" "autoboat-vt-microros-full-${ARCH}.deb"
+
+if [ "$INSTALL_FIRMWARE_SDK" = true ]; then
+    install_deb "autoboatvt-firmware-dependencies" "autoboatvt-firmware-dependencies-${ARCH}.deb"
 fi
 
 

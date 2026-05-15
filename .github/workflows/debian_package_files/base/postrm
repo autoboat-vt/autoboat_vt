@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+
+# Only run cleanup on actual uninstall, not upgrades
+if [ "$1" != "remove" ] && [ "$1" != "purge" ]; then
+    exit 0
+fi
+
+rm -f /etc/profile.d/autoboatvt-base.sh
+
+# If there are other autoboat profile.d scripts, don't remove the bashrc modification
+if ls /etc/profile.d/autoboatvt-*.sh 1>/dev/null 2>&1; then
+    exit 0
+fi
+
+if [ -n "$SUDO_USER" ]; then
+    USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+    BASHRC="${USER_HOME}/.bashrc"
+    if [ -f "$BASHRC" ]; then
+        sed -i '/# Added by autoboatvt$/d' "$BASHRC"
+        sed -i '\|autoboatvt-\*\.sh|d' "$BASHRC"
+    fi
+fi
