@@ -5,10 +5,8 @@ Contains:
 - AutopilotThreadRouter: Class containing ``QThread`` classes dealing with the ``autopilot_parameters`` endpoint.
 - BoatStatusThreadRouter: Class containing ``QThread`` classes dealing with the ``boat_status`` endpoint.
 - InstanceManagerThreadRouter: Class containing ``QThread`` classes dealing with the ``instance_manager`` endpoint.
-
 - WaypointThreadRouter: Class containing ``QThread`` classes dealing with waypoints,
 both from the ``waypoints`` endpoint and the local server.
-
 - ImageFetcher: ``QThread`` class for fetching images from the telemetry server.
 """
 

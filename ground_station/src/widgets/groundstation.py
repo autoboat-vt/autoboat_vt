@@ -1,14 +1,14 @@
+import gzip
 import json
 import os
 import time
-from functools import partial
 from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urljoin
 
 import numpy as np
 import svg
-from qtpy.QtCore import Qt, QUrl, Signal
+from qtpy.QtCore import QSize, Qt, Signal, Slot
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import (
     QFileDialog,
@@ -81,24 +81,29 @@ class GroundStationWidget(QWidget):
         self.main_layout = QGridLayout()
         self.main_layout.setObjectName("main_layout")
 
+        self.left_width = 300
         self.left_layout = QVBoxLayout()
         self.left_layout.setObjectName("left_layout")
         self.left_widget = QWidget()
 
+        self.middle_width_min = 2 * self.left_width
+        self.middle_width_max = 4 * self.left_width
         self.middle_layout = QGridLayout()
         self.middle_layout.setObjectName("middle_layout")
 
+        self.right_width = self.left_width + 30
         self.right_layout = QTabWidget()
         self.right_layout.setObjectName("right_layout")
         self.right_tab1_layout = QGridLayout()
         self.right_tab2_layout = QGridLayout()
         self.right_tab1 = QWidget()
         self.right_tab2 = QWidget()
+
+        self.setMaximumWidth(self.left_width + self.middle_width_max + self.right_width)
         # endregion define layouts
 
         # region setup UI
         # region left section
-        self.left_width = 300
         self.left_label = QLabel("Telemetry Data")
         self.left_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.left_text_section = QTextEdit()
@@ -106,49 +111,29 @@ class GroundStationWidget(QWidget):
         self.left_text_section.setReadOnly(True)
         self.left_text_section.setText("Awaiting telemetry data...")
 
-        self.save_boat_data_button = misc.pushbutton_maker(
-            "Save Boat Data to File",
-            constants.ICONS.save,
-            self.save_boat_data,
+        self.start_data_logging_button = misc.pushbutton_maker(
+            "Start Data Logging",
+            constants.ICONS.play_circle_outline,
+            self.start_data_logging,
             max_width=self.left_width,
             min_height=50,
         )
+        self.start_data_logging_button.setIconSize(QSize(20, 20))
 
-        self.edit_boat_data_limits_button = misc.pushbutton_maker(
-            "Edit Limits",
-            constants.ICONS.cog,
-            self.edit_boat_data_limits,
-            max_width=self.left_width // 2,
+        self.stop_data_logging_button = misc.pushbutton_maker(
+            "End Data Logging",
+            constants.ICONS.stop_circle_outline,
+            self.stop_data_logging,
+            max_width=self.left_width,
             min_height=50,
         )
-
-        self.side_buttons_layout = QVBoxLayout()
-
-        self.load_boat_data_limits_button = misc.pushbutton_maker(
-            "Load Limits from File",
-            constants.ICONS.hard_drive,
-            self.load_boat_data_limits,
-            max_width=self.left_width // 2,
-            min_height=25,
-        )
-
-        self.save_boat_data_limits_button = misc.pushbutton_maker(
-            "Save Limits to File",
-            constants.ICONS.save,
-            self.save_boat_data_limits,
-            max_width=self.left_width // 2,
-            min_height=25,
-        )
-
-        self.side_buttons_layout.addWidget(self.load_boat_data_limits_button)
-        self.side_buttons_layout.addWidget(self.save_boat_data_limits_button)
+        self.stop_data_logging_button.setIconSize(QSize(20, 20))
 
         self.left_button_groupbox = QGroupBox()
         self.left_button_layout = QGridLayout()
 
-        self.left_button_layout.addWidget(self.save_boat_data_button, 0, 0, 1, 2)
-        self.left_button_layout.addWidget(self.edit_boat_data_limits_button, 1, 0)
-        self.left_button_layout.addLayout(self.side_buttons_layout, 1, 1)
+        self.left_button_layout.addWidget(self.start_data_logging_button, 0, 0)
+        self.left_button_layout.addWidget(self.stop_data_logging_button, 1, 0)
         self.left_button_groupbox.setLayout(self.left_button_layout)
 
         self.left_layout.addWidget(self.left_label)
@@ -156,17 +141,18 @@ class GroundStationWidget(QWidget):
         self.left_layout.addWidget(self.left_button_groupbox)
 
         self.left_widget.setLayout(self.left_layout)
-        self.left_widget.setMaximumWidth(self.left_width)
-        # self.left_layout.setContentsMargins(0, 0, 0, self.left_width)
+        self.left_widget.setFixedWidth(self.left_width)
         self.main_layout.addWidget(self.left_widget, 0, 0)
 
         # endregion left section
 
-        # region middle section
+        # region middle sections
         self.browser = QWebEngineView()
-        self.browser.setUrl(QUrl(f"http://127.0.0.1:{constants.VITE_PORT}"))
-        self.browser.setMinimumWidth(700)
-        self.browser.setMinimumHeight(700)
+        self.browser.setPage(constants.MAP_PAGE)
+        
+        self.browser.setMinimumWidth(self.middle_width_min)
+        self.browser.setMaximumWidth(self.middle_width_max)
+        
         self.middle_layout.addWidget(self.browser, 0, 1)
         self.middle_layout.setRowStretch(0, 1)
 
@@ -178,9 +164,7 @@ class GroundStationWidget(QWidget):
         self.telemetry_config_button.setToolTip(
             "If enabled, a popup will appear where you can alter the telemetry configuration.",
         )
-        self.telemetry_config_button.clicked.connect(
-            lambda: self.edit_telemetry_config_window.show() or self.edit_telemetry_config_window.raise_()
-        )
+        self.telemetry_config_button.clicked.connect(self.edit_telemetry_config_window.show)
 
         self.test_waypoint_rng = np.random.default_rng(69420)
         self.add_500_test_waypoints_button = QPushButton("Add 500 Test Waypoints?")
@@ -196,14 +180,14 @@ class GroundStationWidget(QWidget):
         # endregion middle section
 
         # region right section
-        self.right_width = 320
-
         # region tab1: waypoint data
         self.right_tab1_label = QLabel("Waypoints")
         self.right_tab1_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.right_tab1_table = QTableWidget()
         self.right_tab1_table.setMinimumWidth(self.right_width)
-        self.right_tab1_table.cellClicked.connect(partial(self.zoom_to_marker, table="waypoints"))
+        self.right_tab1_table.cellClicked.connect(
+            lambda row, _column: self.zoom_to_marker(row, table="waypoints")
+        )
         self.can_send_waypoints = True
         self.send_waypoints_button = misc.pushbutton_maker(
             "Send Waypoints",
@@ -256,7 +240,9 @@ class GroundStationWidget(QWidget):
         self.right_tab2_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.right_tab2_table = QTableWidget()
         self.right_tab2_table.setMinimumWidth(self.right_width)
-        self.right_tab2_table.cellClicked.connect(partial(self.zoom_to_marker, table="buoys"))
+        self.right_tab2_table.cellClicked.connect(
+            lambda row, _column: self.zoom_to_marker(row, table="buoys")
+        )
 
         self.edit_buoy_data_button = misc.pushbutton_maker(
             "Edit Buoy Data",
@@ -292,7 +278,7 @@ class GroundStationWidget(QWidget):
 
         self.right_layout.addTab(self.right_tab1, "Waypoints")
         self.right_layout.addTab(self.right_tab2, "Buoy Data")
-        self.right_layout.setMaximumWidth(self.right_width)
+        self.right_layout.setFixedWidth(self.right_width)
         self.main_layout.addWidget(self.right_layout, 0, 2)
         # endregion right section
 
@@ -310,10 +296,12 @@ class GroundStationWidget(QWidget):
         for timer in self.timers:
             timer.start()
 
-        self.boat_status_source: Signal = boat_status_source
+        self.boat_status_source = boat_status_source
         self.boat_status_source.connect(self.update_telemetry_display)
 
     # region button functions
+
+    @Slot()
     def send_waypoints(self, test: bool = False) -> None:
         """
         Send waypoints to the server.
@@ -333,7 +321,7 @@ class GroundStationWidget(QWidget):
                 )
 
                 js_code = "map.change_color_waypoints('red')"
-                self.browser.page().runJavaScript(js_code)
+                self.browser.page().runJavaScript(misc.js_load_guard(js_code))
                 print(f"[Info] Waypoints sent successfully. Waypoints: {self.waypoints}")
 
             except RequestException as e:
@@ -352,17 +340,7 @@ class GroundStationWidget(QWidget):
             except RequestException as e:
                 print(f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")
 
-    def add_500_test_waypoints(self) -> None:
-        """Add 500 test waypoints to the map."""
-
-        for _ in range(500):
-            latitude = self.test_waypoint_rng.uniform(-90, 90)
-            longitude = self.test_waypoint_rng.uniform(-180, 180)
-            self.browser.page().runJavaScript(f"map.add_waypoint({latitude}, {longitude})")
-
-        print("[Info] Added 500 test waypoints to the map, LOL.")
-
-
+    @Slot()
     def pull_waypoints(self) -> None:
         """Pull waypoints from the telemetry server and add them to the map."""
 
@@ -373,16 +351,24 @@ class GroundStationWidget(QWidget):
             ).json()
 
             if remote_waypoints:
-                print(f"[Info] Fetched waypoints from server: {remote_waypoints}")
+                if len(remote_waypoints) > 10:
+                    print(
+                        f"[Info] Pulled {len(remote_waypoints)} waypoints from server. "
+                        f"Displaying first 10 waypoints: {remote_waypoints[:10]}"
+                    )
+                else:
+                    print(f"[Info] Fetched waypoints from server: {remote_waypoints}")
+                
                 existing_waypoints = self.waypoints.copy()
-                self.browser.page().runJavaScript("map.clear_waypoints()")
+                self.browser.page().runJavaScript(misc.js_load_guard("map.clear_waypoints()"))
 
                 for waypoint in remote_waypoints:
-                    self.browser.page().runJavaScript(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})")
-                self.browser.page().runJavaScript("map.change_color_waypoints('red')")
+                    self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"))
+                
+                self.browser.page().runJavaScript(misc.js_load_guard("map.change_color_waypoints('red')"))
 
                 for waypoint in existing_waypoints:
-                    self.browser.page().runJavaScript(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})")
+                    self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"))
 
             else:
                 print("[Warning] No waypoints found on the server.")
@@ -393,6 +379,7 @@ class GroundStationWidget(QWidget):
         except RequestException as e:
             print(f"[Error] Failed to pull waypoints. Exception: {e}")
 
+    @Slot()
     def clear_waypoints(self) -> None:
         """Clear waypoints from the table."""
 
@@ -400,109 +387,62 @@ class GroundStationWidget(QWidget):
         self.can_pull_waypoints = True
         self.pull_waypoints_button.setDisabled(not self.can_pull_waypoints)
         js_code = "map.clear_waypoints()"
-        self.browser.page().runJavaScript(js_code)
+        self.browser.page().runJavaScript(misc.js_load_guard(js_code))
 
-    def save_boat_data(self) -> None:
-        """
-        Saves latest entry in the ``self.boat_data`` array to a file.
+    @Slot()
+    def add_500_test_waypoints(self) -> None:
+        """Add 500 test waypoints to the map."""
 
-        Files are stored in the ``boat_data`` directory and are named ``boat_data_<timestamp>.json``
-        where ``<timestamp>`` is nanoseconds since unix epoch.
-        """
+        for _ in range(500):
+            latitude = self.test_waypoint_rng.uniform(-90, 90)
+            longitude = self.test_waypoint_rng.uniform(-180, 180)
+            self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({latitude}, {longitude})"))
 
-        try:
-            file_path = Path(constants.BOAT_DATA_DIR / f"boat_data_{time.time_ns()}.json")
-            with open(file_path, mode="w", encoding="utf-8") as f:
-                json.dump(self.boat_data, f, indent=4)
+        print("[Info] Added 500 test waypoints to the map, LOL.")
 
-        except Exception as e:
-            print(f"[Error] Failed to save boat data: {e}")
+    @Slot()
+    def start_data_logging(self) -> None:
+        """Start logging telemetry data to a file."""
 
-        print(f"[Info] Boat data saved to {file_path}")
+        data_log_file = Path(constants.DATA_LOGS_DIR / f"data_log_{time.time_ns()}.csv")
+        data_log_file.touch(exist_ok=True)
 
-    def edit_boat_data_limits(self) -> None:
-        """
-        Opens a text edit window to edit the telemetry data limits.
+        constants.SM.write("data_log_file_path", data_log_file.as_posix())
+        constants.SM.write("data_logging_active", True)
+        self.boat_status_source.connect(constants.DL.write_from_qthread)
 
-        ``self.edit_boat_data_limits_callback`` is called when the user closes or clicks the save button in the text edit window.
-        ``self.edit_boat_data_limits_callback`` recieves the text from the text edit window when the user clicks the save button,
-        otherwise it recieves the text without any changes.
-        """
+        self.start_data_logging_button.setDisabled(True)
+        self.stop_data_logging_button.setDisabled(False)
+        
+        print("[Info] Data logging started.")
 
-        try:
-            initial_config = json.dumps(self.telemetry_data_limits, indent=4)
-            self.text_edit_window = TextEditWindow(highlighter=JsonHighlighter, initial_text=initial_config)
-            self.text_edit_window.setWindowTitle("Edit Boat Data Limits")
-            self.text_edit_window.user_text_emitter.connect(self.edit_boat_data_limits_callback)
-            self.text_edit_window.show()
+    @Slot()
+    def stop_data_logging(self) -> None:
+        """Stop logging telemetry data to a file."""
 
-        except Exception as e:
-            print(f"[Error] Failed to open boat data limits edit window: {e}")
+        constants.SM.write("data_logging_active", False)
+        self.boat_status_source.disconnect(constants.DL.write_from_qthread)
 
-    def edit_boat_data_limits_callback(self, text: str) -> None:
-        """
-        Callback function for the ``edit_boat_data_limits`` function.
+        self.start_data_logging_button.setDisabled(False)
+        self.stop_data_logging_button.setDisabled(True)
 
-        This function is called when the user closes the text edit window.
-        It retrieves the edited text and saves it to the ``self.telemetry_data_limits`` variable and closes the window.
+        non_compressed_path = Path(constants.SM.read("data_log_file_path"))
+        file_size = os.path.getsize(non_compressed_path) / (1024 * 1024)
+        
+        if file_size > 20:
+            compressed_file_path = Path(constants.SM.read("data_log_file_path").replace(".csv", ".csv.gz"))
 
-        Parameters
-        ----------
-        text
-            The text entered by the user in the text edit window.
-        """
+            with (open(non_compressed_path, "rb") as f_in, gzip.open(compressed_file_path, "wb") as f_out):
+                f_out.writelines(f_in)
 
-        try:
-            self.telemetry_data_limits = json.loads(text)
-
-        except Exception as e:
-            print(f"[Error] Failed to edit boat data limits: {e}")
-
-    def load_boat_data_limits(self) -> None:
-        """
-        Load upper and lower bounds for some of the telemetry data, if no file selected use ``default.json``.
-
-        Files are stored in the ``boat_data_bounds`` directory and are named ``boat_data_bounds_<timestamp>.json``
-        where ``<timestamp>`` is nanoseconds since unix epoch.
-        """
-
-        try:
-            chosen_file = QFileDialog.getOpenFileName(
-                self,
-                "Select Parameter File",
-                constants.BOAT_DATA_LIMITS_DIR.as_posix(),
-                "*.json",
+            compressed_file_size = os.path.getsize(compressed_file_path) / (1024 * 1024)
+            file_size_percent_difference = (file_size - compressed_file_size) / file_size * 100
+            print(
+                f"[Info] Data logging stopped. Log file compressed to {compressed_file_path}, "
+                f"reduced file size by {file_size_percent_difference:.2f}%."
             )
-            if chosen_file == ("", ""):
-                chosen_file = [Path(constants.BOAT_DATA_LIMITS_DIR / "default.json")]
-            with open(chosen_file[0], mode="r", encoding="utf-8") as f:
-                self.telemetry_data_limits = json.load(f)
 
-        except Exception as e:
-            print(f"[Error] Failed to load boat data limits: {e}")
-
-        print(f"[Info] Boat data limits loaded from {chosen_file[0]}")
-
-    def save_boat_data_limits(self) -> None:
-        """
-        Save upper and lower bounds for some of the telemetry data.
-
-        Files are stored in the ``boat_data_bounds`` directory and are named ``boat_data_bounds_<timestamp>.json``
-        where ``<timestamp>`` is nanoseconds since unix epoch.
-        """
-
-        try:
-            file_path = Path(
-                constants.BOAT_DATA_LIMITS_DIR / f"boat_data_bounds_{time.time_ns()}.json",
-            )
-            with open(file_path, mode="w", encoding="utf-8") as f:
-                json.dump(self.telemetry_data_limits, f, indent=4)
-
-        except Exception as e:
-            print(f"[Error] Failed to save boat data limits: {e}")
-
-        print(f"[Info] Boat data limits saved to {file_path}")
-
+    @Slot()
     def edit_buoy_data(self) -> None:
         """
         Opens a text edit window to edit the buoy data.
@@ -522,6 +462,7 @@ class GroundStationWidget(QWidget):
         except Exception as e:
             print(f"[Error] Failed to open buoy data edit window: {e}")
 
+    @Slot(str)
     def edit_buoy_data_callback(self, text: str) -> None:
         """
         Callback function for the ``edit_buoy_data`` function.
@@ -553,12 +494,12 @@ class GroundStationWidget(QWidget):
         self.right_tab2_table.setHorizontalHeaderLabels(["Latitude", "Longitude"])
 
         clear_js_buoys = "map.clear_buoys()"
-        self.browser.page().runJavaScript(clear_js_buoys)
+        self.browser.page().runJavaScript(misc.js_load_guard(clear_js_buoys))
 
         for buoy in self.buoys:
             self.right_tab2_table.insertRow(self.right_tab2_table.rowCount())
             add_js_buoy = f"map.add_buoy({self.buoys[buoy]['lat']}, {self.buoys[buoy]['lon']})"
-            self.browser.page().runJavaScript(add_js_buoy)
+            self.browser.page().runJavaScript(misc.js_load_guard(add_js_buoy))
 
             for i, coord in enumerate(["lat", "lon"]):
                 item = QTableWidgetItem(f"{float(self.buoys[buoy][coord]):.13f}")
@@ -568,6 +509,7 @@ class GroundStationWidget(QWidget):
         self.right_tab2_table.resizeColumnsToContents()
         self.right_tab2_table.resizeRowsToContents()
 
+    @Slot()
     def save_buoy_data(self) -> None:
         """
         Saves latest entry in the ``self.buoys`` array to a file.
@@ -585,7 +527,8 @@ class GroundStationWidget(QWidget):
             print(f"[Error] Failed to save buoy data: {e}")
 
         print(f"[Info] Buoy data saved to {file_path}")
-
+    
+    @Slot()
     def load_buoy_data(self) -> None:
         """
         Load buoy data from the ``buoy_data`` directory, if none selected use ``default.json``.
@@ -619,11 +562,13 @@ class GroundStationWidget(QWidget):
 
         print(f"[Info] Buoy data loaded from {chosen_file[0]}")
 
+    @Slot()
     def zoom_to_boat(self) -> None:
         """Center the view on the boat's position."""
 
-        self.browser.page().runJavaScript("map.focus_map_on_boat()")
+        self.browser.page().runJavaScript(misc.js_load_guard("map.focus_map_on_boat()"))
 
+    @Slot(int, str)
     def zoom_to_marker(self, row: int, table: Literal["waypoints", "buoys"] = "waypoints") -> None:
         """
         Center the view on the selected waypoint in the table.
@@ -650,7 +595,7 @@ class GroundStationWidget(QWidget):
                             break
 
                     js_code = f"map.focus_map_on_marker({lat}, {lon})"
-                    self.browser.page().runJavaScript(js_code)
+                    self.browser.page().runJavaScript(misc.js_load_guard(js_code))
 
                 except (ValueError, TypeError) as e:
                     print(f"[Error] Invalid waypoint data: {e}")
@@ -670,7 +615,7 @@ class GroundStationWidget(QWidget):
                             break
 
                     js_code = f"map.focus_map_on_marker({lat}, {lon})"
-                    self.browser.page().runJavaScript(js_code)
+                    self.browser.page().runJavaScript(misc.js_load_guard(js_code))
 
                 except (ValueError, TypeError) as e:
                     print(f"[Error] Invalid buoy data: {e}")
@@ -684,6 +629,7 @@ class GroundStationWidget(QWidget):
 
     # region pyqt thread functions
 
+    @Slot()
     def remote_waypoint_handler_starter(self) -> None:
         """Starts the telemetry waypoint handler thread."""
 
@@ -695,12 +641,14 @@ class GroundStationWidget(QWidget):
         if not self.remote_waypoint_handler.isRunning():
             self.remote_waypoint_handler.start()
 
+    @Slot()
     def local_waypoint_handler_starter(self) -> None:
         """Starts the local waypoint handler thread."""
 
         if not self.local_waypoint_handler.isRunning():
             self.local_waypoint_handler.start()
 
+    @Slot(tuple)
     def update_waypoints_display(self, request_result: tuple[list[list[int | float]], constants.TelemetryStatus]) -> None:
         """
         Update waypoints display with waypoints fetched from the local server.
@@ -754,6 +702,7 @@ class GroundStationWidget(QWidget):
             self.right_tab1_table.resizeColumnsToContents()
             self.right_tab1_table.resizeRowsToContents()
 
+    @Slot(tuple)
     def check_telemetry_waypoints(self, request_result: tuple[list[list[int | float]], constants.TelemetryStatus]) -> None:
         """
         Check if the waypoints on the telemetry server are the same as the local waypoints.
@@ -787,14 +736,16 @@ class GroundStationWidget(QWidget):
             if response == QMessageBox.StandardButton.Yes:
                 not_uploaded_waypoints = [waypoint for waypoint in self.waypoints if waypoint not in waypoints]
                 self.waypoints = waypoints.copy()
-                self.browser.page().runJavaScript("map.clear_waypoints()")
+                self.browser.page().runJavaScript(misc.js_load_guard("map.clear_waypoints()"))
 
                 for waypoint in self.waypoints:
-                    self.browser.page().runJavaScript(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})")
-                self.browser.page().runJavaScript("map.change_color_waypoints('red')")
+                    self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"))
+                
+                self.browser.page().runJavaScript(misc.js_load_guard("map.change_color_waypoints('red')"))
 
                 for waypoint in not_uploaded_waypoints:
-                    self.browser.page().runJavaScript(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})")
+                    self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"))
+                
                 print("[Info] Local waypoints updated from telemetry server.")
 
             else:
@@ -882,6 +833,9 @@ class GroundStationWidget(QWidget):
             - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
+        boat_data, connection_status = request_result
+        self.boat_data = boat_data
+
         def fix_formatting(data_item: float | None) -> str:
             """
             Applies some formatting rules that multiple keys have in common.
@@ -913,8 +867,10 @@ class GroundStationWidget(QWidget):
 
         # region mode dependent print functions
         def sailboat_mode(boat_data: dict[str, Any]) -> str:
-            self.boat_data["full_autonomy_maneuver"] = constants.SailboatStates(boat_data["full_autonomy_maneuver"]).name
-            self.boat_data["autopilot_mode"] = constants.SailboatAutopilotMode(boat_data["autopilot_mode"]).name
+            self.boat_data["full_autonomy_maneuver"] = constants.StrictMatchEnums.SailboatStates(
+                boat_data["full_autonomy_maneuver"]
+            ).name
+            self.boat_data["autopilot_mode"] = constants.StrictMatchEnums.SailboatAutopilotMode(boat_data["autopilot_mode"]).name
 
             return (
                 "Position: "
@@ -943,7 +899,7 @@ class GroundStationWidget(QWidget):
 
 
         def motorboat_mode(boat_data: dict[str, Any]) -> str:
-            self.boat_data["autopilot_mode"] = constants.MotorboatAutopilotMode(boat_data["autopilot_mode"]).name
+            self.boat_data["autopilot_mode"] = constants.StrictMatchEnums.MotorboatAutopilotMode(boat_data["autopilot_mode"]).name
 
             return (
                 "Position: "
@@ -971,9 +927,6 @@ class GroundStationWidget(QWidget):
                 f"Motor Temperature: {fix_formatting(self.boat_data.get('motor_temperature'))} °C\n"
                 f"VESC Temperature: {fix_formatting(self.boat_data.get('vesc_temperature'))} °C\n"
             )
-        
-        boat_data, connection_status = request_result
-        self.boat_data = boat_data
 
         # endregion mode dependent print functions
 
@@ -987,33 +940,30 @@ class GroundStationWidget(QWidget):
                 The heading of the boat, used to orient the diagnostics correctly on the map.
             """
 
-            no_sail_zone_size_dict: dict[str, str | float] | None = constants.SM.read("current_autopilot_parameters").get(
-                "no_sail_zone_size"
+            current_autopilot_parameters = constants.SM.read("current_autopilot_parameters")
+            
+            no_sail_zone_size_dict: dict[str, str | float] | None = (
+                current_autopilot_parameters.get("no_sail_zone_size")
             )
-
             if no_sail_zone_size_dict is None:
-                print("[Warning] `no_sail_zone_size` not found in current autopilot parameters, not drawing the no sail zone.")
                 return
 
-            no_sail_size: float = 0
             if "current" in no_sail_zone_size_dict:
-                no_sail_size = no_sail_zone_size_dict["current"]
+                no_sail_size: float = no_sail_zone_size_dict["current"]
             else:
-                no_sail_size = no_sail_zone_size_dict["default"]
+                no_sail_size: float = no_sail_zone_size_dict["default"]
 
             wind_direction: float | None = self.boat_data.get("true_wind_angle")
             if wind_direction is None:
-                print("[Warning] `true_wind_angle` not found in boat data, defaulting to 0.")
-                wind_direction = 0
+                return
 
-            head = heading + wind_direction + 180  # opposite the direction of wind
-            size = 0.2
+            heading_opposite_wind = heading + (wind_direction + 180)
 
             # don't think about it too hard
-            x1: float = 2 + np.cos(np.deg2rad(head - no_sail_size / 2))
-            y1: float = 2 - np.sin(np.deg2rad(head - no_sail_size / 2))
-            x2: float = 2 + np.cos(np.deg2rad(head + no_sail_size / 2))
-            y2: float = 2 - np.sin(np.deg2rad(head + no_sail_size / 2))
+            x1: float = 2 + np.cos(np.deg2rad(heading_opposite_wind - no_sail_size / 2))
+            y1: float = 2 - np.sin(np.deg2rad(heading_opposite_wind - no_sail_size / 2))
+            x2: float = 2 + np.cos(np.deg2rad(heading_opposite_wind + no_sail_size / 2))
+            y2: float = 2 - np.sin(np.deg2rad(heading_opposite_wind + no_sail_size / 2))
 
             no_go_path_shape: list[svg.PathData] = [
                 svg.MoveTo(2, 2),
@@ -1023,20 +973,18 @@ class GroundStationWidget(QWidget):
             ]
             no_go_html = svg.Path(d=no_go_path_shape, fill="#c9140a")
 
-            tack_distance_dict: dict[str, str | float] | None = constants.SM.read("current_autopilot_parameters").get(
-                "tack_distance"
-            )
-
+            tack_distance_dict: dict[str, str | float] | None = current_autopilot_parameters.get("tack_distance")
             if tack_distance_dict is None:
-                print("[Warning] `tack_distance` not found in current autopilot parameters, not drawing the no sail zone.")
                 return
 
-            tack_distance = tack_distance_dict["current"] if "current" in tack_distance_dict else tack_distance_dict["default"]
+            if "current" in tack_distance_dict:
+                tack_distance: float = tack_distance_dict["current"]
+            else:
+                tack_distance: float = tack_distance_dict["default"]
 
             distance_to_waypoint: float | None = self.boat_data.get("distance_to_next_waypoint")
             if distance_to_waypoint is None:
-                print("[Warning] `distance_to_next_waypoint` not found in boat data, defaulting to 200.")
-                distance_to_waypoint = 200
+                return
             
             if tack_distance > distance_to_waypoint:
                 # we can't draw the line!
@@ -1044,16 +992,17 @@ class GroundStationWidget(QWidget):
                 distance_to_waypoint = 200
                 
             else:
+                # ratio of the tack distance to the distance to the waypoint, used to scale the decision zone size
+                tack_distance_ratio = tack_distance / distance_to_waypoint
+
                 # in radians
-                decision_zone_size: float = np.rad2deg(
-                    np.arcsin((tack_distance / distance_to_waypoint) * np.sin(np.deg2rad(no_sail_size / 2)))
-                )
+                decision_zone_size: float = np.rad2deg(np.arcsin(tack_distance_ratio * np.sin(np.deg2rad(no_sail_size / 2))))
 
                 # don't think about it too hard
-                x1: float = 2 + np.cos(np.deg2rad(head - (no_sail_size / 2 - decision_zone_size / 2)))
-                y1: float = 2 - np.sin(np.deg2rad(head - (no_sail_size / 2 - decision_zone_size / 2)))
-                x2: float = 2 + np.cos(np.deg2rad(head + (no_sail_size / 2 - decision_zone_size / 2)))
-                y2: float = 2 - np.sin(np.deg2rad(head + (no_sail_size / 2 - decision_zone_size / 2)))
+                x1: float = 2 + np.cos(np.deg2rad(heading_opposite_wind - (no_sail_size / 2 - decision_zone_size / 2)))
+                y1: float = 2 - np.sin(np.deg2rad(heading_opposite_wind - (no_sail_size / 2 - decision_zone_size / 2)))
+                x2: float = 2 + np.cos(np.deg2rad(heading_opposite_wind + (no_sail_size / 2 - decision_zone_size / 2)))
+                y2: float = 2 - np.sin(np.deg2rad(heading_opposite_wind + (no_sail_size / 2 - decision_zone_size / 2)))
 
                 decision_zone_path: list[svg.PathData] = [
                     svg.MoveTo(2, 2),
@@ -1067,8 +1016,8 @@ class GroundStationWidget(QWidget):
             wind_direction_shape: list[svg.PathData] = [
                 svg.MoveTo(50, 50),
                 svg.LineTo(
-                    50 + 50*np.cos(np.deg2rad(heading + wind_direction)),
-                    50 - 50*np.sin(np.deg2rad(heading + wind_direction)),
+                    50 + 50 * np.cos(np.deg2rad(heading + wind_direction)),
+                    50 - 50 * np.sin(np.deg2rad(heading + wind_direction)),
                 ),
             ]
             wind_html = svg.Path(
@@ -1079,8 +1028,7 @@ class GroundStationWidget(QWidget):
 
             speed: float | None = self.boat_data.get("speed")
             if speed is None:
-                print("[Warning] `speed` not found in boat data, defaulting to 1e-3.")
-                speed = 1e-3
+                return
 
             elif np.isclose(speed, 0.0, rtol=1e-5, atol=1e-8):
                 print("[Warning] `speed` is very close to 0, defaulting to 1e-3 to avoid division by zero.")
@@ -1089,17 +1037,16 @@ class GroundStationWidget(QWidget):
             vx: float = self.boat_data.get("velocity_x", -69.420)
             vy: float = self.boat_data.get("velocity_y", -69.420)
 
-            radius: float = 4*speed
+            radius: float = 4 * speed
             x1: float = 2 + radius * vx / speed
             y1: float = 2 + radius * vy / speed
-            head = heading
 
             velocity_arrow_shape: list[svg.PathData] = [
                 svg.MoveTo(2, 2),
                 svg.LineTo(x1, y1)
             ]
             velocity_arrow_transform: list[svg.Transform] = [
-                svg.Rotate(-head, 2, 2),
+                svg.Rotate(-heading, 2, 2),
             ]
             velocity_html = svg.Path(
                 d=velocity_arrow_shape,
@@ -1108,20 +1055,18 @@ class GroundStationWidget(QWidget):
                 transform=velocity_arrow_transform
             )
 
+            size = 0.2
             svg_str = no_go_html.as_str() + decision_zone_html.as_str()
-            self.browser.page().runJavaScript(
-                f"map.update_no_sail_svg('{svg_str}', {size})"
+
+            js_code = "\n".join(
+                [
+                    f"map.update_no_sail_svg({json.dumps(svg_str)}, {size});",
+                    f"map.update_velocity_svg({json.dumps(velocity_html.as_str())}, {size});",
+                    f"map.update_wind_svg({json.dumps(wind_html.as_str())});",
+                    f"map.update_compass_svg({heading + wind_direction});",
+                ]
             )
-            self.browser.page().runJavaScript(
-                f"map.update_velocity_svg('{velocity_html.as_str()}', '{size}')"
-            )
-            self.browser.page().runJavaScript(
-                f"map.update_wind_svg('{wind_html.as_str()}')"
-            )
-            self.browser.page().runJavaScript(
-                f"map.update_compass_svg('{heading+wind_direction}')"
-            )
-            print(heading+wind_direction)
+            self.browser.page().runJavaScript(misc.js_load_guard(js_code))
 
         # region data validation and defaulting
         try:
@@ -1145,19 +1090,25 @@ class GroundStationWidget(QWidget):
 
         if constants.SM.read("has_telemetry_server_instance_changed"):
             constants.SM.write("remote_autopilot_param_hash", "")
+            constants.SM.write("data_logging_active", False)
+            constants.SM.write("data_log_file_path", "")
+
+            self.start_data_logging_button.setDisabled(False)
+            self.stop_data_logging_button.setDisabled(True)
             self.clear_waypoints()
+
             constants.SM.write("has_telemetry_server_instance_changed", False)
 
         # endregion data validation and defaulting
 
-        self.browser.page().runJavaScript(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})")
+        self.browser.page().runJavaScript(misc.js_load_guard(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})"))
 
         if constants.SM.read("map_features")["sailboat_debug_symbols"]["status"]:
             draw_map_diagnostics(heading)
             self.need_to_clear_diagnostics = True
         
         elif self.need_to_clear_diagnostics:
-            self.browser.page().runJavaScript("map.remove_all_svgs()")
+            self.browser.page().runJavaScript(misc.js_load_guard("map.remove_all_svgs()"))
             self.need_to_clear_diagnostics = False
 
         if "full_autonomy_maneuver" in self.boat_data:

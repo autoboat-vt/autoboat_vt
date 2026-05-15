@@ -16,5 +16,9 @@
         "noUnusedParameters": true,
         "noFallthroughCasesInSwitch": true
     },
-    "include": ["src/widgets/map_widget/*.ts", "src/widgets/map_widget/*.js", "src/widgets/map_widget/*.d.ts"]
+    "include": [
+        "src/widgets/map_widget/frontend/*.ts",
+        "src/widgets/map_widget/frontend/*.js",
+        "src/widgets/map_widget/frontend/*.d.ts"
+    ]
 }

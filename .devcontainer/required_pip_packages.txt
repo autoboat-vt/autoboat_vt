@@ -18,7 +18,7 @@ pyproj
 utm                    # probably don't need this anymore maybe?
 
 
-# Serial/ Hardware communication
+# Serial / Hardware communication
 pyserial
 sparkfun-ublox-gps
 crsf-parser
@@ -38,8 +38,9 @@ matplotlib             # required only for the sailboat simulation
 click                  # required only for the sailboat simulation
 
 
-# Telemetry/ Internet
+# Telemetry / Internet
 requests
+
 
 
 # Documentation
@@ -50,10 +51,12 @@ mkdocs-material
 
 # Groundstation
 urllib3
-QtAwesome==1.4.0
-QtPy==2.4.3
-pyqtgraph
+QtAwesome
+QtPy
+pyside6
 jsonc-parser
+pyqtgraph
+PyYAML
 pytz
 StrEnum
 svg.py

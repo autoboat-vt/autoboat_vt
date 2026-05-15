@@ -5,16 +5,12 @@ import sys
 import threading
 from typing import NoReturn
 
+from qtpy.QtGui import QIcon
+from qtpy.QtWebEngineWidgets import QWebEnginePage
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 from utils import constants, misc
-from widgets import (
-    AutopilotConfigWidget,
-    CameraWidget,
-    ConsoleOutputWidget,
-    GraphViewer,
-    GroundStationWidget,
-    InstanceHandler,
-)
+from widgets import AutopilotConfigWidget, CameraWidget, ConsoleOutputWidget, GraphViewer, GroundStationWidget, InstanceHandler
+from widgets.map_widget import server as map_server
 
 
 class MainWindow(QMainWindow):
@@ -34,10 +30,23 @@ class MainWindow(QMainWindow):
         print(f"[Info] Serving HTTP assets on port {constants.ASSET_SERVER_PORT}...")
         self.asset_server.serve_forever()
 
+    def start_map_server(self) -> None:
+        """Start the local map widget server."""
+
+        try:
+            map_server.run()
+        except OSError as exc:
+            print(f"[Error] Failed to start map server on port {constants.MAP_SERVER_PORT}: {exc}")
+
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("SailBussy Ground Station")
+        self.setWindowTitle(constants.WINDOW_TITLE)
         self.setGeometry(constants.WINDOW_BOX)
+        self.setMaximumSize(constants.MAX_WINDOW_SIZE)
+        self.setUnifiedTitleAndToolBarOnMac(True)
+
+        constants.MAP_PAGE = QWebEnginePage()
+        constants.MAP_PAGE.load(constants.MAP_URL)
 
         self.main_widget = QTabWidget()
         self.setCentralWidget(self.main_widget)
@@ -66,7 +75,7 @@ class MainWindow(QMainWindow):
         print("[Info] Shutting down asset server...")
         if hasattr(self, "asset_server"):
             self.asset_server.shutdown()
-        
+
         print("[Info] Closing the application...")
         event.accept()
 
@@ -97,12 +106,28 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     constants.ICONS = misc.get_icons()
+    
     window = MainWindow()
     threading.Thread(target=window.start_asset_server, daemon=True).start()
+    threading.Thread(target=window.start_map_server, daemon=True).start()
+
     app.setStyleSheet(constants.STYLE_SHEET)
     app.setPalette(constants.PALLETTE)
     app.setStyle("Fusion")
-    app.setWindowIcon(constants.ICONS.boat)
+
+    app.setApplicationName(constants.APPLICATION_NAME)
+    app.setOrganizationName(constants.ORGANIZATION_NAME)
+
+    if constants.APP_LOGO_PATH.is_file():
+        print(f"[Info] Setting application icon from {constants.APP_LOGO_PATH}...")
+        logo_icon = QIcon(constants.APP_LOGO_PATH.as_posix())
+        app.setWindowIcon(logo_icon)
+        window.setWindowIcon(logo_icon)
+
+    else:
+        print(f"[Warning] Application logo not found at {constants.APP_LOGO_PATH}. Using default icon.")
+        app.setWindowIcon(constants.ICONS.boat)
+        window.setWindowIcon(constants.ICONS.boat)
 
     window.show()
     sys.exit(app.exec())
