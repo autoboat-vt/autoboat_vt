@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=vtautoboat/development_image:latest
+ARG BASE_IMAGE=vtautoboat/development_image_base:latest
 FROM ${BASE_IMAGE}
 
 USER root

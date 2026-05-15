@@ -76,7 +76,7 @@ write_host_environment_variables() {
 	log_info "Updating $HOST_ENV_FILE"
 	{
 		echo "# Host environment variables for autoboatvt"
-		echo "export DEVCONTAINER_VARIANT=vtautoboat/development_image"
+		echo "export DEVCONTAINER_VARIANT=vtautoboat/development_image_base"
 		for line in "${extra_lines[@]}"; do
 			# Ensure it starts with export
 			if [[ "$line" =~ ^export ]]; then

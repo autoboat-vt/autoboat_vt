@@ -1,4 +1,4 @@
-FROM vtautoboat/development_image:latest
+FROM vtautoboat/development_image_base:latest
 
 ARG USERNAME=autoboat_user
 USER $USERNAME

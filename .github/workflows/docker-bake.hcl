@@ -43,16 +43,16 @@ target "base" {
   dockerfile = ".devcontainer/Dockerfile"
   platforms = ["linux/${ARCHITECTURE}"]
   tags = [
-    "${IS_OFFICIAL}" == "true" ? "vtautoboat/development_image:${ARCHITECTURE}" : "vtautoboat/development_image:local-${ARCHITECTURE}",
-    "${IS_OFFICIAL}" == "true" ? "ghcr.io/${OWNER}/development_image:${ARCHITECTURE}" : "",
-    IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image:${GITHUB_SHA}" : "",
-    IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image:${substr(GITHUB_SHA, 0, 7)}" : "",
-    IS_RELEASE == "true" ? "vtautoboat/development_image:v${VERSION}-${ARCHITECTURE}" : "",
-    IS_RELEASE == "true" ? "vtautoboat/development_image:v${MINOR}-${ARCHITECTURE}" : "",
-    IS_RELEASE == "true" ? "vtautoboat/development_image:v${MAJOR}-${ARCHITECTURE}" : "",
-    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image:v${VERSION}-${ARCHITECTURE}" : "",
-    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image:v${MINOR}-${ARCHITECTURE}" : "",
-    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image:v${MAJOR}-${ARCHITECTURE}" : ""
+    "${IS_OFFICIAL}" == "true" ? "vtautoboat/development_image_base:${ARCHITECTURE}" : "vtautoboat/development_image_base:local-${ARCHITECTURE}",
+    "${IS_OFFICIAL}" == "true" ? "ghcr.io/${OWNER}/development_image_base:${ARCHITECTURE}" : "",
+    IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image_base:${GITHUB_SHA}" : "",
+    IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image_base:${substr(GITHUB_SHA, 0, 7)}" : "",
+    IS_RELEASE == "true" ? "vtautoboat/development_image_base:v${VERSION}-${ARCHITECTURE}" : "",
+    IS_RELEASE == "true" ? "vtautoboat/development_image_base:v${MINOR}-${ARCHITECTURE}" : "",
+    IS_RELEASE == "true" ? "vtautoboat/development_image_base:v${MAJOR}-${ARCHITECTURE}" : "",
+    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_base:v${VERSION}-${ARCHITECTURE}" : "",
+    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_base:v${MINOR}-${ARCHITECTURE}" : "",
+    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_base:v${MAJOR}-${ARCHITECTURE}" : ""
   ]
 }
 

@@ -166,9 +166,9 @@ jobs:
             *.cache-from=type=gha,scope=${{ matrix.architecture }}
             *.cache-to=type=gha,mode=max,scope=${{ matrix.architecture }}
             base.cache-from=type=gha,scope=base-${{ matrix.architecture }}
-            base.cache-from=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache
+            base.cache-from=type=registry,ref=vtautoboat/development_image_base:${{ matrix.architecture }}-cache
             base.cache-to=type=gha,mode=max,scope=base-${{ matrix.architecture }}
-            base.cache-to=type=registry,ref=vtautoboat/development_image:${{ matrix.architecture }}-cache,mode=max
+            base.cache-to=type=registry,ref=vtautoboat/development_image_base:${{ matrix.architecture }}-cache,mode=max
             firmware.cache-from=type=gha,scope=firmware-${{ matrix.architecture }}
             firmware.cache-from=type=registry,ref=vtautoboat/development_image_firmware:${{ matrix.architecture }}-cache
             firmware.cache-to=type=gha,mode=max,scope=firmware-${{ matrix.architecture }}
@@ -300,7 +300,7 @@ jobs:
         variant: [ standard, firmware ]
         include:
           - variant: standard
-            image_repo: vtautoboat/development_image
+            image_repo: vtautoboat/development_image_base
           - variant: firmware
             image_repo: vtautoboat/development_image_firmware
     steps:
@@ -320,8 +320,8 @@ jobs:
       - name: Create and Push Multi-Arch Manifests
         run: |
           OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}
-          GHCR_REPO="ghcr.io/${OWNER_LC}/${{ matrix.variant == 'standard' && 'development_image' || 'development_image_firmware' }}"
-          DOCKER_HUB_REPO="vtautoboat/${{ matrix.variant == 'standard' && 'development_image' || 'development_image_firmware' }}"
+          GHCR_REPO="ghcr.io/${OWNER_LC}/${{ matrix.variant == 'standard' && 'development_image_base' || 'development_image_firmware' }}"
+          DOCKER_HUB_REPO="vtautoboat/${{ matrix.variant == 'standard' && 'development_image_base' || 'development_image_firmware' }}"
 
           echo "==> Creating multi-arch manifest for ${DOCKER_HUB_REPO}:latest..."
           docker buildx imagetools create -t ${DOCKER_HUB_REPO}:latest ${DOCKER_HUB_REPO}:amd64 ${DOCKER_HUB_REPO}:arm64
