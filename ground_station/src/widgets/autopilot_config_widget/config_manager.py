@@ -395,7 +395,7 @@ class AutopilotConfigManager(QWidget):
             print(f"[Warning] Invalid sort by option: {sort_method}")
             return
 
-    @Slot()
+    @Slot(str)
     def filter_instances(self, search_text: str) -> None:
         """
         Filter the displayed configuration widgets based on the search text.
