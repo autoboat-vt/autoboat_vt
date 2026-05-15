@@ -1,3 +1,4 @@
+import time
 from typing import Any
 
 import numpy as np
@@ -17,6 +18,8 @@ from .utils.utils_function_library import (
 
 # used to specify what is available to import from this file
 __all__ = ["SailboatAutopilot"]
+
+
 
 class SailboatAutopilot:
     """A class containing algorithms to control a sailboat given sensor data."""
@@ -54,6 +57,7 @@ class SailboatAutopilot:
         
         # Describes The Position The Boat Last Executed A Tack At
         self.last_tacking_position: Position = Position(longitude=0.0, latitude=0.0)
+        # self.enter_no_sail_zone_time: float | None = time.time()
 
 
     def reset(self) -> None:
@@ -166,7 +170,7 @@ class SailboatAutopilot:
     # TODO: Add a stalled state and try to implement the following: https://www.ussailing.org/news/getting-in-and-out-of-irons/
     # TODO: Add a state transition that if you are in the sailing downwind state and suddenly go into the no sail zone
     # that you should cw or ccw tack to get out so you can hard over your rudder and get out of the no sail zone asap.
-    def _apply_tacking_logic(
+    def _apply_tacking_state_machine(
         self,
         current_heading: float, current_bearing: float,
         true_wind_angle: float, apparent_wind_angle: float,
@@ -176,7 +180,8 @@ class SailboatAutopilot:
         """
         This function controls all of the state machine logic of the tacking, which includes state transitions
         from a tacks, downwind sailing, whether or not the boat is currently executing a tack, etc. All of the
-        state transitions are done on the SailboatStates enum.
+        state transitions are done on the SailboatStates enum. To see the state machine diagram please see the
+        following documentation page: TODO TODO.
         
         No side effects.
 
@@ -226,6 +231,11 @@ class SailboatAutopilot:
         distance_between_heading_and_left_no_sail_zone = abs(get_distance_between_angles(current_heading, no_sail_zone_bounds[0]))
         distance_between_heading_and_right_no_sail_zone = abs(get_distance_between_angles(current_heading, no_sail_zone_bounds[1]))
         port_tack_is_closer = distance_between_heading_and_left_no_sail_zone > distance_between_heading_and_right_no_sail_zone
+        
+        
+        # # If We Are Stuck In The No Sail Zone For Too Long, Then We Need To Wiggle Out
+        # if is_angle_between_boundaries(current_heading, no_sail_zone_bounds[0], no_sail_zone_bounds[1]):
+        #     self.enter_no_sail_zone_time = time.time()
         
         
         # If We Have Been On A Specific Tack For Too Long, Switch Tacks
@@ -314,9 +324,9 @@ class SailboatAutopilot:
         else:
             desired_heading = 0.0
         
-        # self.logger.info(f"distance from last tack position: {distance_from_last_tack_position}")
-        # self.logger.info(f"current state: {current_state}")
-        # self.logger.info(f"desired_heading: {desired_heading}")
+        self.logger.info(f"distance from last tack position: {distance_from_last_tack_position}")
+        self.logger.info(f"current state: {current_state}")
+        self.logger.info(f"desired_heading: {desired_heading}")
 
         return desired_heading, current_state
 
@@ -402,7 +412,7 @@ class SailboatAutopilot:
         rudder_angle: float = 0.0
 
         # This Function Manages The Sailing State Machine
-        desired_heading, self.current_state = self._apply_tacking_logic(
+        desired_heading, self.current_state = self._apply_tacking_state_machine(
             current_heading, current_bearing, true_wind_angle, apparent_wind_angle,
             current_position, self.last_tacking_position, self.current_state
         )

@@ -199,6 +199,40 @@ def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float
     return check_float_equivalence(angle_b1_to_angle + angle_angle_to_b2, angle_b1_to_b2)
 
 
+
+def is_angle_between_boundaries_with_hysteresis(angle: float, boundary1: float, boundary2: float, biased_side: False) -> bool:
+    """
+    Parameters
+    ----------
+    angle
+        An angle measured in degrees counter-clockwise from the x axis.
+    boundary1
+        An angle measured in degrees counter-clockwise from the x axis.
+    boundary2
+        An angle measured in degrees counter-clockwise from the x axis.
+
+    Returns
+    -------
+    bool
+        If "angle" is between ```boundary1``` and ```boundary2```, then return ```True``` and if not, return ```False```.
+    """
+
+    angle_radians, boundary1_radians, boundary2_radians = np.deg2rad([angle, boundary1, boundary2])
+
+    angle_vector = np.array([np.cos(angle_radians), np.sin(angle_radians)])
+    boundary1_vector = np.array([np.cos(boundary1_radians), np.sin(boundary1_radians)])
+    boundary2_vector = np.array([np.cos(boundary2_radians), np.sin(boundary2_radians)])
+
+    # Angle is between boundaries if the sum of angles from b1->angle and angle->b2 equals b1->b2
+    angle_b1_to_angle = get_angle_between_vectors(boundary1_vector, angle_vector)
+    angle_angle_to_b2 = get_angle_between_vectors(angle_vector, boundary2_vector)
+    angle_b1_to_b2 = get_angle_between_vectors(boundary1_vector, boundary2_vector)
+
+    return check_float_equivalence(angle_b1_to_angle + angle_angle_to_b2, angle_b1_to_b2)
+
+
+
+
 # ==============================================================================
 # UTIL FUNCTIONS THAT ARE NOT FULLY TESTED
 # ==============================================================================

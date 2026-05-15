@@ -47,11 +47,12 @@ class SailboatStates(Enum):
 
     NA = 0
     DOWNWIND_SAILING = 1
-    PORT_TACK = 2         # On a tack where the wind vector is to the left of the boat (port and left both have 4 letters)
-    STARBOARD_TACK = 3    # On a tack where the wind vector is to the right of the boat
-    CW_TACKING = 4        # Switching tacks from starboard to port tack
-    CCW_TACKING = 5       # Switching tacks from port to staboard tack
-    STALL = 6
+    PORT_TACK = 2          # On a tack where the wind vector is to the left of the boat (port and left both have 4 letters)
+    STARBOARD_TACK = 3     # On a tack where the wind vector is to the right of the boat
+    CW_TACKING = 4         # Switching tacks from starboard to port tack
+    CCW_TACKING = 5        # Switching tacks from port to staboard tack
+    STALL_WIGGLE_TO_PORT_TACK = 6         # We have stalled in the no sail zone and need to wiggle to port tack
+    STALL_WIGGLE_TO_STARBOARD_TACK = 7    # We have stalled in the no sail zone and need to wiggle to the starboard tack
     
 
 class SailboatManeuvers(Enum):
