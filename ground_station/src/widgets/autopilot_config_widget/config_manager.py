@@ -233,7 +233,7 @@ class AutopilotConfigManager(QWidget):
         else:
             self.timer.stop()
 
-    @Slot()
+    @Slot(tuple)
     def on_hashes_fetched(self, request_result: tuple[list[dict[str, Any]], constants.TelemetryStatus]) -> None:
         """
         Handle the fetched hashes from the telemetry server.
@@ -300,7 +300,7 @@ class AutopilotConfigManager(QWidget):
             self.configs_container.setUpdatesEnabled(True)
             self.configs_container.update()
 
-    @Slot()
+    @Slot(tuple)
     def on_active_hash_fetched(self, request_result: tuple[str, constants.TelemetryStatus]) -> None:
         """
         Handle the fetched active configuration hash from the telemetry server.
