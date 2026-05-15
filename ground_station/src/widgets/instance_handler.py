@@ -475,7 +475,7 @@ class InstanceHandler(QWidget):
         except RequestException as e:
             print(f"[Error] Failed to delete all instances: {e}")
 
-    @Slot()
+    @Slot(str)
     def filter_instances(self, text: str) -> None:
         """
         Filter the displayed instances based on the search text.
