@@ -26,6 +26,7 @@ ros_packages/object_detection/object_detection/deepstream_yolo/onnx_files/**
 
 # groundstation
 ground_station/app_data/git_ignore
+ground_station/bin
 node_modules
 
 # ros_packages/object_detection

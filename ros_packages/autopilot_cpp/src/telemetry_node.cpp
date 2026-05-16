@@ -48,13 +48,21 @@ TelemetryNode::TelemetryNode() : Node("telemetry_cpp") {
 
 
 std::string TelemetryNode::sha256(const std::string& str) {
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, str.c_str(), str.size());
-    SHA256_Final(hash, &sha256);
+    unsigned char hash[EVP_MAX_MD_SIZE];
+    unsigned int lengthOfHash = 0;
+
+    EVP_MD_CTX* context = EVP_MD_CTX_new();
+    if(context != nullptr) {
+        if(EVP_DigestInit_ex(context, EVP_sha256(), nullptr)) {
+            if(EVP_DigestUpdate(context, str.c_str(), str.size())) {
+                EVP_DigestFinal_ex(context, hash, &lengthOfHash);
+            }
+        }
+        EVP_MD_CTX_free(context);
+    }
+
     std::stringstream ss;
-    for(int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+    for(unsigned int i = 0; i < lengthOfHash; i++) {
         ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
     }
     return ss.str();

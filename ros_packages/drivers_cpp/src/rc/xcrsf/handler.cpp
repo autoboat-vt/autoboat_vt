@@ -81,11 +81,11 @@ namespace crossfire {
             if (!is_read) { std::this_thread::sleep_for(STD_READ_INTERRUPT); continue; }
             if (byte != CRSF_SYNC_BYTE && buffer.empty()) { continue; }
 
-            if (buffer.size() < 3 || buffer.size() < buffer[1] + 2) {
+            if (buffer.size() < 3 || buffer.size() < static_cast<std::size_t>(buffer[1]) + 2) {
                 buffer.emplace_back(byte); const auto is_valid = CRCValidator::get_crc8(&buffer[2], buffer[1] - 1) == buffer[buffer[1] + 1];
-                if (buffer.size() == buffer[1] + 2 && is_valid) { if (this->state_callback_) { this->state_callback_(buffer); } }
+                if (buffer.size() == static_cast<std::size_t>(buffer[1]) + 2 && is_valid) { if (this->state_callback_) { this->state_callback_(buffer); } }
                 if (buffer[2] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED) { this->timeout_ = std::chrono::high_resolution_clock::now(); }
-                if (buffer.size() >= buffer[1] + 2) { buffer.assign(0, 0x0); }
+                if (buffer.size() >= static_cast<std::size_t>(buffer[1]) + 2) { buffer.assign(0, 0x0); }
             }
         }
     }

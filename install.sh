@@ -2,19 +2,10 @@
 set -e
 
 
-
+# Ensure that the installation does not try to ask questions that force the user to respond
 export DEBIAN_FRONTEND=noninteractive
 export TZ=Etc/UTC
-
-# Pre-seed tzdata answers for debconf to ensure no interactive prompts
-echo "tzdata tzdata/Areas select Etc" | sudo debconf-set-selections 2>/dev/null || true
-echo "tzdata tzdata/Zones/Etc select UTC" | sudo debconf-set-selections 2>/dev/null || true
-
-# Provide /etc/timezone file which is often checked by tzdata scripts
-echo "Etc/UTC" | sudo tee /etc/timezone > /dev/null
-
-# Manual link as a secondary safety measure
-sudo ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime
+sudo ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ | sudo tee /etc/timezone > /dev/null
 
 
 
@@ -85,6 +76,7 @@ else
     echo "==> ROS 2 repositories already configured."
 fi
 
+
 # Add OSRF Gazebo Repositories if missing (Required for simulation)
 if [ ! -f /etc/apt/sources.list.d/gazebo-stable.list ]; then
     echo "==> Configuring OSRF Gazebo repositories..."
@@ -104,7 +96,7 @@ install_deb() {
     local PKG_NAME=$1
     local DEB_NAME=$2
     
-    # Check if actually installed (avoiding false positives from 'rc' state)
+    # Check if actually installed
     if dpkg-query -W -f='${Status}' "$PKG_NAME" 2>/dev/null | grep -q "ok installed"; then
         echo "==> Package '$PKG_NAME' is already installed. Skipping..."
         return 0

@@ -24,7 +24,7 @@ RCDataPublisher::RCDataPublisher() : Node("rc_data_publisher"), crossfire_device
     while (!crossfire_device.is_paired() && rclcpp::ok()) {
         std::printf("Waiting for reconnect...\n");
         RCLCPP_INFO(this->get_logger(), "Waiting for reconnect...\n:");
-        auto _ = crossfire_device.open_port();
+        (void)crossfire_device.open_port();
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
 

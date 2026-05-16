@@ -20,7 +20,7 @@
 #include <mutex>
 #include <fstream>
 #include <cmath>
-#include <openssl/sha.h>
+#include <openssl/evp.h>
 #include <iomanip>
 #include <sstream>
 
