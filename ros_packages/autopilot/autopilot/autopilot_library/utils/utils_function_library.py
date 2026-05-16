@@ -16,6 +16,7 @@ __all__ = [
     "get_distance_between_angles",
     "get_distance_between_positions",
     "is_angle_between_boundaries",
+    "is_angle_between_boundaries_with_hysteresis",
 ]
 
 
@@ -200,8 +201,24 @@ def is_angle_between_boundaries(angle: float, boundary1: float, boundary2: float
 
 
 
-def is_angle_between_boundaries_with_hysteresis(angle: float, boundary1: float, boundary2: float, biased_side: False) -> bool:
+def is_angle_between_boundaries_with_hysteresis(
+    angle: float, boundary1: float, boundary2: float,
+    biased_side: bool = False, hysteresis_amount: float = 0
+) -> bool:
     """
+    This function is primarily used to ensure that states don't transition many times per second with noisy sensor readings.
+    
+    This function behaves more like a schmidt trigger where if the "biased_side" is False, which means that the function is biased
+    towards saying the angle is outside of the boundary, then the function will require the angle to be an extra
+    "hysteresis_amount" degrees inside of the boundary to change its beliefs on what the output "should be".
+    
+    Another way of putting this is that if biased_side == True then it requires angle + hysteresis_amount and
+    angle - hysteresis_amount to make the function return false. If biased_side == False then it requires
+    angle + hysteresis_amount and angle - hysteresis amount to make the function return true.
+    
+    See the below link for an explanation on how schmidt triggers work
+    https://www.geeksforgeeks.org/electronics-engineering/schmitt-trigger/?utm_source=mail&utm_medium=signup_newsletter&utm_campaign=newsletter
+    
     Parameters
     ----------
     angle
@@ -210,27 +227,30 @@ def is_angle_between_boundaries_with_hysteresis(angle: float, boundary1: float, 
         An angle measured in degrees counter-clockwise from the x axis.
     boundary2
         An angle measured in degrees counter-clockwise from the x axis.
-
+    biased_side
+        Which side is the hysteresis biased to? True or False.
+    hysteresis_amount
+        How much does angle have to be outside of or inside of the boundaries in order to change the system's biased side.
+    
     Returns
     -------
     bool
         If "angle" is between ```boundary1``` and ```boundary2```, then return ```True``` and if not, return ```False```.
     """
+    
+    test_angle1 = (angle + hysteresis_amount) % 360
+    test_angle2 = (angle - hysteresis_amount) % 360
+    
+    is_test_angle1_between_boundaries = is_angle_between_boundaries(test_angle1, boundary1, boundary2)
+    is_test_angle2_between_boundaries = is_angle_between_boundaries(test_angle2, boundary1, boundary2)
 
-    angle_radians, boundary1_radians, boundary2_radians = np.deg2rad([angle, boundary1, boundary2])
+    if not biased_side:
+        return is_test_angle1_between_boundaries and is_test_angle2_between_boundaries
+    
+    else:
+        return is_test_angle1_between_boundaries or is_test_angle2_between_boundaries
 
-    angle_vector = np.array([np.cos(angle_radians), np.sin(angle_radians)])
-    boundary1_vector = np.array([np.cos(boundary1_radians), np.sin(boundary1_radians)])
-    boundary2_vector = np.array([np.cos(boundary2_radians), np.sin(boundary2_radians)])
-
-    # Angle is between boundaries if the sum of angles from b1->angle and angle->b2 equals b1->b2
-    angle_b1_to_angle = get_angle_between_vectors(boundary1_vector, angle_vector)
-    angle_angle_to_b2 = get_angle_between_vectors(angle_vector, boundary2_vector)
-    angle_b1_to_b2 = get_angle_between_vectors(boundary1_vector, boundary2_vector)
-
-    return check_float_equivalence(angle_b1_to_angle + angle_angle_to_b2, angle_b1_to_b2)
-
-
+        
 
 
 # ==============================================================================
@@ -357,3 +377,14 @@ def does_line_segment_intersect_circle(
     t2 = (-b + sqrt_disc) * inv_2a
 
     return (0 <= t1 <= 1) or (0 <= t2 <= 1)
+
+
+
+def main():
+    print(not is_angle_between_boundaries_with_hysteresis(80, 70, 90, False, 10.01))
+    print(is_angle_between_boundaries_with_hysteresis(80, 70, 90, False, 9.99))
+    print(is_angle_between_boundaries_with_hysteresis(80, 70, 90, True, 10.01))
+    print(not is_angle_between_boundaries_with_hysteresis(80, 70, 90, True, 9.99))
+
+if __name__ == "__main__":
+    main()

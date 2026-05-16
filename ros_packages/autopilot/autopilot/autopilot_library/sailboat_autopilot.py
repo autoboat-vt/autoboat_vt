@@ -1,4 +1,3 @@
-import time
 from typing import Any
 
 import numpy as np
@@ -14,6 +13,7 @@ from .utils.utils_function_library import (
     get_distance_between_angles,
     get_distance_between_positions,
     is_angle_between_boundaries,
+    is_angle_between_boundaries_with_hysteresis,
 )
 
 # used to specify what is available to import from this file
@@ -163,10 +163,8 @@ class SailboatAutopilot:
             return SailboatManeuvers.STANDARD
 
 
-    # TODO: THIS FUNCTION WILL HAVE THE NEW TACKING LOGIC
     # TODO: Add hysteresis to all of the state transitions (like a schmidt trigger)
     # is_angle_between_boundaries <--- specifically look at this function and adding hysteresis to it
-    # TODO: Maybe rename this to emphasize that this is basically a state machine function
     # TODO: Add a stalled state and try to implement the following: https://www.ussailing.org/news/getting-in-and-out-of-irons/
     # TODO: Add a state transition that if you are in the sailing downwind state and suddenly go into the no sail zone
     # that you should cw or ccw tack to get out so you can hard over your rudder and get out of the no sail zone asap.

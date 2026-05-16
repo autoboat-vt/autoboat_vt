@@ -75,7 +75,7 @@ def generate_wind_upwind(_) -> np.ndarray[np.float64]:
 
 
 # WIND_GENERATION_FUNCTION = generate_wind_real_life_data
-WIND_GENERATION_FUNCTION = generate_wind
+WIND_GENERATION_FUNCTION = generate_wind_real_life_data
 
 
 
