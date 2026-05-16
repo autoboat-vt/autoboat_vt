@@ -57,7 +57,7 @@ namespace crossfire {
     }
 
     bool UARTSerial::port_active() const {
-        const auto byte_count = write(this->uart_fd_, std::string{}.data(), 0x0);
+        const auto byte_count = write(this->uart_fd_, "", 0x0);
         return byte_count != -1;
     }
 
