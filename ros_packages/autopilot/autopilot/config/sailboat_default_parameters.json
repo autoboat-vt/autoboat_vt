@@ -70,5 +70,9 @@
     "heading_n_gain": {
         "default": 0.0,
         "description": "N gain for heading control."
+    },
+    "hysteresis_amount_angles": {
+        "default": 5.0,
+        "description": "The amount of hysteresis to have for sailboat autopilot state transitions that depend on checking angular values."
     }
 }

@@ -38,7 +38,7 @@ for index, row in wind_df.iterrows():
 
 def generate_wind_real_life_data(_) -> np.ndarray[np.float64]:
     # randomize the wind direction and use real life data to be more like real life
-    index = math.floor(sim_time / 250) % len(wind_data)
+    index = math.floor(sim_time / 1000) % len(wind_data)
     WIND_SPEED = min(wind_data[index][0], 2.5)
     WIND_DIRECTION = wind_data[index][1]
 
@@ -46,6 +46,7 @@ def generate_wind_real_life_data(_) -> np.ndarray[np.float64]:
     generated_wind = np.array([np.cos(random_angle), np.sin(random_angle)]) * (
         min(WIND_SPEED, 2.5) + random.gauss(sigma=0.3, mu=0)
     )
+    
     return generated_wind
 
 
@@ -75,7 +76,7 @@ def generate_wind_upwind(_) -> np.ndarray[np.float64]:
 
 
 # WIND_GENERATION_FUNCTION = generate_wind_real_life_data
-WIND_GENERATION_FUNCTION = generate_wind_real_life_data
+WIND_GENERATION_FUNCTION = generate_wind_randomized
 
 
 

@@ -116,54 +116,9 @@ class SailboatAutopilot:
         inner = np.clip(inner, -1, 1)
         return np.clip(np.rad2deg(np.arcsin(inner)), 0, no_sail_zone_size)
 
-    def _get_maneuver_from_desired_heading(
-        self, heading: float, desired_heading: float, true_wind_angle: float
-    ) -> SailboatManeuvers:
-        """
-        Gets the maneuver that the boat should take based on its current heading, desired heading, and true wind angle.
-
-        A maneuver is basically a "mode" of sailing. During each of these "modes" we have to act differently, and this function
-        helps us determine if we should switch sailing "modes".
-        
-        In ``STANDARD``, we are just trying to face our boat towards a waypoint and sail directly towards that point.
-        When we are in the ``TACK`` "mode", our goal is to complete a ``TACK`` across the wind, and when we are in the
-        ``JIBE`` "mode", our goal is to complete a ``JIBE`` across the
-        wind. For more information about what tacking and jibing are, please read the following: https://captainsword.com/tacking-and-jibing
-
-        Parameters
-        ----------
-        heading
-            The direction the boat is currently facing measured in degrees counter-clockwise from true east.
-        desired_heading
-            The direction the boat wants to face measured in degrees counter-clockwise from true east.
-        true_wind_angle
-            The true wind angle in degrees measured counter-clockwise from the centerline of the boat.
-
-        Returns
-        -------
-        SailboatManeuvers
-            Which maneuver the boat should take.
-        """
-
-        # Wind angle counter-clockwise from true east
-        global_true_wind_angle = (true_wind_angle + heading) % 360
-
-        # Calculate upwind angle (nominal angle at which course is heading straight into the wind)
-        # Global True Wind Angle                    0     45    90   135  179 | 180  225  270  315  360
-        # Global True Upwind Angle                  180   225   270  315  359 | 0    45   90   135  180
-        global_true_upwind_angle = (global_true_wind_angle + 180) % 360
-
-        if is_angle_between_boundaries(global_true_wind_angle, heading, desired_heading):
-            return SailboatManeuvers.JIBE
-
-        elif is_angle_between_boundaries(global_true_upwind_angle, heading, desired_heading):
-            return SailboatManeuvers.TACK
-
-        else:
-            return SailboatManeuvers.STANDARD
 
 
-    # TODO: Add hysteresis to all of the state transitions (like a schmidt trigger)
+    # TODO: Add hysteresis to all of the state transitions (like a schmidt trigger)?
     # is_angle_between_boundaries <--- specifically look at this function and adding hysteresis to it
     # TODO: Add a stalled state and try to implement the following: https://www.ussailing.org/news/getting-in-and-out-of-irons/
     # TODO: Add a state transition that if you are in the sailing downwind state and suddenly go into the no sail zone
@@ -224,7 +179,19 @@ class SailboatAutopilot:
             (global_apparent_upwind_angle - self.parameters["no_sail_zone_size"] / 2) % 360,  # Clockwise bound
         )
         
-        is_waypoint_in_no_sail_zone = is_angle_between_boundaries(current_bearing, no_sail_zone_bounds[0], no_sail_zone_bounds[1])
+        
+        if current_state in {
+                SailboatStates.CW_TACKING, SailboatStates.CCW_TACKING,
+                SailboatStates.PORT_TACK, SailboatStates.STARBOARD_TACK
+            }:
+            is_waypoint_in_no_sail_zone_biased_value = True
+        else:
+            is_waypoint_in_no_sail_zone_biased_value = False
+                
+        is_waypoint_in_no_sail_zone = is_angle_between_boundaries_with_hysteresis(
+            current_bearing, no_sail_zone_bounds[0], no_sail_zone_bounds[1],
+            is_waypoint_in_no_sail_zone_biased_value, self.parameters["hysteresis_amount_angles"]
+        )
         
         distance_between_heading_and_left_no_sail_zone = abs(get_distance_between_angles(current_heading, no_sail_zone_bounds[0]))
         distance_between_heading_and_right_no_sail_zone = abs(get_distance_between_angles(current_heading, no_sail_zone_bounds[1]))
@@ -249,7 +216,11 @@ class SailboatAutopilot:
         
         
         # If We Need To Get Around The No Sail Zone To Get To The Waypoint
-        is_bearing_around_no_sail_zone = is_angle_between_boundaries(global_true_upwind_angle, current_heading, current_bearing)
+        is_bearing_around_no_sail_zone = is_angle_between_boundaries_with_hysteresis(
+            global_true_upwind_angle, current_heading, current_bearing,
+            False, # Always require extra belief that the result is true to initiate a tack maneuver
+            self.parameters["hysteresis_amount_angles"]
+        )
         if is_bearing_around_no_sail_zone and current_state == SailboatStates.DOWNWIND_SAILING:
             # Check Where The Boat Is Inclined To Turn And Tack In That Direction
             if self.get_optimal_rudder_angle(current_heading, current_bearing) > 0:
@@ -286,7 +257,10 @@ class SailboatAutopilot:
         
         
         # If We No Longer Need To Hold A Tack And Can Just Sail Straight To The Waypoint
-        if not is_waypoint_in_no_sail_zone and current_state in {SailboatStates.PORT_TACK, SailboatStates.STARBOARD_TACK}:
+        if not is_waypoint_in_no_sail_zone and current_state in {
+                SailboatStates.PORT_TACK, SailboatStates.STARBOARD_TACK,
+                SailboatStates.CW_TACKING, SailboatStates.CCW_TACKING
+            }:
             current_state = SailboatStates.DOWNWIND_SAILING
             self.logger.info("NO LONGER NEED TO HOLD A TACK. NOW TRANSITIONING TO DOWNWIND SAILING")
         
@@ -297,7 +271,7 @@ class SailboatAutopilot:
             distance_to_tack_target_heading = abs(get_distance_between_angles(current_heading, tack_target_heading))
 
             if distance_to_tack_target_heading < self.parameters["tack_tolerance"]:
-                self.logger.info("JUST FINISHED STARBOARD TACK. NOW HOLDING STARBOARD TACK")
+                self.logger.info("JUST FINISHED STARBOARD TACK MANEUVER. NOW HOLDING STARBOARD TACK")
                 current_state = SailboatStates.STARBOARD_TACK
                 
         elif current_state == SailboatStates.CW_TACKING:
@@ -306,7 +280,8 @@ class SailboatAutopilot:
             
             if distance_to_tack_target_heading < self.parameters["tack_tolerance"]:
                 current_state = SailboatStates.PORT_TACK
-                self.logger.info("JUST FINISHED CW TACK. NOW HOLDING PORT TACK")
+                self.logger.info("JUST FINISHED CW TACK MANEUVER. NOW HOLDING PORT TACK")
+        
         
         
         # Handle Results For Each Of The States
@@ -322,9 +297,9 @@ class SailboatAutopilot:
         else:
             desired_heading = 0.0
         
-        self.logger.info(f"distance from last tack position: {distance_from_last_tack_position}")
-        self.logger.info(f"current state: {current_state}")
-        self.logger.info(f"desired_heading: {desired_heading}")
+        # self.logger.info(f"distance from last tack position: {distance_from_last_tack_position}")
+        # self.logger.info(f"current state: {current_state}")
+        # self.logger.info(f"desired_heading: {desired_heading}")
 
         return desired_heading, current_state
 
