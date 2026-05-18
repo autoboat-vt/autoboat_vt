@@ -1,0 +1,9 @@
+{
+    "camera": {
+        "focal_length_millimeter": 1.93,
+        "pixel_pitch_micrometer": 3.0,
+        "sensor_array_size_millimeter": { "x": 3.84, "y": 2.4 },
+        "max_detection_depth_meter": 100.0
+    },
+    "object_array": [{ "name": "buoy", "latitude": 0.002, "longitude": 0.002 }]
+}

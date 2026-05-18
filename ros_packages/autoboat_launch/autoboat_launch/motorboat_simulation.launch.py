@@ -41,7 +41,7 @@ def generate_launch_description():
             respawn_delay=2.0,
             output="log"
         ),
-         
+
          Node(
             package='autopilot',
             executable='motorboat_autopilot',

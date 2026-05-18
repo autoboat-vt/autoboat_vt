@@ -8,6 +8,7 @@ build_unit_tests
 install
 log
 output
+compile_commands.json
 
 # object detection
 **.pt
@@ -47,3 +48,5 @@ trace.json
 *.deb
 .devcontainer/devcontainer_environment_variables
 .devcontainer/host_environment_variables
+
+.zed
