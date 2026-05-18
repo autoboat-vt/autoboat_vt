@@ -1,5 +1,5 @@
 import json
-import math
+from math import atan2, degrees, floor
 from pathlib import Path
 
 import navpy
@@ -75,8 +75,6 @@ class SimulationCameraEngine(Node):
         # https://cseweb.ucsd.edu/classes/fa12/cse252A-a/lec4.pdf
         # https://www.cse.unr.edu/~bebis/CS791E/Notes/PerspectiveProjection.pdf
         for obj in self.object_array:
-            object_type = obj["name"]
-
             local_y, local_x, local_down = navpy.lla2ned(
                 obj["latitude"], obj["longitude"], 0, self.position.latitude, self.position.longitude, self.position.altitude
             )
@@ -116,8 +114,8 @@ class SimulationCameraEngine(Node):
                 self.camera_focal_length_meter * object_location_relative_to_camera[1] / object_location_relative_to_camera[2]
             )
 
-            object_pixel_location_x = math.floor(object_location_on_camera_sensor_array_x / self.camera_pixel_pitch_meter)
-            object_pixel_location_y = math.floor(object_location_on_camera_sensor_array_y / self.camera_pixel_pitch_meter)
+            object_pixel_location_x = floor(object_location_on_camera_sensor_array_x / self.camera_pixel_pitch_meter)
+            object_pixel_location_y = floor(object_location_on_camera_sensor_array_y / self.camera_pixel_pitch_meter)
 
             # Check if the object is horizontally out of bounds
             if abs(object_pixel_location_x) > (self.camera_number_of_pixels_along_width / 2):
@@ -131,7 +129,7 @@ class SimulationCameraEngine(Node):
             standard_pixel_x = (self.camera_number_of_pixels_along_width / 2) - object_pixel_location_x
             standard_pixel_y = (self.camera_number_of_pixels_along_height / 2) - object_pixel_location_y
 
-            angle_to_object = -1 * math.atan2(object_location_relative_to_camera[0], object_location_relative_to_camera[2])
+            angle_to_object = -1 * degrees(atan2(object_location_relative_to_camera[0], object_location_relative_to_camera[2]))
 
             object_detection_results.append(
                 ObjectDetectionResult(
