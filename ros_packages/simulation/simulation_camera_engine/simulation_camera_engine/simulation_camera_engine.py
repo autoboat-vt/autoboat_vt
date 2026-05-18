@@ -73,7 +73,8 @@ class SimulationCameraEngine(Node):
         # https://www.cse.unr.edu/~bebis/CS791E/Notes/PerspectiveProjection.pdf
         for obj in self.object_array:
             local_y, local_x, local_down = navpy.lla2ned(
-                obj["latitude"], obj["longitude"], 0, self.position.latitude, self.position.longitude, self.position.altitude
+                obj["latitude"], obj["longitude"], 0,
+                self.position.latitude, self.position.longitude, self.position.altitude
             )
             local_z = -1 * local_down
 
@@ -95,31 +96,28 @@ class SimulationCameraEngine(Node):
                 object_location_relative_to_camera[0],  # distance straight out of the camera
             ]
 
-            # Make sure that we don't see any objects that are too far away or behind us.
-            # Also make sure that we don't see any objects out of frame: TODO
-            if object_location_relative_to_camera[2] > self.camera_max_detection_depth_meter:
-                continue
 
-            if object_location_relative_to_camera[2] < 0:
-                continue
-
-            object_location_on_camera_sensor_array_x = (  # x = f * X/Z formula
-                self.camera_focal_length_meter * object_location_relative_to_camera[0] / object_location_relative_to_camera[2]
-            )
-
-            object_location_on_camera_sensor_array_y = (  # y = f * Y/Z formula
-                self.camera_focal_length_meter * object_location_relative_to_camera[1] / object_location_relative_to_camera[2]
-            )
+            # This is the classic perspective projection formula found here:
+            # https://www.scratchapixel.com/lessons/3d-basic-rendering/perspective-and-orthographic-projection-matrix/building-basic-perspective-projection-matrix.html
+            f = self.camera_focal_length_meter
+            x = object_location_relative_to_camera[0]
+            y = object_location_relative_to_camera[1]
+            z = object_location_relative_to_camera[2]
+            object_location_on_camera_sensor_array_x = f * x / z
+            object_location_on_camera_sensor_array_y = f * y / z
 
             object_pixel_location_x = floor(object_location_on_camera_sensor_array_x / self.camera_pixel_pitch_meter)
             object_pixel_location_y = floor(object_location_on_camera_sensor_array_y / self.camera_pixel_pitch_meter)
 
-            # Check if the object is horizontally out of bounds
-            if abs(object_pixel_location_x) > (self.camera_number_of_pixels_along_width / 2):
-                continue
-
-            # Check if the object is vertically out of bounds
-            if abs(object_pixel_location_y) > (self.camera_number_of_pixels_along_height / 2):
+            # Make sure that we don't see any objects that are too far away or behind us.
+            # Also make sure that we don't see any objects out of frame
+            # Also check if the object is horizontally and vertically out of bounds
+            if (
+                object_location_relative_to_camera[2] > self.camera_max_detection_depth_meter or
+                object_location_relative_to_camera[2] < 0 or
+                abs(object_pixel_location_x) > (self.camera_number_of_pixels_along_width / 2) or
+                abs(object_pixel_location_y) > (self.camera_number_of_pixels_along_height / 2)
+            ):
                 continue
 
             # Shift X so 0 is the left edge and shift Y so 0 is the top edge which is the standard coordinate scheme
@@ -141,6 +139,8 @@ class SimulationCameraEngine(Node):
             )
 
         self.object_detection_results_publisher.publish(ObjectDetectionResultsList(detection_results=object_detection_results))
+
+
 
 
 def main() -> None:
