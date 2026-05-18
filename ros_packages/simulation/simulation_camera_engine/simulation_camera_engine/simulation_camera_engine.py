@@ -52,10 +52,7 @@ class SimulationCameraEngine(Node):
         self.odometry = odometry
 
     def update_ros_topics(self) -> None:
-        """
-        A periodically called function that publishes fake object detection data to the autopilot
-        and triangulation engine.
-        """
+        """A periodically called function that publishes fake object detection data to the autopilot and triangulation engine."""
 
         twist = Twist()
         twist.linear = self.odometry.twist.twist.linear
