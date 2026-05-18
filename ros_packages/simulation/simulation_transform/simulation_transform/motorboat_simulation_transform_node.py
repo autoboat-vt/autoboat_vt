@@ -16,9 +16,9 @@ class AutopilotTransformNode(Node):
     def __init__(self) -> None:
         super().__init__("simulation_transform_node")
 
-        self.simulation_transform_refresh_timer = self.create_timer(0.1, self.update_ros_topics)
+        self.simulation_transform_refresh_timer = self.create_timer(0.02, self.update_ros_topics)
 
-        self.velocity_publisher =  self.create_publisher(Twist, "/velocity", 10)
+        self.velocity_publisher = self.create_publisher(Twist, "/velocity", 10)
         self.heading_publisher = self.create_publisher(Float32, "/heading", 10)
         self.desired_rudder_angle_publisher = self.create_publisher(Float64, "/motorboat_simulation/desired_rudder_angle", 10)
         self.propeller_rpm_publisher = self.create_publisher(Float64, "/motorboat_simulation/desired_propeller_rpm", 10)
@@ -31,9 +31,9 @@ class AutopilotTransformNode(Node):
             VESCControlData, "/propeller_motor_control_struct", self.vesc_control_data_callback, qos_profile_sensor_data
         )
 
-        self.velocity = Twist()
-        self.speed= 0.0
-        self.heading:float  = 0.0
+        self.velocity: Twist = Twist()
+        self.speed: float = 0.0
+        self.heading: float = 0.0
         self.odometry = Odometry()
         self.desired_rudder_angle: float = 0.0
         self.vesc_control_data: VESCControlData = VESCControlData()
