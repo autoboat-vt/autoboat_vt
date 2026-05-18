@@ -90,6 +90,7 @@ class SimulationCameraEngine(Node):
             # "Z" (third element) is the distance straight out of the camera, "X" (first element) is the distance to the left
             # of where the camera is facing, and "Y" (second element) is the distance above where the camera is facing.
             # This way, the vector simply reads [x, y, z].
+            # TL:DR we are just transforming FLU to LUF coordinate scheme
             object_location_relative_to_camera = [
                 object_location_relative_to_camera[1],  # distance to the left of where the camera is facing
                 object_location_relative_to_camera[2],  # distance above where the camera is facing
