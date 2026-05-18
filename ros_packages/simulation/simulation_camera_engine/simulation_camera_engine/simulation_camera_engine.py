@@ -1,7 +1,6 @@
 import json
 import math
 from pathlib import Path
-from typing import Any
 
 import navpy
 import rclpy
@@ -14,48 +13,43 @@ from sensor_msgs.msg import NavSatFix
 
 
 class SimulationCameraEngine(Node):
-
     def __init__(self) -> None:
         super().__init__("simulation_camera_engine_node")
 
         parameters_path = Path(__file__).resolve().parent.parent / "config/simulation_camera_engine_config.json"
         with open(parameters_path, "r", encoding="utf-8") as parameters_file:
-            camera_engine_config: dict[str: Any] = json.load(parameters_file)
-        
-        self.camera_focal_length_meter = camera_engine_config["camera"]["focal_length_millimeter"]/1000
+            camera_engine_config = json.load(parameters_file)
+
+        self.camera_focal_length_meter = camera_engine_config["camera"]["focal_length_millimeter"] / 1000
         self.camera_max_detection_depth_meter = camera_engine_config["camera"]["max_detection_depth_meter"]
         self.object_array = camera_engine_config["object_array"]
 
-        self.camera_pixel_pitch_meter = camera_engine_config["camera"]["pixel_pitch_micrometer"]/1000000
-        camera_sensor_array_size_x_meter = camera_engine_config["camera"]["sensor_array_size_millimeter"]["x"]/ 1000
-        camera_sensor_array_size_y_meter = camera_engine_config["camera"]["sensor_array_size_millimeter"]["y"]/ 1000
-        
+        self.camera_pixel_pitch_meter = camera_engine_config["camera"]["pixel_pitch_micrometer"] / 1000000
+        camera_sensor_array_size_x_meter = camera_engine_config["camera"]["sensor_array_size_millimeter"]["x"] / 1000
+        camera_sensor_array_size_y_meter = camera_engine_config["camera"]["sensor_array_size_millimeter"]["y"] / 1000
+
         self.camera_number_of_pixels_along_width = int(camera_sensor_array_size_x_meter / self.camera_pixel_pitch_meter)
         self.camera_number_of_pixels_along_height = int(camera_sensor_array_size_y_meter / self.camera_pixel_pitch_meter)
-        
-        
+
         self.simulation_transform_refresh_timer = self.create_timer(0.02, self.update_ros_topics)
 
         self.create_subscription(NavSatFix, "/position", self.position_callback, 10)
         self.create_subscription(Odometry, "/motorboat_simulation/odometry", self.odometry_callback, 10)
-        
+
         self.object_detection_results_publisher = self.create_publisher(
             ObjectDetectionResultsList, "/object_detection_results", 10
         )
-        
+
         self.odometry = Odometry()
         self.position = NavSatFix()
-        
-    
+
     def position_callback(self, position: NavSatFix) -> None:
-        """A callback function to get the current position of the boat"""
+        """A callback function to get the current position of the boat."""
         self.position = position
-        
+
     def odometry_callback(self, odometry: Odometry) -> None:
         """A callback function to get the current odometry of the boat."""
         self.odometry = odometry
-        
-        
 
     def update_ros_topics(self) -> None:
         """
@@ -74,28 +68,25 @@ class SimulationCameraEngine(Node):
         w = orientation.w
 
         rotation: Rotation = Rotation.from_quat([x, y, z, w])
-        
-        object_detection_results: ObjectDetectionResultsList = []
-        
-        
-        
+
+        object_detection_results: list = []
+
         # Compute perspective projection
         # https://cseweb.ucsd.edu/classes/fa12/cse252A-a/lec4.pdf
         # https://www.cse.unr.edu/~bebis/CS791E/Notes/PerspectiveProjection.pdf
         for obj in self.object_array:
             object_type = obj["name"]
-            
+
             local_y, local_x, local_down = navpy.lla2ned(
-                obj["latitude"], obj["longitude"], 0,
-                self.position.latitude, self.position.longitude, self.position.altitude
+                obj["latitude"], obj["longitude"], 0, self.position.latitude, self.position.longitude, self.position.altitude
             )
             local_z = -1 * local_down
-            
+
             print(f"original_location: {[local_x, local_y, local_z]}")
             print(f"result: {rotation.apply([local_x, local_y, local_z], inverse=True)}")
-            
+
             object_location_relative_to_camera = rotation.apply([local_x, local_y, local_z], inverse=True)
-            
+
             # Just to explain the coordinate scheme of object_location_relative_to_camera, the first element measures
             # the distance straight out of the camera, the second element measures the distance to the LEFT of where
             # the boat is facing, and the third element measures the distance above where the boat is facing
@@ -104,57 +95,57 @@ class SimulationCameraEngine(Node):
             # of where the camera is facing, and "Y" (second element) is the distance above where the camera is facing.
             # This way, the vector simply reads [x, y, z].
             object_location_relative_to_camera = [
-                object_location_relative_to_camera[1], # distance to the left of where the camera is facing
-                object_location_relative_to_camera[2], # distance above where the camera is facing
-                object_location_relative_to_camera[0]  # distance straight out of the camera
+                object_location_relative_to_camera[1],  # distance to the left of where the camera is facing
+                object_location_relative_to_camera[2],  # distance above where the camera is facing
+                object_location_relative_to_camera[0],  # distance straight out of the camera
             ]
-            
-            
+
             # Make sure that we don't see any objects that are too far away or behind us.
             # Also make sure that we don't see any objects out of frame: TODO
-            if (
-                object_location_relative_to_camera[2] > self.camera_max_detection_depth_meter or
-                object_location_relative_to_camera[2] < 0
-            ):
+            if object_location_relative_to_camera[2] > self.camera_max_detection_depth_meter:
                 continue
-            
-            
-            object_location_on_camera_sensor_array_x = ( # x = f * X/Z formula
-                self.camera_focal_length_meter * object_location_relative_to_camera[0]/ object_location_relative_to_camera[2]
+
+            if object_location_relative_to_camera[2] < 0:
+                continue
+
+            object_location_on_camera_sensor_array_x = (  # x = f * X/Z formula
+                self.camera_focal_length_meter * object_location_relative_to_camera[0] / object_location_relative_to_camera[2]
             )
 
-            object_location_on_camera_sensor_array_y = ( # y = f * Y/Z formula
-                self.camera_focal_length_meter * object_location_relative_to_camera[1]/ object_location_relative_to_camera[2]
+            object_location_on_camera_sensor_array_y = (  # y = f * Y/Z formula
+                self.camera_focal_length_meter * object_location_relative_to_camera[1] / object_location_relative_to_camera[2]
             )
-            
+
             object_pixel_location_x = math.floor(object_location_on_camera_sensor_array_x / self.camera_pixel_pitch_meter)
             object_pixel_location_y = math.floor(object_location_on_camera_sensor_array_y / self.camera_pixel_pitch_meter)
-            
+
+            # Check if the object is horizontally out of bounds
+            if abs(object_pixel_location_x) > (self.camera_number_of_pixels_along_width / 2):
+                continue
+
+            # Check if the object is vertically out of bounds
+            if abs(object_pixel_location_y) > (self.camera_number_of_pixels_along_height / 2):
+                continue
+
+            # Shift X so 0 is the left edge and shift Y so 0 is the top edge which is the standard coordinate scheme
+            standard_pixel_x = (self.camera_number_of_pixels_along_width / 2) - object_pixel_location_x
+            standard_pixel_y = (self.camera_number_of_pixels_along_height / 2) - object_pixel_location_y
+
             angle_to_object = -1 * math.atan2(object_location_relative_to_camera[0], object_location_relative_to_camera[2])
-            
-                        
+
             object_detection_results.append(
                 ObjectDetectionResult(
-                    detector_confidence = 1.0,
-                    tracker_confidence = 1.0,
-                    x_position = float(object_pixel_location_x),
-                    y_position = float(object_pixel_location_y),
-                    
-                    object_id = 0,
-                    class_id = 0,
-                    
-                    angle_to_object = float(angle_to_object)
+                    detector_confidence=1.0,
+                    tracker_confidence=1.0,
+                    x_position=float(standard_pixel_x),
+                    y_position=float(standard_pixel_y),
+                    object_id=0,
+                    class_id=0,
+                    angle_to_object=float(angle_to_object),
                 )
             )
-            
-            
-        self.object_detection_results_publisher.publish(
-            ObjectDetectionResultsList(
-                detection_results = object_detection_results
-            )
-        )
-        
 
+        self.object_detection_results_publisher.publish(ObjectDetectionResultsList(detection_results=object_detection_results))
 
 
 def main() -> None:
