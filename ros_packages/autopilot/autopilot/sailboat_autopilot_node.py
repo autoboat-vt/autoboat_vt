@@ -4,13 +4,12 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 import rclpy
+from autoboat_msgs.msg import RCData, WaypointList
 from geometry_msgs.msg import Twist, Vector3
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Bool, Float32, Int32, String
-
-from autoboat_msgs.msg import RCData, WaypointList
 
 from .autopilot_library.sailboat_autopilot import SailboatAutopilot
 from .autopilot_library.utils.constants import (

@@ -12,14 +12,13 @@ import numpy as np
 import numpy.typing as npt
 import rclpy
 import requests
+from autoboat_msgs.msg import VESCTelemetryData, WaypointList
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Twist, Vector3
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image, NavSatFix
 from std_msgs.msg import Bool, Float32, Int32, String
-
-from autoboat_msgs.msg import VESCTelemetryData, WaypointList
 
 from .autopilot_library.utils.constants import (
     QOS_AUTOPILOT_PARAM_CONFIG_PATH,
@@ -111,7 +110,7 @@ class TelemetryNode(Node):
             self.autopilot_mode = SailboatAutopilotMode.DISABLED
             self.full_autonomy_maneuver = SailboatStates.DOWNWIND_SAILING
             self.mapping = SailboatStatusPayload.construct_mapping()
-        
+
         elif self.is_motorboat_mode:
             self.autopilot_mode = MotorboatAutopilotMode.DISABLED
             self.mapping = MotorboatStatusPayload.construct_mapping()
@@ -152,7 +151,7 @@ class TelemetryNode(Node):
                 if not does_hash_exist:
                     url = f"autopilot_parameters/set_default/{self.instance_id}"
                     self.send_raw_data_to_telemetry_server(url, self.autopilot_parameters, self.autopilot_parameters_session)
-                
+
                 # if hash exists on server, just set the default from that hash
                 # to avoid sending over all the parameters again
                 else:
@@ -161,7 +160,7 @@ class TelemetryNode(Node):
 
                 self.logger.info(f"Telemetry node instance ID: {self.instance_id}")
                 self.logger.info(f"Using hash: {config_hash}")
-                
+
                 break
 
         self.create_timer(0.01, self.update_boat_status)
@@ -173,7 +172,7 @@ class TelemetryNode(Node):
         self.autopilot_parameters_publisher = self.create_publisher(String, "/autopilot_parameters", 10)
         self.sensors_parameters_publisher = self.create_publisher(String, "/sensors_parameters", 10)
         self.waypoints_list_publisher = self.create_publisher(WaypointList, "/waypoints_list", 10)
-        
+
         self.create_subscription(Float32, "/desired_heading", self.desired_heading_callback, 10)
 
         self.create_subscription(Int32, "/current_waypoint_index", self.current_waypoint_index_callback, 10)
@@ -257,7 +256,7 @@ class TelemetryNode(Node):
     def heading_callback(self, heading: Float32) -> None:
         """
         Callback function for the heading topic. Updates the boat's current heading.
-        
+
         Parameters
         ----------
         heading
@@ -278,7 +277,7 @@ class TelemetryNode(Node):
         """
 
         self.apparent_wind_vector = np.array([apparent_wind_vector.x, apparent_wind_vector.y], dtype=np.float64)
-        
+
         self.apparent_wind_speed, self.apparent_wind_angle = cartesian_vector_to_polar(
             apparent_wind_vector.x, apparent_wind_vector.y
         )
@@ -287,7 +286,7 @@ class TelemetryNode(Node):
     def desired_heading_callback(self, desired_heading: Float32) -> None:
         """
         Callback function for the desired heading topic. Updates the boat's desired heading.
-        
+
         Parameters
         ----------
         desired_heading
@@ -300,7 +299,7 @@ class TelemetryNode(Node):
     def vesc_telemetry_data_callback(self, vesc_telemetry_data: VESCTelemetryData) -> None:
         """
         Callback function for the VESC telemetry data topic. Updates the boat's current VESC telemetry data.
-        
+
         Parameters
         ----------
         vesc_telemetry_data
@@ -336,7 +335,7 @@ class TelemetryNode(Node):
     def full_autonomy_maneuver_callback(self, full_autonomy_maneuver: String) -> None:
         """
         Callback function for the full autonomy maneuver topic. Updates the boat's current full autonomy maneuver.
-        
+
         Parameters
         ----------
         full_autonomy_maneuver
@@ -365,7 +364,7 @@ class TelemetryNode(Node):
     def desired_sail_angle_callback(self, desired_sail_angle: Float32) -> None:
         """
         Callback function for the desired sail angle topic. Updates the boat's desired sail angle.
-        
+
         Parameters
         ----------
         desired_sail_angle
@@ -378,7 +377,7 @@ class TelemetryNode(Node):
     def desired_rudder_angle_callback(self, desired_rudder_angle: Float32) -> None:
         """
         Callback function for the desired rudder angle topic. Updates the boat's desired rudder angle.
-        
+
         Parameters
         ----------
         desired_rudder_angle
@@ -413,7 +412,7 @@ class TelemetryNode(Node):
 
         self.current_rudder_angle = current_rudder_angle.data
 
-    
+
     def autopilot_param_config_path_callback(self, autopilot_param_config_path: String) -> None:
         """
         Callback function for the autopilot parameter config path topic.
@@ -430,7 +429,7 @@ class TelemetryNode(Node):
         if parameters_path.stem in {"sailboat_default_parameters", "motorboat_default_parameters"}:
             with open(file=parameters_path, mode="r", encoding="utf-8") as parameters_file:
                 self.autopilot_parameters = json.load(parameters_file)
-            
+
             self.logger.info(f"Loaded autopilot parameters from config path: {parameters_path}")
 
             if parameters_path.stem == "sailboat_default_parameters":
@@ -526,7 +525,7 @@ class TelemetryNode(Node):
             response.raise_for_status()
 
             yield response.json(), TelemetryStatus.SUCCESS
-        
+
         except Exception as e:
             self.logger.error(f"Error: {e} \n Could not recieve data with telemetry server route {route}, retrying...")
             yield from self.get_raw_response_from_telemetry_server(route, session)
@@ -562,7 +561,7 @@ class TelemetryNode(Node):
             elif isinstance(data, str):
                 if " " in data:
                     data = data.replace(" ", "_")
-                
+
                 url += f"/{data}"
                 response = session.post(url=url, timeout=10)
 
@@ -571,7 +570,7 @@ class TelemetryNode(Node):
 
             elif isinstance(data, BoatStatusPayload):
                 response = session.post(url=url, data=bytes(data), timeout=10)
-            
+
             else:
                 response = session.post(url=url, json=json.dumps(data, separators=(",", ":"), indent=False), timeout=10)
 
@@ -581,7 +580,7 @@ class TelemetryNode(Node):
             self.logger.error(f"Error: {e} \n Could not send data with telemetry server route {route}, retrying...")
             if response is not None:
                 self.logger.error(f"Response content: {response.content}")
-            
+
             self.send_raw_data_to_telemetry_server(route, data, session)
 
 
@@ -611,12 +610,12 @@ class TelemetryNode(Node):
                 longitude=self.position.longitude,
                 latitude=self.position.latitude
             )
-            
+
             next_waypoint_position = Position(
                 longitude=self.current_waypoints[self.current_waypoint_index][1],
                 latitude=self.current_waypoints[self.current_waypoint_index][0]
             )
-            
+
             self.distance_to_next_waypoint = get_distance_between_positions(current_position, next_waypoint_position)
 
         else:
@@ -673,7 +672,7 @@ class TelemetryNode(Node):
         if payload is not None:
             for key, value in base.items():
                 setattr(payload, key, value)
-        
+
         return payload
 
 
