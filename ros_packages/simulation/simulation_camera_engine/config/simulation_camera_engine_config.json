@@ -5,5 +5,6 @@
         "sensor_array_size_millimeter": { "x": 3.84, "y": 2.4 },
         "max_detection_depth_meter": 100.0
     },
+    "object_detection_noise_standard_deviation_pixels": 5,
     "object_array": [{ "name": "buoy", "latitude": 0.002, "longitude": 0.002 }]
 }

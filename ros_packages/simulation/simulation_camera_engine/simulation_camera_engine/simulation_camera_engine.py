@@ -1,6 +1,7 @@
 import json
 from math import atan2, degrees, floor
 from pathlib import Path
+from random import gauss
 
 import navpy
 import rclpy
@@ -23,6 +24,7 @@ class SimulationCameraEngine(Node):
         self.camera_focal_length_meter = camera_engine_config["camera"]["focal_length_millimeter"] / 1000
         self.camera_max_detection_depth_meter = camera_engine_config["camera"]["max_detection_depth_meter"]
         self.object_array = camera_engine_config["object_array"]
+        self.object_detection_noise_standard_deviation_pixels = camera_engine_config["object_detection_noise_standard_deviation_pixels"]
 
         self.camera_pixel_pitch_meter = camera_engine_config["camera"]["pixel_pitch_micrometer"] / 1000000
         camera_sensor_array_size_x_meter = camera_engine_config["camera"]["sensor_array_size_millimeter"]["x"] / 1000
@@ -78,9 +80,6 @@ class SimulationCameraEngine(Node):
             )
             local_z = -1 * local_down
 
-            print(f"original_location: {[local_x, local_y, local_z]}")
-            print(f"result: {rotation.apply([local_x, local_y, local_z], inverse=True)}")
-
             object_location_relative_to_camera = rotation.apply([local_x, local_y, local_z], inverse=True)
 
             # Just to explain the coordinate scheme of object_location_relative_to_camera, the first element measures
@@ -108,7 +107,10 @@ class SimulationCameraEngine(Node):
             object_location_on_camera_sensor_array_y = f * y / z
 
             object_pixel_location_x = floor(object_location_on_camera_sensor_array_x / self.camera_pixel_pitch_meter)
+            object_pixel_location_x += gauss(mu=0, sigma=self.object_detection_noise_standard_deviation_pixels)
+
             object_pixel_location_y = floor(object_location_on_camera_sensor_array_y / self.camera_pixel_pitch_meter)
+            object_pixel_location_y += gauss(mu=0, sigma=self.object_detection_noise_standard_deviation_pixels)
 
             # Make sure that we don't see any objects that are too far away or behind us.
             # Also make sure that we don't see any objects out of frame
@@ -125,7 +127,9 @@ class SimulationCameraEngine(Node):
             standard_pixel_x = (self.camera_number_of_pixels_along_width / 2) - object_pixel_location_x
             standard_pixel_y = (self.camera_number_of_pixels_along_height / 2) - object_pixel_location_y
 
-            angle_to_object = -1 * degrees(atan2(object_location_relative_to_camera[0], object_location_relative_to_camera[2]))
+            noisy_object_location_on_camera_sensor_array_x = object_pixel_location_x * self.camera_pixel_pitch_meter
+            angle_to_object = -1 * degrees(atan2(noisy_object_location_on_camera_sensor_array_x, self.camera_focal_length_meter))
+
 
             object_detection_results.append(
                 ObjectDetectionResult(
