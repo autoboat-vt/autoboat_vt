@@ -210,7 +210,7 @@ class SailboatAutopilot:
         distance_between_heading_and_right_no_sail_zone = abs(get_distance_between_angles(current_heading, no_sail_zone_bounds[1]))
 
         # TODO make it so that this only procs if the port tack is 25 degrees closer so it doesn't go back and forth constantely
-        port_tack_is_closer = distance_between_heading_and_left_no_sail_zone > distance_between_heading_and_right_no_sail_zone+25
+        port_tack_is_closer = distance_between_heading_and_left_no_sail_zone > distance_between_heading_and_right_no_sail_zone
 
 
         # # If We Are Stuck In The No Sail Zone For Too Long, Then We Need To Wiggle Out
