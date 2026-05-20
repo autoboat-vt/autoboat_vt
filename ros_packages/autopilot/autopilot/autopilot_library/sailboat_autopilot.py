@@ -132,7 +132,7 @@ class SailboatAutopilot:
         This function controls all of the state machine logic of the tacking, which includes state transitions
         from a tacks, downwind sailing, whether or not the boat is currently executing a tack, etc. All of the
         state transitions are done on the SailboatStates enum. To see the state machine diagram please see the
-        following documentation page: TODO TODO.
+        following documentation page: https://autoboat-vt.github.io/documentation/ros2_packages/autopilot_package/sailboat_autopilot/.
 
         No side effects.
 

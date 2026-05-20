@@ -41,22 +41,22 @@ using json = nlohmann::json;
 /**
  * @class MotorboatAutopilotNode
  * @brief ROS 2 node that handles motorboat autopilot logic.
- * 
+ *
  * The autopilot takes in sensor data and waypoints and attempts to traverse through
- * the waypoints by continuously publishing to the propeller motor control struct 
+ * the waypoints by continuously publishing to the propeller motor control struct
  * and rudder angle topics.
- * 
+ *
  * The main function to pay attention to is update_ros_topics,
  * since this is the function that is called periodically on a timer.
- * 
- * NOTE: All units are in standard SI units and angles are generally measured 
+ *
+ * NOTE: All units are in standard SI units and angles are generally measured
  * in degrees unless otherwise specified.
  */
 class MotorboatAutopilotNode : public rclcpp::Node {
 public:
     /**
      * @brief Construct a new Motorboat Autopilot Node object.
-     * 
+     *
      * Initializes publishers, subscriptions, and the autopilot core.
      */
     MotorboatAutopilotNode();
@@ -67,7 +67,7 @@ private:
     MotorboatAutopilot motorboat_autopilot;
     std::map<std::string, json> autopilot_parameters;
     MotorboatAutopilotMode autopilot_mode = MotorboatAutopilotMode::Waypoint_Mission;
-    MotorboatControls propeller_motor_control_mode = MotorboatControls::RPM;
+    PropellerMotorControlType propeller_motor_control_mode = PropellerMotorControlType::RPM;
     DiscretePID pid_controller;
 
 
@@ -75,7 +75,7 @@ private:
     rclcpp::Publisher<std_msgs::msg::UInt8>::SharedPtr autopilot_mode_publisher;
     rclcpp::Publisher<std_msgs::msg::UInt8>::SharedPtr full_autonomy_maneuver_publisher;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr desired_heading_publisher;
-    
+
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr desired_rudder_angle_publisher;
     rclcpp::Publisher<autoboat_msgs::msg::VESCControlData>::SharedPtr propeller_motor_control_struct_publisher;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr should_propeller_motor_be_powered_publisher;
@@ -87,7 +87,7 @@ private:
     rclcpp::Time last_gps_position_received_time = rclcpp::Time(0, 0, RCL_ROS_TIME);
     rclcpp::Time last_heading_received_time = rclcpp::Time(0, 0, RCL_ROS_TIME);
 
-    
+
     double current_latitude = 0.0, current_longitude = 0.0;
     std::vector<float> current_global_velocity = {0.0, 0.0};
     float current_speed = 0.0;
@@ -97,7 +97,7 @@ private:
 
     int previous_toggle_f = 0;
     bool previous_button_d = false;
-    
+
     bool should_propeller_motor_be_powered = true;
     bool should_zero_encoder = false;
     bool encoder_has_been_zeroed = false;
@@ -125,7 +125,7 @@ private:
 
     /**
      * @brief Callback for remote control (RC) data.
-     * 
+     *
      * Processes RC inputs for manual control, mode switching, and failsafes.
      * @param msg The RCData message.
      */
@@ -151,7 +151,7 @@ private:
 
     /**
      * @brief Periodically called to update ROS topics based on autopilot output.
-     * 
+     *
      * Handles publisher updates for rudder, RPM, and status topics.
      */
     void update_ros_topics();

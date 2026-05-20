@@ -64,10 +64,10 @@ enum class MotorboatAutopilotMode {
 };
 
 /**
- * @enum MotorboatControls
+ * @enum PropellerMotorControlType
  * @brief Control primitives for motorboat propulsion.
  */
-enum class MotorboatControls {
+enum class PropellerMotorControlType {
     RPM = 0,           ///< Control based on motor revolutions per minute.
     DUTY_CYCLE = 1,    ///< Control based on Pulse Width Modulation duty cycle (0-1.0).
     CURRENT = 2        ///< Control based on motor current in Amperes.

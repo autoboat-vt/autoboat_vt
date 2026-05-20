@@ -117,9 +117,9 @@ void MotorboatAutopilotNode::rc_data_callback(const autoboat_msgs::msg::RCData::
     else autopilot_mode = MotorboatAutopilotMode::Full_RC;
 
     // Control Type
-    if (msg->toggle_c == 0) propeller_motor_control_mode = MotorboatControls::RPM;
-    else if (msg->toggle_c == 1) propeller_motor_control_mode = MotorboatControls::DUTY_CYCLE;
-    else propeller_motor_control_mode = MotorboatControls::CURRENT;
+    if (msg->toggle_c == 0) propeller_motor_control_mode = PropellerMotorControlType::RPM;
+    else if (msg->toggle_c == 1) propeller_motor_control_mode = PropellerMotorControlType::DUTY_CYCLE;
+    else propeller_motor_control_mode = PropellerMotorControlType::CURRENT;
 }
 
 
@@ -260,19 +260,19 @@ void MotorboatAutopilotNode::update_ros_topics() {
         );
     }
     else if (autopilot_mode == MotorboatAutopilotMode::Full_RC || autopilot_mode == MotorboatAutopilotMode::Hold_Heading) {
-        if (propeller_motor_control_mode == MotorboatControls::RPM) {
+        if (propeller_motor_control_mode == PropellerMotorControlType::RPM) {
             propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
                 .set__control_type_for_vesc("rpm")
                 .set__control_value(100.0 * joystick_left_y)
             );
         }
-        else if (propeller_motor_control_mode == MotorboatControls::DUTY_CYCLE) {
+        else if (propeller_motor_control_mode == PropellerMotorControlType::DUTY_CYCLE) {
             propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
                 .set__control_type_for_vesc("duty_cycle")
                 .set__control_value(joystick_left_y)
             );
         }
-        else if (propeller_motor_control_mode == MotorboatControls::CURRENT) {
+        else if (propeller_motor_control_mode == PropellerMotorControlType::CURRENT) {
             propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
                 .set__control_type_for_vesc("current")
                 .set__control_value(joystick_left_y)

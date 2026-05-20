@@ -12,7 +12,7 @@ __all__ = [
     "QOS_AUTOPILOT_PARAM_CONFIG_PATH",
     "TELEMETRY_SERVER_URL",
     "MotorboatAutopilotMode",
-    "MotorboatControls",
+    "PropellerMotorControlType",
     "SailboatAutopilotMode",
     "SailboatManeuvers",
     "SailboatStates",
@@ -34,13 +34,13 @@ class SailboatAutopilotMode(Enum):
 class SailboatStates(Enum):
     """
     An enum containing the different states that the sailboat autopilot can be in.
-    
+
     NOTE
     ----
     If you would like to learn more about the difference between a port/ starboard tack
     and other similar terms, please look at the following resource:
     https://rpayc.com.au/wp-content/uploads/2020/11/Basic_Terminology.pdf?srsltid=AfmBOop6ujPja2Fu5hKn8OYW-YlFAZVxAZTDO8zgEOzT3R4wk-7PCQzf
-    
+
     For more information about what tacking and jibing are, please read the following:
     https://captainsword.com/tacking-and-jibing
     """
@@ -53,7 +53,7 @@ class SailboatStates(Enum):
     CCW_TACKING = 5        # Switching tacks from port to staboard tack
     STALL_WIGGLE_TO_PORT_TACK = 6         # We have stalled in the no sail zone and need to wiggle to port tack
     STALL_WIGGLE_TO_STARBOARD_TACK = 7    # We have stalled in the no sail zone and need to wiggle to the starboard tack
-    
+
 
 class SailboatManeuvers(Enum):
     """
@@ -82,7 +82,7 @@ class MotorboatAutopilotMode(Enum):
     HOLD_HEADING = 2
     WAYPOINT_MISSION = 3
 
-class MotorboatControls(Enum):
+class PropellerMotorControlType(Enum):
     """An enum containing the different motorboat control types."""
 
     RPM = 0

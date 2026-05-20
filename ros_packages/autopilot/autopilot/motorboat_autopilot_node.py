@@ -17,7 +17,7 @@ from .autopilot_library.utils.constants import (
     CONFIG_DIRECTORY,
     QOS_AUTOPILOT_PARAM_CONFIG_PATH,
     MotorboatAutopilotMode,
-    MotorboatControls,
+    PropellerMotorControlType,
 )
 from .autopilot_library.utils.position import Position
 from .autopilot_library.utils.utils_function_library import get_bearing
@@ -92,6 +92,7 @@ class MotorboatAutopilotNode(Node):
         self.rudder_angle = 0.0
 
         self.autopilot_mode = MotorboatAutopilotMode.WAYPOINT_MISSION
+        self.propeller_motor_control_mode = PropellerMotorControlType.RPM
         self.should_propeller_motor_be_powered = False
         self.should_zero_encoder = False
         self.encoder_has_been_zeroed = False
@@ -192,13 +193,13 @@ class MotorboatAutopilotNode(Node):
 
         # Check the type of control that is selected
         if self.toggle_c == 0:
-            self.propeller_motor_control_mode = MotorboatControls.RPM
+            self.propeller_motor_control_mode = PropellerMotorControlType.RPM
 
         elif self.toggle_c == 1:
-            self.propeller_motor_control_mode = MotorboatControls.DUTY_CYCLE
+            self.propeller_motor_control_mode = PropellerMotorControlType.DUTY_CYCLE
 
         elif self.toggle_c == 2:
-            self.propeller_motor_control_mode = MotorboatControls.CURRENT
+            self.propeller_motor_control_mode = PropellerMotorControlType.CURRENT
 
 
     def autopilot_parameters_callback(self, new_parameters: String) -> None:
@@ -278,50 +279,6 @@ class MotorboatAutopilotNode(Node):
         self.last_heading_received_time = time.time()
 
 
-    # TODO MAKE RC CONTROL THE RPM DIRECTLY
-    def run_rc_control(self, joystick_right_x: float) -> float:
-        """
-        Formulas used: https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio.
-
-        Parameters
-        ----------
-        joystick_right_x
-            The value of the X joystick from `-100` to `100` where
-            - `-100` means the joystick is fully left
-            - `100` means the joystick is fully right.
-
-        Returns
-        -------
-        float
-            The desired rudder_angle that the boat should use based on the controller input.
-        """
-
-        min_rudder_angle: float = self.autopilot_parameters["min_rudder_angle"]
-        max_rudder_angle: float = self.autopilot_parameters["max_rudder_angle"]
-
-        return (((joystick_right_x - -100) * (max_rudder_angle - min_rudder_angle)) / (100 - -100)) + min_rudder_angle
-
-
-
-
-    def step(self) -> float:
-        """TODO Documentation."""
-        rpm = 0.0
-        rudder_angle = 0.0
-
-        if self.autopilot_mode == MotorboatAutopilotMode.WAYPOINT_MISSION and self.motorboat_autopilot.waypoints is not None:
-            rpm, rudder_angle = self.motorboat_autopilot.run_waypoint_mission_step(self.position, self.heading)
-
-        elif self.autopilot_mode == MotorboatAutopilotMode.HOLD_HEADING:
-            rudder_angle = self.motorboat_autopilot.get_optimal_rudder_angle(self.heading, self.heading_to_hold)
-
-        elif self.autopilot_mode == MotorboatAutopilotMode.FULL_RC:
-            rudder_angle = self.run_rc_control(self.joystick_right_x)
-
-
-        return rudder_angle, rpm
-
-
 
     def update_ros_topics(self) -> None:
         """
@@ -329,27 +286,8 @@ class MotorboatAutopilotNode(Node):
         Updates the propeller control struct and rudder angle topics based on the output of the autopilot controller.
         """
 
-        desired_rudder_angle, desired_rpm = self.step()
-
-        self.current_waypoint_index_publisher.publish(Int32(data=self.motorboat_autopilot.current_waypoint_index))
-
-        self.autopilot_mode_publisher.publish(String(data=self.autopilot_mode.name))
-        self.full_autonomy_maneuver_publisher.publish(String(data="N/A"))
-        self.autopilot_mode_publisher.publish(String(data=self.autopilot_mode.name))
-
-
-        if self.autopilot_mode == MotorboatAutopilotMode.HOLD_HEADING:
-            self.desired_heading_publisher.publish(Float32(data=float(self.heading_to_hold)))
-
-        elif self.autopilot_mode == MotorboatAutopilotMode.WAYPOINT_MISSION and self.motorboat_autopilot.waypoints is not None:
-            current_waypoint = self.motorboat_autopilot.waypoints[self.motorboat_autopilot.current_waypoint_index]
-            bearing_to_waypoint = get_bearing(self.position, current_waypoint)
-            self.desired_heading_publisher.publish(Float32(data=float(bearing_to_waypoint)))
-        else:
-            self.desired_heading_publisher.publish(Float32(data=0.))
-
-
-        self.desired_rudder_angle_publisher.publish(Float32(data=float(desired_rudder_angle)))
+        desired_rudder_angle = 0.0
+        desired_vesc_control_struct = VESCControlData(control_type_for_vesc="rpm", control_value=0.0)
 
 
         # Manually check whether any of the sensors have disconnecteds
@@ -366,39 +304,67 @@ class MotorboatAutopilotNode(Node):
         has_sensor_disconnected = has_rc_data_disconnected or has_gps_disconnected or has_heading_disconnected
 
 
-
         if has_sensor_disconnected:
             self.get_logger().info(f"has sensor disconnected: {has_sensor_disconnected}")
             self.get_logger().info(f"has remote controller disconnected: {has_rc_data_disconnected}")
             self.get_logger().info(f"has gps disconnected: {has_gps_disconnected}")
             self.get_logger().info(f"has heading disconnected: {has_heading_disconnected}")
 
-            vesc_control_data = VESCControlData(control_type_for_vesc="rpm", control_value=0.0)
+            # Set the values to 0 as a failsafe so that the boat doesn't make bad decisions
+            # while it lost connection with some of its sensors
+            desired_rudder_angle = 0.0
+            desired_vesc_control_struct = VESCControlData(control_type_for_vesc="rpm", control_value=0.0)
 
 
-        # Now it is time to apply the RC control, check the control type, and then tell the VESC node to turn
-        elif self.autopilot_mode in {MotorboatAutopilotMode.FULL_RC, MotorboatAutopilotMode.HOLD_HEADING}:
-            if self.propeller_motor_control_mode == MotorboatControls.RPM:
-                vesc_control_data = VESCControlData(control_type_for_vesc="rpm", control_value=100.0*self.joystick_left_y)
+        elif self.autopilot_mode == MotorboatAutopilotMode.WAYPOINT_MISSION and self.motorboat_autopilot.waypoints is not None:
+            desired_rpm, desired_rudder_angle = self.motorboat_autopilot.run_waypoint_mission_step(self.position, self.heading)
+            desired_vesc_control_struct = VESCControlData(control_type_for_vesc="rpm", control_value=desired_rpm)
 
+        elif self.autopilot_mode == MotorboatAutopilotMode.HOLD_HEADING:
+            desired_rudder_angle = self.motorboat_autopilot.get_optimal_rudder_angle(self.heading, self.heading_to_hold)
+            desired_vesc_control_type, desired_vesc_control_value, _ = self.motorboat_autopilot.run_rc_control(
+                self.joystick_left_y, self.joystick_right_x, self.propeller_motor_control_mode
+            )
+            desired_vesc_control_struct = VESCControlData(
+                control_type_for_vesc=desired_vesc_control_type, control_value=desired_vesc_control_value
+            )
 
-            elif self.propeller_motor_control_mode == MotorboatControls.DUTY_CYCLE:
-                vesc_control_data = VESCControlData(control_type_for_vesc="duty_cycle", control_value=self.joystick_left_y)
-
-
-            elif self.propeller_motor_control_mode == MotorboatControls.CURRENT:
-                vesc_control_data = VESCControlData(control_type_for_vesc="current", control_value=self.joystick_left_y)
-
-
-        elif self.autopilot_mode == MotorboatAutopilotMode.WAYPOINT_MISSION:
-            vesc_control_data = VESCControlData(control_type_for_vesc="rpm", control_value=desired_rpm)
+        elif self.autopilot_mode == MotorboatAutopilotMode.FULL_RC:
+            desired_vesc_control_type, desired_vesc_control_value, desired_rudder_angle = self.motorboat_autopilot.run_rc_control(
+                self.joystick_left_y, self.joystick_right_x, self.propeller_motor_control_mode
+            )
+            desired_vesc_control_struct = VESCControlData(
+                control_type_for_vesc=desired_vesc_control_type, control_value=desired_vesc_control_value
+            )
 
         else:
-            vesc_control_data = VESCControlData(control_type_for_vesc="rpm", control_value=0.0)
+            desired_rudder_angle = 0.0
+            desired_vesc_control_struct = VESCControlData(control_type_for_vesc="rpm", control_value=0.0)
 
 
-        self.propeller_motor_control_struct_publisher.publish(vesc_control_data)
+        # Now that we are done computing what the autopilot should do, publish everything to their respective topics
+
+        self.propeller_motor_control_struct_publisher.publish(desired_vesc_control_struct)
         self.should_propeller_motor_be_powered_publisher.publish(Bool(data=self.should_propeller_motor_be_powered))
+
+        self.current_waypoint_index_publisher.publish(Int32(data=self.motorboat_autopilot.current_waypoint_index))
+
+        self.autopilot_mode_publisher.publish(String(data=self.autopilot_mode.name))
+        self.full_autonomy_maneuver_publisher.publish(String(data="N/A"))
+
+        if self.autopilot_mode == MotorboatAutopilotMode.HOLD_HEADING:
+            self.desired_heading_publisher.publish(Float32(data=float(self.heading_to_hold)))
+
+        elif self.autopilot_mode == MotorboatAutopilotMode.WAYPOINT_MISSION and self.motorboat_autopilot.waypoints is not None:
+            current_waypoint = self.motorboat_autopilot.waypoints[self.motorboat_autopilot.current_waypoint_index]
+            bearing_to_waypoint = get_bearing(self.position, current_waypoint)
+            self.desired_heading_publisher.publish(Float32(data=float(bearing_to_waypoint)))
+        else:
+            self.desired_heading_publisher.publish(Float32(data=0.))
+
+
+        self.desired_rudder_angle_publisher.publish(Float32(data=float(desired_rudder_angle)))
+
 
         if self.should_zero_encoder:
             self.zero_rudder_encoder_publisher.publish(Bool(data=self.should_zero_encoder))
