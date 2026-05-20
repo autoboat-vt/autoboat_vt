@@ -12,6 +12,8 @@ from .utils.utils_function_library import get_bearing, get_distance_between_angl
 # used to specify what is available to import from this file
 __all__ = ["MotorboatAutopilot"]
 
+
+
 class MotorboatAutopilot:
     """A class containing algorithms to control a motorboat given sensor data."""
 
