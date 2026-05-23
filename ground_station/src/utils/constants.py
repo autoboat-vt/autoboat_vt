@@ -31,13 +31,13 @@ class StrictMatchEnums:
 
     Contains
     --------
-    - ``SailboatAutopilotMode``
-    - ``SailboatStates``
-    - ``MotorboatAutopilotMode``
+    - ``SailboatControlModes``
+    - ``SailboatAutopilotStates``
+    - ``MotorboatControlModes``
     """
 
-    class SailboatAutopilotMode(Enum):
-        """An enum containing the different modes that the sailboat autopilot can be in."""
+    class SailboatControlModes(Enum):
+        """An enum containing the different control modes that the sailboat can be in."""
 
         DISABLED = 0
         FULL_RC = 1
@@ -45,28 +45,44 @@ class StrictMatchEnums:
         HOLD_HEADING = 3
         HOLD_HEADING_AND_BEST_SAIL = 4
         WAYPOINT_MISSION = 5
+        EMERGENCY_STOP = 6
 
 
-    class SailboatStates(Enum):
-        """An enum containing the different states that the sailboat autopilot can be in."""
+
+    class SailboatAutopilotStates(Enum):
+        """
+        An enum containing the different states that the sailboat can be in.
+
+        NOTE
+        ----
+        If you would like to learn more about the difference between a port/ starboard tack
+        and other similar terms, please look at the following resource:
+        https://rpayc.com.au/wp-content/uploads/2020/11/Basic_Terminology.pdf?srsltid=AfmBOop6ujPja2Fu5hKn8OYW-YlFAZVxAZTDO8zgEOzT3R4wk-7PCQzf
+
+        For more information about what tacking and jibing are, please read the following:
+        https://captainsword.com/tacking-and-jibing
+        """
 
         NA = 0
         DOWNWIND_SAILING = 1
-        PORT_TACK = 2         # On a tack where the wind vector is to the left of the boat (port and left both have 4 letters)
-        STARBOARD_TACK = 3    # On a tack where the wind vector is to the right of the boat
-        CW_TACKING = 4        # Switching tacks from starboard to port tack
-        CCW_TACKING = 5       # Switching tacks from port to staboard tack
-        STALL = 6
-        
-        
-    class MotorboatAutopilotMode(Enum):
-        """An enum containing the different modes that the motorboat autopilot can be in."""
+        PORT_TACK = 2          # On a tack where the wind vector is to the left of the boat (port and left both have 4 letters)
+        STARBOARD_TACK = 3     # On a tack where the wind vector is to the right of the boat
+        CW_TACKING = 4         # Switching tacks from starboard to port tack
+        CCW_TACKING = 5        # Switching tacks from port to staboard tack
+        STALL_WIGGLE_TO_PORT_TACK = 6         # We have stalled in the no sail zone and need to wiggle to port tack
+        STALL_WIGGLE_TO_STARBOARD_TACK = 7    # We have stalled in the no sail zone and need to wiggle to the starboard tack
+
+
+
+    class MotorboatControlModes(Enum):
+        """An enum containing the different control modes that the motorboat can be in."""
 
         DISABLED = 0
         FULL_RC = 1
         HOLD_HEADING = 2
         WAYPOINT_MISSION = 3
-        
+
+
 
 
 class TelemetryStatus(StrEnum):
@@ -87,6 +103,8 @@ class TelemetryStatus(StrEnum):
     SUCCESS = auto()
     FAILURE = auto()
     WRONG_FORMAT = auto()
+
+
 
 NumberType: TypeAlias = int | float | complex | np_number
 FileType: TypeAlias = str | os.PathLike[str]
@@ -315,7 +333,7 @@ try:
 
     CAMERA_WIDGET_DIR = Path(WIDGETS_DIR / "camera_widget")
     HTML_CAMERA_PATH = Path(CAMERA_WIDGET_DIR / "camera.html")
-    
+
     APP_STATE_PATH = Path(GIT_IGNORE_DIR / "app_state.json")
 
     stack = inspect.stack()
@@ -325,10 +343,10 @@ try:
     if active_flag:
         if "assets" not in os.listdir(GIT_KEEP_DIR):
             raise Exception("Assets directory not found, please redownload the directory from GitHub.")
-        
+
         if "defaults_examples" not in os.listdir(GIT_KEEP_DIR):
             raise Exception("Defaults/examples directory not found, please redownload the directory from GitHub.")
-        
+
         if "autopilot_params" not in os.listdir(GIT_IGNORE_DIR):
             print("[Info] Creating autopilot parameters directory...")
             os.makedirs(GIT_IGNORE_DIR / "autopilot_params")
@@ -357,7 +375,7 @@ try:
                 f"Stale app state file found at {APP_STATE_PATH}, please delete this file "
                 "and restart the application."
             )
-        
+
     DATA_LOGS_DIR = Path(GIT_IGNORE_DIR / "data_logs")
     os.makedirs(DATA_LOGS_DIR, exist_ok=True)
 

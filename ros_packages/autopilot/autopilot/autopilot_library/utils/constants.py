@@ -9,19 +9,18 @@ from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPo
 __all__ = [
     "BASE_DIRECTORY",
     "CONFIG_DIRECTORY",
-    "QOS_AUTOPILOT_PARAM_CONFIG_PATH",
+    "QOS_AUTOPILOT_PARAMETER_CONFIG_PATH",
     "TELEMETRY_SERVER_URL",
-    "MotorboatAutopilotMode",
-    "PropellerMotorControlType",
-    "SailboatAutopilotMode",
-    "SailboatManeuvers",
-    "SailboatStates",
+    "MotorboatControlModes",
+    "PropellerMotorControlMode",
+    "SailboatAutopilotStates",
+    "SailboatControlModes",
     "TelemetryStatus",
 ]
 
 
-class SailboatAutopilotMode(Enum):
-    """An enum containing the different modes that the sailboat autopilot can be in."""
+class SailboatControlModes(Enum):
+    """An enum containing the different control modes that the sailboat can be in."""
 
     DISABLED = 0
     FULL_RC = 1
@@ -29,11 +28,12 @@ class SailboatAutopilotMode(Enum):
     HOLD_HEADING = 3
     HOLD_HEADING_AND_BEST_SAIL = 4
     WAYPOINT_MISSION = 5
+    EMERGENCY_STOP = 6
 
 
-class SailboatStates(Enum):
+class SailboatAutopilotStates(Enum):
     """
-    An enum containing the different states that the sailboat autopilot can be in.
+    An enum containing the different states that the sailboat can be in.
 
     NOTE
     ----
@@ -55,39 +55,45 @@ class SailboatStates(Enum):
     STALL_WIGGLE_TO_STARBOARD_TACK = 7    # We have stalled in the no sail zone and need to wiggle to the starboard tack
 
 
-class SailboatManeuvers(Enum):
-    """
-    An enum containing the different sailing maneuvers that the sailboat autopilot can perform.
-
-    Note
-    ----
-    For more information about what tacking and jibing are, please read the following:
-    https://captainsword.com/tacking-and-jibing
-    """
-
-    AUTOPILOT_DISABLED = 0
-    STANDARD = 1
-    TACK = 2
-    JIBE = 3
 
 
 
 
-
-class MotorboatAutopilotMode(Enum):
-    """An enum containing the different modes that the motorboat autopilot can be in."""
+class MotorboatControlModes(Enum):
+    """An enum containing the different control modes that the motorboat can be in."""
 
     DISABLED = 0
     FULL_RC = 1
     HOLD_HEADING = 2
     WAYPOINT_MISSION = 3
+    EMERGENCY_STOP = 4
 
-class PropellerMotorControlType(Enum):
-    """An enum containing the different motorboat control types."""
+class PropellerMotorControlMode(Enum):
+    """
+    An enum containing the different propeller control modes for the motorboat.
+
+    RPM directly commands the rotations per minute of the propeller, the duty cycle
+    directly controls the voltage going to the motor, and the current, obviously,
+    controls the current going to the propeller motor.
+    """
 
     RPM = 0
     DUTY_CYCLE = 1
     CURRENT = 2
+
+
+
+
+
+class TelemetryNodeModes(Enum):
+    """
+    An enum containing whether or not we are relaying the telemety data of a sailboat
+    or of a motorboat. The things that we need to send to the telemetry server changes
+    based on whether or not we are using a sailboat or motorboat.
+    """
+
+    SAILBOAT = 0
+    MOTORBOAT = 1
 
 
 class TelemetryStatus(Enum):
@@ -97,7 +103,9 @@ class TelemetryStatus(Enum):
     FAILURE = 1
 
 
-QOS_AUTOPILOT_PARAM_CONFIG_PATH = QoSProfile(
+
+
+QOS_AUTOPILOT_PARAMETER_CONFIG_PATH = QoSProfile(
     reliability=ReliabilityPolicy.RELIABLE,
     durability=DurabilityPolicy.TRANSIENT_LOCAL,
     history=HistoryPolicy.KEEP_LAST,

@@ -44,7 +44,7 @@ class BoatStatusPayload(ctypes.LittleEndianStructure):
 
     one_byte_fields: Final[tuple[tuple[str, ctypes._SimpleCData], ...]] = (
         ("current_waypoint_index", ctypes.c_ubyte),
-        ("autopilot_mode", ctypes.c_ubyte),
+        ("boat_control_mode", ctypes.c_ubyte),
     )
 
     _fields_: ClassVar[tuple[tuple[str, ctypes._SimpleCData], ...]] = four_byte_fields + one_byte_fields
@@ -61,7 +61,7 @@ class BoatStatusPayload(ctypes.LittleEndianStructure):
         """
 
         return "\n".join(f"{field_name}: {getattr(self, field_name)}" for field_name in self._field_names)
-    
+
     @classmethod
     def construct_mapping(cls) -> list[list[str]]:
         """
@@ -72,7 +72,7 @@ class BoatStatusPayload(ctypes.LittleEndianStructure):
         list[list[str]]
             A list of lists, where each inner list contains the field name and data type of a field in the boat status payload.
         """
-        
+
         return [[field_name, field_type.__name__] for field_name, field_type in cls._fields_]
 
 
@@ -101,7 +101,7 @@ class SailboatStatusPayload(BoatStatusPayload):
         ("sail_angle_error", ctypes.c_float),
     )
 
-    sail_one_byte_fields: Final[tuple[tuple[str, ctypes._SimpleCData], ...]] = (("full_autonomy_maneuver", ctypes.c_ubyte),)
+    sail_one_byte_fields: Final[tuple[tuple[str, ctypes._SimpleCData], ...]] = (("boat_autopilot_state", ctypes.c_ubyte),)
 
     _fields_: ClassVar[tuple[tuple[str, ctypes._SimpleCData], ...]] = (
         sail_four_byte_fields + sail_one_byte_fields
@@ -121,7 +121,7 @@ class SailboatStatusPayload(BoatStatusPayload):
             A list of lists, where each inner list contains the field name
             and data type of a field in the sailboat status payload.
         """
-        
+
         parent_mapping = BoatStatusPayload.construct_mapping()
         child_mapping = [[field_name, field_type.__name__] for field_name, field_type in cls._fields_]
         return parent_mapping + child_mapping
@@ -173,7 +173,7 @@ class MotorboatStatusPayload(BoatStatusPayload):
             A list of lists, where each inner list contains the field name
             and data type of a field in the motorboat status payload.
         """
-        
+
         parent_mapping = BoatStatusPayload.construct_mapping()
         child_mapping = [[field_name, field_type.__name__] for field_name, field_type in cls._fields_]
         return parent_mapping + child_mapping

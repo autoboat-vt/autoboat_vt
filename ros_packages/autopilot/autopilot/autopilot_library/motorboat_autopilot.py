@@ -4,7 +4,7 @@ from typing import Any
 import numpy as np
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from .utils.constants import PropellerMotorControlType
+from .utils.constants import PropellerMotorControlMode
 from .utils.discrete_pid import DiscretePID
 from .utils.position import Position
 from .utils.utils_function_library import get_bearing, get_distance_between_angles, get_distance_between_positions
@@ -15,7 +15,17 @@ __all__ = ["MotorboatAutopilot"]
 
 
 class MotorboatAutopilot:
-    """A class containing algorithms to control a motorboat given sensor data."""
+    """
+    A class containing algorithms to control a motorboat given sensor data.
+
+    This class is meant to abstract away all of the actual autopilot math from the ROS node,
+    so all the ROS2 node for the autopilot has to do is handle the "control mode"
+    and publish the results from the autopilot.
+
+    The ROS2 node does not have to concern itself with the exact implementation details of the autopilot,
+    and this allows us in the future to switch to any other alternative for ROS2 (ie maybe ROS3) in the future by just
+    plugging and playing this class.
+    """
 
     def __init__(self, parameters: dict[str, Any], logger: RcutilsLogger) -> None:
         """
@@ -78,7 +88,7 @@ class MotorboatAutopilot:
 
     def run_rc_control(
         self, joystick_left_y: float, joystick_right_x: float,
-        propeller_motor_control_mode: PropellerMotorControlType
+        propeller_motor_control_mode: PropellerMotorControlMode
     ) -> tuple[str, float, float]:
         """
         Formulas used: https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio.
@@ -112,13 +122,13 @@ class MotorboatAutopilot:
         max_rudder_angle: float = self.parameters["max_rudder_angle"]
         desired_rudder_angle = (((joystick_right_x - -100) * (max_rudder_angle-min_rudder_angle)) / (100 - -100))+min_rudder_angle
 
-        if propeller_motor_control_mode == PropellerMotorControlType.RPM:
+        if propeller_motor_control_mode == PropellerMotorControlMode.RPM:
             desired_vesc_control_type, desired_vesc_control_value = "rpm", 100.0 * joystick_left_y
 
-        elif propeller_motor_control_mode == PropellerMotorControlType.DUTY_CYCLE:
+        elif propeller_motor_control_mode == PropellerMotorControlMode.DUTY_CYCLE:
             desired_vesc_control_type, desired_vesc_control_value = "duty_cycle", joystick_left_y
 
-        elif propeller_motor_control_mode == PropellerMotorControlType.CURRENT:
+        elif propeller_motor_control_mode == PropellerMotorControlMode.CURRENT:
             desired_vesc_control_type, desired_vesc_control_value = "current", joystick_left_y
 
         else:
