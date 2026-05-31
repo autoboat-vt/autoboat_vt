@@ -175,7 +175,7 @@ class SailboatAutopilot:
             k_i=self.parameters["heading_i_gain"],
             k_d=self.parameters["heading_d_gain"],
             n=self.parameters["heading_n_gain"],
-            sample_period=self.parameters["autopilot_refresh_rate"],
+            sample_period=(1 / self.parameters["autopilot_refresh_rate"]),
         )
 
         error = get_distance_between_angles(desired_heading, heading)

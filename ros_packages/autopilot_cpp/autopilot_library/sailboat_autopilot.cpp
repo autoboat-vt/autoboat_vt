@@ -293,7 +293,27 @@ std::pair<float, SailboatAutopilotStates> SailboatAutopilot::_apply_tacking_stat
     float distance_between_heading_and_left_no_sail_zone = std::abs(get_distance_between_angles(current_heading, no_sail_zone_bounds_0));
     float distance_between_heading_and_right_no_sail_zone = std::abs(get_distance_between_angles(current_heading, no_sail_zone_bounds_1));
 
-    bool port_tack_is_closer = distance_between_heading_and_left_no_sail_zone > distance_between_heading_and_right_no_sail_zone;
+    float hysteresis_amount_angles = (*autopilot_parameters)["hysteresis_amount_angles"].get<float>();
+    bool use_hyst_tack = (*autopilot_parameters)["use_hysteresis_for_checking_if_port_or_starboard_tacks_are_closer"].get<bool>();
+    bool port_tack_is_closer = false;
+
+    if (use_hyst_tack && (
+        current_state == SailboatAutopilotStates::PORT_TACK ||
+        current_state == SailboatAutopilotStates::CW_TACKING ||
+        current_state == SailboatAutopilotStates::STALL_WIGGLE_TO_PORT_TACK
+    )) {
+        port_tack_is_closer = distance_between_heading_and_right_no_sail_zone <= distance_between_heading_and_left_no_sail_zone + hysteresis_amount_angles;
+    }
+    else if (use_hyst_tack && (
+        current_state == SailboatAutopilotStates::STARBOARD_TACK ||
+        current_state == SailboatAutopilotStates::CCW_TACKING ||
+        current_state == SailboatAutopilotStates::STALL_WIGGLE_TO_STARBOARD_TACK
+    )) {
+        port_tack_is_closer = distance_between_heading_and_left_no_sail_zone > distance_between_heading_and_right_no_sail_zone + hysteresis_amount_angles;
+    }
+    else {
+        port_tack_is_closer = distance_between_heading_and_left_no_sail_zone > distance_between_heading_and_right_no_sail_zone;
+    }
 
     bool is_waypoint_in_no_sail_zone_biased_value = false;
     if (current_state == SailboatAutopilotStates::CW_TACKING ||
@@ -304,8 +324,6 @@ std::pair<float, SailboatAutopilotStates> SailboatAutopilot::_apply_tacking_stat
         current_state == SailboatAutopilotStates::STALL_WIGGLE_TO_STARBOARD_TACK) {
         is_waypoint_in_no_sail_zone_biased_value = true;
     }
-
-    float hysteresis_amount_angles = (*autopilot_parameters)["hysteresis_amount_angles"].get<float>();
     bool is_waypoint_in_no_sail_zone = is_angle_between_boundaries_with_hysteresis(
         current_bearing, no_sail_zone_bounds_0, no_sail_zone_bounds_1,
         is_waypoint_in_no_sail_zone_biased_value, hysteresis_amount_angles
@@ -356,6 +374,20 @@ std::pair<float, SailboatAutopilotStates> SailboatAutopilot::_apply_tacking_stat
         }
     }
 
+    bool is_bearing_around_no_sail_zone = is_angle_between_boundaries_with_hysteresis(
+        global_true_upwind_angle, current_heading, current_bearing,
+        false, hysteresis_amount_angles
+    );
+    if (is_bearing_around_no_sail_zone && current_state == SailboatAutopilotStates::DOWNWIND_SAILING) {
+        if (get_optimal_rudder_angle(current_heading, current_bearing) > 0.0f) {
+            current_state = SailboatAutopilotStates::CW_TACKING;
+            RCLCPP_INFO(rclcpp::get_logger("sailboat_autopilot"), "GET AROUND NO SAIL ZONE CLOCKWISE TACKING");
+        } else {
+            current_state = SailboatAutopilotStates::CCW_TACKING;
+            RCLCPP_INFO(rclcpp::get_logger("sailboat_autopilot"), "GET AROUND NO SAIL ZONE COUNTER CLOCKWISE TACKING");
+        }
+    }
+
     if (is_heading_in_no_sail_zone && current_state == SailboatAutopilotStates::DOWNWIND_SAILING) {
         if (port_tack_is_closer) {
             current_state = SailboatAutopilotStates::CW_TACKING;
@@ -372,20 +404,6 @@ std::pair<float, SailboatAutopilotStates> SailboatAutopilot::_apply_tacking_stat
         } else {
             current_state = SailboatAutopilotStates::STARBOARD_TACK;
             RCLCPP_INFO(rclcpp::get_logger("sailboat_autopilot"), "TRANSITION FROM DOWNWIND SAILING TO STARBOARD TACK");
-        }
-    }
-
-    bool is_bearing_around_no_sail_zone = is_angle_between_boundaries_with_hysteresis(
-        global_true_upwind_angle, current_heading, current_bearing,
-        false, hysteresis_amount_angles
-    );
-    if (is_bearing_around_no_sail_zone && current_state == SailboatAutopilotStates::DOWNWIND_SAILING) {
-        if (get_optimal_rudder_angle(current_heading, current_bearing) > 0.0f) {
-            current_state = SailboatAutopilotStates::CW_TACKING;
-            RCLCPP_INFO(rclcpp::get_logger("sailboat_autopilot"), "GET AROUND NO SAIL ZONE CLOCKWISE TACKING");
-        } else {
-            current_state = SailboatAutopilotStates::CCW_TACKING;
-            RCLCPP_INFO(rclcpp::get_logger("sailboat_autopilot"), "GET AROUND NO SAIL ZONE COUNTER CLOCKWISE TACKING");
         }
     }
 

@@ -135,6 +135,11 @@ void SailboatAutopilotNode::velocity_callback(const geometry_msgs::msg::Twist::S
 
 
 void SailboatAutopilotNode::waypoints_list_callback(const autoboat_msgs::msg::WaypointList::SharedPtr msg) {
+    if (msg->waypoints.empty()) {
+        return;
+    }
+
+    sailboat_autopilot.reset();
 
     std::vector<Position> waypoints;
     for (auto &waypoint : msg->waypoints) {
