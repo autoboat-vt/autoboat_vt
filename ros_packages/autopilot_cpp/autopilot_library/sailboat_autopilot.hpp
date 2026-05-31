@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <array>
 #include <limits>
+#include <optional>
+#include <chrono>
 
 #include <nlohmann/json.hpp>
 
@@ -37,15 +39,23 @@ private:
     std::vector<Position> waypoints;
     int current_waypoint_index;
     
-    float desired_tacking_angle;
+    float desired_tacking_angle = 0.0f;
     
-    SailboatStates current_waypoint_mission_state = SailboatStates::NORMAL;
+    SailboatAutopilotStates current_state = SailboatAutopilotStates::DOWNWIND_SAILING;
+    Position last_tacking_position = Position(0.0, 0.0);
+    std::chrono::steady_clock::time_point last_time_out_of_no_sail_zone;
 
     float get_decision_zone_size(float distance_to_waypoint);
     SailboatManeuvers get_maneuver_from_desired_heading(float heading, float desired_heading, float true_wind_angle);
     std::pair<float, bool> apply_decision_zone_tacking_logic(
         float current_heading, float desired_heading, 
         float true_wind_angle, float apparent_wind_angle, float distance
+    );
+    std::pair<float, SailboatAutopilotStates> _apply_tacking_state_machine(
+        float current_heading, float current_bearing,
+        float true_wind_angle, float apparent_wind_angle,
+        Position current_position, Position last_tack_position,
+        SailboatAutopilotStates current_state
     );
 
 
@@ -54,12 +64,9 @@ public:
     /**
      * @brief PID controller for the rudder.
      */
-    DiscretePID rudder_pid_controller;
+    DiscretePID heading_pid_controller;
 
-    /**
-     * @brief Current autopilot mode.
-     */
-    SailboatAutopilotModes current_autopilot_mode = SailboatAutopilotModes::Waypoint_Mission;
+
 
     /**
      * @brief Heading to hold in HOLD_HEADING mode.
@@ -102,31 +109,18 @@ public:
 
     /**
      * @brief Get the current waypoint mission state.
-     * @return SailboatStates The current state (e.g., NORMAL, TACKING).
+     * @return SailboatAutopilotStates The current state.
      */
-    SailboatStates get_current_waypoint_mission_state();
+    SailboatAutopilotStates get_current_waypoint_mission_state();
 
     /**
-     * @brief Computes the desired rudder and sail angles for the current timestep.
-     * @param current_position The boat's current position.
-     * @param current_global_velocity_vector The boat's velocity vector in m/s.
-     * @param current_heading The boat's current heading in degrees.
-     * @param current_apparent_wind_vector The apparent wind vector in m/s.
-     * @param heading_to_hold Target heading for hold mode.
-     * @param rc_rudder_control Manual rudder input (-100 to 100).
-     * @param rc_sail_control Manual sail input (-100 to 100).
-     * @return std::pair<float, float> Pair of (rudder_angle, sail_angle).
+     * @brief Gets what the autopilot should do in order to not crash into the object in front of it.
+     * @param heading_object_was_detected_at Direction the boat was facing when it encountered the object.
+     * @param current_heading Direction the boat is facing in degrees.
+     * @param apparent_wind_angle Apparent wind angle in degrees.
+     * @return std::pair<float, float> Pair of (sail_angle, rudder_angle).
      */
-    std::pair<float, float> step(
-        Position current_position, 
-        std::array<float, 2> current_global_velocity_vector, 
-        float current_heading, 
-        std::array<float, 2> current_apparent_wind_vector,
-
-        float heading_to_hold = 0.0,
-        float rc_rudder_control = 0.0,
-        float rc_sail_control = 0.0
-    );
+    std::pair<float, float> run_emergency_stop_step(float heading_object_was_detected_at, float current_heading, float apparent_wind_angle);
 
     /**
      * @brief Gets the optimal sail angle given the apparent wind angle.
@@ -157,7 +151,7 @@ public:
      * @param global_velocity_vector The boat's velocity vector in m/s.
      * @param heading The boat's current heading in degrees.
      * @param apparent_wind_vector The apparent wind vector in m/s.
-     * @return std::pair<float, float> Pair of (sail_angle, rudder_angle).
+     * @return std::tuple<std::optional<float>, std::optional<float>, std::optional<float>> Tuple of (sail_angle, rudder_angle, desired_heading).
      */
-    std::pair<float, float> run_waypoint_mission_step(Position current_position, std::array<float, 2> global_velocity_vector, float heading, std::array<float, 2> apparent_wind_vector);
+    std::tuple<std::optional<float>, std::optional<float>, std::optional<float>> run_waypoint_mission_step(Position current_position, std::array<float, 2> global_velocity_vector, float heading, std::array<float, 2> apparent_wind_vector);
 };

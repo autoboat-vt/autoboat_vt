@@ -22,7 +22,8 @@ if(MOLD_PROGRAM)
   message(STATUS "Using mold linker: ${MOLD_PROGRAM}")
 endif()
 
-add_compile_options(-Wall -Wextra -Wpedantic)
+add_compile_options(-Wall -Wextra -Wpedantic -ffunction-sections -fdata-sections)
+add_link_options(-Wl,--gc-sections)
 
 
 
@@ -35,6 +36,8 @@ find_package(sensor_msgs REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(autoboat_msgs REQUIRED)
+set(OpenCV_STATIC ON)
+find_package(OpenCV REQUIRED)
 
 
 
@@ -99,9 +102,9 @@ install(TARGETS sailboat_autopilot DESTINATION lib/${PROJECT_NAME})
 
 # create telemetry node executable
 add_executable(telemetry src/telemetry_node.cpp)
-target_include_directories(telemetry PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(telemetry PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> ${CMAKE_CURRENT_SOURCE_DIR} PRIVATE ${OpenCV_INCLUDE_DIRS})
 ament_target_dependencies(telemetry rclcpp std_msgs geometry_msgs sensor_msgs autoboat_msgs)
-target_link_libraries(telemetry autopilot_lib nlohmann_json::nlohmann_json cpr::cpr OpenSSL::SSL OpenSSL::Crypto)
+target_link_libraries(telemetry autopilot_lib nlohmann_json::nlohmann_json cpr::cpr OpenSSL::SSL OpenSSL::Crypto ${OpenCV_LIBRARIES})
 target_precompile_headers(telemetry REUSE_FROM autopilot_lib)
 install(TARGETS telemetry DESTINATION lib/${PROJECT_NAME})
 

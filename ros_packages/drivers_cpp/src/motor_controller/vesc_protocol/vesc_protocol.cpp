@@ -180,6 +180,11 @@ bool VescProtocol::processPayload(const uint8_t* payload, size_t length) {
         data.error = static_cast<mc_fault_code>(message[index++]);
         data.pidPos = buffer_get_float32(message, 1000000.0, &index);
         data.id = message[index++];
+        if (index + 4 <= static_cast<int32_t>(length - 1)) {
+            data.time_ms = buffer_get_int32(message, &index);
+        } else {
+            data.time_ms = 0;
+        }
         return true;
     }
     

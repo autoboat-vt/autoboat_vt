@@ -1,41 +1,47 @@
 #include "autopilot_utils.hpp"
 
 
-std::string to_string(MotorboatAutopilotMode mode) {
+std::string to_string(MotorboatControlModes mode) {
     switch(mode) {
-        case MotorboatAutopilotMode::Disabled: return "DISABLED";
-        case MotorboatAutopilotMode::Full_RC: return "FULL_RC";
-        case MotorboatAutopilotMode::Hold_Heading: return "HOLD_HEADING";
-        case MotorboatAutopilotMode::Waypoint_Mission: return "WAYPOINT_MISSION";
+        case MotorboatControlModes::DISABLED: return "DISABLED";
+        case MotorboatControlModes::FULL_RC: return "FULL_RC";
+        case MotorboatControlModes::HOLD_HEADING: return "HOLD_HEADING";
+        case MotorboatControlModes::WAYPOINT_MISSION: return "WAYPOINT_MISSION";
+        case MotorboatControlModes::EMERGENCY_STOP: return "EMERGENCY_STOP";
     }
     return "DISABLED";
 }
 
-std::string to_string(SailboatAutopilotModes mode) {
+std::string to_string(SailboatControlModes mode) {
     switch(mode) {
-        case SailboatAutopilotModes::Disabled: return "DISABLED";
-        case SailboatAutopilotModes::Full_RC: return "FULL_RC";
-        case SailboatAutopilotModes::Hold_Best_Sail: return "HOLD_BEST_SAIL";
-        case SailboatAutopilotModes::Hold_Heading: return "HOLD_HEADING";
-        case SailboatAutopilotModes::Hold_Heading_And_Best_Sail: return "HOLD_HEADING_AND_BEST_SAIL";
-        case SailboatAutopilotModes::Waypoint_Mission: return "WAYPOINT_MISSION";
+        case SailboatControlModes::DISABLED: return "DISABLED";
+        case SailboatControlModes::FULL_RC: return "FULL_RC";
+        case SailboatControlModes::HOLD_BEST_SAIL: return "HOLD_BEST_SAIL";
+        case SailboatControlModes::HOLD_HEADING: return "HOLD_HEADING";
+        case SailboatControlModes::HOLD_HEADING_AND_BEST_SAIL: return "HOLD_HEADING_AND_BEST_SAIL";
+        case SailboatControlModes::WAYPOINT_MISSION: return "WAYPOINT_MISSION";
+        case SailboatControlModes::EMERGENCY_STOP: return "EMERGENCY_STOP";
     }
     return "DISABLED";
 }
 
-std::string to_string(SailboatStates state) {
+std::string to_string(SailboatAutopilotStates state) {
     switch(state) {
-        case SailboatStates::NORMAL: return "NORMAL";
-        case SailboatStates::CW_TACKING: return "CW_TACKING";
-        case SailboatStates::CCW_TACKING: return "CCW_TACKING";
-        case SailboatStates::STALL: return "STALL";
+        case SailboatAutopilotStates::NA: return "NA";
+        case SailboatAutopilotStates::DOWNWIND_SAILING: return "DOWNWIND_SAILING";
+        case SailboatAutopilotStates::PORT_TACK: return "PORT_TACK";
+        case SailboatAutopilotStates::STARBOARD_TACK: return "STARBOARD_TACK";
+        case SailboatAutopilotStates::CW_TACKING: return "CW_TACKING";
+        case SailboatAutopilotStates::CCW_TACKING: return "CCW_TACKING";
+        case SailboatAutopilotStates::STALL_WIGGLE_TO_PORT_TACK: return "STALL_WIGGLE_TO_PORT_TACK";
+        case SailboatAutopilotStates::STALL_WIGGLE_TO_STARBOARD_TACK: return "STALL_WIGGLE_TO_STARBOARD_TACK";
     }
-    return "NORMAL";
+    return "NA";
 }
 
 
 bool check_float_equivalence(float f1, float f2) {
-    return std::abs(f1 - f2) <= 0.01f;
+    return std::abs(f1 - f2) <= 0.001f;
 }
 
 std::pair<float, float> cartesian_vector_to_polar(float x, float y) {
@@ -114,6 +120,7 @@ bool does_line_violate_no_sail_zone(
 
     // Upwind angle is opposite to wind
     float upwind_angle = std::fmod(global_true_wind_angle + 180.0f, 360.0f);
+    if (upwind_angle < 0.0f) upwind_angle += 360.0f;
     float upwind_angle_radians = upwind_angle * static_cast<float>(M_PI) / 180.0f;
 
     std::array<float, 2> upwind_vector = {std::cos(upwind_angle_radians), std::sin(upwind_angle_radians)};
@@ -130,27 +137,52 @@ bool does_line_segment_intersect_circle(
     const std::array<float, 2>& circle_position,
     float circle_radius
 ) {
+    if (circle_radius <= 0.0f) {
+        throw std::invalid_argument("Circle radius must be positive.");
+    }
+
     float dx = line_end[0] - line_start[0];
     float dy = line_end[1] - line_start[1];
 
-    float fx = line_end[0] - circle_position[0];
-    float fy = line_end[1] - circle_position[1];
+    float fx = line_start[0] - circle_position[0];
+    float fy = line_start[1] - circle_position[1];
 
     float a = dx*dx + dy*dy;
-    float b = 2 * (fx*dx + fy*dy);
-    float c = (fx*fx + fy*fy) - circle_radius*circle_radius;
+    float ff = fx*fx + fy*fy;
+    float r2 = circle_radius * circle_radius;
 
-    float discriminant = b*b - 4*a*c;
+    if (ff <= r2) return true;
+    if (a == 0.0f) return ff <= r2;
 
-    if (discriminant < 0) return false;
+    float b = 2.0f * (fx*dx + fy*dy);
+    float c = ff - r2;
+
+    float discriminant = b*b - 4.0f*a*c;
+
+    if (discriminant < 0.0f) return false;
 
     discriminant = std::sqrt(discriminant);
-    float t1 = (-b - discriminant) / (2 * a);
-    float t2 = (-b + discriminant) / (2 * a);
+    float t1 = (-b - discriminant) / (2.0f * a);
+    float t2 = (-b + discriminant) / (2.0f * a);
 
-    // Check if the intersection points are within the line segment [0, 1]
-    if (t1 >= 0 && t1 <= 1) return true;
-    if (t2 >= 0 && t2 <= 1) return true;
+    return (t1 >= 0.0f && t1 <= 1.0f) || (t2 >= 0.0f && t2 <= 1.0f);
+}
 
-    return false;
+bool is_angle_between_boundaries_with_hysteresis(
+    float angle, float boundary1, float boundary2,
+    bool biased_side, float hysteresis_amount
+) {
+    float test_angle1 = std::fmod(angle + hysteresis_amount, 360.0f);
+    if (test_angle1 < 0) test_angle1 += 360.0f;
+    float test_angle2 = std::fmod(angle - hysteresis_amount, 360.0f);
+    if (test_angle2 < 0) test_angle2 += 360.0f;
+
+    bool is_test_angle1_between_boundaries = is_angle_between_boundaries(test_angle1, boundary1, boundary2);
+    bool is_test_angle2_between_boundaries = is_angle_between_boundaries(test_angle2, boundary1, boundary2);
+
+    if (!biased_side) {
+        return is_test_angle1_between_boundaries && is_test_angle2_between_boundaries;
+    } else {
+        return is_test_angle1_between_boundaries || is_test_angle2_between_boundaries;
+    }
 }

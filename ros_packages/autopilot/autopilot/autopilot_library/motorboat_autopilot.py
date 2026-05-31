@@ -196,7 +196,7 @@ class MotorboatAutopilot:
         return float(np.clip(rpm_output, min_rpm, max_rpm))
 
 
-    def run_waypoint_mission_step(self, current_position: Position, heading: float) -> tuple[float, float]:
+    def run_waypoint_mission_step(self, current_position: Position, heading: float) -> tuple[float, float | None]:
         """
         Runs a single step of the waypoint mission algorithm to get the optimal propeller RPM
         and rudder angle to get to the next waypoint autonomously.
@@ -214,11 +214,13 @@ class MotorboatAutopilot:
 
         Returns
         -------
-        tuple[float, float]
+        tuple[float, float | None]
             tuple of the form ```(propeller_rpm, rudder_angle)``` that the autopilot believes that we should take.
+            The rudder angle is None if there are no waypoints loaded into the autopilot or we have reached the final waypoint
         """
 
         if not self.waypoints:
+            return 0.0, None
             raise Exception("Expected route to be loaded into the autopilot. Field self.waypoints was not filled")
 
         desired_position = self.waypoints[self.current_waypoint_index]
@@ -235,7 +237,7 @@ class MotorboatAutopilot:
 
             if len(self.waypoints) <= self.current_waypoint_index + 1: # Has Reached The Final Waypoint
                 self.reset()
-                return 0.0, 0.0
+                return 0.0, None
 
             self.current_waypoint_index += 1
             desired_position = self.waypoints[self.current_waypoint_index]

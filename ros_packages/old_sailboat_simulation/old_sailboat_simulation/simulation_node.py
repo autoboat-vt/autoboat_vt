@@ -46,7 +46,7 @@ def generate_wind_real_life_data(_) -> np.ndarray[np.float64]:
     generated_wind = np.array([np.cos(random_angle), np.sin(random_angle)]) * (
         min(WIND_SPEED, 2.5) + random.gauss(sigma=0.3, mu=0)
     )
-    
+
     return generated_wind
 
 
@@ -75,8 +75,8 @@ def generate_wind_upwind(_) -> np.ndarray[np.float64]:
 
 
 
-# WIND_GENERATION_FUNCTION = generate_wind_real_life_data
-WIND_GENERATION_FUNCTION = generate_wind_randomized
+WIND_GENERATION_FUNCTION = generate_wind_real_life_data
+# WIND_GENERATION_FUNCTION = generate_wind_randomized
 
 
 
@@ -96,7 +96,6 @@ class SimulationNode(Node):
 
     """
 
-
     def __init__(self):
         global sim_time
 
@@ -115,7 +114,7 @@ class SimulationNode(Node):
         self.create_subscription(Bool, "/should_terminate", self.should_terminate_callback, 10)
 
         self.get_logger().info(
-            f"Creating simulation docker container. If this is your first time running the simulation, this may take a while because it needs to download the docker image. Please wait..."
+            "Creating simulation docker container. If this is your first time running the simulation, this may take a while because it needs to download the docker image. Please wait..."
         )
 
         self.env = gym.make(
@@ -128,7 +127,7 @@ class SimulationNode(Node):
         )
 
         self.get_logger().info(
-            f"Finished creating the simulation docker container! Please launch the groundstation to interact with the simulation"
+            "Finished creating the simulation docker container! Please launch the groundstation to interact with the simulation"
         )
 
         self.env.NB_STEPS_PER_SECONDS = 1000
@@ -166,7 +165,7 @@ class SimulationNode(Node):
 
     def desired_sail_angle_callback(self, desired_sail_angle_message: Float32):
         """
-        the simulation measures the sail angle from -90 to 90 degrees, and will attempt to move the sail to that angle
+        The simulation measures the sail angle from -90 to 90 degrees, and will attempt to move the sail to that angle
         however, the way our boat in real life works is that we can only tell the sail to go from 0 to 90 degrees,
         and the direction of the wind will decide whether or not that will be 0 to 90 or 0 to -90.
         If the wind is blowing to the boat's right hand side, then the sail will automatically go to the right side of the boat,

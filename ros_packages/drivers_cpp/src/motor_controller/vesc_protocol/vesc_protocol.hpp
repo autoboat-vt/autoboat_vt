@@ -25,7 +25,8 @@ struct TelemetryData {
     float tempMotor;
     float pidPos;
     uint8_t id;
-    mc_fault_code error; 
+    mc_fault_code error;
+    int32_t time_ms; 
 };
 
 struct NunchuckData {

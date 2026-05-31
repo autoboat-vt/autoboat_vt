@@ -53,7 +53,7 @@
     },
     "rudder_hard_over": {
         "default": 25.0,
-        "description": "Hard over default for the rudder control, in radians."
+        "description": "Hard over default for the rudder control, in degrees."
     },
     "heading_p_gain": {
         "default": 0.3,
@@ -70,5 +70,17 @@
     "heading_n_gain": {
         "default": 0.0,
         "description": "N gain for heading control."
+    },
+    "hysteresis_amount_angles": {
+        "default": 5.0,
+        "description": "The amount of hysteresis to have for sailboat autopilot state transitions that depend on checking angular values."
+    },
+    "max_no_sail_zone_time": {
+      "default": 5.0,
+      "description": "The amount of time in seconds the boat has to stay in the no sail zone to trigger a stall."
+    },
+    "sail_angle_when_wiggling_out_of_no_sail_zone": {
+      "default": 30.0,
+      "description": "The sail angle the boat should hold when trying to wiggle out of the no sail zone"
     }
 }

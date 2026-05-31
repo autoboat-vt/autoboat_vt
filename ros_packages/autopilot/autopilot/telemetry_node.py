@@ -72,6 +72,10 @@ class TelemetryNode(Node):
         self.apparent_wind_speed: float = 0.0
         self.apparent_wind_angle: float = 0.0
 
+        self.true_wind_vector: npt.NDArray[np.float64] = np.zeros(2, dtype=np.float64)
+        self.true_wind_speed: float = 0.0
+        self.true_wind_angle: float = 0.0
+
         self.base64_encoded_current_rgb_image: str = None
 
         self.vesc_telemetry_data_rpm: float = 0.0
@@ -178,7 +182,6 @@ class TelemetryNode(Node):
         """
 
         instance_id: int = ""
-        print("TODO MAKE SURE INSTANCE ID TYPE IS CORRECT:")
 
         if telemetry_node_mode == TelemetryNodeModes.SAILBOAT:
             boat_status_mapping = SailboatStatusPayload.construct_mapping()
@@ -198,7 +201,6 @@ class TelemetryNode(Node):
                 continue
 
             instance_id = response
-            print(f"instance id: {instance_id}")
 
             # set username
             username = os.environ.get("USER", default="Unkown User")
@@ -640,8 +642,15 @@ class TelemetryNode(Node):
             The constructed boat status payload. Returns ``None`` if the boat is not in
             either sailboat or motorboat mode, but this should never happen.
         """
-        true_wind_vector = self.apparent_wind_vector + self.velocity_vector
-        self.true_wind_speed, self.true_wind_angle = cartesian_vector_to_polar(true_wind_vector[0], true_wind_vector[1])
+
+        # TODO MAKE SURE THIS MATH IS RIGHT
+        speed, velocity_angle = cartesian_vector_to_polar(self.velocity_vector[0], self.velocity_vector[1])
+        global_velocity_angle = (velocity_angle - self.heading) % 360
+
+        local_velocity_vector = [speed * np.cos(global_velocity_angle), speed * np.sin(global_velocity_angle)]
+
+        self.true_wind_vector = self.apparent_wind_vector + local_velocity_vector
+        self.true_wind_speed, self.true_wind_angle = cartesian_vector_to_polar(self.true_wind_vector[0], self.true_wind_vector[1])
 
         if self.current_waypoints != [] and self.current_waypoint_index < len(self.current_waypoints):
             current_position = Position(

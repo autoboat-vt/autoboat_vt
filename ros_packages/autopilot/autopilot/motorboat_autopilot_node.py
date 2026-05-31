@@ -288,10 +288,10 @@ class MotorboatAutopilotNode(Node):
         then we need to emergency stop the boat until the emergency stop is
         turned to 'false'.
         """
-        if should_emergency_stop and self.motorboat_control_mode == MotorboatControlModes.WAYPOINT_MISSION:
+        if should_emergency_stop.data and self.motorboat_control_mode == MotorboatControlModes.WAYPOINT_MISSION:
             self.motorboat_control_mode = MotorboatControlModes.EMERGENCY_STOP
 
-        else:
+        elif not should_emergency_stop.data:
             self.motorboat_control_mode = MotorboatControlModes.WAYPOINT_MISSION
 
 
@@ -363,7 +363,9 @@ class MotorboatAutopilotNode(Node):
         # Now that we are done computing what the autopilot should do, publish everything to their respective topics
 
         self.propeller_motor_control_struct_publisher.publish(desired_vesc_control_struct)
-        self.desired_rudder_angle_publisher.publish(Float32(data=float(desired_rudder_angle)))
+
+        if desired_rudder_angle is not None:
+            self.desired_rudder_angle_publisher.publish(Float32(data=float(desired_rudder_angle)))
 
         if self.should_zero_encoder:
             self.zero_rudder_encoder_publisher.publish(Bool(data=self.should_zero_encoder))

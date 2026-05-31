@@ -19,7 +19,7 @@ from .autopilot_library.utils.constants import (
     SailboatControlModes,
 )
 from .autopilot_library.utils.position import Position
-from .autopilot_library.utils.utils_function_library import cartesian_vector_to_polar, get_bearing
+from .autopilot_library.utils.utils_function_library import cartesian_vector_to_polar
 
 
 class SailboatAutopilotNode(Node):
@@ -65,6 +65,7 @@ class SailboatAutopilotNode(Node):
         self.create_subscription(Float32, "/heading", self.heading_callback, qos_profile_sensor_data)
         self.create_subscription(Vector3, "/apparent_wind_vector", self.apparent_wind_vector_callback, qos_profile_sensor_data)
         self.create_subscription(RCData, "/rc_data", self.rc_data_callback, qos_profile_sensor_data)
+        self.create_subscription(Bool, "/object_detection_emergency_stop", self.emergency_stop_callback, 10)
 
         self.current_waypoint_index_publisher = self.create_publisher(Int32, "/current_waypoint_index", 10)
         self.boat_control_mode_publisher = self.create_publisher(String, "/boat_control_mode", qos_profile_sensor_data)
@@ -87,11 +88,13 @@ class SailboatAutopilotNode(Node):
         self.sail_angle: float = 0.0
         self.rudder_angle: float = 0.0
 
-        self.should_zero_rudder_encoder = False
-        self.rudder_encoder_has_been_zeroed = False
+        self.should_zero_rudder_encoder: bool = False
+        self.rudder_encoder_has_been_zeroed: bool = False
 
-        self.should_zero_winch_encoder = False
-        self.winch_encoder_has_been_zeroed = False
+        self.should_zero_winch_encoder: bool = False
+        self.winch_encoder_has_been_zeroed: bool = False
+
+        self.heading_entered_emergency_stop_in: float | None = None
 
         # Should this be by default: SailboatAutopilotModes.Full_RC
         self.sailboat_control_mode: SailboatControlModes = SailboatControlModes.WAYPOINT_MISSION
@@ -259,12 +262,13 @@ class SailboatAutopilotNode(Node):
         If this topic has a 'true' in it, then we need to emergency stop
         the boat until the emergency stop is turned to 'false'.
         """
-        if should_emergency_stop:
-            pass # TODO
+        if should_emergency_stop.data and self.sailboat_control_mode == SailboatControlModes.WAYPOINT_MISSION:
+            self.sailboat_control_mode = SailboatControlModes.EMERGENCY_STOP
+            self.heading_entered_emergency_stop_in = self.heading
 
-        else:
-            # Handle clearing the emergency stop and continuing the autopilot
-            pass
+        elif not should_emergency_stop.data:
+            self.sailboat_control_mode = SailboatControlModes.WAYPOINT_MISSION
+            self.heading_entered_emergency_stop_in = None
 
 
 
@@ -276,14 +280,17 @@ class SailboatAutopilotNode(Node):
         Updates the sail_angle and rudder_angle topics based on the output of stepping in the autopilot controller.
         """
 
+        desired_heading: float | None = None
         desired_sail_angle: float | None = None
         desired_rudder_angle: float | None = None
 
         if self.sailboat_control_mode == SailboatControlModes.EMERGENCY_STOP:
-            desired_sail_angle, desired_rudder_angle = self.sailboat_autopilot.run_emergency_stop_step(self.apparent_wind_vector)
+            desired_sail_angle, desired_rudder_angle = self.sailboat_autopilot.run_emergency_stop_step(
+                self.heading_entered_emergency_stop_in, self.heading, self.apparent_wind_vector
+            )
 
-        if self.sailboat_control_mode == SailboatControlModes.WAYPOINT_MISSION and self.sailboat_autopilot.waypoints is not None:
-            desired_sail_angle, desired_rudder_angle = self.sailboat_autopilot.run_waypoint_mission_step(
+        elif self.sailboat_control_mode == SailboatControlModes.WAYPOINT_MISSION and self.sailboat_autopilot.waypoints is not None:
+            desired_sail_angle, desired_rudder_angle, desired_heading = self.sailboat_autopilot.run_waypoint_mission_step(
                 self.position, self.global_velocity, self.heading, self.apparent_wind_vector
             )
 
@@ -341,15 +348,8 @@ class SailboatAutopilotNode(Node):
         if self.sailboat_control_mode in (SailboatControlModes.HOLD_HEADING, SailboatControlModes.HOLD_HEADING_AND_BEST_SAIL):
             self.desired_heading_publisher.publish(Float32(data=float(self.heading_to_hold)))
 
-        elif self.sailboat_control_mode == SailboatControlModes.WAYPOINT_MISSION and self.sailboat_autopilot.waypoints is not None:
-            current_waypoint = self.sailboat_autopilot.waypoints[self.sailboat_autopilot.current_waypoint_index]
-
-            # TODO: make it so that the bearing is the actual heading the autopilot is trying to follow
-            # (this is different when tacking) when tacking, the boat is not trying to head straight towards the waypoint,
-            # but rather, it is travelling on a tacking line
-            # maybe add a new ROS topic specifically for the actual heading that the autopilot is trying to follow
-            bearing_to_waypoint = float(get_bearing(self.position, current_waypoint))
-            self.desired_heading_publisher.publish(Float32(data=bearing_to_waypoint))
+        elif self.sailboat_control_mode == SailboatControlModes.WAYPOINT_MISSION and desired_heading is not None:
+            self.desired_heading_publisher.publish(Float32(data=desired_heading))
 
         else:
             self.desired_heading_publisher.publish(Float32(data=0.0))

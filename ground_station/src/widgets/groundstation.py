@@ -27,6 +27,11 @@ from qtpy.QtWidgets import (
 from requests.exceptions import RequestException
 from syntax_highlighters import JsonHighlighter
 from utils import constants, misc, thread_classes
+from utils.constants import StrictMatchEnums
+
+MotorboatControlModes = StrictMatchEnums.MotorboatControlModes
+SailboatAutopilotStates = StrictMatchEnums.SailboatAutopilotStates
+SailboatControlModes = StrictMatchEnums.SailboatControlModes
 
 from widgets.popup_edit import TextEditWindow
 from widgets.popup_telemetry_config import EditTelemetryConfigWindow
@@ -867,18 +872,18 @@ class GroundStationWidget(QWidget):
 
         # region mode dependent print functions
         def sailboat_mode(boat_data: dict[str, Any]) -> str:
-            self.boat_data["full_autonomy_maneuver"] = constants.StrictMatchEnums.SailboatAutopilotStates(
-                boat_data["full_autonomy_maneuver"]
+            self.boat_data["boat_autopilot_state"] = SailboatAutopilotStates(
+                boat_data["boat_autopilot_state"]
             ).name
-            self.boat_data["boat_control_mode"] = constants.StrictMatchEnums.SailboatControlModes(boat_data["boat_control_mode"]).name
+            self.boat_data["boat_control_mode"] = SailboatControlModes(boat_data["boat_control_mode"]).name
 
             return (
                 "Position: "
                 f"[{self.boat_data.get('position', self.fake_position)[0]:.8f}, "
                 f"{self.boat_data.get('position', self.fake_position)[1]:.8f}]\n"
                 f"Control Mode: {self.boat_data.get('boat_control_mode', 'N/A')}\n"
+                f"Autopilot State: {self.boat_data.get('boat_autopilot_state', 'N/A')}\n"
                 f"Connection Status: {connection_status.name}\n"
-                f"Autopilot State: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
                 f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
                 f"Velocity Vector: [{fix_formatting(self.boat_data.get('velocity_x', -69.420))}, {fix_formatting(self.boat_data.get('velocity_y', -69.420))}]\n"  # noqa: E501
                 f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
@@ -899,15 +904,15 @@ class GroundStationWidget(QWidget):
 
 
         def motorboat_mode(boat_data: dict[str, Any]) -> str:
-            self.boat_data["boat_control_mode"] = constants.StrictMatchEnums.MotorboatControlModes(boat_data["boat_control_mode"]).name
+            self.boat_data["boat_control_mode"] = MotorboatControlModes(boat_data["boat_control_mode"]).name
 
             return (
                 "Position: "
                 f"{self.boat_data.get('position', self.fake_position)[0]:.8f}, "
                 f"{self.boat_data.get('position', self.fake_position)[1]:.8f}\n"
-                f"Control Mode: {self.boat_data.get('boat_control_mode', 'N/A')}\n"
+                f"Boat Control Mode: {self.boat_data.get('boat_control_mode', 'N/A')}\n"
                 f"Connection Status: {connection_status.name}\n"
-                f"Autopilot State: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
+                f"Autopilot State: {self.boat_data.get('boat_autopilot_state', 'N/A')}\n"
                 f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
                 f"Velocity Vector: [{fix_formatting(self.boat_data.get('velocity_x', -69.420))}, {fix_formatting(self.boat_data.get('velocity_y', -69.420))}]\n"  # noqa: E501
                 f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
@@ -1111,7 +1116,7 @@ class GroundStationWidget(QWidget):
             self.browser.page().runJavaScript(misc.js_load_guard("map.remove_all_svgs()"))
             self.need_to_clear_diagnostics = False
 
-        if "full_autonomy_maneuver" in self.boat_data:
+        if "desired_sail_angle" in self.boat_data:
             telemetry_text = sailboat_mode(boat_data)
 
         elif "rpm" in self.boat_data:

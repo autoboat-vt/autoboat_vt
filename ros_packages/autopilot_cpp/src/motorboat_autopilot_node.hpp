@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <tuple>
 #include <cmath>
 #include <iostream>
 #include <filesystem>
@@ -66,9 +67,8 @@ private:
 
     MotorboatAutopilot motorboat_autopilot;
     std::map<std::string, json> autopilot_parameters;
-    MotorboatAutopilotMode autopilot_mode = MotorboatAutopilotMode::Waypoint_Mission;
-    PropellerMotorControlType propeller_motor_control_mode = PropellerMotorControlType::RPM;
-    DiscretePID pid_controller;
+    MotorboatControlModes autopilot_mode = MotorboatControlModes::WAYPOINT_MISSION;
+    PropellerMotorControlMode propeller_motor_control_mode = PropellerMotorControlMode::RPM;
 
 
     rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr current_waypoint_index_publisher;
@@ -144,10 +144,12 @@ private:
     void waypoints_list_callback(const autoboat_msgs::msg::WaypointList::SharedPtr waypoint_list);
 
     /**
-     * @brief Runs one step of the autopilot control logic.
-     * @return std::pair<float, float> A pair containing the desired rudder angle and propeller RPM.
+     * @brief Callback for emergency stop.
+     * @param msg Bool message indicating if the emergency stop should be active.
      */
-    std::pair<float, float> step();
+    void emergency_stop_callback(const std_msgs::msg::Bool::SharedPtr msg);
+
+
 
     /**
      * @brief Periodically called to update ROS topics based on autopilot output.

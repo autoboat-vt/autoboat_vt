@@ -8,21 +8,8 @@ MotorboatAutopilot::MotorboatAutopilot() {}
 
 
 MotorboatAutopilot::MotorboatAutopilot(std::map<std::string, json> *autopilot_parameters_) {
-
     autopilot_parameters = autopilot_parameters_;
-    
-    rudder_angle_to_heading_pid_controller = DiscretePID(
-        1/ (*autopilot_parameters)["autopilot_refresh_rate"].get<float>(), 
-        (*autopilot_parameters)["heading_p_gain"].get<float>(), 
-        (*autopilot_parameters)["heading_i_gain"].get<float>(), 
-        (*autopilot_parameters)["heading_d_gain"].get<float>(), 
-        (*autopilot_parameters)["heading_n_gain"].get<float>()
-    );
-
-    waypoints.clear();
-    current_waypoint_index = 0;
-    rudder_angle_to_heading_pid_controller.reset();        
-
+    reset();
 }
 
 
@@ -36,9 +23,16 @@ std::vector<Position> MotorboatAutopilot::get_current_waypoints_list() const {
 
 
 void MotorboatAutopilot::reset() {
+    heading_pid_controller = DiscretePID(
+        1.0f / (*autopilot_parameters)["autopilot_refresh_rate"].get<float>(), 
+        (*autopilot_parameters)["heading_p_gain"].get<float>(), 
+        (*autopilot_parameters)["heading_i_gain"].get<float>(), 
+        (*autopilot_parameters)["heading_d_gain"].get<float>(), 
+        (*autopilot_parameters)["heading_n_gain"].get<float>()
+    );
+
     waypoints.clear();
     current_waypoint_index = 0;
-    rudder_angle_to_heading_pid_controller.reset();
 }
 
 
@@ -52,15 +46,15 @@ float MotorboatAutopilot::get_optimal_rudder_angle(float heading, float target_h
     float error = get_distance_between_angles(target_heading, heading);
 
     // Update PID gains in case they were changed via YAML/JSON
-    rudder_angle_to_heading_pid_controller.set_gains(
-        1.0 / (*autopilot_parameters)["autopilot_refresh_rate"].get<float>(), // sample_period
+    heading_pid_controller.set_gains(
+        1.0f / (*autopilot_parameters)["autopilot_refresh_rate"].get<float>(), // sample_period
         (*autopilot_parameters)["heading_p_gain"].get<float>(),
         (*autopilot_parameters)["heading_i_gain"].get<float>(),
         (*autopilot_parameters)["heading_d_gain"].get<float>(),
         (*autopilot_parameters)["heading_n_gain"].get<float>()
     );
 
-    float rudder_angle = rudder_angle_to_heading_pid_controller.step(error);
+    float rudder_angle = heading_pid_controller.step(error);
     
     return std::clamp(
         rudder_angle, 
@@ -70,25 +64,35 @@ float MotorboatAutopilot::get_optimal_rudder_angle(float heading, float target_h
 }
 
 
-std::pair<float, float> MotorboatAutopilot::run_rc_control(float joystick_left_y, float joystick_right_x) {
-    // Formula: (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
-    auto map_range = [](float value, float out_min, float out_max) {
-        return (value - (-100.0)) * (out_max - out_min) / (100.0 - (-100.0)) + out_min;
-    };
+std::tuple<std::string, float, float> MotorboatAutopilot::run_rc_control(
+    float joystick_left_y, float joystick_right_x,
+    PropellerMotorControlMode propeller_motor_control_mode
+) {
+    float min_rudder_angle = (*autopilot_parameters)["min_rudder_angle"].get<float>();
+    float max_rudder_angle = (*autopilot_parameters)["max_rudder_angle"].get<float>();
+    float desired_rudder_angle = (((joystick_right_x - -100.0f) * (max_rudder_angle - min_rudder_angle)) / (100.0f - -100.0f)) + min_rudder_angle;
 
-    float sail_angle = map_range(
-        joystick_left_y, 
-        (*autopilot_parameters)["min_sail_angle"].get<float>(), 
-        (*autopilot_parameters)["max_sail_angle"].get<float>()
-    );
-    
-    float rudder_angle = map_range(
-        joystick_right_x, 
-        (*autopilot_parameters)["min_rudder_angle"].get<float>(), 
-        (*autopilot_parameters)["max_rudder_angle"].get<float>()
-    );
+    std::string desired_vesc_control_type;
+    float desired_vesc_control_value = 0.0f;
 
-    return {sail_angle, rudder_angle};
+    if (propeller_motor_control_mode == PropellerMotorControlMode::RPM) {
+        desired_vesc_control_type = "rpm";
+        desired_vesc_control_value = 100.0f * joystick_left_y;
+    }
+    else if (propeller_motor_control_mode == PropellerMotorControlMode::DUTY_CYCLE) {
+        desired_vesc_control_type = "duty_cycle";
+        desired_vesc_control_value = joystick_left_y;
+    }
+    else if (propeller_motor_control_mode == PropellerMotorControlMode::CURRENT) {
+        desired_vesc_control_type = "current";
+        desired_vesc_control_value = joystick_left_y;
+    }
+    else {
+        desired_vesc_control_type = "rpm";
+        desired_vesc_control_value = 0.0f;
+    }
+
+    return {desired_vesc_control_type, desired_vesc_control_value, desired_rudder_angle};
 }
 
 float MotorboatAutopilot::get_optimal_rpm(float rudder_angle) {
@@ -100,9 +104,9 @@ float MotorboatAutopilot::get_optimal_rpm(float rudder_angle) {
     return std::clamp(rpm_output, min_rpm, max_rpm);
 }
 
-std::pair<float, float> MotorboatAutopilot::run_waypoint_mission_step(Position current_position, float heading) {
+std::pair<float, std::optional<float>> MotorboatAutopilot::run_waypoint_mission_step(Position current_position, float heading) {
     if (waypoints.empty()) {
-        return {0.0f, 0.0f};
+        return {0.0f, std::nullopt};
     }
 
     Position desired_position = waypoints[current_waypoint_index];
@@ -118,7 +122,7 @@ std::pair<float, float> MotorboatAutopilot::run_waypoint_mission_step(Position c
         
         if (waypoints.size() <= (size_t)(current_waypoint_index + 1)) {
             reset();
-            return {0.0f, 0.0f};
+            return {0.0f, std::nullopt};
         }
         
         current_waypoint_index++;

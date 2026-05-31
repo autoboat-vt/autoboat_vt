@@ -18,82 +18,60 @@ using json = nlohmann::json;
 
 
 /**
- * @enum SailboatAutopilotModes
+ * @enum SailboatControlModes
  * @brief Operational modes for a sailboat autopilot.
  */
-enum class SailboatAutopilotModes {
-    Disabled = 0,                     ///< Autopilot is inactive.
-    Full_RC = 1,                      ///< Remote control overrides all autonomous functions.
-    Hold_Best_Sail = 2,               ///< Automatically adjust sails for optimal trim given current wind.
-    Hold_Heading = 3,                 ///< Maintain a constant compass heading using the rudder.
-    Hold_Heading_And_Best_Sail = 4,   ///< Maintain heading while also optimizing sail trim.
-    Waypoint_Mission = 5              ///< Navigate through a sequence of waypoints autonomously.
+enum class SailboatControlModes {
+    DISABLED = 0,
+    FULL_RC = 1,
+    HOLD_BEST_SAIL = 2,
+    HOLD_HEADING = 3,
+    HOLD_HEADING_AND_BEST_SAIL = 4,
+    WAYPOINT_MISSION = 5,
+    EMERGENCY_STOP = 6
 };
 
-/**
- * @enum SailboatStates
- * @brief Internal state machine states for sailboat navigation logic.
- */
-enum class SailboatStates {
-    NORMAL = 0,       ///< Standard sailing state.
-    CW_TACKING = 1,   ///< Clockwise tacking maneuver in progress.
-    CCW_TACKING = 2,  ///< Counter-clockwise tacking maneuver in progress.
-    STALL = 3         ///< Boat has lost speed or is in irons.
+enum class SailboatAutopilotStates {
+    NA = 0,
+    DOWNWIND_SAILING = 1,
+    PORT_TACK = 2,
+    STARBOARD_TACK = 3,
+    CW_TACKING = 4,
+    CCW_TACKING = 5,
+    STALL_WIGGLE_TO_PORT_TACK = 6,
+    STALL_WIGGLE_TO_STARBOARD_TACK = 7
 };
 
-/**
- * @enum SailboatManeuvers
- * @brief Specific sailing maneuvers that the autopilot can execute.
- */
 enum class SailboatManeuvers {
-    AUTOPILOT_DISABLED = 0, ///< No maneuver active.
-    STANDARD = 1,           ///< Standard course keeping.
-    TACK = 2,               ///< Executing a tack (turning through the wind).
-    JIBE = 3                ///< Executing a jibe (turning with the wind).
+    AUTOPILOT_DISABLED = 0,
+    STANDARD = 1,
+    TACK = 2,
+    JIBE = 3
 };
 
-/**
- * @enum MotorboatAutopilotMode
- * @brief Operational modes for a motorboat autopilot.
- */
-enum class MotorboatAutopilotMode {
-    Disabled = 0,          ///< Autopilot is inactive.
-    Full_RC = 1,           ///< Remote control mode.
-    Hold_Heading = 2,      ///< Maintain a constant compass heading.
-    Waypoint_Mission = 3   ///< Navigate through a sequence of waypoints.
+enum class MotorboatControlModes {
+    DISABLED = 0,
+    FULL_RC = 1,
+    HOLD_HEADING = 2,
+    WAYPOINT_MISSION = 3,
+    EMERGENCY_STOP = 4
 };
 
-/**
- * @enum PropellerMotorControlType
- * @brief Control primitives for motorboat propulsion.
- */
-enum class PropellerMotorControlType {
-    RPM = 0,           ///< Control based on motor revolutions per minute.
-    DUTY_CYCLE = 1,    ///< Control based on Pulse Width Modulation duty cycle (0-1.0).
-    CURRENT = 2        ///< Control based on motor current in Amperes.
+enum class PropellerMotorControlMode {
+    RPM = 0,
+    DUTY_CYCLE = 1,
+    CURRENT = 2
 };
 
 
 /**
- * @brief Converts a MotorboatAutopilotMode to its string representation.
+ * @brief Converts a MotorboatControlModes to its string representation.
  * @param mode The mode to convert.
  * @return A string describing the mode.
  */
-std::string to_string(MotorboatAutopilotMode mode);
-
-/**
- * @brief Converts a SailboatAutopilotModes to its string representation.
- * @param mode The mode to convert.
- * @return A string describing the mode.
- */
-std::string to_string(SailboatAutopilotModes mode);
-
-/**
- * @brief Converts a SailboatStates to its string representation.
- * @param state The state to convert.
- * @return A string describing the state.
- */
-std::string to_string(SailboatStates state);
+std::string to_string(MotorboatControlModes mode);
+std::string to_string(SailboatControlModes mode);
+std::string to_string(SailboatAutopilotStates state);
 
 
 /**
@@ -153,6 +131,14 @@ float get_distance_between_positions(const Position& position1, const Position& 
  * @return True if the angle is within the specified sector.
  */
 bool is_angle_between_boundaries(float angle, float boundary1, float boundary2);
+
+/**
+ * @brief Checks if a given angle is between two boundaries using vector summation logic with hysteresis.
+ */
+bool is_angle_between_boundaries_with_hysteresis(
+    float angle, float boundary1, float boundary2,
+    bool biased_side = false, float hysteresis_amount = 0.0f
+);
 
 
 

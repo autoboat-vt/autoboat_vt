@@ -22,7 +22,7 @@ struct BoatStatusPayloadBase {
     float current_rudder_angle = 0;
     float rudder_angle_error = 0;
     uint8_t current_waypoint_index = 0;
-    uint8_t autopilot_mode = 0;
+    uint8_t boat_control_mode = 0;
 };
 
 struct SailboatStatusPayload : public BoatStatusPayloadBase {
@@ -33,7 +33,7 @@ struct SailboatStatusPayload : public BoatStatusPayloadBase {
     float current_sail_angle = 0;
     float desired_sail_angle = 0;
     float sail_angle_error = 0;
-    uint8_t full_autonomy_maneuver = 0;
+    uint8_t boat_autopilot_state = 0;
 };
 
 struct MotorboatStatusPayload : public BoatStatusPayloadBase {
@@ -47,7 +47,7 @@ struct MotorboatStatusPayload : public BoatStatusPayloadBase {
     float wattage_to_motor = 0;
     float motor_temperature = 0;
     float vesc_temperature = 0;
-    float time_since_vesc_startup_in_ms = 0;
+    float time_since_vesc_startup = 0;
 };
 
 #pragma pack(pop)

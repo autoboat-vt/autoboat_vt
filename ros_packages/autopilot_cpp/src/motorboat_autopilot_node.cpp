@@ -45,6 +45,7 @@ MotorboatAutopilotNode::MotorboatAutopilotNode() : Node("motorboat_autopilot_cpp
 
     sub.push_back(create_subscription<geometry_msgs::msg::Twist>("/velocity", 10, std::bind(&MotorboatAutopilotNode::velocity_callback, this, _1)));
     sub.push_back(create_subscription<autoboat_msgs::msg::RCData>("/rc_data", sensor_qos, std::bind(&MotorboatAutopilotNode::rc_data_callback, this, _1)));
+    sub.push_back(create_subscription<std_msgs::msg::Bool>("/object_detection_emergency_stop", 10, std::bind(&MotorboatAutopilotNode::emergency_stop_callback, this, _1)));
 
 
 
@@ -111,15 +112,15 @@ void MotorboatAutopilotNode::rc_data_callback(const autoboat_msgs::msg::RCData::
     if (msg->toggle_b == 1) should_propeller_motor_be_powered = false;
     else should_propeller_motor_be_powered = true;
 
-    if (msg->toggle_b == 2) autopilot_mode = MotorboatAutopilotMode::Disabled;
-    else if (msg->toggle_f == 2) autopilot_mode = MotorboatAutopilotMode::Waypoint_Mission;
-    else if (msg->toggle_f == 1) autopilot_mode = MotorboatAutopilotMode::Hold_Heading;
-    else autopilot_mode = MotorboatAutopilotMode::Full_RC;
+    if (msg->toggle_b == 2) autopilot_mode = MotorboatControlModes::DISABLED;
+    else if (msg->toggle_f == 2) autopilot_mode = MotorboatControlModes::WAYPOINT_MISSION;
+    else if (msg->toggle_f == 1) autopilot_mode = MotorboatControlModes::HOLD_HEADING;
+    else autopilot_mode = MotorboatControlModes::FULL_RC;
 
     // Control Type
-    if (msg->toggle_c == 0) propeller_motor_control_mode = PropellerMotorControlType::RPM;
-    else if (msg->toggle_c == 1) propeller_motor_control_mode = PropellerMotorControlType::DUTY_CYCLE;
-    else propeller_motor_control_mode = PropellerMotorControlType::CURRENT;
+    if (msg->toggle_c == 0) propeller_motor_control_mode = PropellerMotorControlMode::RPM;
+    else if (msg->toggle_c == 1) propeller_motor_control_mode = PropellerMotorControlMode::DUTY_CYCLE;
+    else propeller_motor_control_mode = PropellerMotorControlMode::CURRENT;
 }
 
 
@@ -179,52 +180,103 @@ void MotorboatAutopilotNode::waypoints_list_callback(const autoboat_msgs::msg::W
 
 
 
-std::pair<float, float> MotorboatAutopilotNode::step() {
-    float rpm = 0.0;
-    float rudder_angle = 0.0;
-
-    if (autopilot_mode == MotorboatAutopilotMode::Waypoint_Mission && motorboat_autopilot.get_current_waypoints_list().size() > 0) {
-        Position pos(current_longitude, current_latitude);
-        auto [res_rpm, res_rudder] = motorboat_autopilot.run_waypoint_mission_step(pos, current_heading);
-        rpm = res_rpm;
-        rudder_angle = res_rudder;
+void MotorboatAutopilotNode::emergency_stop_callback(const std_msgs::msg::Bool::SharedPtr msg) {
+    if (msg->data && autopilot_mode == MotorboatControlModes::WAYPOINT_MISSION) {
+        autopilot_mode = MotorboatControlModes::EMERGENCY_STOP;
+    } else if (!msg->data) {
+        autopilot_mode = MotorboatControlModes::WAYPOINT_MISSION;
     }
-
-    else if (autopilot_mode == MotorboatAutopilotMode::Hold_Heading) {
-        rudder_angle = motorboat_autopilot.get_optimal_rudder_angle(current_heading, heading_to_hold);
-    }
-
-    else if (autopilot_mode == MotorboatAutopilotMode::Full_RC) {
-        auto [_, res_rudder] = motorboat_autopilot.run_rc_control(joystick_left_y, joystick_right_x);
-        rudder_angle = res_rudder;
-    }
-
-    return {rudder_angle, rpm};
 }
 
 
 void MotorboatAutopilotNode::update_ros_topics() {
+    std::optional<float> desired_rudder_angle = 0.0f;
+    std::string desired_vesc_control_type = "rpm";
+    float desired_vesc_control_value = 0.0f;
 
-    // Publish mode and telemetry info
+    // Disconnect Safety Check
+    auto now = this->get_clock()->now();
+    double rc_dt = (now - last_rc_data_time).seconds();
+    double gps_dt = (now - last_gps_position_received_time).seconds();
+    double heading_dt = (now - last_heading_received_time).seconds();
+
+    bool has_rc_disconnected = rc_dt >= autopilot_parameters["rc_data_failsafe_time"].get<double>();
+    bool has_gps_disconnected = gps_dt >= autopilot_parameters["gps_position_failsafe_time"].get<double>();
+    bool has_heading_disconnected = heading_dt >= autopilot_parameters["heading_data_failsafe_time"].get<double>();
+    bool has_sensor_disconnected = has_rc_disconnected || has_gps_disconnected || has_heading_disconnected;
+
+    if (has_sensor_disconnected) {
+        RCLCPP_INFO(this->get_logger(), "has sensor disconnected: %d", has_sensor_disconnected);
+        RCLCPP_INFO(this->get_logger(), "has remote controller disconnected: %d", has_rc_disconnected);
+        RCLCPP_INFO(this->get_logger(), "has gps disconnected: %d", has_gps_disconnected);
+        RCLCPP_INFO(this->get_logger(), "has heading disconnected: %d", has_heading_disconnected);
+
+        desired_vesc_control_type = "rpm";
+        desired_vesc_control_value = 0.0f;
+        desired_rudder_angle = 0.0f;
+    }
+    else if (autopilot_mode == MotorboatControlModes::EMERGENCY_STOP) {
+        desired_vesc_control_type = "rpm";
+        desired_vesc_control_value = 0.0f;
+        desired_rudder_angle = autopilot_parameters["rudder_hard_over"].get<float>();
+    }
+    else if (autopilot_mode == MotorboatControlModes::WAYPOINT_MISSION) {
+        Position pos(current_longitude, current_latitude);
+        auto [desired_rpm, desired_rudder] = motorboat_autopilot.run_waypoint_mission_step(pos, current_heading);
+        desired_vesc_control_type = "rpm";
+        desired_vesc_control_value = desired_rpm;
+        desired_rudder_angle = desired_rudder;
+    }
+    else if (autopilot_mode == MotorboatControlModes::HOLD_HEADING) {
+        desired_rudder_angle = motorboat_autopilot.get_optimal_rudder_angle(current_heading, heading_to_hold);
+        auto [vesc_type, vesc_val, _] = motorboat_autopilot.run_rc_control(
+            joystick_left_y, joystick_right_x, propeller_motor_control_mode
+        );
+        desired_vesc_control_type = vesc_type;
+        desired_vesc_control_value = vesc_val;
+    }
+    else if (autopilot_mode == MotorboatControlModes::FULL_RC) {
+        auto [vesc_type, vesc_val, desired_rudder] = motorboat_autopilot.run_rc_control(
+            joystick_left_y, joystick_right_x, propeller_motor_control_mode
+        );
+        desired_vesc_control_type = vesc_type;
+        desired_vesc_control_value = vesc_val;
+        desired_rudder_angle = desired_rudder;
+    }
+    else {
+        desired_vesc_control_type = "rpm";
+        desired_vesc_control_value = 0.0f;
+        desired_rudder_angle = 0.0f;
+    }
+
+    // Now publish to respective topics
+    propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
+        .set__control_type_for_vesc(desired_vesc_control_type)
+        .set__control_value(desired_vesc_control_value)
+    );
+
+    if (desired_rudder_angle.has_value()) {
+        desired_rudder_angle_publisher->publish(std_msgs::msg::Float32().set__data(*desired_rudder_angle));
+    }
+
+    if (should_zero_encoder) {
+        zero_rudder_encoder_publisher->publish(std_msgs::msg::Bool().set__data(true));
+        encoder_has_been_zeroed = true;
+        should_zero_encoder = false; // Reset flag after publishing
+    }
+
+    should_propeller_motor_be_powered_publisher->publish(std_msgs::msg::Bool().set__data(should_propeller_motor_be_powered));
+
     current_waypoint_index_publisher->publish(std_msgs::msg::Int32().set__data(motorboat_autopilot.get_current_waypoint_index()));
 
     autopilot_mode_publisher->publish(std_msgs::msg::UInt8().set__data(static_cast<uint8_t>(autopilot_mode)));
 
-
-    // TODO LOOK INTO WHY WE ARE SENDING THIS AT ALL FOR THE MOTORBOAT AUTOPILOT NODE
     full_autonomy_maneuver_publisher->publish(std_msgs::msg::UInt8().set__data(255));
 
-    // Calculate Rudder Angle and Desired RPM based on Autopilot
-    auto [desired_rudder_angle, desired_rpm] = step();
-
-
-    desired_rudder_angle_publisher->publish(std_msgs::msg::Float32().set__data(desired_rudder_angle));
-
-    // Publish Current Target Heading for Telemetry
-    if (autopilot_mode == MotorboatAutopilotMode::Hold_Heading) {
+    if (autopilot_mode == MotorboatControlModes::HOLD_HEADING) {
         desired_heading_publisher->publish(std_msgs::msg::Float32().set__data(heading_to_hold));
     }
-    else if (autopilot_mode == MotorboatAutopilotMode::Waypoint_Mission && motorboat_autopilot.get_current_waypoints_list().size() > 0) {
+    else if (autopilot_mode == MotorboatControlModes::WAYPOINT_MISSION && motorboat_autopilot.get_current_waypoints_list().size() > 0) {
         Position pos(current_longitude, current_latitude);
         int waypoint_index = motorboat_autopilot.get_current_waypoint_index();
         auto waypoints_list = motorboat_autopilot.get_current_waypoints_list();
@@ -240,72 +292,7 @@ void MotorboatAutopilotNode::update_ros_topics() {
     else {
         desired_heading_publisher->publish(std_msgs::msg::Float32().set__data(0.0f));
     }
-
-
-    // Disconnect Safety Check
-    auto now = this->get_clock()->now();
-    double rc_dt = (now - last_rc_data_time).seconds();
-    double gps_dt = (now - last_gps_position_received_time).seconds();
-    double heading_dt = (now - last_heading_received_time).seconds();
-
-    bool has_rc_disconnected = rc_dt >= autopilot_parameters["rc_data_failsafe_time"].get<double>();
-    bool has_gps_disconnected = gps_dt >= autopilot_parameters["gps_position_failsafe_time"].get<double>();
-    bool has_heading_disconnected = heading_dt >= autopilot_parameters["heading_data_failsafe_time"].get<double>();
-    bool has_sensor_disconnected = has_rc_disconnected || has_gps_disconnected || has_heading_disconnected;
-
-    if (has_sensor_disconnected) {
-        propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
-            .set__control_type_for_vesc("rpm")
-            .set__control_value(0.0)
-        );
-    }
-    else if (autopilot_mode == MotorboatAutopilotMode::Full_RC || autopilot_mode == MotorboatAutopilotMode::Hold_Heading) {
-        if (propeller_motor_control_mode == PropellerMotorControlType::RPM) {
-            propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
-                .set__control_type_for_vesc("rpm")
-                .set__control_value(100.0 * joystick_left_y)
-            );
-        }
-        else if (propeller_motor_control_mode == PropellerMotorControlType::DUTY_CYCLE) {
-            propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
-                .set__control_type_for_vesc("duty_cycle")
-                .set__control_value(joystick_left_y)
-            );
-        }
-        else if (propeller_motor_control_mode == PropellerMotorControlType::CURRENT) {
-            propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
-                .set__control_type_for_vesc("current")
-                .set__control_value(joystick_left_y)
-            );
-        }
-    }
-    else if (autopilot_mode == MotorboatAutopilotMode::Waypoint_Mission) {
-        propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
-            .set__control_type_for_vesc("rpm")
-            .set__control_value(desired_rpm)
-        );
-    }
-    else {
-        propeller_motor_control_struct_publisher->publish(autoboat_msgs::msg::VESCControlData()
-            .set__control_type_for_vesc("rpm")
-            .set__control_value(0.0)
-        );
-    }
-
-
-    // Zero Encoder Handling
-    if (should_zero_encoder) {
-        zero_rudder_encoder_publisher->publish(std_msgs::msg::Bool().set__data(true));
-        encoder_has_been_zeroed = true;
-        should_zero_encoder = false; // Reset flag after publishing
-    }
-
-
-    // Should Propeller Motor Be Powered
-    should_propeller_motor_be_powered_publisher->publish(std_msgs::msg::Bool().set__data(should_propeller_motor_be_powered));
 }
-
-
 
 
 int main(int argc, char **argv) {
