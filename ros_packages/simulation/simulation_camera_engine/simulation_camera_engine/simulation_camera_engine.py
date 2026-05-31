@@ -89,7 +89,7 @@ class SimulationCameraEngine(Node):
             # "Z" (third element) is the distance straight out of the camera, "X" (first element) is the distance to the left
             # of where the camera is facing, and "Y" (second element) is the distance above where the camera is facing.
             # This way, the vector simply reads [x, y, z].
-            # TL:DR we are just transforming FLU to LUF coordinate scheme
+            # TL:DR we are just transforming FLU to LUF coordinate scheme (forward, left, up to left, up, forward)
             object_location_relative_to_camera = [
                 object_location_relative_to_camera[1],  # distance to the left of where the camera is facing
                 object_location_relative_to_camera[2],  # distance above where the camera is facing
@@ -99,6 +99,9 @@ class SimulationCameraEngine(Node):
 
             # This is the classic perspective projection formula found here:
             # https://www.scratchapixel.com/lessons/3d-basic-rendering/perspective-and-orthographic-projection-matrix/building-basic-perspective-projection-matrix.html
+            # If you would like a slightly more advanced/ rigorous perspective, I would recommend looking at MIT's textbook where
+            # they represent perspective projection as a homography transformation using homogeneous matrices/ coordinates:
+            # https://visionbook.mit.edu/imaging_geometry.html
             f = self.camera_focal_length_meter
             x = object_location_relative_to_camera[0]
             y = object_location_relative_to_camera[1]
@@ -123,7 +126,9 @@ class SimulationCameraEngine(Node):
             ):
                 continue
 
-            # Shift X so 0 is the left edge and shift Y so 0 is the top edge which is the standard coordinate scheme
+            # Shift X so 0 is the left edge and shift Y so 0 is the top edge which is the standard coordinate scheme\
+            # This is the standard top left coordinate scheme for pixel indices
+            # See: Figure 39.5 Convention 2 (n, m) coordinates https://visionbook.mit.edu/imaging_geometry.html#from-meters-to-pixels
             standard_pixel_x = (self.camera_number_of_pixels_along_width / 2) - object_pixel_location_x
             standard_pixel_y = (self.camera_number_of_pixels_along_height / 2) - object_pixel_location_y
 

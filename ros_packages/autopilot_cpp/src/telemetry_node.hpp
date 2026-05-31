@@ -12,6 +12,8 @@
 #include <autoboat_msgs/msg/waypoint_list.hpp>
 #include <autoboat_msgs/msg/vesc_telemetry_data.hpp>
 
+#include <sensor_msgs/msg/image.hpp>
+#include <opencv2/opencv.hpp>
 #include <nlohmann/json.hpp>
 #include <cpr/cpr.h>
 
@@ -26,6 +28,7 @@
 
 #include "autopilot_library/telemetry_payloads.hpp"
 #include "autopilot_library/geographic_function_library.hpp"
+#include "autopilot_library/autopilot_utils.hpp"
 
 using json = nlohmann::json;
 
@@ -146,6 +149,17 @@ private:
     void apparent_wind_callback(const geometry_msgs::msg::Vector3::SharedPtr msg);
 
     /**
+     * @brief Callback for camera image updates.
+     * @param msg The Image message.
+     */
+    void camera_rgb_image_callback(const sensor_msgs::msg::Image::SharedPtr msg);
+
+    /**
+     * @brief Encodes raw bytes to base64 string.
+     */
+    std::string base64_encode(const unsigned char* bytes_to_encode, unsigned int in_len);
+
+    /**
      * @brief Callback for VESC telemetry data.
      * @param msg The VESCTelemetryData message.
      */
@@ -222,6 +236,7 @@ private:
     float current_sail_angle = 0.0f, current_rudder_angle = 0.0f;
     int current_waypoint_index = 0;
     uint8_t autopilot_mode = 0, full_autonomy_maneuver = 0;
+    std::string base64_encoded_current_rgb_image;
     std::vector<std::pair<double,double>> current_waypoints_list;
 
     float vesc_rpm = 0, vesc_duty_cycle = 0, vesc_amp_hours = 0, vesc_amp_hours_charged = 0;

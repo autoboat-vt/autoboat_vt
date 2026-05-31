@@ -17,7 +17,7 @@
     },
     "rudder_hard_over": {
         "default": 25.0,
-        "description": "Hard over default for the rudder control, in radians."
+        "description": "This is the angle to turn to whenever we need to execute a 'hardover' maneuever. IE we need to turn as quickly as possible."
     },
     "heading_p_gain": {
         "default": 0.3,

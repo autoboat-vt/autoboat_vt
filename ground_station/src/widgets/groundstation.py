@@ -27,6 +27,11 @@ from qtpy.QtWidgets import (
 from requests.exceptions import RequestException
 from syntax_highlighters import JsonHighlighter
 from utils import constants, misc, thread_classes
+from utils.constants import StrictMatchEnums
+
+MotorboatControlModes = StrictMatchEnums.MotorboatControlModes
+SailboatAutopilotStates = StrictMatchEnums.SailboatAutopilotStates
+SailboatControlModes = StrictMatchEnums.SailboatControlModes
 
 from widgets.popup_edit import TextEditWindow
 from widgets.popup_telemetry_config import EditTelemetryConfigWindow
@@ -149,10 +154,10 @@ class GroundStationWidget(QWidget):
         # region middle sections
         self.browser = QWebEngineView()
         self.browser.setPage(constants.MAP_PAGE)
-        
+
         self.browser.setMinimumWidth(self.middle_width_min)
         self.browser.setMaximumWidth(self.middle_width_max)
-        
+
         self.middle_layout.addWidget(self.browser, 0, 1)
         self.middle_layout.setRowStretch(0, 1)
 
@@ -358,13 +363,13 @@ class GroundStationWidget(QWidget):
                     )
                 else:
                     print(f"[Info] Fetched waypoints from server: {remote_waypoints}")
-                
+
                 existing_waypoints = self.waypoints.copy()
                 self.browser.page().runJavaScript(misc.js_load_guard("map.clear_waypoints()"))
 
                 for waypoint in remote_waypoints:
                     self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"))
-                
+
                 self.browser.page().runJavaScript(misc.js_load_guard("map.change_color_waypoints('red')"))
 
                 for waypoint in existing_waypoints:
@@ -413,7 +418,7 @@ class GroundStationWidget(QWidget):
 
         self.start_data_logging_button.setDisabled(True)
         self.stop_data_logging_button.setDisabled(False)
-        
+
         print("[Info] Data logging started.")
 
     @Slot()
@@ -428,7 +433,7 @@ class GroundStationWidget(QWidget):
 
         non_compressed_path = Path(constants.SM.read("data_log_file_path"))
         file_size = os.path.getsize(non_compressed_path) / (1024 * 1024)
-        
+
         if file_size > 20:
             compressed_file_path = Path(constants.SM.read("data_log_file_path").replace(".csv", ".csv.gz"))
 
@@ -527,7 +532,7 @@ class GroundStationWidget(QWidget):
             print(f"[Error] Failed to save buoy data: {e}")
 
         print(f"[Info] Buoy data saved to {file_path}")
-    
+
     @Slot()
     def load_buoy_data(self) -> None:
         """
@@ -740,12 +745,12 @@ class GroundStationWidget(QWidget):
 
                 for waypoint in self.waypoints:
                     self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"))
-                
+
                 self.browser.page().runJavaScript(misc.js_load_guard("map.change_color_waypoints('red')"))
 
                 for waypoint in not_uploaded_waypoints:
                     self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"))
-                
+
                 print("[Info] Local waypoints updated from telemetry server.")
 
             else:
@@ -798,7 +803,7 @@ class GroundStationWidget(QWidget):
 
                 if new_url:
                     print(f"[Info] Changed telemetry server URL to {new_url}, was {constants.SM.read('telemetry_server_url')}.")
-                    
+
                     constants.SM.write("telemetry_server_url", new_url)
                     tmp_dict = {}
                     for endpoint, value in constants.SM.read("telemetry_server_endpoints").items():
@@ -867,27 +872,27 @@ class GroundStationWidget(QWidget):
 
         # region mode dependent print functions
         def sailboat_mode(boat_data: dict[str, Any]) -> str:
-            self.boat_data["full_autonomy_maneuver"] = constants.StrictMatchEnums.SailboatStates(
-                boat_data["full_autonomy_maneuver"]
+            self.boat_data["boat_autopilot_state"] = SailboatAutopilotStates(
+                boat_data["boat_autopilot_state"]
             ).name
-            self.boat_data["autopilot_mode"] = constants.StrictMatchEnums.SailboatAutopilotMode(boat_data["autopilot_mode"]).name
+            self.boat_data["boat_control_mode"] = SailboatControlModes(boat_data["boat_control_mode"]).name
 
             return (
                 "Position: "
                 f"[{self.boat_data.get('position', self.fake_position)[0]:.8f}, "
                 f"{self.boat_data.get('position', self.fake_position)[1]:.8f}]\n"
-                f"State: {self.boat_data.get('autopilot_mode', 'N/A')}\n"
+                f"Control Mode: {self.boat_data.get('boat_control_mode', 'N/A')}\n"
+                f"Autopilot State: {self.boat_data.get('boat_autopilot_state', 'N/A')}\n"
                 f"Connection Status: {connection_status.name}\n"
-                f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
                 f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
                 f"Velocity Vector: [{fix_formatting(self.boat_data.get('velocity_x', -69.420))}, {fix_formatting(self.boat_data.get('velocity_y', -69.420))}]\n"  # noqa: E501
                 f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
                 f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
-                f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
                 f"True Wind Speed: {fix_formatting(self.boat_data.get('true_wind_speed'))} knots\n"
                 f"True Wind Angle: {fix_formatting(self.boat_data.get('true_wind_angle'))}°\n"
                 f"Apparent Wind Speed: {fix_formatting(self.boat_data.get('apparent_wind_speed'))} knots\n"
                 f"Apparent Wind Angle: {fix_formatting(self.boat_data.get('apparent_wind_angle'))}°\n"
+                f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
                 f"Desired Heading: {fix_formatting(self.boat_data.get('desired_heading'))}°\n"
                 f"Desired Sail Angle: {fix_formatting(self.boat_data.get('desired_sail_angle'))}°\n"
                 f"Current Sail Angle: {fix_formatting(self.boat_data.get('current_sail_angle'))}°\n"
@@ -899,15 +904,15 @@ class GroundStationWidget(QWidget):
 
 
         def motorboat_mode(boat_data: dict[str, Any]) -> str:
-            self.boat_data["autopilot_mode"] = constants.StrictMatchEnums.MotorboatAutopilotMode(boat_data["autopilot_mode"]).name
+            self.boat_data["boat_control_mode"] = MotorboatControlModes(boat_data["boat_control_mode"]).name
 
             return (
                 "Position: "
                 f"{self.boat_data.get('position', self.fake_position)[0]:.8f}, "
                 f"{self.boat_data.get('position', self.fake_position)[1]:.8f}\n"
-                f"State: {self.boat_data.get('autopilot_mode', 'N/A')}\n"
+                f"Boat Control Mode: {self.boat_data.get('boat_control_mode', 'N/A')}\n"
                 f"Connection Status: {connection_status.name}\n"
-                f"Current Maneuver: {self.boat_data.get('full_autonomy_maneuver', 'N/A')}\n"
+                f"Autopilot State: {self.boat_data.get('boat_autopilot_state', 'N/A')}\n"
                 f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
                 f"Velocity Vector: [{fix_formatting(self.boat_data.get('velocity_x', -69.420))}, {fix_formatting(self.boat_data.get('velocity_y', -69.420))}]\n"  # noqa: E501
                 f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
@@ -933,7 +938,7 @@ class GroundStationWidget(QWidget):
         def draw_map_diagnostics(heading: float) -> None:
             """
             Draw diagnostics on the map, such as no sail zone and wind direction.
-            
+
             Parameters
             ----------
             heading
@@ -941,7 +946,7 @@ class GroundStationWidget(QWidget):
             """
 
             current_autopilot_parameters = constants.SM.read("current_autopilot_parameters")
-            
+
             no_sail_zone_size_dict: dict[str, str | float] | None = (
                 current_autopilot_parameters.get("no_sail_zone_size")
             )
@@ -985,12 +990,12 @@ class GroundStationWidget(QWidget):
             distance_to_waypoint: float | None = self.boat_data.get("distance_to_next_waypoint")
             if distance_to_waypoint is None:
                 return
-            
+
             if tack_distance > distance_to_waypoint:
                 # we can't draw the line!
                 decision_zone_path: list[svg.PathData] = []
                 distance_to_waypoint = 200
-                
+
             else:
                 # ratio of the tack distance to the distance to the waypoint, used to scale the decision zone size
                 tack_distance_ratio = tack_distance / distance_to_waypoint
@@ -1033,7 +1038,7 @@ class GroundStationWidget(QWidget):
             elif np.isclose(speed, 0.0, rtol=1e-5, atol=1e-8):
                 print("[Warning] `speed` is very close to 0, defaulting to 1e-3 to avoid division by zero.")
                 speed = 1e-3
-            
+
             vx: float = self.boat_data.get("velocity_x", -69.420)
             vy: float = self.boat_data.get("velocity_y", -69.420)
 
@@ -1106,14 +1111,14 @@ class GroundStationWidget(QWidget):
         if constants.SM.read("map_features")["sailboat_debug_symbols"]["status"]:
             draw_map_diagnostics(heading)
             self.need_to_clear_diagnostics = True
-        
+
         elif self.need_to_clear_diagnostics:
             self.browser.page().runJavaScript(misc.js_load_guard("map.remove_all_svgs()"))
             self.need_to_clear_diagnostics = False
 
-        if "full_autonomy_maneuver" in self.boat_data:
+        if "desired_sail_angle" in self.boat_data:
             telemetry_text = sailboat_mode(boat_data)
-        
+
         elif "rpm" in self.boat_data:
             telemetry_text = motorboat_mode(boat_data)
 

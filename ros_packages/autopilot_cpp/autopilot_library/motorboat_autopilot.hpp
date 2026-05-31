@@ -3,6 +3,8 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <tuple>
+#include <optional>
 
 #include <nlohmann/json.hpp>
 
@@ -25,7 +27,7 @@ class MotorboatAutopilot {
 
 private:
     
-    DiscretePID rudder_angle_to_heading_pid_controller;
+    DiscretePID heading_pid_controller;
     
     std::map<std::string, json> *autopilot_parameters;
 
@@ -81,9 +83,13 @@ public:
      * @brief Handles manual RC control inputs.
      * @param joystick_left_y Throttle input.
      * @param joystick_right_x Steering input.
-     * @return std::pair<float, float> Pair of (rudder_angle, rpm).
+     * @param propeller_motor_control_mode The current motor control mode.
+     * @return std::tuple<std::string, float, float> Tuple of (vesc_control_type, vesc_control_value, rudder_angle).
      */
-    std::pair<float, float> run_rc_control(float joystick_left_y, float joystick_right_x);
+    std::tuple<std::string, float, float> run_rc_control(
+        float joystick_left_y, float joystick_right_x,
+        PropellerMotorControlMode propeller_motor_control_mode
+    );
 
     /**
      * @brief Gets the optimal motor RPM based on current rudder angle.
@@ -96,7 +102,7 @@ public:
      * @brief Runs a single step of the waypoint mission algorithm.
      * @param current_position The boat's current position.
      * @param heading The boat's current heading in degrees.
-     * @return std::pair<float, float> Pair of (rpm, rudder_angle).
+     * @return std::pair<float, std::optional<float>> Pair of (rpm, rudder_angle).
      */
-    std::pair<float, float> run_waypoint_mission_step(Position current_position, float heading);
+    std::pair<float, std::optional<float>> run_waypoint_mission_step(Position current_position, float heading);
 };

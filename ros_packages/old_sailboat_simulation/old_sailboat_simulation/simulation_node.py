@@ -1,25 +1,24 @@
 #!usr/bin/python3
 # TODO: Implement a graceful way to handle simulation termination with the control scripts
 
-import random
-import numpy as np
-import gymnasium as gym
-import navpy
-import pandas as pd
 import math
 import os
-from gymnasium.wrappers.time_limit import TimeLimit
-from sailboat_gym import CV2DRenderer, Observation
-from .utils import *
+import random
 
-
+import gymnasium as gym
+import navpy
+import numpy as np
+import pandas as pd
 import rclpy
+from geometry_msgs.msg import Twist, Vector3
+from gymnasium.wrappers.time_limit import TimeLimit
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from std_msgs.msg import Float32, Bool
-from geometry_msgs.msg import Vector3, Twist
+from sailboat_gym import CV2DRenderer, Observation
 from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import Bool, Float32
 
+from .utils import *
 
 sim_time = 0
 
@@ -39,7 +38,7 @@ for index, row in wind_df.iterrows():
 
 def generate_wind_real_life_data(_) -> np.ndarray[np.float64]:
     # randomize the wind direction and use real life data to be more like real life
-    index = math.floor(sim_time / 250) % len(wind_data)
+    index = math.floor(sim_time / 1000) % len(wind_data)
     WIND_SPEED = min(wind_data[index][0], 2.5)
     WIND_DIRECTION = wind_data[index][1]
 
@@ -47,6 +46,7 @@ def generate_wind_real_life_data(_) -> np.ndarray[np.float64]:
     generated_wind = np.array([np.cos(random_angle), np.sin(random_angle)]) * (
         min(WIND_SPEED, 2.5) + random.gauss(sigma=0.3, mu=0)
     )
+
     return generated_wind
 
 
@@ -76,6 +76,7 @@ def generate_wind_upwind(_) -> np.ndarray[np.float64]:
 
 
 WIND_GENERATION_FUNCTION = generate_wind_real_life_data
+# WIND_GENERATION_FUNCTION = generate_wind_randomized
 
 
 
@@ -95,7 +96,6 @@ class SimulationNode(Node):
 
     """
 
-
     def __init__(self):
         global sim_time
 
@@ -114,7 +114,7 @@ class SimulationNode(Node):
         self.create_subscription(Bool, "/should_terminate", self.should_terminate_callback, 10)
 
         self.get_logger().info(
-            f"Creating simulation docker container. If this is your first time running the simulation, this may take a while because it needs to download the docker image. Please wait..."
+            "Creating simulation docker container. If this is your first time running the simulation, this may take a while because it needs to download the docker image. Please wait..."
         )
 
         self.env = gym.make(
@@ -127,7 +127,7 @@ class SimulationNode(Node):
         )
 
         self.get_logger().info(
-            f"Finished creating the simulation docker container! Please launch the groundstation to interact with the simulation"
+            "Finished creating the simulation docker container! Please launch the groundstation to interact with the simulation"
         )
 
         self.env.NB_STEPS_PER_SECONDS = 1000
@@ -165,7 +165,7 @@ class SimulationNode(Node):
 
     def desired_sail_angle_callback(self, desired_sail_angle_message: Float32):
         """
-        the simulation measures the sail angle from -90 to 90 degrees, and will attempt to move the sail to that angle
+        The simulation measures the sail angle from -90 to 90 degrees, and will attempt to move the sail to that angle
         however, the way our boat in real life works is that we can only tell the sail to go from 0 to 90 degrees,
         and the direction of the wind will decide whether or not that will be 0 to 90 or 0 to -90.
         If the wind is blowing to the boat's right hand side, then the sail will automatically go to the right side of the boat,

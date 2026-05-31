@@ -37,6 +37,7 @@ TelemetryNode::TelemetryNode() : Node("telemetry_cpp") {
     subs.push_back(create_subscription<std_msgs::msg::Float32>("/heading", sensor_qos, std::bind(&TelemetryNode::heading_callback, this, _1)));
     subs.push_back(create_subscription<geometry_msgs::msg::Vector3>("/apparent_wind_vector", sensor_qos, std::bind(&TelemetryNode::apparent_wind_callback, this, _1)));
     subs.push_back(create_subscription<autoboat_msgs::msg::VESCTelemetryData>("/vesc_telemetry_data", sensor_qos, std::bind(&TelemetryNode::vesc_data_callback, this, _1)));
+    subs.push_back(create_subscription<sensor_msgs::msg::Image>("/camera/camera/color/image_raw", sensor_qos, std::bind(&TelemetryNode::camera_rgb_image_callback, this, _1)));
 
     // Publishers
     autopilot_parameters_publisher = create_publisher<std_msgs::msg::String>("/autopilot_parameters", 10);
@@ -152,10 +153,20 @@ void TelemetryNode::initialize_server_connection() {
 void TelemetryNode::send_boat_status() {
     if (instance_id < 0) return;
 
-    float true_wind_x = velocity_vector_x + apparent_wind_x;
-    float true_wind_y = velocity_vector_y + apparent_wind_y;
-    float true_wind_speed = std::hypot(true_wind_x, true_wind_y);
-    float true_wind_angle = std::atan2(true_wind_y, true_wind_x) * 180.0f / static_cast<float>(M_PI);
+    float speed = std::hypot(velocity_vector_x, velocity_vector_y);
+    auto [_, velocity_angle] = cartesian_vector_to_polar(velocity_vector_x, velocity_vector_y);
+    float global_velocity_angle = std::fmod(velocity_angle - heading, 360.0f);
+    if (global_velocity_angle < 0.0f) {
+        global_velocity_angle += 360.0f;
+    }
+
+    float global_velocity_angle_rad = global_velocity_angle * 3.14159265f / 180.0f;
+    float local_velocity_vector_x = speed * std::cos(global_velocity_angle_rad);
+    float local_velocity_vector_y = speed * std::sin(global_velocity_angle_rad);
+
+    float true_wind_x = local_velocity_vector_x + apparent_wind_x;
+    float true_wind_y = local_velocity_vector_y + apparent_wind_y;
+    auto [true_wind_speed, true_wind_angle] = cartesian_vector_to_polar(true_wind_x, true_wind_y);
 
     float distance_to_next_waypoint = 0.0f;
     if (!current_waypoints_list.empty() && current_waypoint_index >= 0 && current_waypoint_index < (int)current_waypoints_list.size()) {
@@ -180,7 +191,7 @@ void TelemetryNode::send_boat_status() {
         payload.current_rudder_angle = current_rudder_angle;
         payload.rudder_angle_error = desired_rudder_angle - current_rudder_angle;
         payload.current_waypoint_index = current_waypoint_index;
-        payload.autopilot_mode = autopilot_mode;
+        payload.boat_control_mode = autopilot_mode;
 
         payload.true_wind_speed = true_wind_speed;
         payload.true_wind_angle = true_wind_angle;
@@ -189,7 +200,7 @@ void TelemetryNode::send_boat_status() {
         payload.current_sail_angle = current_sail_angle;
         payload.desired_sail_angle = desired_sail_angle;
         payload.sail_angle_error = desired_sail_angle - current_sail_angle;
-        payload.full_autonomy_maneuver = full_autonomy_maneuver;
+        payload.boat_autopilot_state = full_autonomy_maneuver;
 
         post_bytes(route, (const char*)&payload, sizeof(payload), &write_boat_status_session);
     } 
@@ -207,7 +218,7 @@ void TelemetryNode::send_boat_status() {
         payload.current_rudder_angle = current_rudder_angle;
         payload.rudder_angle_error = desired_rudder_angle - current_rudder_angle;
         payload.current_waypoint_index = current_waypoint_index;
-        payload.autopilot_mode = autopilot_mode;
+        payload.boat_control_mode = autopilot_mode;
 
         payload.rpm = vesc_rpm;
         payload.duty_cycle = vesc_duty_cycle;
@@ -219,7 +230,7 @@ void TelemetryNode::send_boat_status() {
         payload.wattage_to_motor = vesc_wattage_to_motor;
         payload.motor_temperature = vesc_motor_temperature;
         payload.vesc_temperature = vesc_vesc_temperature;
-        payload.time_since_vesc_startup_in_ms = vesc_time_ms;
+        payload.time_since_vesc_startup = vesc_time_ms;
 
         post_bytes(route, (const char*)&payload, sizeof(payload), &write_boat_status_session);
     }
@@ -383,8 +394,9 @@ void TelemetryNode::heading_callback(const std_msgs::msg::Float32::SharedPtr msg
 void TelemetryNode::apparent_wind_callback(const geometry_msgs::msg::Vector3::SharedPtr msg) {
     apparent_wind_x = static_cast<float>(msg->x); 
     apparent_wind_y = static_cast<float>(msg->y);
-    apparent_wind_speed = std::hypot(apparent_wind_x, apparent_wind_y);
-    apparent_wind_angle = std::atan2(apparent_wind_y, apparent_wind_x) * 180.0f / static_cast<float>(M_PI);
+    auto [speed, angle] = cartesian_vector_to_polar(apparent_wind_x, apparent_wind_y);
+    apparent_wind_speed = speed;
+    apparent_wind_angle = angle;
 }
 
 void TelemetryNode::vesc_data_callback(const autoboat_msgs::msg::VESCTelemetryData::SharedPtr msg) {
@@ -431,6 +443,84 @@ void TelemetryNode::current_sail_angle_callback(const std_msgs::msg::Float32::Sh
 
 void TelemetryNode::current_rudder_angle_callback(const std_msgs::msg::Float32::SharedPtr msg) { 
     current_rudder_angle = msg->data; 
+}
+
+void TelemetryNode::camera_rgb_image_callback(const sensor_msgs::msg::Image::SharedPtr msg) {
+    try {
+        cv::Mat rgb_image_cv;
+        if (msg->encoding == "rgb8") {
+            rgb_image_cv = cv::Mat(msg->height, msg->width, CV_8UC3, const_cast<uint8_t*>(msg->data.data()), msg->step).clone();
+        } else if (msg->encoding == "bgr8") {
+            cv::Mat bgr_image_cv(msg->height, msg->width, CV_8UC3, const_cast<uint8_t*>(msg->data.data()), msg->step);
+            cv::cvtColor(bgr_image_cv, rgb_image_cv, cv::COLOR_BGR2RGB);
+        } else if (msg->encoding == "mono8") {
+            cv::Mat mono_image_cv(msg->height, msg->width, CV_8UC1, const_cast<uint8_t*>(msg->data.data()), msg->step);
+            cv::cvtColor(mono_image_cv, rgb_image_cv, cv::COLOR_GRAY2RGB);
+        } else {
+            RCLCPP_WARN(this->get_logger(), "Unsupported image encoding: %s", msg->encoding.c_str());
+            return;
+        }
+
+        if (rgb_image_cv.rows >= 1200 && rgb_image_cv.cols >= 680) {
+            rgb_image_cv = rgb_image_cv(cv::Range(80, 1200), cv::Range(40, 680));
+        }
+
+        std::vector<uchar> buffer;
+        cv::imencode(".jpg", rgb_image_cv, buffer);
+
+        cv::Mat bgr_image_cv;
+        cv::cvtColor(rgb_image_cv, bgr_image_cv, cv::COLOR_RGB2BGR);
+        cv::imwrite("test.jpg", bgr_image_cv);
+
+        base64_encoded_current_rgb_image = base64_encode(buffer.data(), buffer.size());
+    }
+    catch (const std::exception& e) {
+        RCLCPP_ERROR(this->get_logger(), "Error in camera callback: %s", e.what());
+    }
+}
+
+std::string TelemetryNode::base64_encode(const unsigned char* bytes_to_encode, unsigned int in_len) {
+    std::string ret;
+    int i = 0;
+    int j = 0;
+    unsigned char char_array_3[3];
+    unsigned char char_array_4[4];
+    const std::string base64_chars = 
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz"
+        "0123456789+/";
+
+    while (in_len--) {
+        char_array_3[i++] = *(bytes_to_encode++);
+        if (i == 3) {
+            char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+            char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+            char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+            char_array_4[3] = char_array_3[2] & 0x3f;
+
+            for(i = 0; (i <4) ; i++)
+                ret += base64_chars[char_array_4[i]];
+            i = 0;
+        }
+    }
+
+    if (i) {
+        for(j = i; j < 3; j++)
+            char_array_3[j] = '\0';
+
+        char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+        char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+        char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+        char_array_4[3] = char_array_3[2] & 0x3f;
+
+        for (j = 0; (j < i + 1); j++)
+            ret += base64_chars[char_array_4[j]];
+
+        while((i++ < 3))
+            ret += '=';
+    }
+
+    return ret;
 }
 
 

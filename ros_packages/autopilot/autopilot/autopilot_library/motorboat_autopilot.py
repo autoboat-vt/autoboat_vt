@@ -3,8 +3,8 @@ from typing import Any
 
 import numpy as np
 from rclpy.impl.rcutils_logger import RcutilsLogger
-from scipy.interpolate import interp1d
 
+from .utils.constants import PropellerMotorControlMode
 from .utils.discrete_pid import DiscretePID
 from .utils.position import Position
 from .utils.utils_function_library import get_bearing, get_distance_between_angles, get_distance_between_positions
@@ -12,8 +12,20 @@ from .utils.utils_function_library import get_bearing, get_distance_between_angl
 # used to specify what is available to import from this file
 __all__ = ["MotorboatAutopilot"]
 
+
+
 class MotorboatAutopilot:
-    """A class containing algorithms to control a motorboat given sensor data."""
+    """
+    A class containing algorithms to control a motorboat given sensor data.
+
+    This class is meant to abstract away all of the actual autopilot math from the ROS node,
+    so all the ROS2 node for the autopilot has to do is handle the "control mode"
+    and publish the results from the autopilot.
+
+    The ROS2 node does not have to concern itself with the exact implementation details of the autopilot,
+    and this allows us in the future to switch to any other alternative for ROS2 (ie maybe ROS3) in the future by just
+    plugging and playing this class.
+    """
 
     def __init__(self, parameters: dict[str, Any], logger: RcutilsLogger) -> None:
         """
@@ -35,14 +47,14 @@ class MotorboatAutopilot:
             k_d=parameters["heading_d_gain"],
             n=parameters["heading_n_gain"],
         )
-        
+
         self.parameters = parameters
         self.logger = logger
-        self.waypoints: list[Position] = None
-        
+        self.waypoints: list[Position] | None = None
+
         self.current_waypoint_index = 0
 
-        
+
 
     def reset(self) -> None:
         """Resets the autopilot to its initial state."""
@@ -54,7 +66,7 @@ class MotorboatAutopilot:
             k_d=self.parameters["heading_d_gain"],
             n=self.parameters["heading_n_gain"],
         )
-        
+
         self.waypoints = None
         self.current_waypoint_index = 0
 
@@ -62,7 +74,7 @@ class MotorboatAutopilot:
 
     def update_waypoints_list(self, waypoints_list: list[Position]) -> None:
         """
-        Updates the list of waypoints that the boat should follow.
+        Updates the list of waypoints that the boat should follow for autonomous navigation.
 
         Parameters
         ----------
@@ -72,14 +84,64 @@ class MotorboatAutopilot:
 
         self.waypoints = waypoints_list
         self.current_waypoint_index = 0
-    
-    
+
+
+    def run_rc_control(
+        self, joystick_left_y: float, joystick_right_x: float,
+        propeller_motor_control_mode: PropellerMotorControlMode
+    ) -> tuple[str, float, float]:
+        """
+        Formulas used: https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio.
+
+        Parameters
+        ----------
+        joystick_left_y
+            The "vertical value" of the left joystick from `-100` to `100` where
+            - `-100` means the joystick is fully down
+            - `100` means the joystick is fully up.
+
+        joystick_right_x
+            The "hortizontal value" of the right joystick from `-100` to `100` where
+            - `-100` means the joystick is fully left
+            - `100` means the joystick is fully right.
+
+        propeller_motor_control_mode
+            An enum that can either be RPM, DUTY_CYCLE, or CURRENT
+
+        Returns
+        -------
+        tuple[str, float, float]
+            A 3 element tuple with the following elements:
+            - A string that represents the desired vesc control type that the boat should use based on the controller input.
+                Can be either "rpm", "duty_cycle", or "current"
+            - A float that represents the desired vesc control value that the boat should use based on the controller input.
+            - A float that represents the desired rudder_angle that the boat should use based on the controller input.
+        """
+
+        min_rudder_angle: float = self.parameters["min_rudder_angle"]
+        max_rudder_angle: float = self.parameters["max_rudder_angle"]
+        desired_rudder_angle = (((joystick_right_x - -100) * (max_rudder_angle-min_rudder_angle)) / (100 - -100))+min_rudder_angle
+
+        if propeller_motor_control_mode == PropellerMotorControlMode.RPM:
+            desired_vesc_control_type, desired_vesc_control_value = "rpm", 100.0 * joystick_left_y
+
+        elif propeller_motor_control_mode == PropellerMotorControlMode.DUTY_CYCLE:
+            desired_vesc_control_type, desired_vesc_control_value = "duty_cycle", joystick_left_y
+
+        elif propeller_motor_control_mode == PropellerMotorControlMode.CURRENT:
+            desired_vesc_control_type, desired_vesc_control_value = "current", joystick_left_y
+
+        else:
+            desired_vesc_control_type, desired_vesc_control_value = "rpm", 0.0
+
+        return desired_vesc_control_type, desired_vesc_control_value, desired_rudder_angle
+
 
     def get_optimal_rudder_angle(self, heading: float, desired_heading: float) -> float:
         """
-        Gets the optimal rudder angle that will help the boat go from its current heading to the desired_heading
+        Gets the optimal rudder angle that will help the boat go from its current heading to the desired_heading autonomously
         using a PID controller.
-        
+
         Parameters
         ----------
         heading
@@ -96,9 +158,9 @@ class MotorboatAutopilot:
         # Update the gains of the controller in case they changed. If the gains didn't change, then nothing happens
         self.heading_pid_controller.set_gains(
             k_p=self.parameters['heading_p_gain'], k_i=self.parameters['heading_i_gain'], k_d=self.parameters['heading_d_gain'],
-            n=self.parameters['heading_n_gain'], sample_period=self.parameters['autopilot_refresh_rate']
+            n=self.parameters['heading_n_gain'], sample_period=(1 / self.parameters['autopilot_refresh_rate'])
         )
-        
+
         error = get_distance_between_angles(desired_heading, heading)
         rudder_angle = self.heading_pid_controller(error)
         return np.clip(rudder_angle, self.parameters['min_rudder_angle'], self.parameters['max_rudder_angle'])
@@ -107,8 +169,8 @@ class MotorboatAutopilot:
 
     def get_optimal_rpm(self, rudder_angle: float) ->float:
         """
-        Gets the optimal motor RPM that will help it arrive at the destination waypoint efficiently.
-        
+        Gets the optimal motor RPM that will help it arrive at the destination waypoint efficiently and autonomously.
+
         Parameters
         ----------
         rudder_angle
@@ -119,25 +181,25 @@ class MotorboatAutopilot:
         float
             The rpm the boat should use to get to the desired heading
         """
-        
+
         error = abs(rudder_angle)
-        
+
         # if the error is high, then we want to be going at min rpm and if the error is low,
         # then we want to be going at max rpm
         max_rpm = self.parameters['max_rpm']
         min_rpm = self.parameters['min_rpm']
-        
-        rpm_output = min_rpm + (max_rpm - min_rpm) * np.exp(-self.parameters["rpm_decay_rate"] * error)
-        
-        # self.logger.info(f"Error: {error}, RPM Output: {rpm_output}")
-        
-        return float(np.clip(rpm_output, min_rpm, max_rpm))
-    
 
-    def run_waypoint_mission_step(self, current_position: Position, heading: float) -> tuple[float, float]:
+        rpm_output = min_rpm + (max_rpm - min_rpm) * np.exp(-self.parameters["rpm_decay_rate"] * error)
+
+        # self.logger.info(f"Error: {error}, RPM Output: {rpm_output}")
+
+        return float(np.clip(rpm_output, min_rpm, max_rpm))
+
+
+    def run_waypoint_mission_step(self, current_position: Position, heading: float) -> tuple[float, float | None]:
         """
         Runs a single step of the waypoint mission algorithm to get the optimal propeller RPM
-        and rudder angle to get to the next waypoint.
+        and rudder angle to get to the next waypoint autonomously.
 
         Note
         ----
@@ -152,11 +214,13 @@ class MotorboatAutopilot:
 
         Returns
         -------
-        tuple[float, float]
+        tuple[float, float | None]
             tuple of the form ```(propeller_rpm, rudder_angle)``` that the autopilot believes that we should take.
+            The rudder angle is None if there are no waypoints loaded into the autopilot or we have reached the final waypoint
         """
 
         if not self.waypoints:
+            return 0.0, None
             raise Exception("Expected route to be loaded into the autopilot. Field self.waypoints was not filled")
 
         desired_position = self.waypoints[self.current_waypoint_index]
@@ -170,11 +234,11 @@ class MotorboatAutopilot:
         if distance_to_desired_position < self.parameters['waypoint_accuracy']:
             rudder_angle = 0.0
             propeller_rpm = 0.0
-            
+
             if len(self.waypoints) <= self.current_waypoint_index + 1: # Has Reached The Final Waypoint
                 self.reset()
-                return 0.0, 0.0
-            
+                return 0.0, None
+
             self.current_waypoint_index += 1
             desired_position = self.waypoints[self.current_waypoint_index]
 

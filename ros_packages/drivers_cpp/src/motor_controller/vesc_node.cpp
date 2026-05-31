@@ -125,7 +125,7 @@ void VescNode::timer_callback() {
             .set__wattage_to_motor(motor_current * rpm / 180.0f)
             .set__motor_temperature(protocol.data.tempMotor)
             .set__vesc_temperature(protocol.data.tempMosfet)
-            .set__time_since_vesc_startup_in_ms(0)
+            .set__time_since_vesc_startup_in_ms(protocol.data.time_ms)
             .set__amp_hours(protocol.data.ampHours)
             .set__amp_hours_charged(protocol.data.ampHoursCharged)
         );

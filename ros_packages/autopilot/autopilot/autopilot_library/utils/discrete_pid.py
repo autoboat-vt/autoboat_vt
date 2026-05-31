@@ -46,7 +46,7 @@ class DiscretePID:
     def reset(self) -> None:
         """Resets the PID controller to its initial state."""
 
-        self.__init__(self.sample_period, self.k_p, self.k_i, self.k_d, self.n, self.sample_period)
+        self.__init__(self.sample_period, self.k_p, self.k_i, self.k_d, self.n)
 
 
     def __call__(self, error: float) -> float:
@@ -106,11 +106,16 @@ class DiscretePID:
             Sample period for the discrete PID controller.
         """
 
-        self.k_p = k_p or self.k_p
-        self.k_i = k_i or self.k_i
-        self.k_d = k_d or self.k_d
-        self.n = n or self.n
-        self.sample_period = sample_period or self.sample_period
+        if k_p is not None:
+            self.k_p = k_p
+        if k_i is not None:
+            self.k_i = k_i
+        if k_d is not None:
+            self.k_d = k_d
+        if n is not None:
+            self.n = n
+        if sample_period is not None:
+            self.sample_period = sample_period
 
 
     def step(self, error: float) -> float:

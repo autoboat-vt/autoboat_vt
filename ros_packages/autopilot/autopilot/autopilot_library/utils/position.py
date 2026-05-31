@@ -21,16 +21,16 @@ class Position:
 
     This class mainly just calls on python libraries such as ```navpy```, ```utm```, and ```pygeodesy``` to convert to
     other position measurement systems.
-    
-    
+
+
     The constructor supports two mutually exclusive initialization schemes:
     1. **Global:** Provide `longitude` and `latitude` only.
-    
+
     >>> Position(longitude=longitude, latitude=latitude)
-    
+
     2. **Local:** Provide `local_x`, `local_y`, and a reference global point
     (`reference_longitude`, `reference_latitude`) to calculate the position.
-    
+
     >>> Position(local_x=local_x, local_y=local_y, reference_longitude=reference_longitude, reference_latitude=reference_latitude)
 
 
@@ -48,7 +48,7 @@ class Position:
             The longitude of the origin for local coordinates.
         reference_latitude: float
             The latitude of the origin for local coordinates.
-    
+
     Raises
     ------
         Exception: If the provided arguments do not match one of the two supported initialization schemes.
@@ -59,18 +59,18 @@ class Position:
         local_x: Optional[float] = None, local_y: Optional[float] = None,
         reference_longitude: Optional[float] = None, reference_latitude: Optional[float] = None
     ) -> None:
-        
+
         is_using_longitude_latitude_coordinates = (
             longitude is not None and latitude is not None and
             local_x is None and local_y is None and reference_longitude is None and reference_latitude is None
         )
-        
+
         is_using_local_coordinates = (
             longitude is None and latitude is None and
             local_x is not None and local_y is not None and reference_longitude is not None and reference_latitude is not None
         )
-        
-        
+
+
         if (not (is_using_local_coordinates or is_using_longitude_latitude_coordinates)):
             raise Exception(
                 "Incorrect parameters passed to construct the Position object. "
@@ -79,14 +79,14 @@ class Position:
                 "Position(local_x=local_x, local_y=local_y, reference_longitude=reference_longitude, "
                 "reference_latitude=reference_latitude)"
             )
-        
+
         if (is_using_longitude_latitude_coordinates):
             self.longitude = longitude
             self.latitude = latitude
-        
+
         else: # is_using_local_coordinates
             self.set_local_coordinates(local_x, local_y, reference_longitude, reference_latitude)
-        
+
 
 
 

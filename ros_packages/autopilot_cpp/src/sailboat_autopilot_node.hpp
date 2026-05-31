@@ -65,9 +65,11 @@ private:
     Position current_position = {0.0, 0.0};
     std::array<float, 2> current_global_velocity_vector = {0.0, 0.0};
     std::array<float, 2> current_apparent_wind_vector = {0.0, 0.0};
+    float current_apparent_wind_angle = 0.0f;
 
     float current_heading = 0.0;
     float heading_to_hold = 0.0;
+    float heading_entered_emergency_stop_in = 0.0f;
 
     float joystick_left_y = 0.0;
     float joystick_right_x = 0.0;
@@ -78,6 +80,7 @@ private:
     bool has_rudder_encoder_been_zeroed = false;
     bool has_winch_encoder_been_zeroed = false;
     
+    SailboatControlModes sailboat_control_mode = SailboatControlModes::WAYPOINT_MISSION;
 
 
     autoboat_msgs::msg::RCData previous_rc_data;
@@ -139,6 +142,12 @@ private:
      * @param new_parameters JSON string containing parameter updates.
      */
     void autopilot_parameters_callback(const std_msgs::msg::String::SharedPtr new_parameters);
+
+    /**
+     * @brief Callback for object detection emergency stop.
+     * @param msg The Bool message containing the emergency stop signal.
+     */
+    void emergency_stop_callback(const std_msgs::msg::Bool::SharedPtr msg);
 
     /**
      * @brief Periodically called to update ROS topics based on autopilot output.

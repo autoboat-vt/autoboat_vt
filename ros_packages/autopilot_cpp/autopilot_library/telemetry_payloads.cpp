@@ -18,7 +18,7 @@ json get_sailboat_mapping_raw() {
         json::array({"current_rudder_angle", "c_float"}),
         json::array({"rudder_angle_error", "c_float"}),
         json::array({"current_waypoint_index", "c_ubyte"}),
-        json::array({"autopilot_mode", "c_ubyte"}),
+        json::array({"boat_control_mode", "c_ubyte"}),
         json::array({"true_wind_speed", "c_float"}),
         json::array({"true_wind_angle", "c_float"}),
         json::array({"apparent_wind_speed", "c_float"}),
@@ -26,7 +26,7 @@ json get_sailboat_mapping_raw() {
         json::array({"current_sail_angle", "c_float"}),
         json::array({"desired_sail_angle", "c_float"}),
         json::array({"sail_angle_error", "c_float"}),
-        json::array({"full_autonomy_maneuver", "c_ubyte"})
+        json::array({"boat_autopilot_state", "c_ubyte"})
     });
 }
 
@@ -44,7 +44,7 @@ json get_motorboat_mapping_raw() {
         json::array({"current_rudder_angle", "c_float"}),
         json::array({"rudder_angle_error", "c_float"}),
         json::array({"current_waypoint_index", "c_ubyte"}),
-        json::array({"autopilot_mode", "c_ubyte"}),
+        json::array({"boat_control_mode", "c_ubyte"}),
         json::array({"rpm", "c_float"}),
         json::array({"duty_cycle", "c_float"}),
         json::array({"amp_hours", "c_float"}),
