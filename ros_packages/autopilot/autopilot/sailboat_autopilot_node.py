@@ -286,7 +286,7 @@ class SailboatAutopilotNode(Node):
 
         if self.sailboat_control_mode == SailboatControlModes.EMERGENCY_STOP:
             desired_sail_angle, desired_rudder_angle = self.sailboat_autopilot.run_emergency_stop_step(
-                self.heading_entered_emergency_stop_in, self.heading, self.apparent_wind_vector
+                self.heading_entered_emergency_stop_in, self.heading, self.apparent_wind_angle
             )
 
         elif self.sailboat_control_mode == SailboatControlModes.WAYPOINT_MISSION and self.sailboat_autopilot.waypoints is not None:

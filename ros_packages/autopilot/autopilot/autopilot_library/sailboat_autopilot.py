@@ -404,7 +404,6 @@ class SailboatAutopilot:
 
 
         # If We Are On A Specific Tack And We Are Closer To The Other Tack, Just Switch To The Other Tack
-        # TODO I think this might be bugged??? I need to do more testing
         if current_state == SailboatAutopilotStates.STARBOARD_TACK and port_tack_is_closer:
             self.logger.info(f"distance between heading and left no sail zone: {distance_between_heading_and_left_no_sail_zone}")
             self.logger.info(f"distance between heading and right no sail zone: {distance_between_heading_and_right_no_sail_zone}")
@@ -639,6 +638,7 @@ class SailboatAutopilot:
         )
 
         desired_heading = (heading_object_was_detected_at + 180) % 360
+
 
         distance_between_desired_heading_and_left_no_sail_zone = abs(get_distance_between_angles(desired_heading, no_sail_zone_bounds[0]))
         distance_between_desired_heading_and_right_no_sail_zone = abs(get_distance_between_angles(desired_heading, no_sail_zone_bounds[1]))
