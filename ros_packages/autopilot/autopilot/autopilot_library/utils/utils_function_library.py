@@ -380,11 +380,11 @@ def does_line_segment_intersect_circle(
 
 
 
-def main():
-    print(not is_angle_between_boundaries_with_hysteresis(80, 70, 90, False, 10.01))
-    print(is_angle_between_boundaries_with_hysteresis(80, 70, 90, False, 9.99))
-    print(is_angle_between_boundaries_with_hysteresis(80, 70, 90, True, 10.01))
-    print(not is_angle_between_boundaries_with_hysteresis(80, 70, 90, True, 9.99))
+# def main():
+#     print(not is_angle_between_boundaries_with_hysteresis(80, 70, 90, False, 10.01))
+#     print(is_angle_between_boundaries_with_hysteresis(80, 70, 90, False, 9.99))
+#     print(is_angle_between_boundaries_with_hysteresis(80, 70, 90, True, 10.01))
+#     print(not is_angle_between_boundaries_with_hysteresis(80, 70, 90, True, 9.99))
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

@@ -79,6 +79,10 @@
       "default": 5.0,
       "description": "The amount of time in seconds the boat has to stay in the no sail zone to trigger a stall."
     },
+    "use_hysteresis_for_checking_if_port_or_starboard_tacks_are_closer": {
+      "default": false,
+      "description": "Whether or not to use hysteresis to check whether or not the boat should tack to the port or starboard tacks. (Experimental Feature)"
+    },
     "sail_angle_when_wiggling_out_of_no_sail_zone": {
       "default": 30,
       "description": "The sail angle the boat should hold when trying to wiggle out of the no sail zone"

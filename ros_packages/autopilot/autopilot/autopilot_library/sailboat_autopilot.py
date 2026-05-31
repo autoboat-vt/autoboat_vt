@@ -227,7 +227,7 @@ class SailboatAutopilot:
 
 
 
-    # that you should cw or ccw tack to get out so you can hard over your rudder and get out of the no sail zone asap.
+
     def _apply_tacking_state_machine(
         self,
         current_heading: float, current_bearing: float,
@@ -289,8 +289,23 @@ class SailboatAutopilot:
         distance_between_heading_and_left_no_sail_zone = abs(get_distance_between_angles(current_heading, no_sail_zone_bounds[0]))
         distance_between_heading_and_right_no_sail_zone = abs(get_distance_between_angles(current_heading, no_sail_zone_bounds[1]))
 
-        # TODO make it so that this only procs if the port tack is 25 degrees closer so it doesn't go back and forth constantely
-        port_tack_is_closer = distance_between_heading_and_left_no_sail_zone > distance_between_heading_and_right_no_sail_zone
+
+        hysteresis = self.parameters["hysteresis_amount_angles"]
+
+        if self.parameters["use_hysteresis_for_checking_if_port_or_starboard_tacks_are_closer"] and current_state in {
+            SailboatAutopilotStates.PORT_TACK, SailboatAutopilotStates.CW_TACKING,
+            SailboatAutopilotStates.STALL_WIGGLE_TO_PORT_TACK
+        }:
+            port_tack_is_closer = distance_between_heading_and_right_no_sail_zone <= distance_between_heading_and_left_no_sail_zone + hysteresis
+
+        elif self.parameters["use_hysteresis_for_checking_if_port_or_starboard_tacks_are_closer"] and current_state in {
+            SailboatAutopilotStates.STARBOARD_TACK, SailboatAutopilotStates.CCW_TACKING,
+            SailboatAutopilotStates.STALL_WIGGLE_TO_STARBOARD_TACK
+        }:
+            port_tack_is_closer = distance_between_heading_and_left_no_sail_zone > distance_between_heading_and_right_no_sail_zone + hysteresis
+
+        else:
+            port_tack_is_closer = distance_between_heading_and_left_no_sail_zone > distance_between_heading_and_right_no_sail_zone
 
 
         if current_state in {
@@ -328,11 +343,12 @@ class SailboatAutopilot:
 
         # We Have Been In the No Sail For Too Long, The Boat Has Stalled And We Need To Wiggle Out
         elif time.time() - self.last_time_out_of_no_sail_zone > self.parameters["max_no_sail_zone_time"]:
-            self.logger.info(f"BEEN IN NO SAIL ZONE TOO LONG TRYING TO WIGGLE. PORT? {port_tack_is_closer}")
             if port_tack_is_closer:
                 current_state = SailboatAutopilotStates.STALL_WIGGLE_TO_PORT_TACK
-            else:
+            elif not port_tack_is_closer:
                 current_state = SailboatAutopilotStates.STALL_WIGGLE_TO_STARBOARD_TACK
+
+            self.logger.info(f"BEEN IN NO SAIL ZONE TOO LONG TRYING TO WIGGLE. PORT? {current_state.name}")
 
         self.logger.info(f"time in no sail zone: {time.time() - self.last_time_out_of_no_sail_zone}")
 
