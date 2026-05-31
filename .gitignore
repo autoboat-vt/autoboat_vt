@@ -1,5 +1,6 @@
 # general
 .DS_Store
+.zed
 .python-version
 *.pyc
 **/__pycache__/**
@@ -27,7 +28,6 @@ ros_packages/object_detection/object_detection/deepstream_yolo/onnx_files/**
 
 # groundstation
 ground_station/app_data/git_ignore
-ground_station/bin
 node_modules
 
 # ros_packages/object_detection
@@ -48,5 +48,3 @@ trace.json
 *.deb
 .devcontainer/devcontainer_environment_variables
 .devcontainer/host_environment_variables
-
-.zed
