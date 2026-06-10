@@ -1,0 +1,9 @@
+0:
+    # The v4l2 format can be found using the command: v4l2-ctl --list-formats-ext -d /dev/videoX, where X is the camera device number.
+    v4l2_format: YUYV
+    gst_format: YUY2
+    # The name is used to regex search the available camera devices.
+    name: RealSense
+    width: 1280
+    height: 800
+    framerate: 30/1

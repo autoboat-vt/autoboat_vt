@@ -18,13 +18,19 @@ firmware/dependencies/**
 **.onnx
 **.o
 **.so
-ros_packages/object_detection/object_detection/deepstream_yolo/ultralytics/
-ros_packages/object_detection/object_detection/deepstream_yolo/labels.txt
 ros_packages/object_detection/object_detection/frame_results/
-ros_packages/object_detection/object_detection/deepstream_yolo/label_files/**
-ros_packages/object_detection/object_detection/deepstream_yolo/engine_files/**
-ros_packages/object_detection/object_detection/deepstream_yolo/pt_files/**
-ros_packages/object_detection/object_detection/deepstream_yolo/onnx_files/**
+ros_packages/object_detection/object_detection/config/yolo11/**
+ros_packages/object_detection/object_detection/config/yolo26/**
+ros_packages/object_detection/object_detection/config/yolo11/engine_files/**
+ros_packages/object_detection/object_detection/config/yolo26/engine_files/**
+ros_packages/object_detection/object_detection/config/yolo11/pt_files/**
+ros_packages/object_detection/object_detection/config/yolo26/pt_files/**
+ros_packages/object_detection/object_detection/config/yolo11/onnx_files/**
+ros_packages/object_detection/object_detection/config/yolo26/onnx_files/**
+ros_packages/object_detection/object_detection/config/yolo11_config.txt
+ros_packages/object_detection/object_detection/config/yolo26_config.txt
+ros_packages/object_detection/object_detection/config/yolo11_config.yaml
+ros_packages/object_detection/object_detection/config/yolo26_config.yaml
 
 # groundstation
 ground_station/app_data/git_ignore

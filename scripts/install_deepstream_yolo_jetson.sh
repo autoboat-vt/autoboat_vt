@@ -60,9 +60,9 @@ pip3 install ./pyds-1.2.0-*.whl
 
 # Compile the deepstream_yolo library
 echo -e "\n\nCompiling deepstream_yolo library\n\n"
-cd ~/autoboat_vt/ros_packages/object_detection/object_detection/deepstream_yolo/
+cd ~/autoboat_vt/ros_packages/object_detection/object_detection/cv_library/
 export CUDA_VER=12.6
-make -C nvdsinfer_custom_impl_Yolo clean && make -C nvdsinfer_custom_impl_Yolo
+make -C deepstream_yolo_library clean && make -C deepstream_yolo_library
 
 # Install ultralytics
 echo -e "\n\nInstalling ultralytics\n\n"

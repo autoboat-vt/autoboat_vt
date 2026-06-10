@@ -1,12 +1,12 @@
 import os
 import sys
+from copy import deepcopy
+
 import onnx
 import torch
 import torch.nn as nn
-from copy import deepcopy
-
-import ultralytics.utils
 import ultralytics.models.yolo
+import ultralytics.utils
 import ultralytics.utils.tal as _m
 
 sys.modules["ultralytics.yolo"] = ultralytics.models.yolo
@@ -93,7 +93,7 @@ def main(args):
     img_size = args.size * 2 if len(args.size) == 1 else args.size
 
     onnx_input_im = torch.zeros(args.batch, 3, *img_size).to(device)
-    onnx_output_file = f"{args.weights}.onnx"
+    onnx_output_file = args.weights.rsplit(".", 1)[0] + ".onnx"
 
     dynamic_axes = {"input": {0: "batch"}, "output": {0: "batch"}}
 
