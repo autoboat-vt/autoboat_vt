@@ -6,10 +6,6 @@ if len(sys.argv) < 3:
     print("Usage: python modify_config_file.py <name_of_model> <yolo_version>")
     sys.exit(1)
 
-# if not sys.argv[1].endswith('.onnx'):
-#     print("Error: ONNX file must end with .onnx")
-#     sys.exit(1)
-
 YOLO_VER = sys.argv[2]
 FP_VER = 16
 IS_DEV_CONTAINER = re.search("/home/ws", os.getcwd()) is not None
