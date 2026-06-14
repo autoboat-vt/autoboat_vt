@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-__all__ = ["DataLogEntry", "DataLogger"]
-
 import contextlib
 import fcntl
 from collections.abc import Generator, Iterable
