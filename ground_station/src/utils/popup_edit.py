@@ -7,8 +7,11 @@ from qtpy.QtGui import (
     QSyntaxHighlighter,
 )
 from qtpy.QtWidgets import QMessageBox, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
-from utils import constants, misc
 
+from utils import constants
+from utils.dialog_templates import show_message_box
+
+__all__ = ["TextEditWindow"]
 
 class TextEditWindow(QWidget):
     """
@@ -259,7 +262,7 @@ class TextEditWindow(QWidget):
 
         self.current_text = self.editor.toPlainText()
 
-        response = misc.show_message_box(
+        response = show_message_box(
             title="Save Text",
             message="Do you want to save the current text and close the window?",
             icon=constants.ICONS.question,

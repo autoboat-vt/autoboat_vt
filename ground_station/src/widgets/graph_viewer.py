@@ -1,5 +1,6 @@
 import time
 from collections import deque
+from requests.exceptions import RequestException
 from typing import Any
 from urllib.parse import urljoin
 
@@ -8,7 +9,7 @@ import numpy.typing as npt
 import pyqtgraph as pg
 from qtpy.QtCore import Qt, Signal, Slot
 from qtpy.QtWidgets import QCheckBox, QDialog, QGridLayout, QWidget
-from requests.exceptions import RequestException
+
 from utils import constants, misc
 from utils.thread_classes import BoatStatusThreadRouter
 
@@ -74,7 +75,7 @@ class GraphViewer(QWidget):
                 - a ``TelemetryStatus`` enum value indicating the status of the request.
         """
 
-        if constants.SM.read("has_telemetry_server_instance_changed"):
+        if constants.SM.read_bool("has_telemetry_server_instance_changed"):
             self.x_axis.clear()
             self.data.clear()
             self.plots.clear()
@@ -97,7 +98,7 @@ class GraphViewer(QWidget):
             }
             filtered_values = {key: float(boat_data.get(key, np.nan)) for key in self.important_keys}
 
-            current_time = time.time() - constants.SM.read("start_time")
+            current_time = time.time() - constants.SM.read_float("start_time")
             self.x_axis.append(current_time)
 
             for key, val in filtered_values.items():
@@ -162,7 +163,7 @@ class GraphViewer(QWidget):
                 response = constants.REQ_SESSION.get(
                     urljoin(
                         misc.get_route("get_boat_status"),
-                        str(constants.SM.read("telemetry_server_instance_id"))
+                        str(constants.SM.read_int("telemetry_server_instance_id"))
                     )
                 ).json()
 

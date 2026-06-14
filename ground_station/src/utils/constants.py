@@ -1,8 +1,10 @@
-"""Module containing constants for the ground station application."""
+"""Module containing constants for the Groundstation application."""
 
 import inspect
 import json
 import os
+import requests
+import requests.adapters
 import time
 from enum import Enum, auto
 from pathlib import Path
@@ -10,8 +12,6 @@ from types import SimpleNamespace
 from typing import Any, TypeAlias
 from urllib.parse import urljoin
 
-import requests
-import requests.adapters
 from numpy import number as np_number
 from qtpy.QtCore import QPoint, QRect, QSize, Qt, QUrl
 from qtpy.QtGui import QColor, QPalette
@@ -105,7 +105,6 @@ class TelemetryStatus(StrEnum):
     WRONG_FORMAT = auto()
 
 
-
 NumberType: TypeAlias = int | float | complex | np_number
 FileType: TypeAlias = str | os.PathLike[str]
 
@@ -194,7 +193,10 @@ MAP_URL = QUrl(f"http://127.0.0.1:{VITE_PORT}")
 MAP_PAGE: QWebEnginePage
 
 # url for local waypoints server
-_waypoints_server_url: str = f"http://localhost:{MAP_SERVER_PORT}/waypoints"
+_waypoints_server_url: str = f"http://127.0.0.1:{MAP_SERVER_PORT}/waypoints"
+
+# url for documentation
+DOCUMENTATION_URL = QUrl("https://autoboat-vt.github.io/documentation")
 
 TELEMETRY_TIMEOUT_SECONDS = 10
 TELEMETRY_RETRY_ATTEMPTS = 3
@@ -204,9 +206,6 @@ ADAPTER = requests.adapters.HTTPAdapter(max_retries=TELEMETRY_RETRY_ATTEMPTS)
 REQ_SESSION.mount("http://", ADAPTER)
 REQ_SESSION.mount("https://", ADAPTER)
 
-# base url for telemetry server (the CIA is inside of my brain...)
-_telemetry_server_url: str = "https://vt-autoboat-telemetry.uk"
-
 _local_autopilot_param_hash: str = ""
 _remote_autopilot_param_hash: str = ""
 _current_autopilot_parameters: dict[str, Any] = {}
@@ -214,6 +213,9 @@ _current_autopilot_parameters: dict[str, Any] = {}
 TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE: int = -1  # -1 means no instance selected
 _telemetry_server_instance_id: int = TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE
 _has_telemetry_server_instance_changed: bool = False
+
+# base url for telemetry server (the CIA is inside of my brain...)
+_telemetry_server_url: str = "https://vt-autoboat-telemetry.uk"
 
 # endpoints for telemetry server, format is `_telemetry_server_url` + `endpoint` + `/`
 _instance_manager_endpoints: dict[str, str] = {
@@ -247,6 +249,7 @@ _autopilot_parameters_endpoints: dict[str, str] = {
     "get_all_hashes": urljoin(_telemetry_server_url, "autopilot_parameters/get_all_hashes"),
     "get_hash_exists": urljoin(_telemetry_server_url, "autopilot_parameters/get_hash_exists/"),
     "set_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/set/"),
+    "update_autopilot_parameter": urljoin(_telemetry_server_url, "autopilot_parameters/update_existing_parameter/"),
     "set_default_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/set_default/"),
     "set_default_from_hash": urljoin(_telemetry_server_url, "autopilot_parameters/set_default_from_hash/"),
     "set_hash_description": urljoin(_telemetry_server_url, "autopilot_parameters/set_hash_description/"),

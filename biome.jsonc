@@ -1,12 +1,12 @@
 /* 
 This file is used to configure formatters and linters for html, css, javascript, typescript, etc.
 
-Please see the following for a guide on biome: https://biomejs.dev/guides/configure-biome/
-This file is a jsonc instead of a json and the only difference between the 2 is that jsonc allows comments like this!
+Please see the following for a guide on Biome: https://biomejs.dev/guides/configure-biome
+For those who are curious: .jsonc -> json with comments
 */
 
 {
-    "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
+    "$schema": "ground_station/node_modules/@biomejs/biome/configuration_schema.json",
     "root": true,
     "vcs": {
         "enabled": true,
@@ -16,7 +16,6 @@ This file is a jsonc instead of a json and the only difference between the 2 is 
     "files": {
         "ignoreUnknown": true,
         "includes": [
-            // Include everything, then exclude common build/cache outputs.
             "**",
             "!**/__pycache__",
             "!**/node_modules",
@@ -44,8 +43,7 @@ This file is a jsonc instead of a json and the only difference between the 2 is 
     "linter": {
         "enabled": true,
         "rules": {
-            // Keep recommended defaults, then tweak a few rules.
-            "recommended": true,
+            "preset": "recommended",
             "style": {
                 "useConst": "error",
                 "useTemplate": "warn"
@@ -65,7 +63,6 @@ This file is a jsonc instead of a json and the only difference between the 2 is 
         "actions": {
             "recommended": true,
             "source": {
-                // Keep imports tidy on save.
                 "organizeImports": "on"
             }
         }
@@ -116,7 +113,6 @@ This file is a jsonc instead of a json and the only difference between the 2 is 
         }
     },
     "overrides": [
-        // Relax rules for minified/vendor files and tune JSON parsing by extension.
         {
             "includes": ["*.min.js", "*.min.css", "**/vendor/**"],
             "formatter": {

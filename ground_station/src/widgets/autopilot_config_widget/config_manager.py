@@ -2,6 +2,7 @@ import json
 from collections.abc import Callable
 from datetime import datetime, timezone
 from enum import auto
+from requests import RequestException
 from typing import Any
 from urllib.parse import urljoin
 
@@ -20,12 +21,9 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from requests import RequestException
 from strenum import StrEnum
-from syntax_highlighters import JsonHighlighter
-from utils import constants, misc, thread_classes
 
-from widgets.popup_edit import TextEditWindow
+from utils import TextEditWindow, constants, misc, syntax_highlighters, thread_classes
 
 
 class ConfigInfo:
@@ -129,7 +127,7 @@ class AutopilotConfigManager(QWidget):
     def __init__(self) -> None:
         super().__init__()
 
-        self.timer = misc.copy_qtimer(constants.ONE_SECOND_TIMER)
+        self.timer = misc.copy_qtimer(constants.HALF_SECOND_TIMER)
 
         self.widgets_by_hash: dict[str, ConfigWidget] = {}
         self.sort_by = self.SortBy.DESCRIPTION
@@ -183,17 +181,20 @@ class AutopilotConfigManager(QWidget):
             constants.ICONS.refresh,
             self.hash_fetcher_starter
         )
-        self.auto_refresh_toggle = QCheckBox("Auto Refresh?")
-        self.auto_refresh_toggle.setChecked(True)
-        self.auto_refresh_toggle.stateChanged.connect(self.on_auto_refresh_toggled)
-
         self.create_new_config_button = misc.pushbutton_maker(
             "Create New Config",
             constants.ICONS.add,
             self.create_new_config,
         )
+        self.download_all_button = misc.pushbutton_maker(
+            "Download All Configs",
+            constants.ICONS.download,
+            self.on_download_all_clicked,
+        )
+
         self.button_layout.addWidget(self.manual_refresh_button)
         self.button_layout.addWidget(self.create_new_config_button)
+        self.button_layout.addWidget(self.download_all_button)
         self.button_groupbox.setLayout(self.button_layout)
 
         self.main_layout.addLayout(sort_layout, 0, 0)
@@ -201,6 +202,10 @@ class AutopilotConfigManager(QWidget):
         self.main_layout.addWidget(self.status_label, 3, 0)
         self.main_layout.addWidget(self.scroll, 4, 0)
         self.main_layout.addWidget(self.button_groupbox, 5, 0)
+
+        self.auto_refresh_toggle = QCheckBox("Auto Refresh?")
+        self.auto_refresh_toggle.setChecked(True)
+        self.auto_refresh_toggle.stateChanged.connect(self.on_auto_refresh_toggled)
 
         # put auto refresh toggle on the buttom center of the main layout
         self.main_layout.addWidget(self.auto_refresh_toggle, 6, 0, alignment=Qt.AlignCenter)
@@ -216,6 +221,21 @@ class AutopilotConfigManager(QWidget):
 
         self.on_sort_by_changed(self.sort_by.name)
         self.timer.start()
+
+    @Slot()
+    def on_download_all_clicked(self) -> None:
+        """Handle the download all configurations button click event."""
+
+        print("[Info] Downloading all configurations from the telemetry server...")
+
+        already_downloaded_hashes = [
+            config_path.stem
+            for config_path in constants.AUTOPILOT_PARAMS_DIR.iterdir()
+            if config_path.is_file()
+        ]
+        for hash_id in self.widgets_by_hash:
+            if hash_id not in already_downloaded_hashes:
+                ConfigWidget.download_config(hash_id)
 
     @Slot(int)
     def on_auto_refresh_toggled(self, state: int) -> None:
@@ -286,7 +306,7 @@ class AutopilotConfigManager(QWidget):
             for widget in sorted(self.widgets_by_hash.values(), key=self.sort_key):
                 self.configs_layout.addWidget(widget)
 
-                if widget.hash_value == constants.SM.read("remote_autopilot_param_hash"):
+                if widget.hash_value == constants.SM.read_str("remote_autopilot_param_hash"):
                     widget.setStyleSheet(ConfigWidget.activated_style_sheet)
                 
                 else:
@@ -326,7 +346,7 @@ class AutopilotConfigManager(QWidget):
         Opens a popup window to enter new configuration data.
         """
 
-        self.text_edit_window = TextEditWindow(highlighter=JsonHighlighter)
+        self.text_edit_window = TextEditWindow(highlighter=syntax_highlighters.JsonHighlighter)
         self.text_edit_window.setWindowTitle("Create New Autopilot Configuration")
         self.text_edit_window.user_text_emitter.connect(self.create_new_config_callback)
         self.text_edit_window.show()
@@ -437,7 +457,7 @@ class AutopilotConfigManager(QWidget):
         total_count = len(self.widgets_by_hash)
         status_text = (
             f"Showing {visible_count} of {total_count} configurations | "
-            f"Remote Hash: {constants.SM.read('remote_autopilot_param_hash')}"
+            f"Remote Hash: {constants.SM.read_str('remote_autopilot_param_hash')}"
         )
         self.status_label.setText(status_text)
 
@@ -574,40 +594,52 @@ class ConfigWidget(QFrame):
         self.main_layout.addLayout(self.button_layout)
         self.setLayout(self.main_layout)
 
-    @Slot()
-    def on_download_clicked(self) -> None:
-        """Handle the download button click event."""
+    @staticmethod
+    def download_config(hash_value: str) -> None:
+        """
+        Download the configuration file corresponding to the given hash value.
 
-        print(f"[Info] Downloading configuration with hash: {self.hash_value}")
+        Parameters
+        ----------
+        hash_value
+            The hash value of the configuration to download.
+        """
 
-        for hash_value in constants.AUTOPILOT_PARAMS_DIR.iterdir():
-            if hash_value.name == self.hash_value:
-                print(f"[Info] Configuration {self.hash_value} already exists locally.")
+        for config_path in constants.AUTOPILOT_PARAMS_DIR.iterdir():
+            if config_path.stem == hash_value and config_path.is_file():
+                print(f"[Info] Configuration {hash_value} already exists locally.")
                 return
             
         try:
             data = constants.REQ_SESSION.get(
                     urljoin(
                         misc.get_route("get_config_from_hash"),
-                        self.hash_value
+                        hash_value
                 )
             ).json()
 
             if not isinstance(data, dict):
                 raise TypeError
             
-            file_name = f"{self.hash_value}.json"
+            file_name = f"{hash_value}.json"
             config_path = constants.AUTOPILOT_PARAMS_DIR / file_name
             with open(config_path, "w") as config_file:
                 json.dump(data, config_file, indent=4)
             
-            print("[Info] Configuration downloaded successfully!")
+            print(f"[Info] Configuration {hash_value} downloaded successfully!")
             
         except RequestException as e:
             print(f"[Error] Failed to download configuration: {e}")
         
         except TypeError as e:
             print(f"[Error] Invalid data format received from server, expected `dict` but got `{data}`: {e}")
+
+    @Slot()
+    def on_download_clicked(self) -> None:
+        """Handle the download button click event."""
+
+        print(f"[Info] Downloading configuration with hash: {self.hash_value}")
+        ConfigWidget.download_config(self.hash_value)
 
     @Slot()
     def on_delete_clicked(self) -> None:

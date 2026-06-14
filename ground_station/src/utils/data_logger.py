@@ -1,5 +1,3 @@
-"""Module for managing the logging of data within the ground station."""
-
 from __future__ import annotations
 
 __all__ = ["DataLogEntry", "DataLogger"]
@@ -18,6 +16,7 @@ from qtpy.QtCore import Slot
 
 from utils import constants
 
+__all__ = ["DataLogger"]
 
 @dataclass
 class DataLogEntry:
@@ -92,7 +91,7 @@ def _load_log() -> Path:
         If the log file cannot be loaded or created.
     """
 
-    log = Path(constants.SM.read("data_log_file_path"))
+    log = Path(constants.SM.read_str("data_log_file_path"))
 
     if not log.exists():
         print(f"[Info] Creating new data log file at {log}...")

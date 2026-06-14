@@ -1,59 +1,86 @@
 """
-Module containing miscellaneous utility functions for the ground station application.
+Module containing miscellaneous utility functions for the Groundstation application.
 
 Functions:
 - get_icons: Load and return a set of icons for the application.
 - get_route: Get the full URL for a given route name.
 - pushbutton_maker: Create a QPushButton with specified features.
-- show_message_box: Show a message box with specified title, message, icon, and buttons
-- show_input_dialog: Show an input dialog to get user input.
 - create_timer: Create a QTimer with specified interval and single-shot status.
 - copy_qtimer: Create a copy of a QTimer with the same interval and single-shot status.
 - cache_cdn_file: Download and cache a file to serve in a local CDN server.
+- js_load_guard: Run JavaScript after the map API has loaded.
+- create_symlinks: Create symbolic links for all files in the source directory to the target directory.
 """
 
 __all__ = [
     "cache_cdn_file",
     "copy_qtimer",
+    "create_symlinks",
     "create_timer",
     "get_icons",
     "get_route",
+    "js_load_guard",
     "pushbutton_maker",
-    "show_input_dialog",
-    "show_message_box",
 ]
 
 import os
 import textwrap
 from collections.abc import Callable
 from pathlib import Path
+from requests import RequestException
 from types import SimpleNamespace
-from typing import TypeVar
+from typing import Protocol, TypeVar, cast
 
 import qtawesome as qta
 from qtpy.QtCore import QTimer
 from qtpy.QtGui import QIcon
-from qtpy.QtWidgets import QCheckBox, QInputDialog, QMessageBox, QPushButton
-from requests import RequestException
+from qtpy.QtWidgets import QPushButton
 
 from utils import constants
 
 T = TypeVar("T")
 
-def get_icons() -> SimpleNamespace:
+class IconProtocol(Protocol):
+    upload: QIcon
+    download: QIcon
+    connect: QIcon
+    disconnect: QIcon
+    delete: QIcon
+    add: QIcon
+    home: QIcon
+    save: QIcon
+    pause: QIcon
+    play: QIcon
+    play_circle: QIcon
+    play_circle_outline: QIcon
+    green_play_circle_outline: QIcon
+    stop: QIcon
+    stop_circle: QIcon
+    stop_circle_outline: QIcon
+    red_stop_circle_outline: QIcon
+    cog: QIcon
+    pencil: QIcon
+    refresh: QIcon
+    hard_drive: QIcon
+    boat: QIcon
+    image_upload: QIcon
+    notification: QIcon
+    warning: QIcon
+    question: QIcon
+
+def get_icons() -> IconProtocol:
     """
     Load and return a set of icons for the application.
 
     Returns
     -------
-    SimpleNamespace
-        A namespace object containing the loaded icons.
-        Each icon can be accessed as an attribute of the namespace.
-    
+    IconProtocol
+        An object containing the loaded icons as attributes.
+
     Example
     -------
-    >>> icons.upload == icons["upload"]
-        True
+    >>> icons = get_icons()
+    >>> icons.upload
 
     Notes
     -----
@@ -67,6 +94,7 @@ def get_icons() -> SimpleNamespace:
         "disconnect": qta.icon("fa6s.plug-circle-xmark", color="white"),
         "delete": qta.icon("mdi.trash-can", color="white"),
         "add": qta.icon("mdi.plus", color="white"),
+        "home": qta.icon("mdi.home", color="white"),
         "save": qta.icon("mdi.content-save", color="white"),
         "pause": qta.icon("mdi.pause-circle", color="white"),
         "play": qta.icon("mdi.play-circle", color="white"),
@@ -89,11 +117,10 @@ def get_icons() -> SimpleNamespace:
     }
 
     for icon_name, icon in icons.items():
-        assert isinstance(icon, QIcon), (
-            f"Icon '{icon_name}' is not a valid QIcon. Please check the icon name or ensure the icon is available."
-        )
+        if not isinstance(icon, QIcon):
+            raise TypeError(f"Icon '{icon_name}' is not a valid QIcon. Check the icon name or make sure the icon is available.")
 
-    return SimpleNamespace(**icons)
+    return cast("IconProtocol", SimpleNamespace(**icons))
 
 def get_route(route_name: str) -> str:
     """
@@ -115,7 +142,7 @@ def get_route(route_name: str) -> str:
         If the route name is not found in the telemetry server endpoints.
     """
 
-    endpoints = constants.SM.read("telemetry_server_endpoints")
+    endpoints = constants.SM.read_dict("telemetry_server_endpoints")
 
     if isinstance(endpoints, dict) and endpoints.get(route_name) is not None:
         return endpoints[route_name]
@@ -131,6 +158,7 @@ def pushbutton_maker(
     max_width: int | None = None,
     min_height: int | None = None,
     is_clickable: bool = True,
+    tooltip: str | None = None,
 ) -> QPushButton:
     """
     Create a ``QPushButton`` with the specified features.
@@ -151,6 +179,8 @@ def pushbutton_maker(
         The minimum height of the button. If not specified, not used.
     is_clickable
         Whether the button should be clickable. Defaults to ``True``.
+    tooltip
+        An optional tooltip to show when hovering over the button.
 
     Returns
     -------
@@ -171,6 +201,9 @@ def pushbutton_maker(
         if style_sheet is not None:
             button.setStyleSheet(style_sheet)
 
+        if tooltip is not None:
+            button.setToolTip(tooltip)
+
         if max_width is not None:
             button.setMaximumWidth(max_width)
 
@@ -183,130 +216,6 @@ def pushbutton_maker(
         raise RuntimeError(f"Failed to create button '{button_text}': {e}") from e
 
     return button
-
-
-def show_message_box(
-    title: str,
-    message: str,
-    icon: QIcon | None = None,
-    buttons: list[QMessageBox.StandardButton] | None = None,
-    remember_choice_option: bool | None = False,
-) -> QMessageBox.StandardButton | tuple[QMessageBox.StandardButton, bool]:
-    """
-    Show a message box with the specified title, message, and optional icon and buttons.
-    
-    If the user closes the message box without clicking a button, it returns ``QMessageBox.StandardButton.NoButton``.
-
-    Parameters
-    ----------
-    title
-        The title of the message box.
-    message
-        The message to display in the message box.
-    icon
-        An optional icon to display in the message box.
-    buttons
-        A list of standard buttons to show. Defaults to ``[QMessageBox.Ok]``. <br>
-        Example: ``[QMessageBox.Yes, QMessageBox.No]``
-    remember_choice_option
-        If ``True``, adds a "Remember my choice" checkbox to the message box.
-
-    Returns
-    -------
-    QMessageBox.StandardButton
-        The button that was clicked by the user.
-    bool
-        If ``remember_choice_option`` is ``True``, returns whether the user checked the "Remember my choice" checkbox.
-    """
-
-    if buttons is None:
-        buttons = [QMessageBox.Ok]
-
-    msg_box = QMessageBox()
-    msg_box.setWindowTitle(title)
-    msg_box.setText(message)
-
-    if icon:
-        msg_box.setIconPixmap(icon.pixmap(64, 64))
-
-    std_buttons = QMessageBox.NoButton
-    for b in buttons:
-        std_buttons |= b
-    msg_box.setStandardButtons(std_buttons)
-
-    if remember_choice_option:
-        remember_checkbox = QCheckBox("Remember my decision?")
-        msg_box.setCheckBox(remember_checkbox)
-        clicked = msg_box.exec()
-        clicked_button = QMessageBox.StandardButton(clicked)
-
-        if clicked_button == QMessageBox.NoButton:
-            clicked_button = buttons[-1]
-            print(f"[Warning] User closed the dialog without selecting a button. Using {clicked_button}.")
-
-        return clicked_button, remember_checkbox.isChecked()
-
-    else:
-        clicked = msg_box.exec()
-        clicked_button = QMessageBox.StandardButton(clicked)
-        
-        if clicked_button == QMessageBox.NoButton:
-            clicked_button = buttons[-1]
-            print(f"[Warning] User closed the dialog without selecting a button. Using {clicked_button}.")
-        
-        return clicked_button
-
-
-def show_input_dialog(
-    title: str,
-    label: str,
-    default_value: str | None = None,
-    input_type: Callable[[str], T] = str,
-) -> T | None:
-    """
-    Show an input dialog to get user input.
-
-    Parameters
-    ----------
-    title
-        The title of the input dialog.
-    label
-        The label for the input field.
-    default_value
-        The default value to show in the input field.
-    input_type
-        The type to convert the input to. Defaults to ``str``. <br>
-        Example: ``int``, ``float``, etc.
-
-    Returns
-    -------
-    T | None
-        The user input converted to the specified type, or ``None`` if the dialog was cancelled.
-    """
-
-    if input_type is int:
-        value = int(default_value) if default_value is not None else 0
-        result, ok = QInputDialog.getInt(None, title, label, value=value)
-
-    elif input_type is float:
-        value = float(default_value) if default_value is not None else 0.0
-        result, ok = QInputDialog.getDouble(None, title, label, value=value)
-
-    else:
-        text = default_value if default_value is not None else ""
-        text, ok = QInputDialog.getText(None, title, label, text=text)
-        result = None
-        if ok:
-            try:
-                result = input_type(text)
-            except ValueError:
-                print(f"[Error] Failed to convert '{text}' to {input_type.__name__}.")
-                return None
-
-    if ok:
-        return result if result is not None else text
-    else:
-        return None
 
 
 def create_timer(interval_ms: int, single_shot: bool = False) -> QTimer:

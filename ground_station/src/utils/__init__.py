@@ -1,14 +1,39 @@
 """
-Package containing constants and utility functions for the Groundstation application.
+This package contains various utility classes and functions used throughout the application.
 
-Includes:
-- `constants.py`: Defines constants used throughout the application.
-- `misc.py`: Contains miscellaneous utility functions.
-- `data_logger.py`: Provides a class for logging data to a CSV file in a thread-safe manner.
-- `state_manager.py`: Manages the state of variables used in multiple places within the Groundstation.
-- `thread_classes.py`: Defines custom thread classes for handling background tasks.
+Subpackages
+-----------
+- ``syntax_highlighters``: Contains syntax highlighters for various text formats.
+- ``widget_size_controllers``: Contains classes for controlling the size of widgets.
+- ``dialog_templates``: Contains template classes for creating dialog windows.
+
+Modules
+-------
+- ``constants``: Contains constant values used throughout the application.
+- ``misc``: Contains miscellaneous utility functions.
+- ``thread_classes``: Contains classes for managing threads in the application.
+
+Classes
+-------
+- ``TextEditWindow``: A simple text edit window that emits the entered text when closed.
+- ``StateManager``: A class for managing shared application state stored in a JSON file.
+- ``TextEditWindow``: A simple text edit window that emits the entered text when closed.
+- ``DataLogger``: A class for logging data entries to a file.
 """
 
-__all__ = ["constants", "data_logger", "misc", "state_manager", "thread_classes"]
+__all__ = [
+    "DataLogger",
+    "StateManager",
+    "TextEditWindow",
+    "constants",
+    "dialog_templates",
+    "misc",
+    "syntax_highlighters",
+    "thread_classes",
+    "widget_size_controllers",
+]
 
-from . import constants, data_logger, misc, state_manager, thread_classes
+from . import constants, dialog_templates, misc, syntax_highlighters, thread_classes, widget_size_controllers
+from .data_logger import DataLogger
+from .popup_edit import TextEditWindow
+from .state_manager import StateManager

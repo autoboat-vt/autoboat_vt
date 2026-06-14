@@ -5,7 +5,8 @@ import pytz
 from qtpy.QtCore import QThread, Signal, Slot
 from qtpy.QtGui import QCloseEvent, QTextCursor
 from qtpy.QtWidgets import QTextEdit, QVBoxLayout, QWidget
-from syntax_highlighters import ConsoleHighlighter
+
+from utils import syntax_highlighters
 
 
 class EmittingStream(QThread):
@@ -73,7 +74,7 @@ class ConsoleOutputWidget(QWidget):
         self.console_output.setReadOnly(True)
         self.main_layout.addWidget(self.console_output)
 
-        self.highlighter = ConsoleHighlighter(self.console_output.document())
+        self.highlighter = syntax_highlighters.ConsoleHighlighter(self.console_output.document())
 
         self.stdout_stream = EmittingStream()
         self.stderr_stream = EmittingStream()

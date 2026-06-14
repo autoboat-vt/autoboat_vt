@@ -7,8 +7,7 @@ Contains:
 - JsonHighlighter: Syntax highlighter for JSON text.
 """
 
-__all__ = ["BaseHighlighter", "ConsoleHighlighter", "JsonHighlighter"]
+__all__ = ["ConsoleHighlighter", "JsonHighlighter"]
 
-from .base_highlighter import BaseHighlighter
 from .console import ConsoleHighlighter
 from .json import JsonHighlighter

@@ -16,10 +16,12 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
 from utils import constants, misc
 
+__all__ = ["MapOptionsHandler"]
 
-class EditTelemetryConfigWindow(QDialog):
+class MapOptionsHandler(QDialog):
     """
     A dialog for controlling which diagnostics appear on the map.
 
@@ -96,7 +98,7 @@ class EditTelemetryConfigWindow(QDialog):
 
         self.feedback_text = QTextEdit(self)
         self.feedback_text.setReadOnly(True)
-        self.feedback_text.setStyleSheet(EditTelemetryConfigWindow.feedback_text_style)
+        self.feedback_text.setStyleSheet(MapOptionsHandler.feedback_text_style)
         self.feedback_text.setText(self.feedback_text_default)
         self.feedback_text_label.setBuddy(self.feedback_text)
 
@@ -104,7 +106,7 @@ class EditTelemetryConfigWindow(QDialog):
         self.feedback_text_clear_timer.setSingleShot(True)
         self.feedback_text_clear_timer.timeout.connect(self.clear_feedback_text)
 
-        map_features: dict[str, dict[str, str | bool]] = constants.SM.read("map_features")
+        map_features: dict[str, dict[str, str | bool]] = constants.SM.read_dict("map_features")
         for row, feature in enumerate(map_features):
             feature_info = map_features[feature]
 
@@ -187,7 +189,7 @@ class EditTelemetryConfigWindow(QDialog):
         self.feature_table.setItem(row, 1, description_item)
 
         checkbox = QCheckBox(self)
-        checkbox.setStyleSheet(EditTelemetryConfigWindow.checkbox_style)
+        checkbox.setStyleSheet(MapOptionsHandler.checkbox_style)
         checkbox.setChecked(enabled)
         checkbox.setToolTip(description)
         checkbox.toggled.connect(
@@ -197,7 +199,7 @@ class EditTelemetryConfigWindow(QDialog):
         @Slot(bool)
         def on_checkbox_toggled(checked: bool) -> None:
             name_item.enabled = checked
-            edited_map_features = constants.SM.read("map_features")
+            edited_map_features = constants.SM.read_dict("map_features")
             edited_map_features[key]["status"] = checked
             constants.SM.write("map_features", edited_map_features)
 

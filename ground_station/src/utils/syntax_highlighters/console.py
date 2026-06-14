@@ -1,8 +1,13 @@
-from qtpy.QtCore import QRegularExpression
-from qtpy.QtGui import QFont
-from utils.constants import GREEN, RED, WHITE, YELLOW
+from __future__ import annotations
 
-from syntax_highlighters.base_highlighter import BaseHighlighter
+from qtpy.QtCore import QRegularExpression
+from qtpy.QtGui import QFont, QTextDocument
+
+from utils import constants
+
+from .base_highlighter import BaseHighlighter
+
+__all__ = ["ConsoleHighlighter"]
 
 
 class ConsoleHighlighter(BaseHighlighter):
@@ -14,7 +19,7 @@ class ConsoleHighlighter(BaseHighlighter):
     ``BaseHighlighter``
     """
 
-    def __init__(self, parent: object | None = None) -> None:
+    def __init__(self, parent: QTextDocument | None = None) -> None:
         super().__init__(parent)
 
         self.pattern = QRegularExpression(
@@ -26,11 +31,11 @@ class ConsoleHighlighter(BaseHighlighter):
         )
 
         self.formats = {
-            "timestamp": self.create_format(WHITE, QFont.Bold),
-            "error": self.create_format(RED, QFont.Bold),
-            "warning": self.create_format(YELLOW, QFont.Bold),
-            "info": self.create_format(GREEN, QFont.Bold),
-            "text": self.create_format(WHITE, QFont.Normal),
+            "timestamp": self.create_format(constants.WHITE, QFont.Weight.Bold),
+            "error": self.create_format(constants.RED, QFont.Weight.Bold),
+            "warning": self.create_format(constants.YELLOW, QFont.Weight.Bold),
+            "info": self.create_format(constants.GREEN, QFont.Weight.Bold),
+            "text": self.create_format(constants.WHITE, QFont.Weight.Normal),
         }
 
     def highlightBlock(self, text: str) -> None:

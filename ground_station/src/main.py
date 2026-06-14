@@ -9,7 +9,15 @@ from qtpy.QtGui import QIcon
 from qtpy.QtWebEngineWidgets import QWebEnginePage
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 from utils import constants, misc
-from widgets import AutopilotConfigWidget, CameraWidget, ConsoleOutputWidget, GraphViewer, GroundStationWidget, InstanceHandler
+from widgets import (
+    AutopilotConfigWidget,
+    CameraWidget,
+    ConsoleOutputWidget,
+    GraphViewer,
+    GroundStationWidget,
+    InstanceHandler,
+    UserGuideWidget,
+)
 from widgets.map_widget import server as map_server
 
 
@@ -55,9 +63,11 @@ class MainWindow(QMainWindow):
             self.console_widget = ConsoleOutputWidget()
             print(f"[Info] Starting the {self.windowTitle()}...")
             self.instance_handler = InstanceHandler()
+            self.main_widget.addTab(UserGuideWidget(), "Documentation")
             self.main_widget.addTab(self.console_widget, "Console Output")
+            self.main_widget.setCurrentIndex(1)
 
-            if constants.SM.read("has_telemetry_server_instance_changed"):
+            if constants.SM.read_bool("has_telemetry_server_instance_changed"):
                 self.load_main_tabs()
 
             else:
@@ -82,7 +92,7 @@ class MainWindow(QMainWindow):
     def check_instance_connection(self) -> None:
         """Check if an instance connection has been established."""
 
-        if constants.SM.read("has_telemetry_server_instance_changed"):
+        if constants.SM.read_bool("has_telemetry_server_instance_changed"):
             self.check_timer.stop()
             self.load_main_tabs()
 
@@ -91,12 +101,19 @@ class MainWindow(QMainWindow):
 
         try:
             self.main_widget.addTab(self.instance_handler, "Instance Handler")
+            
             graph_viewer = GraphViewer()
-            self.main_widget.addTab(GroundStationWidget(graph_viewer.boat_data_signal), "Ground Station")
+            groundstation_widget = GroundStationWidget(graph_viewer.boat_data_signal)
+            self.main_widget.addTab(groundstation_widget, "Ground Station")
             self.main_widget.addTab(graph_viewer, "Graph Viewer")
-            self.main_widget.addTab(AutopilotConfigWidget(), "Autopilot Configuration")
+            
+            autopilot_config_widget = AutopilotConfigWidget(
+                groundstation_widget.refresh_autopilot_config_signal
+            )
+            self.main_widget.addTab(autopilot_config_widget, "Autopilot Configuration")
+            
             self.main_widget.addTab(CameraWidget(), "Camera Feed")
-            self.main_widget.setCurrentIndex(2)
+            self.main_widget.setCurrentIndex(3)
             print("[Info] Main application tabs loaded.")
 
         except Exception as e:
@@ -108,16 +125,6 @@ if __name__ == "__main__":
     constants.ICONS = misc.get_icons()
     
     window = MainWindow()
-    threading.Thread(target=window.start_asset_server, daemon=True).start()
-    threading.Thread(target=window.start_map_server, daemon=True).start()
-
-    app.setStyleSheet(constants.STYLE_SHEET)
-    app.setPalette(constants.PALLETTE)
-    app.setStyle("Fusion")
-
-    app.setApplicationName(constants.APPLICATION_NAME)
-    app.setOrganizationName(constants.ORGANIZATION_NAME)
-
     if constants.APP_LOGO_PATH.is_file():
         print(f"[Info] Setting application icon from {constants.APP_LOGO_PATH}...")
         logo_icon = QIcon(constants.APP_LOGO_PATH.as_posix())
@@ -128,6 +135,16 @@ if __name__ == "__main__":
         print(f"[Warning] Application logo not found at {constants.APP_LOGO_PATH}. Using default icon.")
         app.setWindowIcon(constants.ICONS.boat)
         window.setWindowIcon(constants.ICONS.boat)
+
+    threading.Thread(target=window.start_asset_server, daemon=True).start()
+    threading.Thread(target=window.start_map_server, daemon=True).start()
+
+    app.setStyleSheet(constants.STYLE_SHEET)
+    app.setPalette(constants.PALLETTE)
+    app.setStyle("Fusion")
+
+    app.setApplicationName(constants.APPLICATION_NAME)
+    app.setOrganizationName(constants.ORGANIZATION_NAME)
 
     window.show()
     sys.exit(app.exec())

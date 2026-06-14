@@ -153,5 +153,6 @@
         "valarray": "cpp",
         "variant": "cpp",
         "strstream": "cpp"
-    }
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:pyenv"
 }

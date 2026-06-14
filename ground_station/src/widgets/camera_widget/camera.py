@@ -2,6 +2,7 @@ import json
 
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import QGridLayout, QHBoxLayout, QPushButton, QWidget
+
 from utils import constants, misc, thread_classes
 
 

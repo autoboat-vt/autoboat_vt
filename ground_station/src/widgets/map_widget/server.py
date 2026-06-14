@@ -2,7 +2,7 @@ from http.server import ThreadingHTTPServer
 
 from utils import constants
 
-from widgets.map_widget.waypoints_handler import WaypointsHandler
+from .waypoints_handler import WaypointsHandler
 
 
 def run() -> None:

@@ -1,4 +1,8 @@
-from qtpy.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCharFormat
+from __future__ import annotations
+
+from qtpy.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCharFormat, QTextDocument
+
+__all__ = ["BaseHighlighter"]
 
 
 class BaseHighlighter(QSyntaxHighlighter):
@@ -10,11 +14,11 @@ class BaseHighlighter(QSyntaxHighlighter):
     ``QSyntaxHighlighter``
     """
 
-    def __init__(self, parent: object | None = None) -> None:
+    def __init__(self, parent: QTextDocument | None = None) -> None:
         super().__init__(parent)
 
     @staticmethod
-    def create_format(color: QColor, weight: QFont.Weight) -> QTextCharFormat:
+    def create_format(color: QColor, weight: QFont.Weight = QFont.Weight.Normal) -> QTextCharFormat:
         """
         Create a ``QTextCharFormat`` with the specified color and font weight.
 
@@ -51,4 +55,4 @@ class BaseHighlighter(QSyntaxHighlighter):
             If the method is not implemented in a subclass.
         """
 
-        raise NotImplementedError("Subclasses must implement highlightBlock()!")
+        raise NotImplementedError("Subclasses must implement highlightBlock()")

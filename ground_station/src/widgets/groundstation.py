@@ -3,6 +3,7 @@ import json
 import os
 import time
 from pathlib import Path
+from requests.exceptions import RequestException
 from typing import Any, Literal
 from urllib.parse import urljoin
 
@@ -24,17 +25,17 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from requests.exceptions import RequestException
-from syntax_highlighters import JsonHighlighter
-from utils import constants, misc, thread_classes
+
+from utils import TextEditWindow, constants, misc, thread_classes
 from utils.constants import StrictMatchEnums
+from utils.dialog_templates import show_input_dialog, show_message_box
+from utils.syntax_highlighters import JsonHighlighter
+
+from .map_widget import MapOptionsHandler
 
 MotorboatControlModes = StrictMatchEnums.MotorboatControlModes
 SailboatAutopilotStates = StrictMatchEnums.SailboatAutopilotStates
 SailboatControlModes = StrictMatchEnums.SailboatControlModes
-
-from widgets.popup_edit import TextEditWindow
-from widgets.popup_telemetry_config import EditTelemetryConfigWindow
 
 
 class GroundStationWidget(QWidget):
@@ -46,10 +47,17 @@ class GroundStationWidget(QWidget):
     boat_status_source
         A ``Signal`` that provides boat status updates.
 
+    Attributes
+    ----------
+    refresh_autopilot_config_signal: ``Signal``
+        Signal emitted when the autopilot configuration needs to be refreshed.
+
     Inherits
     -------
     ``QWidget``
     """
+
+    refresh_autopilot_config_signal = Signal(bool)
 
     def __init__(self, boat_status_source: Signal) -> None:
         super().__init__()
@@ -164,7 +172,7 @@ class GroundStationWidget(QWidget):
         self.middle_button_groupbox = QGroupBox()
         self.middle_button_layout = QGridLayout()
 
-        self.edit_telemetry_config_window = EditTelemetryConfigWindow()
+        self.edit_telemetry_config_window = MapOptionsHandler()
         self.telemetry_config_button = QPushButton("Map Appearance Configuration")
         self.telemetry_config_button.setToolTip(
             "If enabled, a popup will appear where you can alter the telemetry configuration.",
@@ -179,7 +187,7 @@ class GroundStationWidget(QWidget):
         self.middle_button_layout.addWidget(self.add_500_test_waypoints_button, 0, 1)
         self.middle_button_groupbox.setLayout(self.middle_button_layout)
 
-        self.middle_layout.addWidget(self.middle_button_groupbox, 1, 1, Qt.AlignCenter)
+        self.middle_layout.addWidget(self.middle_button_groupbox, 1, 1, Qt.AlignmentFlag.AlignCenter)
         self.middle_layout.setRowStretch(1, 0)
         self.main_layout.addLayout(self.middle_layout, 0, 1)
         # endregion middle section
@@ -189,10 +197,8 @@ class GroundStationWidget(QWidget):
         self.right_tab1_label = QLabel("Waypoints")
         self.right_tab1_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.right_tab1_table = QTableWidget()
-        self.right_tab1_table.setMinimumWidth(self.right_width)
-        self.right_tab1_table.cellClicked.connect(
-            lambda row, _column: self.zoom_to_marker(row, table="waypoints")
-        )
+        self.right_tab1_table.setMinimumWidth(self.right_width - 20)
+        self.right_tab1_table.cellClicked.connect(lambda row, _column: self.zoom_to_marker(row, table="waypoints"))
         self.can_send_waypoints = True
         self.send_waypoints_button = misc.pushbutton_maker(
             "Send Waypoints",
@@ -210,7 +216,7 @@ class GroundStationWidget(QWidget):
             self.clear_waypoints,
             max_width=self.right_width // 2,
             min_height=50,
-            is_clickable=self.can_send_waypoints,
+            is_clickable=self.can_reset_waypoints,
         )
 
         self.can_pull_waypoints = True
@@ -244,10 +250,8 @@ class GroundStationWidget(QWidget):
         self.right_tab2_label = QLabel("Buoy Data")
         self.right_tab2_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.right_tab2_table = QTableWidget()
-        self.right_tab2_table.setMinimumWidth(self.right_width)
-        self.right_tab2_table.cellClicked.connect(
-            lambda row, _column: self.zoom_to_marker(row, table="buoys")
-        )
+        self.right_tab2_table.setMinimumWidth(self.right_width - 20)
+        self.right_tab2_table.cellClicked.connect(lambda row, _column: self.zoom_to_marker(row, table="buoys"))
 
         self.edit_buoy_data_button = misc.pushbutton_maker(
             "Edit Buoy Data",
@@ -319,7 +323,7 @@ class GroundStationWidget(QWidget):
 
         if not test:
             try:
-                instance_id = constants.SM.read("telemetry_server_instance_id")
+                instance_id = constants.SM.read_int("telemetry_server_instance_id")
                 constants.REQ_SESSION.post(
                     urljoin(misc.get_route("set_waypoints"), str(instance_id)),
                     json=self.waypoints,
@@ -336,8 +340,8 @@ class GroundStationWidget(QWidget):
             try:
                 constants.REQ_SESSION.post(
                     urljoin(
-                        constants.SM.read("test_waypoints"),
-                        str(constants.SM.read("telemetry_server_instance_id")),
+                        constants.SM.read_str("test_waypoints"),
+                        str(constants.SM.read_int("telemetry_server_instance_id")),
                     ),
                     json=self.waypoints,
                 )
@@ -350,7 +354,7 @@ class GroundStationWidget(QWidget):
         """Pull waypoints from the telemetry server and add them to the map."""
 
         try:
-            instance_id = constants.SM.read("telemetry_server_instance_id")
+            instance_id = constants.SM.read_int("telemetry_server_instance_id")
             remote_waypoints: list[list[float]] = constants.REQ_SESSION.get(
                 urljoin(misc.get_route("get_waypoints"), str(instance_id)),
             ).json()
@@ -431,13 +435,13 @@ class GroundStationWidget(QWidget):
         self.start_data_logging_button.setDisabled(False)
         self.stop_data_logging_button.setDisabled(True)
 
-        non_compressed_path = Path(constants.SM.read("data_log_file_path"))
+        non_compressed_path = Path(constants.SM.read_str("data_log_file_path"))
         file_size = os.path.getsize(non_compressed_path) / (1024 * 1024)
 
         if file_size > 20:
-            compressed_file_path = Path(constants.SM.read("data_log_file_path").replace(".csv", ".csv.gz"))
+            compressed_file_path = Path(constants.SM.read_str("data_log_file_path").replace(".csv", ".csv.gz"))
 
-            with (open(non_compressed_path, "rb") as f_in, gzip.open(compressed_file_path, "wb") as f_out):
+            with open(non_compressed_path, "rb") as f_in, gzip.open(compressed_file_path, "wb") as f_out:
                 f_out.writelines(f_in)
 
             compressed_file_size = os.path.getsize(compressed_file_path) / (1024 * 1024)
@@ -459,6 +463,8 @@ class GroundStationWidget(QWidget):
 
         try:
             buoy_json = json.dumps(self.buoys, indent=4)
+            if hasattr(self, "text_edit_window") and self.text_edit_window is not None:
+                self.text_edit_window.close()
             self.text_edit_window = TextEditWindow(highlighter=JsonHighlighter, initial_text=buoy_json)
             self.text_edit_window.setWindowTitle("Edit Buoy GPS Coordinates")
             self.text_edit_window.user_text_emitter.connect(self.edit_buoy_data_callback)
@@ -482,9 +488,9 @@ class GroundStationWidget(QWidget):
         """
 
         try:
-            edited_bouys = json.loads(text)
-            if self.buoys != edited_bouys:
-                self.buoys = edited_bouys
+            edited_buoys = json.loads(text)
+            if self.buoys != edited_buoys:
+                self.buoys = edited_buoys
                 self.update_buoy_table()
 
         except Exception as e:
@@ -527,11 +533,10 @@ class GroundStationWidget(QWidget):
             file_path = Path(constants.BUOY_DATA_DIR / f"buoy_data_{time.time_ns()}.json")
             with open(file_path, mode="w", encoding="utf-8") as f:
                 json.dump(self.buoys, f, indent=4)
+            print(f"[Info] Buoy data saved to {file_path}")
 
         except Exception as e:
             print(f"[Error] Failed to save buoy data: {e}")
-
-        print(f"[Info] Buoy data saved to {file_path}")
 
     @Slot()
     def load_buoy_data(self) -> None:
@@ -555,17 +560,18 @@ class GroundStationWidget(QWidget):
                     "*.json",
                 )
                 if chosen_file == ("", ""):
-                    chosen_file = [Path(constants.BUOY_DATA_DIR / "default.json")]
+                    chosen_file_path = Path(constants.BUOY_DATA_DIR / "default.json")
+                else:
+                    chosen_file_path = Path(chosen_file[0])
 
-                with open(chosen_file[0], mode="r", encoding="utf-8") as f:
+                with open(chosen_file_path, mode="r", encoding="utf-8") as f:
                     self.buoys = json.load(f)
 
                 self.update_buoy_table()
+                print(f"[Info] Buoy data loaded from {chosen_file_path}")
 
         except Exception as e:
             print(f"[Error] Failed to load buoy data: {e}")
-
-        print(f"[Info] Buoy data loaded from {chosen_file[0]}")
 
     @Slot()
     def zoom_to_boat(self) -> None:
@@ -590,8 +596,13 @@ class GroundStationWidget(QWidget):
         if table == "waypoints":
             if self.right_tab1_table.rowCount() > 0:
                 try:
-                    approx_lat = float(self.right_tab1_table.item(row, 0).text())
-                    approx_lon = float(self.right_tab1_table.item(row, 1).text())
+                    item_lat = self.right_tab1_table.item(row, 0)
+                    item_lon = self.right_tab1_table.item(row, 1)
+                    if item_lat is None or item_lon is None:
+                        raise ValueError(f"Missing cell data at row {row}")
+
+                    approx_lat = float(item_lat.text())
+                    approx_lon = float(item_lon.text())
 
                     lat, lon = None, None
                     for waypoint in self.waypoints:
@@ -599,8 +610,11 @@ class GroundStationWidget(QWidget):
                             lat, lon = waypoint
                             break
 
-                    js_code = f"map.focus_map_on_marker({lat}, {lon})"
-                    self.browser.page().runJavaScript(misc.js_load_guard(js_code))
+                    if lat is not None and lon is not None:
+                        js_code = f"map.focus_map_on_marker({lat}, {lon})"
+                        self.browser.page().runJavaScript(misc.js_load_guard(js_code))
+                    else:
+                        print(f"[Warning] Waypoint not found for coordinates ({approx_lat}, {approx_lon})")
 
                 except (ValueError, TypeError) as e:
                     print(f"[Error] Invalid waypoint data: {e}")
@@ -610,8 +624,13 @@ class GroundStationWidget(QWidget):
         elif table == "buoys":
             if self.right_tab2_table.rowCount() > 0:
                 try:
-                    approx_lat = float(self.right_tab2_table.item(row, 0).text())
-                    approx_lon = float(self.right_tab2_table.item(row, 1).text())
+                    item_lat = self.right_tab2_table.item(row, 0)
+                    item_lon = self.right_tab2_table.item(row, 1)
+                    if item_lat is None or item_lon is None:
+                        raise ValueError(f"Missing cell data at row {row}")
+
+                    approx_lat = float(item_lat.text())
+                    approx_lon = float(item_lon.text())
 
                     lat, lon = None, None
                     for buoy in self.buoys.values():
@@ -619,8 +638,11 @@ class GroundStationWidget(QWidget):
                             lat, lon = buoy["lat"], buoy["lon"]
                             break
 
-                    js_code = f"map.focus_map_on_marker({lat}, {lon})"
-                    self.browser.page().runJavaScript(misc.js_load_guard(js_code))
+                    if lat is not None and lon is not None:
+                        js_code = f"map.focus_map_on_marker({lat}, {lon})"
+                        self.browser.page().runJavaScript(misc.js_load_guard(js_code))
+                    else:
+                        print(f"[Warning] Buoy not found for coordinates ({approx_lat}, {approx_lon})")
 
                 except (ValueError, TypeError) as e:
                     print(f"[Error] Invalid buoy data: {e}")
@@ -638,7 +660,7 @@ class GroundStationWidget(QWidget):
     def remote_waypoint_handler_starter(self) -> None:
         """Starts the telemetry waypoint handler thread."""
 
-        if not constants.SM.read("map_features")["waypoints_popup"]["status"]:
+        if not constants.SM.read_dict("map_features")["waypoints_popup"]["status"]:
             self.remember_waypoints_pull_service_status = False
             print("[Info] Waypoint checker disabled, not checking for waypoint updates.")
             return
@@ -728,7 +750,7 @@ class GroundStationWidget(QWidget):
             for timer in self.timers:
                 timer.stop()
 
-            response, temp_pull_waypoints_reminder = misc.show_message_box(
+            response, temp_pull_waypoints_reminder = show_message_box(
                 "Local Waypoints Mismatch",
                 "The local waypoints are different from the telemetry server waypoints. Do you want to update the local waypoints?",  # noqa: E501
                 constants.ICONS.warning,
@@ -782,7 +804,7 @@ class GroundStationWidget(QWidget):
             for timer in self.timers:
                 timer.stop()
 
-            response, temp_remember_telemetry_server_url_status = misc.show_message_box(
+            response, temp_remember_telemetry_server_url_status = show_message_box(
                 "Failed to fetch waypoints",
                 "Do you want to change the telemetry server URL?",
                 constants.ICONS.question,
@@ -794,21 +816,23 @@ class GroundStationWidget(QWidget):
             )
 
             if response == QMessageBox.StandardButton.Yes:
-                new_url = misc.show_input_dialog(
+                new_url = show_input_dialog(
                     "Change Telemetry Server URL",
                     "Enter the new telemetry server URL:",
-                    default_value=constants.SM.read("telemetry_server_url"),
+                    default_value=constants.SM.read_str("telemetry_server_url"),
                     input_type=str,
                 )
 
                 if new_url:
-                    print(f"[Info] Changed telemetry server URL to {new_url}, was {constants.SM.read('telemetry_server_url')}.")
+                    print(
+                        f"[Info] Changed telemetry server URL to {new_url}, was {constants.SM.read_str('telemetry_server_url')}."
+                    )
 
                     constants.SM.write("telemetry_server_url", new_url)
                     tmp_dict = {}
-                    for endpoint, value in constants.SM.read("telemetry_server_endpoints").items():
+                    for endpoint, value in constants.SM.read_dict("telemetry_server_endpoints").items():
                         path_tail = "/".join(value.split("/")[-2:])
-                        new_endpoint_url = constants.SM.read("telemetry_server_url") + path_tail
+                        new_endpoint_url = constants.SM.read_str("telemetry_server_url") + path_tail
                         tmp_dict[endpoint] = new_endpoint_url
 
                     constants.SM.write("telemetry_server_endpoints", tmp_dict)
@@ -872,9 +896,7 @@ class GroundStationWidget(QWidget):
 
         # region mode dependent print functions
         def sailboat_mode(boat_data: dict[str, Any]) -> str:
-            self.boat_data["boat_autopilot_state"] = SailboatAutopilotStates(
-                boat_data["boat_autopilot_state"]
-            ).name
+            self.boat_data["boat_autopilot_state"] = SailboatAutopilotStates(boat_data["boat_autopilot_state"]).name
             self.boat_data["boat_control_mode"] = SailboatControlModes(boat_data["boat_control_mode"]).name
 
             return (
@@ -901,7 +923,6 @@ class GroundStationWidget(QWidget):
                 f"Current Rudder Angle: {fix_formatting(self.boat_data.get('current_rudder_angle'))}°\n"
                 f"Rudder Angle Error: {fix_formatting(self.boat_data.get('rudder_angle_error'))}°\n"
             )
-
 
         def motorboat_mode(boat_data: dict[str, Any]) -> str:
             self.boat_data["boat_control_mode"] = MotorboatControlModes(boat_data["boat_control_mode"]).name
@@ -945,11 +966,9 @@ class GroundStationWidget(QWidget):
                 The heading of the boat, used to orient the diagnostics correctly on the map.
             """
 
-            current_autopilot_parameters = constants.SM.read("current_autopilot_parameters")
+            current_autopilot_parameters = constants.SM.read_dict("current_autopilot_parameters")
 
-            no_sail_zone_size_dict: dict[str, str | float] | None = (
-                current_autopilot_parameters.get("no_sail_zone_size")
-            )
+            no_sail_zone_size_dict: dict[str, str | float] | None = current_autopilot_parameters.get("no_sail_zone_size")
             if no_sail_zone_size_dict is None:
                 return
 
@@ -1046,18 +1065,12 @@ class GroundStationWidget(QWidget):
             x1: float = 2 + radius * vx / speed
             y1: float = 2 + radius * vy / speed
 
-            velocity_arrow_shape: list[svg.PathData] = [
-                svg.MoveTo(2, 2),
-                svg.LineTo(x1, y1)
-            ]
+            velocity_arrow_shape: list[svg.PathData] = [svg.MoveTo(2, 2), svg.LineTo(x1, y1)]
             velocity_arrow_transform: list[svg.Transform] = [
                 svg.Rotate(-heading, 2, 2),
             ]
             velocity_html = svg.Path(
-                d=velocity_arrow_shape,
-                stroke="black",
-                stroke_width="0.1",
-                transform=velocity_arrow_transform
+                d=velocity_arrow_shape, stroke="black", stroke_width="0.1", transform=velocity_arrow_transform
             )
 
             size = 0.2
@@ -1093,10 +1106,11 @@ class GroundStationWidget(QWidget):
         except AssertionError:
             lat, lon = self.fake_position
 
-        if constants.SM.read("has_telemetry_server_instance_changed"):
+        if constants.SM.read_bool("has_telemetry_server_instance_changed"):
             constants.SM.write("remote_autopilot_param_hash", "")
             constants.SM.write("data_logging_active", False)
             constants.SM.write("data_log_file_path", "")
+            self.refresh_autopilot_config_signal.emit(True)
 
             self.start_data_logging_button.setDisabled(False)
             self.stop_data_logging_button.setDisabled(True)
@@ -1104,11 +1118,14 @@ class GroundStationWidget(QWidget):
 
             constants.SM.write("has_telemetry_server_instance_changed", False)
 
+        else:
+            self.refresh_autopilot_config_signal.emit(False)
+
         # endregion data validation and defaulting
 
         self.browser.page().runJavaScript(misc.js_load_guard(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})"))
 
-        if constants.SM.read("map_features")["sailboat_debug_symbols"]["status"]:
+        if constants.SM.read_dict("map_features")["sailboat_debug_symbols"]["status"]:
             draw_map_diagnostics(heading)
             self.need_to_clear_diagnostics = True
 

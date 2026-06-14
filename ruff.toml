@@ -16,6 +16,17 @@ max-positional-args = 8
 max-returns         = 10
 max-locals          = 30
 
+[lint.isort]
+combine-as-imports     = true
+order-by-type          = true
+relative-imports-order = "furthest-to-closest"
+
+# A list of modules to consider standard-library, in addition to those known to Ruff in advance.
+extra-standard-library = ["requests"]
+
+# A list of modules to consider first-party, regardless of whether they can be identified as such via introspection of the local filesystem.
+known-first-party = ["ground_station", "utils", "widgets", "map_widget"]
+
 [lint]
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 future-annotations = true
@@ -92,5 +103,5 @@ ignore = [
     "W293",
     "Q000",
     "UP045",
-    "SIM108"
+    "SIM108",
 ]

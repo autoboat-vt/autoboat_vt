@@ -1,9 +1,11 @@
 from qtpy.QtCore import QRegularExpression
-from qtpy.QtGui import QFont
-from utils.constants import BLUE, PURPLE, WHITE, YELLOW
+from qtpy.QtGui import QFont, QTextDocument
 
-from syntax_highlighters.base_highlighter import BaseHighlighter
+from utils import constants
 
+from .base_highlighter import BaseHighlighter
+
+__all__ = ["JsonHighlighter"]
 
 class JsonHighlighter(BaseHighlighter):
     """
@@ -14,7 +16,7 @@ class JsonHighlighter(BaseHighlighter):
     ``BaseHighlighter``
     """
 
-    def __init__(self, parent: object | None = None) -> None:
+    def __init__(self, parent: QTextDocument | None = None) -> None:
         super().__init__(parent)
 
         self.pattern = QRegularExpression(
@@ -26,11 +28,11 @@ class JsonHighlighter(BaseHighlighter):
         )
 
         self.formats = {
-            "key": self.create_format(WHITE, QFont.Normal),
-            "string": self.create_format(YELLOW, QFont.Normal),
-            "number": self.create_format(PURPLE, QFont.Normal),
-            "keyword": self.create_format(BLUE, QFont.Normal),
-            "punct": self.create_format(WHITE, QFont.Normal),
+            "key": self.create_format(constants.WHITE, QFont.Weight.Normal),
+            "string": self.create_format(constants.YELLOW, QFont.Weight.Normal),
+            "number": self.create_format(constants.PURPLE, QFont.Weight.Normal),
+            "keyword": self.create_format(constants.BLUE, QFont.Weight.Normal),
+            "punct": self.create_format(constants.WHITE, QFont.Weight.Normal),
         }
 
     def highlightBlock(self, text: str) -> None:
