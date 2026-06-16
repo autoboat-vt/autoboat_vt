@@ -1,10 +1,4 @@
-"""
-Script to generate TensorRT engine file from ONNX model using DeepStream.
-This script creates a minimal GStreamer pipeline that triggers engine generation
-without requiring a physical camera.
-
-This was created with AI
-"""
+"""Minimal pipeline to trigger DeepStream engine generation from a YOLO ONNX model, without needing a camera or video file."""
 
 import os
 import sys
@@ -21,19 +15,15 @@ if len(sys.argv) < 2:
     print("Usage: python make_model_engine.py <yolo_version>")
     sys.exit(1)
 
-# TODO: find a better way to do this
 if (re.search("/home/ws", os.getcwd()) is not None):
     IS_DEV_CONTAINER = True
 else:
     IS_DEV_CONTAINER = False
 
-# Determine paths based on environment (TODO: find a better way to do this)
-if IS_DEV_CONTAINER:
-    PATH_TO_ROS_PACKAGES_DIR = "/home/ws/ros_packages"
-else:
-    PATH_TO_ROS_PACKAGES_DIR = "/home/sailbot/autoboat_vt/ros_packages"
+# Determine paths based on environment
+PATH_TO_PKG_DIR = "/home/ws/ros_packages" if IS_DEV_CONTAINER else f"{os.path.expanduser('~')}/autoboat_vt/ros_packages"
 
-PATH_TO_YOLO_CONFIG = f"{PATH_TO_ROS_PACKAGES_DIR}/object_detection/object_detection/deepstream_yolo/config_infer_primary_yolo{sys.argv[1]}.txt"
+PATH_TO_YOLO_CONFIG = f"{PATH_TO_PKG_DIR}/object_detection/object_detection/config/yolo{sys.argv[1]}_config.yaml"
 
 # Configuration
 COMPUTE_HW = 1
@@ -46,8 +36,8 @@ with open(PATH_TO_YOLO_CONFIG, 'r') as file:
     content = file.read()
     split_content = content.split('\n\n')
     properties = split_content[4].split('\n')
-    BATCH_SIZE = properties[1].split('=')[1].split(' ')[0]
-    network_mode = int(properties[2].split('=')[-1].split(' ')[0])
+    BATCH_SIZE = properties[1].split(': ')[1].split(' ')[0]
+    network_mode = int(properties[2].split(': ')[-1].split(' ')[0])
     match network_mode:
         case 0:
             QUANTIZE = "fp32"
@@ -69,7 +59,7 @@ class EngineGenerator:
         self.max_wait_time = 1800  # 30 minutes max wait for engine creation
 
     def bus_call(self, bus, message, loop):
-        """Handle GStreamer bus messages"""
+        """Handle GStreamer bus messages."""
         t = message.type
 
         if t == Gst.MessageType.EOS:
@@ -259,10 +249,10 @@ def main():
 
     with open(PATH_TO_YOLO_CONFIG, "r") as f:
         for line in f:
-            if line.strip().startswith("onnx-file=") and not line.strip().startswith("#"):
-                onnx_file = line.split("=")[1].strip()
-            if line.strip().startswith("model-engine-file=") and not line.strip().startswith("#"):
-                engine_file = line.split("=")[1].strip()
+            if line.strip().startswith("onnx-file: ") and not line.strip().startswith("#"):
+                onnx_file = line.split(": ")[-1].strip()
+            if line.strip().startswith("model-engine-file: ") and not line.strip().startswith("#"):
+                engine_file = line.split(": ")[-1].strip()
 
     if onnx_file:
         onnx_path = os.path.join(CONFIG_DIRECTORY, onnx_file)
@@ -279,7 +269,7 @@ def main():
         target_engine_path = os.path.join(CONFIG_DIRECTORY, engine_file)
         # Default engine filename that DeepStream creates
         default_engine_file = f"model_b{BATCH_SIZE}_gpu0_{QUANTIZE}.engine"
-        default_engine_path = os.path.join(CONFIG_DIRECTORY, default_engine_file)
+        default_engine_path = os.path.join(f"{PATH_TO_PKG_DIR}/object_detection/object_detection/cv_library", default_engine_file)
         
         if os.path.exists(target_engine_path):
             print(f"⚠ Warning: Target engine file already exists: {engine_file}")
