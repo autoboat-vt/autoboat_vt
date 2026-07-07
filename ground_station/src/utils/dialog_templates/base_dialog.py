@@ -88,18 +88,22 @@ class BaseDialog(QDialog):
 
     def get_result(self) -> str:
         """Get the dialog result value."""
+
         return self._result
 
     def set_result(self, value: str) -> None:
         """Set the dialog result value."""
+
         self._result = value
 
     def get_remember_choice(self) -> bool:
         """Get the remember choice checkbox state."""
+
         return self._remember_choice
 
     def accept(self) -> None:
         """Override accept to capture checkbox state before accepting."""
+
         if self._remember_checkbox is not None:
             self._remember_choice = self._remember_checkbox.isChecked()
         super().accept()
@@ -107,6 +111,7 @@ class BaseDialog(QDialog):
 
     def reject(self) -> None:
         """Override reject to capture checkbox state before rejecting."""
+
         if self._remember_checkbox is not None:
             self._remember_choice = self._remember_checkbox.isChecked()
         super().reject()
@@ -114,8 +119,5 @@ class BaseDialog(QDialog):
 
     def get_result_with_remember(self) -> tuple[str, bool]:
         """Return a tuple of (result, remember_choice)."""
+
         return self._result, self._remember_choice
-        
-        
-
-
