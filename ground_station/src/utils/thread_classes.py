@@ -12,9 +12,10 @@ both from the ``waypoints`` endpoint and the local server.
 
 import pathlib
 from requests import RequestException
+from typing import Any
 from urllib.parse import urljoin
 
-from qtpy.QtCore import QThread, Signal
+from qtpy.QtCore import QMutex, QMutexLocker, QThread, Signal
 
 from utils import constants, misc
 
@@ -155,15 +156,28 @@ class BoatStatusThreadRouter:
         Attributes
         ----------
         response
-            Signal to send boat status to the main thread. Emits a tuple containing:
-                - a dictionary of boat status,
+            Property to get the most recent fetch result. Returns a tuple containing:
+                - a dictionary representing the boat status,
                 - a ``TelemetryStatus`` enum value indicating the status of the request.
-        """
 
-        response = Signal(tuple)
+        Note
+        ----
+        This class uses a mutex to ensure thread-safe access to the
+        ``response`` property, allowing the main thread to safely read
+        the latest boat status while the fetcher thread is running.
+        """
 
         def __init__(self) -> None:
             super().__init__()
+            self._lock = QMutex()
+            self._response: tuple[dict[str, Any], constants.TelemetryStatus] | None = None
+
+        @property
+        def response(self) -> tuple[dict[str, Any], constants.TelemetryStatus] | None:
+            """Return the most recent fetch result, or ``None`` if none yet."""
+
+            with QMutexLocker(self._lock):
+                return self._response
 
         def run(self) -> None:
             """Run the thread to fetch boat status from the telemetry server."""
@@ -171,9 +185,9 @@ class BoatStatusThreadRouter:
             self.get_boat_status()
 
         def get_boat_status(self) -> None:
-            """Fetch boat status from the telemetry server and emit it continuously."""
+            """Fetch boat status from the telemetry server continuously."""
 
-            while True:
+            while not self.isInterruptionRequested():
                 try:
                     data = constants.REQ_SESSION.get(
                         urljoin(misc.get_route("get_boat_status"), str(constants.SM.read_int("telemetry_server_instance_id")))
@@ -183,13 +197,20 @@ class BoatStatusThreadRouter:
                         raise TypeError
 
                 except RequestException:
-                    self.response.emit(({}, constants.TelemetryStatus.FAILURE))
+                    result = ({}, constants.TelemetryStatus.FAILURE)
 
                 except TypeError:
-                    self.response.emit(({}, constants.TelemetryStatus.WRONG_FORMAT))
+                    result = ({}, constants.TelemetryStatus.WRONG_FORMAT)
 
                 else:
-                    self.response.emit((data, constants.TelemetryStatus.SUCCESS))
+                    result = (data, constants.TelemetryStatus.SUCCESS)
+
+                with QMutexLocker(self._lock):
+                    self._response = result
+
+                # Yield between polls so we don't peg a CPU core. ``msleep``
+                # wakes early on ``requestInterruption``, so shutdown stays snappy.
+                self.msleep(500)
 
 
 class InstanceManagerThreadRouter:

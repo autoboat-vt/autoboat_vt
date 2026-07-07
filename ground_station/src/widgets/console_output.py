@@ -2,25 +2,31 @@ import sys
 from datetime import datetime
 
 import pytz
-from qtpy.QtCore import QThread, Signal, Slot
+from qtpy.QtCore import QObject, Signal, Slot
 from qtpy.QtGui import QCloseEvent, QTextCursor
 from qtpy.QtWidgets import QTextEdit, QVBoxLayout, QWidget
 
 from utils import syntax_highlighters
 
 
-class EmittingStream(QThread):
+class EmittingStream(QObject):
     """
     A custom stream that emits text written to it as a signal.
 
     Inherits
     --------
-    ``QThread``
+    ``QObject``
 
     Attributes
     ----------
     text_written: ``Signal``
         Signal emitted when text is written to the stream.
+
+    Notes
+    -----
+    This stream is intended to replace ``sys.stdout`` / ``sys.stderr`` so that
+    output from ``print()`` calls throughout the codebase is captured into the
+    console widget.
     """
 
     text_written = Signal(str)
@@ -105,7 +111,7 @@ class ConsoleOutputWidget(QWidget):
 
             self.console_output.setTextCursor(cursor)
             self.console_output.ensureCursorVisible()
-    
+
     def closeEvent(self, event: QCloseEvent) -> None:
         """
         Restore original streams when widget is closed.

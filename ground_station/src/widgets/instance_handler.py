@@ -751,7 +751,7 @@ class InstanceWidget(QFrame):
                 )
 
                 print(
-                    f"[Info] Instance #{self.instance_id} deleted and new instance created with ID #{constants.SM.read_int('TELEMETRY_SERVER_INSTANCE_ID')}."  # noqa: E501
+                    f"[Info] Instance #{self.instance_id} deleted and new instance created with ID #{constants.SM.read_int('telemetry_server_instance_id')}."  # noqa: E501
                 )
 
             except RequestException as e:

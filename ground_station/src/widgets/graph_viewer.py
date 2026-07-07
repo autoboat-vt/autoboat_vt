@@ -8,6 +8,7 @@ import numpy as np
 import numpy.typing as npt
 import pyqtgraph as pg
 from qtpy.QtCore import Qt, Signal, Slot
+from qtpy.QtGui import QCloseEvent
 from qtpy.QtWidgets import QCheckBox, QDialog, QGridLayout, QWidget
 
 from utils import constants, misc
@@ -34,11 +35,7 @@ class GraphViewer(QWidget):
     def __init__(self) -> None:
         super().__init__()
 
-        self.timer = misc.copy_qtimer(constants.ONE_SECOND_TIMER)
         self.plots: list[pg.PlotItem] = []
-
-        self.time_stopped: float | None = None
-        self.time_started: float | None = None
 
         self.important_keys: list[str] = ["speed", "distance_to_next_waypoint", "desired_heading", "heading", "true_wind_speed"]
         self.available_keys: list[str] = []
@@ -60,8 +57,27 @@ class GraphViewer(QWidget):
         self.setLayout(self.main_layout)
 
         self.telemetry_handler = BoatStatusThreadRouter.BoatStatusFetcherThread()
-        self.telemetry_handler.response.connect(self.update_graph)
         self.telemetry_handler.start()
+
+        # ``BoatStatusFetcherThread.response`` is a thread-safe property (not a
+        # Signal), so the UI polls it on a timer instead of connecting a slot.
+        # ``_last_response`` is tracked so we only call ``update_graph`` when
+        # the fetcher has produced a new result.
+        self._last_response: tuple[dict[str, Any], constants.TelemetryStatus] | None = None
+        self.poll_timer = misc.copy_qtimer(constants.HALF_SECOND_TIMER)
+        self.poll_timer.timeout.connect(self._poll_telemetry)
+        self.poll_timer.start()
+
+    @Slot()
+    def _poll_telemetry(self) -> None:
+        """Poll the telemetry fetcher thread and update graphs when new data arrives."""
+
+        latest = self.telemetry_handler.response
+        if latest is None or latest is self._last_response:
+            return
+
+        self._last_response = latest
+        self.update_graph(latest)
 
     @Slot(tuple)
     def update_graph(self, request_result: tuple[dict[str, Any], constants.TelemetryStatus]) -> None:
@@ -215,6 +231,27 @@ class GraphViewer(QWidget):
         self.plots.clear()
         self.graph_layout_widget.clear()
         print("[Info] Cleared all graphs and data.")
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """
+        Stop the telemetry fetcher thread and poll timer before closing.
+
+        Without this, the ``BoatStatusFetcherThread`` is destroyed while still
+        running, producing ``QThread: Destroyed while thread is still running``
+        and a non-zero exit code. ``requestInterruption`` makes the fetcher's
+        ``msleep`` wake early, and ``wait`` blocks until the thread has fully
+        exited before the QObject is torn down.
+
+        Parameters
+        ----------
+        event
+            The close event that triggered this method.
+        """
+
+        self.poll_timer.stop()
+        self.telemetry_handler.requestInterruption()
+        self.telemetry_handler.wait()
+        super().closeEvent(event)
 
 class GraphSelectionDialog(QDialog):
     """

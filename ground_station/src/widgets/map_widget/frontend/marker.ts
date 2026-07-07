@@ -34,7 +34,7 @@ export abstract class MarkerManager {
     }
 
     protected makeKey(lat: number, lon: number): string {
-        return `${lat * lon}`;
+        return `${lat},${lon}`;
     }
 
     protected addPoint(lat: number, lon: number, color: string): void {

@@ -1,3 +1,4 @@
+from qtpy.QtGui import QCloseEvent
 from qtpy.QtWebEngineWidgets import QWebEnginePage, QWebEngineProfile, QWebEngineView
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
@@ -35,3 +36,12 @@ class UserGuideWidget(QWidget):
         """Navigate to the home page of the documentation."""
 
         self.web_view.load(constants.DOCUMENTATION_URL)
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Handle the close event for the widget."""
+
+        self.web_profile.clearHttpCache()
+        self.web_profile.clearAllVisitedLinks()
+        self.web_profile.clearAllPersistentData()
+
+        super().closeEvent(event)

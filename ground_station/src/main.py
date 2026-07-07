@@ -5,9 +5,11 @@ import sys
 import threading
 from typing import NoReturn
 
-from qtpy.QtGui import QIcon
+from qtpy.QtCore import QThread
+from qtpy.QtGui import QCloseEvent, QIcon
 from qtpy.QtWebEngineWidgets import QWebEnginePage
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
+
 from utils import constants, misc
 from widgets import (
     AutopilotConfigWidget,
@@ -79,23 +81,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"[Error] Failed to initialize main window: {e}")
 
-    def closeEvent(self, event: object) -> NoReturn:
-        """Handle the window close event."""
-
-        print("[Info] Shutting down asset server...")
-        if hasattr(self, "asset_server"):
-            self.asset_server.shutdown()
-
-        print("[Info] Closing the application...")
-        event.accept()
-
-    def check_instance_connection(self) -> None:
-        """Check if an instance connection has been established."""
-
-        if constants.SM.read_bool("has_telemetry_server_instance_changed"):
-            self.check_timer.stop()
-            self.load_main_tabs()
-
     def load_main_tabs(self) -> None:
         """Load the main application tabs after an instance connection is detected."""
 
@@ -118,6 +103,32 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             print(f"[Error] Failed to load main tabs: {e}")
+
+    def check_instance_connection(self) -> None:
+        """Check if an instance connection has been established."""
+
+        if constants.SM.read_bool("has_telemetry_server_instance_changed"):
+            self.check_timer.stop()
+            self.load_main_tabs()
+
+    def closeEvent(self, event: QCloseEvent) -> NoReturn:
+        """Handle the window close event."""
+
+        print("[Info] Shutting down background threads...")
+        for thread in self.findChildren(QThread):
+            thread.requestInterruption()
+            thread.wait()
+
+        print("[Info] Shutting down asset server...")
+        if hasattr(self, "asset_server"):
+            self.asset_server.shutdown()
+
+        print("[Info] Releasing map page...")
+        if hasattr(constants, "MAP_PAGE") and isinstance(constants.MAP_PAGE, QWebEnginePage):
+            constants.MAP_PAGE.deleteLater()
+
+        print("[Info] Closing the application...")
+        event.accept()
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from qtpy.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCharFormat, QTextDocument
+from qtpy.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCharFormat
 
 __all__ = ["BaseHighlighter"]
 
@@ -14,8 +14,8 @@ class BaseHighlighter(QSyntaxHighlighter):
     ``QSyntaxHighlighter``
     """
 
-    def __init__(self, parent: QTextDocument | None = None) -> None:
-        super().__init__(parent)
+    def __init__(self) -> None:
+        super().__init__()
 
     @staticmethod
     def create_format(color: QColor, weight: QFont.Weight = QFont.Weight.Normal) -> QTextCharFormat:

@@ -3,10 +3,11 @@ from __future__ import annotations
 import contextlib
 import fcntl
 import json
+import threading
 from collections.abc import Callable, Generator
 from functools import wraps
 from os import fsync
-from typing import Any, TextIO, TypeVar, cast
+from typing import Any, ClassVar, TextIO, TypeVar, cast
 
 from utils import constants
 
@@ -113,6 +114,16 @@ def _load_state(f: TextIO) -> dict[str, Any]:
 class StateManager:
     """Manage shared application state stored in a JSON file."""
 
+    _cache: ClassVar[dict[str, Any]] = {}
+    _cache_lock: ClassVar[threading.Lock] = threading.Lock()
+
+    @staticmethod
+    def _invalidate_cache() -> None:
+        """Clear the read-through cache. Called after every write."""
+
+        with StateManager._cache_lock:
+            StateManager._cache.clear()
+
     @staticmethod
     def write(variable: str, value: Any) -> None:
         """
@@ -136,10 +147,20 @@ class StateManager:
             f.flush()
             fsync(f.fileno())
 
+        with StateManager._cache_lock:
+            StateManager._cache.clear()
+            StateManager._cache[variable] = value
+
     @staticmethod
     def _read(variable: str) -> Any | None:
         """
         Read a variable's value from the state file.
+
+        Uses a process-wide read-through cache to avoid re-parsing the JSON
+        file on every call. The cache is invalidated by ``write``; this is
+        safe because writes are rare relative to reads, and any external
+        process modifying the file out-of-band is not a supported pattern
+        in this application.
 
         Parameters
         ----------
@@ -151,6 +172,10 @@ class StateManager:
         Any | None
             The value associated with the variable, or ``None`` if the variable is not found.
         """
+
+        with StateManager._cache_lock:
+            if variable in StateManager._cache:
+                return StateManager._cache[variable]
 
         with _locked_file(path=constants.APP_STATE_PATH, mode="r", lock_type=fcntl.LOCK_SH) as f:
             data = _load_state(f)

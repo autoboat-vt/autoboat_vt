@@ -10,6 +10,7 @@ Functions:
 - cache_cdn_file: Download and cache a file to serve in a local CDN server.
 - js_load_guard: Run JavaScript after the map API has loaded.
 - create_symlinks: Create symbolic links for all files in the source directory to the target directory.
+- resolve_enum_name: Resolve a telemetry enum value to its member name.
 """
 
 __all__ = [
@@ -21,15 +22,17 @@ __all__ = [
     "get_route",
     "js_load_guard",
     "pushbutton_maker",
+    "resolve_enum_name",
 ]
 
 import os
 import textwrap
 from collections.abc import Callable
+from enum import Enum
 from pathlib import Path
 from requests import RequestException
 from types import SimpleNamespace
-from typing import Protocol, TypeVar, cast
+from typing import Any, Protocol, TypeVar, cast
 
 import qtawesome as qta
 from qtpy.QtCore import QTimer
@@ -371,3 +374,36 @@ def js_load_guard(js_code: str) -> str:
         __runAutoboatMapCodeWhenReady();
         """
     ).strip()
+
+
+def resolve_enum_name(enum_class: type[Enum], value: Any) -> str:
+    """
+    Resolve a telemetry enum value to its member name.
+
+    The telemetry server may send either the enum's integer value (e.g., ``4``) or its
+    member name as a string (e.g., ``"CW_TACKING"``). This helper handles both formats
+    and falls back to a string representation of the raw value if it cannot be resolved,
+    so that a single unexpected value does not crash the telemetry display.
+
+    Parameters
+    ----------
+    enum_class
+        The enum class to resolve against (e.g., ``SailboatAutopilotStates``).
+    value
+        The raw value received from the telemetry server.
+
+    Returns
+    -------
+    str
+        The resolved enum member name, or a stringified fallback.
+    """
+
+    if isinstance(value, str) and value in enum_class.__members__:
+        return value
+
+    try:
+        return enum_class(int(value)).name
+    except (ValueError, KeyError, TypeError):
+        pass
+
+    return str(value) if value is not None else "N/A"

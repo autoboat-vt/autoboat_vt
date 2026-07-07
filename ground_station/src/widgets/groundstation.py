@@ -28,7 +28,7 @@ from qtpy.QtWidgets import (
 
 from utils import TextEditWindow, constants, misc, thread_classes
 from utils.constants import StrictMatchEnums
-from utils.dialog_templates import show_input_dialog, show_message_box
+from utils.dialog_templates import InputDialog, show_message_box
 from utils.syntax_highlighters import JsonHighlighter
 
 from .map_widget import MapOptionsHandler
@@ -418,6 +418,7 @@ class GroundStationWidget(QWidget):
 
         constants.SM.write("data_log_file_path", data_log_file.as_posix())
         constants.SM.write("data_logging_active", True)
+        constants.DL.start()
         self.boat_status_source.connect(constants.DL.write_from_qthread)
 
         self.start_data_logging_button.setDisabled(True)
@@ -431,6 +432,7 @@ class GroundStationWidget(QWidget):
 
         constants.SM.write("data_logging_active", False)
         self.boat_status_source.disconnect(constants.DL.write_from_qthread)
+        constants.DL.stop()
 
         self.start_data_logging_button.setDisabled(False)
         self.stop_data_logging_button.setDisabled(True)
@@ -441,7 +443,7 @@ class GroundStationWidget(QWidget):
         if file_size > 20:
             compressed_file_path = Path(constants.SM.read_str("data_log_file_path").replace(".csv", ".csv.gz"))
 
-            with open(non_compressed_path, "rb") as f_in, gzip.open(compressed_file_path, "wb") as f_out:
+            with open(non_compressed_path, "rb") as f_in, gzip.open(compressed_file_path, mode="wb", compresslevel=9) as f_out:
                 f_out.writelines(f_in)
 
             compressed_file_size = os.path.getsize(compressed_file_path) / (1024 * 1024)
@@ -816,12 +818,12 @@ class GroundStationWidget(QWidget):
             )
 
             if response == QMessageBox.StandardButton.Yes:
-                new_url = show_input_dialog(
+                new_url = InputDialog(
                     "Change Telemetry Server URL",
                     "Enter the new telemetry server URL:",
                     default_value=constants.SM.read_str("telemetry_server_url"),
                     input_type=str,
-                )
+                ).get_input()
 
                 if new_url:
                     print(
@@ -896,8 +898,12 @@ class GroundStationWidget(QWidget):
 
         # region mode dependent print functions
         def sailboat_mode(boat_data: dict[str, Any]) -> str:
-            self.boat_data["boat_autopilot_state"] = SailboatAutopilotStates(boat_data["boat_autopilot_state"]).name
-            self.boat_data["boat_control_mode"] = SailboatControlModes(boat_data["boat_control_mode"]).name
+            self.boat_data["boat_autopilot_state"] = misc.resolve_enum_name(
+                SailboatAutopilotStates, boat_data["boat_autopilot_state"]
+            )
+            self.boat_data["boat_control_mode"] = misc.resolve_enum_name(
+                SailboatControlModes, boat_data["boat_control_mode"]
+            )
 
             return (
                 "Position: "
@@ -925,7 +931,9 @@ class GroundStationWidget(QWidget):
             )
 
         def motorboat_mode(boat_data: dict[str, Any]) -> str:
-            self.boat_data["boat_control_mode"] = MotorboatControlModes(boat_data["boat_control_mode"]).name
+            self.boat_data["boat_control_mode"] = misc.resolve_enum_name(
+                MotorboatControlModes, boat_data["boat_control_mode"]
+            )
 
             return (
                 "Position: "

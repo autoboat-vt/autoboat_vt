@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import fcntl
+import threading
 from collections.abc import Generator, Iterable
 from csv import DictWriter
 from dataclasses import dataclass, field
@@ -10,7 +11,7 @@ from os import fsync
 from pathlib import Path
 from typing import Any, TextIO, cast
 
-from qtpy.QtCore import Slot
+from qtpy.QtCore import QObject, QTimer, Slot
 
 from utils import constants
 
@@ -74,9 +75,16 @@ def _locked_file(path: constants.FileType, mode: str, lock_type: int) -> Generat
             fcntl.flock(f, fcntl.LOCK_UN)
 
 
-def _load_log() -> Path:
+def _load_log(header_written: bool = False) -> Path:
     """
     Load the CSV log file, creating it with a header if it doesn't exist.
+
+    Parameters
+    ----------
+    header_written
+        Whether the CSV header has already been written during this logging
+        session. When ``True``, the file is known to exist and be initialized,
+        so this function avoids re-opening it in ``a+`` mode just to check.
 
     Returns
     -------
@@ -90,6 +98,9 @@ def _load_log() -> Path:
     """
 
     log = Path(constants.SM.read_str("data_log_file_path"))
+
+    if header_written:
+        return log
 
     if not log.exists():
         print(f"[Info] Creating new data log file at {log}...")
@@ -110,11 +121,29 @@ def _load_log() -> Path:
     return log
 
 
-class DataLogger:
-    """Class for managing the logging of data within the ground station."""
+class DataLogger(QObject):
+    """Class for managing the logging of data within the ground station.
 
-    @staticmethod
-    def write(key_name: str, data: object) -> None:
+    Telemetry arrives at a high rate via ``write_from_qthread``. Writing each
+    tick straight to disk would mean one file open, one ``flock``, and one
+    ``fsync`` call per tick on the GUI thread. Instead, incoming entries are
+    appended to an in-memory buffer and drained by a QTimer every
+    ``_FLUSH_INTERVAL_MS`` milliseconds in a single batched write.
+    """
+
+    _FLUSH_INTERVAL_MS = 1_000
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._buffer: list[dict[str, str]] = []
+        self._buffer_lock = threading.Lock()
+        self._header_written = False
+
+        self._flush_timer = QTimer(self)
+        self._flush_timer.setInterval(self._FLUSH_INTERVAL_MS)
+        self._flush_timer.timeout.connect(self._flush)
+
+    def write(self, key_name: str, data: object) -> None:
         """
         Append a new log entry to the CSV file.
 
@@ -126,12 +155,11 @@ class DataLogger:
             The value associated with the key.
         """
 
-        DataLogger.bulk_write([DataLogEntry(key_name=key_name, data=data)])
+        self.bulk_write([DataLogEntry(key_name=key_name, data=data)])
 
-    @staticmethod
-    def bulk_write(entries: Iterable[tuple[str, object] | DataLogEntry]) -> None:
+    def bulk_write(self, entries: Iterable[tuple[str, object] | DataLogEntry]) -> None:
         """
-        Append multiple log entries to the CSV file in a single operation.
+        Append multiple log entries to the buffer for later flushing.
 
         Parameters
         ----------
@@ -156,17 +184,11 @@ class DataLogger:
         if not rows:
             return
 
-        log_file = _load_log()
+        with self._buffer_lock:
+            self._buffer.extend(rows)
 
-        with _locked_file(path=log_file, mode="a", lock_type=fcntl.LOCK_EX) as f:
-            writer = DictWriter(f, fieldnames=_FIELDNAMES, lineterminator="\n")
-            writer.writerows(rows)
-            f.flush()
-            fsync(f.fileno())
-
-    @staticmethod
     @Slot(tuple)
-    def write_from_qthread(request_result: tuple[dict[str, Any], constants.TelemetryStatus]) -> None:
+    def write_from_qthread(self, request_result: tuple[dict[str, Any], constants.TelemetryStatus]) -> None:
         """
         Convenience method for writing log entries from a ``QThread``, where the data is returned as a tuple.
 
@@ -180,4 +202,38 @@ class DataLogger:
 
         boat_data, _ = request_result
 
-        DataLogger.bulk_write(DataLogEntry(key_name=key, data=value) for key, value in boat_data.items())
+        self.bulk_write(DataLogEntry(key_name=key, data=value) for key, value in boat_data.items())
+
+    @Slot()
+    def start(self) -> None:
+        """Start the periodic flush timer. Called when logging begins."""
+
+        self._header_written = False
+        self._flush_timer.start()
+
+    @Slot()
+    def stop(self) -> None:
+        """Stop the flush timer and drain any buffered entries. Called when logging ends."""
+
+        self._flush_timer.stop()
+        self._flush()
+
+    @Slot()
+    def _flush(self) -> None:
+        """Drain the buffer and write all pending entries to disk in one batch."""
+
+        with self._buffer_lock:
+            if not self._buffer:
+                return
+            
+            rows = self._buffer
+            self._buffer = []
+
+        log_file = _load_log(header_written=self._header_written)
+        self._header_written = True
+
+        with _locked_file(path=log_file, mode="a", lock_type=fcntl.LOCK_EX) as f:
+            writer = DictWriter(f, fieldnames=_FIELDNAMES, lineterminator="\n")
+            writer.writerows(rows)
+            f.flush()
+            fsync(f.fileno())
