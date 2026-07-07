@@ -86,17 +86,15 @@ class MainWindow(QMainWindow):
 
         try:
             self.main_widget.addTab(self.instance_handler, "Instance Handler")
-            
+
             graph_viewer = GraphViewer()
             groundstation_widget = GroundStationWidget(graph_viewer.boat_data_signal)
             self.main_widget.addTab(groundstation_widget, "Ground Station")
             self.main_widget.addTab(graph_viewer, "Graph Viewer")
-            
-            autopilot_config_widget = AutopilotConfigWidget(
-                groundstation_widget.refresh_autopilot_config_signal
-            )
+
+            autopilot_config_widget = AutopilotConfigWidget(groundstation_widget.refresh_autopilot_config_signal)
             self.main_widget.addTab(autopilot_config_widget, "Autopilot Configuration")
-            
+
             self.main_widget.addTab(CameraWidget(), "Camera Feed")
             self.main_widget.setCurrentIndex(3)
             print("[Info] Main application tabs loaded.")
@@ -134,7 +132,7 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     constants.ICONS = misc.get_icons()
-    
+
     window = MainWindow()
     if constants.APP_LOGO_PATH.is_file():
         print(f"[Info] Setting application icon from {constants.APP_LOGO_PATH}...")
