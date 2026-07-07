@@ -532,7 +532,7 @@ class AutopilotConfigEditor(QWidget):
 
         file_path, _ = QFileDialog.getSaveFileName(
             self,
-            caption="Load Parameters from File",
+            caption="Save Parameters to File",
             directory=constants.AUTOPILOT_PARAMS_DIR.as_posix(),
             filter="JSON Files (*.json);;All Files (*)",
         )

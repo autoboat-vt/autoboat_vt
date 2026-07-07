@@ -320,7 +320,7 @@ class WaypointThreadRouter:
                     if not isinstance(waypoint, (tuple, list)):
                         raise TypeError
 
-                    if not all(isinstance(cord, (int, float)) for cord in waypoint):
+                    if not all(isinstance(coord, (int, float)) for coord in waypoint):
                         raise TypeError
 
             except RequestException:
@@ -370,7 +370,7 @@ class WaypointThreadRouter:
                 for waypoint in data:
                     if not isinstance(waypoint, (tuple, list)):
                         raise TypeError
-                    if not all(isinstance(cord, (int, float)) for cord in waypoint):
+                    if not all(isinstance(coord, (int, float)) for coord in waypoint):
                         raise TypeError
 
             except RequestException:
