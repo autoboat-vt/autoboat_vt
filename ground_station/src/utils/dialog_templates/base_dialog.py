@@ -106,6 +106,7 @@ class BaseDialog(QDialog):
 
         if self._remember_checkbox is not None:
             self._remember_choice = self._remember_checkbox.isChecked()
+        
         super().accept()
         self.dialog_closed.emit(True)
 
@@ -114,6 +115,7 @@ class BaseDialog(QDialog):
 
         if self._remember_checkbox is not None:
             self._remember_choice = self._remember_checkbox.isChecked()
+        
         super().reject()
         self.dialog_closed.emit(False)
 

@@ -208,10 +208,6 @@ class BoatStatusThreadRouter:
                 with QMutexLocker(self._lock):
                     self._response = result
 
-                # Yield between polls so we don't peg a CPU core. ``msleep``
-                # wakes early on ``requestInterruption``, so shutdown stays snappy.
-                self.msleep(500)
-
 
 class InstanceManagerThreadRouter:
     """
