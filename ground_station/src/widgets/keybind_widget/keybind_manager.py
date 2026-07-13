@@ -84,7 +84,13 @@ class KeybindManager(QObject):
         self._load_bindings()
 
     def _load_bindings(self) -> None:
-        """Load the current bindings from the state file into memory."""
+        """
+        Load the current bindings from the state file into memory.
+
+        Any actions present in ``default.json`` but missing from the cached
+        state (e.g. a newly added action shipped in an update) are merged in
+        from the defaults so they become available without a manual reset.
+        """
 
         stored = constants.SM.read_dict("keybindings")
         if not isinstance(stored, dict) or not stored:
@@ -99,6 +105,17 @@ class KeybindManager(QObject):
                 entry["key"] = normalize_key_string(entry["key"])
             
             self._bindings[action] = entry
+
+        # merge in any actions that exist in the defaults but not in the cached state
+        defaults = self._load_default_bindings()
+        merged_any = False
+        for action, info in defaults.items():
+            if action not in self._bindings:
+                self._bindings[action] = dict(info)
+                merged_any = True
+
+        if merged_any:
+            self._persist()
 
     @staticmethod
     def _load_default_bindings() -> dict[str, dict[str, str]]:
@@ -213,12 +230,17 @@ class KeybindManager(QObject):
         """
 
         normalized = normalize_key_string(key)
+
+        # empty keys (unbound) never conflict with anything
+        if not normalized:
+            return None
+
         for action, info in self._bindings.items():
             if action == ignore_action:
                 continue
             
             existing = info.get("key")
-            if isinstance(existing, str) and normalize_key_string(existing) == normalized:
+            if isinstance(existing, str) and existing and normalize_key_string(existing) == normalized:
                 return action
         
         return None
@@ -248,7 +270,8 @@ class KeybindManager(QObject):
             return None
 
         normalized = normalize_key_string(key)
-        conflict = self.find_conflict(normalized, ignore_action=action)
+        # an empty key means "unbound" — no conflict is possible, skip the check
+        conflict = self.find_conflict(normalized, ignore_action=action) if normalized else None
 
         info["key"] = normalized
         self._persist()
@@ -401,7 +424,7 @@ class KeybindManager(QObject):
         return {
             action: info["key"]
             for action, info in self.get_actions_by_scope("map").items()
-            if isinstance(info.get("key"), str)
+            if isinstance(info.get("key"), str) and info.get("key")
         }
 
     def _persist(self) -> None:

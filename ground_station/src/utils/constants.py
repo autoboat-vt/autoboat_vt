@@ -335,6 +335,10 @@ try:
     ASSETS_DIR = Path(GIT_KEEP_DIR / "assets")
     APP_LOGO_PATH = Path(ASSETS_DIR / "logo.png")
 
+    TETRIS_ASSETS_DIR = Path(ASSETS_DIR / "tetris")
+    TETRIS_MUSIC_DIR = Path(TETRIS_ASSETS_DIR / "music")
+    TETRIS_SFX_DIR = Path(TETRIS_ASSETS_DIR / "sfx")
+
     CAMERA_WIDGET_DIR = Path(WIDGETS_DIR / "camera_widget")
     HTML_CAMERA_PATH = Path(CAMERA_WIDGET_DIR / "camera.html")
 

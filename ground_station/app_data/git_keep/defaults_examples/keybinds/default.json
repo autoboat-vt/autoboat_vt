@@ -15,13 +15,13 @@
         "name": "Zoom In",
         "description": "Zoom the map one level closer in.",
         "scope": "map",
-        "key": "+"
+        "key": ""
     },
     "zoom_out": {
         "name": "Zoom Out",
         "description": "Zoom the map one level further out.",
         "scope": "map",
-        "key": "-"
+        "key": ""
     },
     "undo_waypoint": {
         "name": "Undo Last Waypoint",
@@ -52,5 +52,11 @@
         "description": "Open the keybind configuration dialog.",
         "scope": "app",
         "key": "Ctrl+K"
+    },
+    "open_tetris": {
+        "name": "Open Tetris",
+        "description": "Can you play tetris on the phallic ice cream?",
+        "scope": "app",
+        "key": ""
     }
 }

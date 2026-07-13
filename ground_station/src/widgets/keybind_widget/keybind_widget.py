@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from qtpy.QtCore import Qt, Slot
+from qtpy.QtCore import QPoint, Qt, Slot
 from qtpy.QtGui import QKeyEvent
 from qtpy.QtWidgets import (
     QDialog,
@@ -11,6 +11,7 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QMenu,
     QSizePolicy,
     QSpacerItem,
     QTableWidget,
@@ -46,9 +47,13 @@ class KeybindConfigWidget(QTableWidget):
     def __init__(self, rows: int) -> None:
         super().__init__(rows, 4)
 
+    UNBOUND_DISPLAY = "— Unbound —"
+
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """
         Capture a key press if a key-capture cell is focused.
+
+        ``Delete`` and ``Backspace`` clear the binding instead of capturing.
 
         Parameters
         ----------
@@ -58,6 +63,10 @@ class KeybindConfigWidget(QTableWidget):
 
         current = self.currentItem()
         if isinstance(current, KeyCaptureItem) and current.listening:
+            if event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
+                current.set_combo("")
+                return
+
             combo = qt_key_event_to_string(event)
             if combo:
                 current.set_combo(combo)
@@ -89,7 +98,7 @@ class KeyCaptureItem(QTableWidgetItem):
     __slots__ = ("_action", "_listening", "_combo")
 
     def __init__(self, action: str, initial_key: str) -> None:
-        super().__init__(initial_key)
+        super().__init__(initial_key or KeybindConfigWidget.UNBOUND_DISPLAY)
         
         self._action = action
         self._listening = False
@@ -118,13 +127,18 @@ class KeyCaptureItem(QTableWidgetItem):
         """Put the item into listening mode, displaying a prompt."""
 
         self._listening = True
-        self.setText("Press a key...")
+        self.setText("Press a key... (Delete to clear)")
 
     def cancel_listening(self) -> None:
         """Exit listening mode and restore the displayed combo."""
 
         self._listening = False
-        self.setText(self._combo)
+        self.setText(self._display_text())
+
+    def _display_text(self) -> str:
+        """Return the user-facing text for the current combo."""
+
+        return self._combo or KeybindConfigWidget.UNBOUND_DISPLAY
 
     def set_combo(self, combo: str) -> None:
         """
@@ -134,11 +148,12 @@ class KeyCaptureItem(QTableWidgetItem):
         ----------
         combo
             The new key combination string (already normalized by the caller).
+            An empty string clears the binding.
         """
 
         self._combo = combo
         self._listening = False
-        self.setText(combo)
+        self.setText(self._display_text())
 
         manager = get_keybind_manager()
         conflict = manager.set_key(self._action, combo)
@@ -221,6 +236,8 @@ class KeybindConfigDialog(QDialog):
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectItems)
         self._table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._table.customContextMenuRequested.connect(self._on_context_menu)
         self._table.cellClicked.connect(self._on_cell_clicked)
 
         header = self._table.horizontalHeader()
@@ -361,7 +378,32 @@ class KeybindConfigDialog(QDialog):
                 other.cancel_listening()
 
         item.start_listening()
-        self.update_feedback_text(f"Press a new key for '{item.action}'. Esc to cancel.")
+        self.update_feedback_text(f"Press a new key for '{item.action}'. Delete to clear. Esc to cancel.")
+
+    @Slot(object)
+    def _on_context_menu(self, position: QPoint) -> None:
+        """
+        Show a context menu on right-click of a key cell.
+
+        Offers a "Clear Keybind" action when the targeted binding has a key set.
+
+        Parameters
+        ----------
+        position
+            The position in table coordinates where the right-click occurred.
+        """
+
+        item = self._table.itemAt(position)
+        if not isinstance(item, KeyCaptureItem):
+            return
+
+        menu = QMenu(self._table)
+        clear_action = menu.addAction("Clear Keybind")
+        clear_action.setEnabled(bool(item.combo))
+        chosen = menu.exec(self._table.viewport().mapToGlobal(position))
+
+        if chosen is clear_action:
+            item.set_combo("")
 
     def _handle_conflict(self, action: str, conflict: str | None) -> None:
         """
@@ -405,7 +447,9 @@ class KeybindConfigDialog(QDialog):
         for action, info in bindings.items():
             item = self._key_items.get(action)
             if item is not None and not item.listening:
-                item.setText(info.get("key", ""))
+                key = info.get("key", "")
+                item._combo = key  # keep internal state in sync
+                item.setText(item._display_text())
 
     @Slot()
     def _on_reset_clicked(self) -> None:

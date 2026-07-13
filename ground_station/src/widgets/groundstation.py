@@ -41,6 +41,7 @@ from .keybind_widget import (
     qt_key_event_to_string,
 )
 from .map_widget import MapOptionsHandler
+from .tetris_widget import TetrisDialog
 
 MotorboatControlModes = StrictMatchEnums.MotorboatControlModes
 SailboatAutopilotStates = StrictMatchEnums.SailboatAutopilotStates
@@ -193,6 +194,8 @@ class GroundStationWidget(QWidget):
         self.keybind_config_button.setToolTip("View and edit keyboard shortcuts.")
         self.keybind_config_button.clicked.connect(self.keybind_config_window.exec)
 
+        self.tetris_window = TetrisDialog()
+
         self.test_waypoint_rng = np.random.default_rng(69420)
         self.add_500_test_waypoints_button = QPushButton("Add 500 Test Waypoints?")
         self.add_500_test_waypoints_button.clicked.connect(self.add_500_test_waypoints)
@@ -337,6 +340,7 @@ class GroundStationWidget(QWidget):
         self._keybind_manager.register_handler("toggle_data_logging", self.toggle_data_logging)
         self._keybind_manager.register_handler("open_keybind_config", self.keybind_config_window.exec)
         self._keybind_manager.register_handler("undo_waypoint", self._trigger_undo_waypoint)
+        self._keybind_manager.register_handler("open_tetris", self._show_tetris)
 
         self._rebuild_shortcuts()
         self._push_map_keybinds()
@@ -394,6 +398,14 @@ class GroundStationWidget(QWidget):
         """Trigger the undo waypoint action in the TS frontend."""
 
         self.browser.page().runJavaScript(misc.js_load_guard("map.undo_last_waypoint();"))
+
+    def _show_tetris(self) -> None:
+        """Show the hidden Tetris easter egg."""
+
+        self.tetris_window.show()
+        self.tetris_window.raise_()
+        self.tetris_window.activateWindow()
+        self.tetris_window._board.setFocus()  # grab focus for key events
 
     def _install_render_widget_filter(self) -> None:
         """Install the event filter on the QWebEngineView's focus proxy."""
