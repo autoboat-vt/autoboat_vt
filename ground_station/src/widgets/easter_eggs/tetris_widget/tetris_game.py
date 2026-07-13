@@ -21,6 +21,7 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -90,7 +91,10 @@ class TetrisBoard(QFrame):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
-        self.setFixedSize(BOARD_WIDTH * BLOCK_SIZE, BOARD_HEIGHT * BLOCK_SIZE)
+        self.setMinimumSize(BOARD_WIDTH * 16, BOARD_HEIGHT * 16)
+        self.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Expanding
+        )
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self._grid: list[list[QColor | None]] = [
@@ -298,27 +302,37 @@ class TetrisBoard(QFrame):
         # background
         painter.fillRect(self.rect(), QColor(20, 20, 30))
 
+        # compute square cell size that fits the widget, centered
+        cell = min(self.width() / BOARD_WIDTH, self.height() / BOARD_HEIGHT)
+        offset_x = (self.width() - cell * BOARD_WIDTH) / 2
+        offset_y = (self.height() - cell * BOARD_HEIGHT) / 2
+
+        painter.save()
+        painter.translate(offset_x, offset_y)
+
         # grid lines
         painter.setPen(QColor(40, 40, 50))
         for col in range(BOARD_WIDTH + 1):
-            x = col * BLOCK_SIZE
-            painter.drawLine(x, 0, x, BOARD_HEIGHT * BLOCK_SIZE)
+            x = col * cell
+            painter.drawLine(int(x), 0, int(x), int(cell * BOARD_HEIGHT))
         for row in range(BOARD_HEIGHT + 1):
-            y = row * BLOCK_SIZE
-            painter.drawLine(0, y, BOARD_WIDTH * BLOCK_SIZE, y)
+            y = row * cell
+            painter.drawLine(0, int(y), int(cell * BOARD_WIDTH), int(y))
 
         # locked blocks
         for row in range(BOARD_HEIGHT):
             for col in range(BOARD_WIDTH):
                 color = self._grid[row][col]
                 if color is not None:
-                    self._draw_block(painter, row, col, color)
+                    self._draw_block(painter, row, col, color, cell)
 
         # current piece
         if self._current_piece is not None and not self._is_game_over:
             for row, col in self._current_piece.absolute_cells():
                 if row >= 0:
-                    self._draw_block(painter, row, col, self._current_piece.color)
+                    self._draw_block(painter, row, col, self._current_piece.color, cell)
+
+        painter.restore()
 
         # overlay text
         if self._is_paused or self._is_game_over:
@@ -344,26 +358,28 @@ class TetrisBoard(QFrame):
 
         painter.end()
 
-    def _draw_block(self, painter: QPainter, row: int, col: int, color: QColor) -> None:
+    def _draw_block(
+        self, painter: QPainter, row: int, col: int, color: QColor, cell: float
+    ) -> None:
         """Draw a single block with a beveled edge."""
 
-        x = col * BLOCK_SIZE
-        y = row * BLOCK_SIZE
+        x = col * cell
+        y = row * cell
 
         # main fill
-        painter.fillRect(x + 1, y + 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2, color)
+        painter.fillRect(int(x + 1), int(y + 1), int(cell - 2), int(cell - 2), color)
 
         # highlight (top-left)
         lighter = color.lighter(150)
         painter.setPen(lighter)
-        painter.drawLine(x + 1, y + 1, x + BLOCK_SIZE - 2, y + 1)
-        painter.drawLine(x + 1, y + 1, x + 1, y + BLOCK_SIZE - 2)
+        painter.drawLine(int(x + 1), int(y + 1), int(x + cell - 2), int(y + 1))
+        painter.drawLine(int(x + 1), int(y + 1), int(x + 1), int(y + cell - 2))
 
         # shadow (bottom-right)
         darker = color.darker(150)
         painter.setPen(darker)
-        painter.drawLine(x + 1, y + BLOCK_SIZE - 2, x + BLOCK_SIZE - 2, y + BLOCK_SIZE - 2)
-        painter.drawLine(x + BLOCK_SIZE - 2, y + 1, x + BLOCK_SIZE - 2, y + BLOCK_SIZE - 2)
+        painter.drawLine(int(x + 1), int(y + cell - 2), int(x + cell - 2), int(y + cell - 2))
+        painter.drawLine(int(x + cell - 2), int(y + 1), int(x + cell - 2), int(y + cell - 2))
 
 
 class TetrisDialog(QDialog):
@@ -374,6 +390,8 @@ class TetrisDialog(QDialog):
 
         self.setWindowTitle("Tetris on the Phallic Ice Cream")
         self.setModal(False)
+        self.resize(420, 720)
+        self.setMinimumSize(260, 480)
 
         self._audio = TetrisAudio()
 

@@ -13,6 +13,7 @@ from qtpy.QtGui import (
     QKeyEvent,
     QPainter,
     QPaintEvent,
+    QPen,
     QShowEvent,
 )
 from qtpy.QtWidgets import (
@@ -21,6 +22,7 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -53,7 +55,10 @@ class PongBoard(QFrame):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
-        self.setFixedSize(WIDTH, HEIGHT)
+        self.setMinimumSize(320, 200)
+        self.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Expanding
+        )
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self._left_y: int = HEIGHT // 2 - PADDLE_H // 2
@@ -266,13 +271,34 @@ class PongBoard(QFrame):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        # background
+        # scale the logical WIDTH x HEIGHT playfield to fit the widget,
+        # preserving aspect ratio and centering
+        scale = min(self.width() / WIDTH, self.height() / HEIGHT)
+        offset_x = (self.width() - WIDTH * scale) / 2
+        offset_y = (self.height() - HEIGHT * scale) / 2
+
+        # background (fills the whole widget)
         painter.fillRect(self.rect(), QColor(15, 15, 25))
 
-        # center dashed line
-        painter.setPen(QColor(80, 80, 100))
-        for y in range(0, HEIGHT, 16):
-            painter.drawLine(WIDTH // 2, y, WIDTH // 2, y + 8)
+        # center dashed line — drawn in widget coordinates so its
+        # thickness and dash size scale with the window
+        center_x = int(offset_x + (WIDTH * scale) / 2)
+        play_top = offset_y
+        play_h = HEIGHT * scale
+        dash = max(6.0, 16.0 * scale)
+        gap = dash
+        line_pen = QPen(QColor(80, 80, 100))
+        line_pen.setWidthF(max(1.0, 2.0 * scale))
+        painter.setPen(line_pen)
+        cy = play_top
+        while cy < play_top + play_h:
+            cy_end = min(cy + dash, play_top + play_h)
+            painter.drawLine(center_x, int(cy), center_x, int(cy_end))
+            cy += dash + gap
+
+        painter.save()
+        painter.translate(offset_x, offset_y)
+        painter.scale(scale, scale)
 
         # paddles
         painter.setBrush(QColor(240, 240, 240))
@@ -284,7 +310,9 @@ class PongBoard(QFrame):
         painter.setBrush(QColor(240, 240, 240))
         painter.drawEllipse(int(self._ball_x), int(self._ball_y), BALL_SIZE, BALL_SIZE)
 
-        # overlay
+        painter.restore()
+
+        # overlay (drawn in widget coordinates so text stays crisp)
         if self._is_paused or self._is_game_over:
             painter.fillRect(self.rect(), QColor(0, 0, 0, 150))
             painter.setPen(QColor(255, 255, 255))
@@ -325,6 +353,8 @@ class PongDialog(QDialog):
 
         self.setWindowTitle("Pong")
         self.setModal(False)
+        self.resize(820, 460)
+        self.setMinimumSize(440, 280)
 
         self._audio = PongAudio()
 

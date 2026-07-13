@@ -22,6 +22,7 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -49,7 +50,10 @@ class SnakeBoard(QFrame):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
-        self.setFixedSize(COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE)
+        self.setMinimumSize(COLS * 12, ROWS * 12)
+        self.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Expanding
+        )
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self._snake: deque[tuple[int, int]] = deque()
@@ -187,24 +191,34 @@ class SnakeBoard(QFrame):
         # background
         painter.fillRect(self.rect(), QColor(15, 30, 15))
 
+        # compute square cell size that fits the widget, centered
+        cell = min(self.width() / COLS, self.height() / ROWS)
+        offset_x = (self.width() - cell * COLS) / 2
+        offset_y = (self.height() - cell * ROWS) / 2
+
+        painter.save()
+        painter.translate(offset_x, offset_y)
+
         # grid (subtle)
         painter.setPen(QColor(25, 45, 25))
         for col in range(COLS + 1):
-            x = col * BLOCK_SIZE
-            painter.drawLine(x, 0, x, ROWS * BLOCK_SIZE)
+            x = col * cell
+            painter.drawLine(int(x), 0, int(x), int(cell * ROWS))
         for row in range(ROWS + 1):
-            y = row * BLOCK_SIZE
-            painter.drawLine(0, y, COLS * BLOCK_SIZE, y)
+            y = row * cell
+            painter.drawLine(0, int(y), int(cell * COLS), int(y))
 
         # food
         fr, fc = self._food
-        self._draw_block(painter, fr, fc, QColor(240, 40, 40))
+        self._draw_block(painter, fr, fc, QColor(240, 40, 40), cell)
 
         # snake
         for i, (r, c) in enumerate(self._snake):
             # head is brighter
             color = QColor(60, 230, 60) if i == 0 else QColor(40, 180, 40)
-            self._draw_block(painter, r, c, color)
+            self._draw_block(painter, r, c, color, cell)
+
+        painter.restore()
 
         # overlay
         if self._is_paused or self._is_game_over:
@@ -230,23 +244,25 @@ class SnakeBoard(QFrame):
 
         painter.end()
 
-    def _draw_block(self, painter: QPainter, row: int, col: int, color: QColor) -> None:
+    def _draw_block(
+        self, painter: QPainter, row: int, col: int, color: QColor, cell: float
+    ) -> None:
         """Draw a single block with a beveled edge."""
 
-        x = col * BLOCK_SIZE
-        y = row * BLOCK_SIZE
+        x = col * cell
+        y = row * cell
 
-        painter.fillRect(x + 1, y + 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2, color)
+        painter.fillRect(int(x + 1), int(y + 1), int(cell - 2), int(cell - 2), color)
 
         lighter = color.lighter(150)
         painter.setPen(lighter)
-        painter.drawLine(x + 1, y + 1, x + BLOCK_SIZE - 2, y + 1)
-        painter.drawLine(x + 1, y + 1, x + 1, y + BLOCK_SIZE - 2)
+        painter.drawLine(int(x + 1), int(y + 1), int(x + cell - 2), int(y + 1))
+        painter.drawLine(int(x + 1), int(y + 1), int(x + 1), int(y + cell - 2))
 
         darker = color.darker(150)
         painter.setPen(darker)
-        painter.drawLine(x + 1, y + BLOCK_SIZE - 2, x + BLOCK_SIZE - 2, y + BLOCK_SIZE - 2)
-        painter.drawLine(x + BLOCK_SIZE - 2, y + 1, x + BLOCK_SIZE - 2, y + BLOCK_SIZE - 2)
+        painter.drawLine(int(x + 1), int(y + cell - 2), int(x + cell - 2), int(y + cell - 2))
+        painter.drawLine(int(x + cell - 2), int(y + 1), int(x + cell - 2), int(y + cell - 2))
 
 
 class SnakeDialog(QDialog):
@@ -257,6 +273,8 @@ class SnakeDialog(QDialog):
 
         self.setWindowTitle("Snake")
         self.setModal(False)
+        self.resize(620, 600)
+        self.setMinimumSize(420, 380)
 
         self._audio = SnakeAudio()
 

@@ -1,5 +1,5 @@
 """
-Package housing the Pong easter-egg game.
+Package housing the Pong easter-egg game and its audio manager.
 
 Exposes:
 - PongDialog: A dialog window containing a playable Pong game (1- or 2-player).

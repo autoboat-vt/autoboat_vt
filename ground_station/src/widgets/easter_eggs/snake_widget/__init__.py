@@ -1,5 +1,5 @@
 """
-Package housing the Snake easter-egg game.
+Package housing the Snake easter-egg game and its audio manager.
 
 Exposes:
 - SnakeDialog: A dialog window containing a playable Snake game.
