@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-__all__ = ["PreserveAspectWidget"]
-
 from qtpy.QtGui import QResizeEvent
 from qtpy.QtWidgets import QWidget
 
+__all__ = ["PreserveAspectWidget"]
 
 class PreserveAspectWidget(QWidget):
     """

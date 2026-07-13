@@ -3,9 +3,10 @@ import json
 from ast import literal_eval
 from copy import deepcopy
 from pathlib import Path
-from requests.exceptions import RequestException
 from typing import Any
 from urllib.parse import urljoin
+
+from requests.exceptions import RequestException
 
 from qtpy.QtCore import Qt, Signal, Slot
 from qtpy.QtWidgets import (
@@ -60,16 +61,16 @@ class AutopilotConfigEditor(QWidget):
 
         self.send_all_button = misc.pushbutton_maker(
             "Send All",
-            constants.ICONS.upload,
             self.send_all_parameters,
+            constants.ICONS.upload,
             max_width=200,
             min_height=30,
             is_clickable=True,
         )
         self.pull_all_button = misc.pushbutton_maker(
             "Pull All",
-            constants.ICONS.download,
             self.pull_all_parameters,
+            constants.ICONS.download,
             max_width=200,
             min_height=30,
             is_clickable=True,
@@ -78,16 +79,16 @@ class AutopilotConfigEditor(QWidget):
         self.show_load_warning: bool = True
         self.load_from_file_button = misc.pushbutton_maker(
             "Load from File",
-            constants.ICONS.hard_drive,
             self.load_parameters_from_file,
+            constants.ICONS.hard_drive,
             max_width=200,
             min_height=30,
             is_clickable=True,
         )
         self.save_to_file_button = misc.pushbutton_maker(
             "Save to File",
-            constants.ICONS.save,
             self.save_parameters_to_file,
+            constants.ICONS.save,
             max_width=200,
             min_height=30,
             is_clickable=True,
@@ -764,8 +765,8 @@ class AutopilotParamWidget(QFrame):
         # region right layout
         self.send_button = misc.pushbutton_maker(
             "Send",
-            constants.ICONS.upload,
             self.send_value,
+            constants.ICONS.upload,
             max_width=100,
             min_height=30,
             is_clickable=True,
@@ -773,8 +774,8 @@ class AutopilotParamWidget(QFrame):
         )
         self.pull_button = misc.pushbutton_maker(
             "Pull",
-            constants.ICONS.download,
             self.pull_value,
+            constants.ICONS.download,
             max_width=100,
             min_height=30,
             is_clickable=True,
@@ -782,8 +783,8 @@ class AutopilotParamWidget(QFrame):
         )
         self.reset_button = misc.pushbutton_maker(
             "Reset",
-            constants.ICONS.refresh,
             self.reset_value,
+            constants.ICONS.refresh,
             max_width=100,
             min_height=30,
             is_clickable=False,

@@ -75,6 +75,7 @@ class MapOptionsHandler(QDialog):
         super().__init__()
 
         self.setWindowTitle("Map Appearance Configuration")
+        self.setModal(True)
         self.layout = QVBoxLayout(self)
 
         self.feature_table = QTableWidget(2, 3, self)

@@ -6,6 +6,8 @@ from .waypoints_handler import WaypointsHandler
 
 
 def run() -> None:
+    """Run the map widget server."""
+
     print(f"[Info] Running map backend server on port {constants.MAP_SERVER_PORT}...")
     server = ThreadingHTTPServer(("127.0.0.1", constants.MAP_SERVER_PORT), WaypointsHandler)
     server.serve_forever()

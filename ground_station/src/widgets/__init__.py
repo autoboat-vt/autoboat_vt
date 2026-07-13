@@ -5,6 +5,7 @@ Subpackages:
 - ``map_widget``: Contains the map widget and related classes for managing waypoints and map options.
 - ``autopilot_config_widget``: Contains the autopilot configuration widget and related classes for managing autopilot settings.
 - ``camera_widget``: Contains the camera widget for displaying camera feeds.
+- ``keybind_widget``: Contains the keybind configuration dialog and the shared keybind manager.
 
 Modules:
 - GroundStationWidget: Main widget for the ground station interface.
@@ -13,6 +14,7 @@ Modules:
 - InstanceHandler: Manages instances of the application, displaying their information and allowing interaction.
 - CameraWidget: Widget for displaying a camera feed.
 - AutopilotConfigWidget: Tabbed widget combining the config editor and manager.
+- KeybindConfigDialog: Dialog for viewing and editing keybinds.
 - UserGuideWidget: Widget for displaying the documentation.
 """
 
@@ -23,8 +25,10 @@ __all__ = [
     "GraphViewer",
     "GroundStationWidget",
     "InstanceHandler",
+    "KeybindConfigDialog",
     "MapOptionsHandler",
     "UserGuideWidget",
+    "get_keybind_manager",
     "run",
 ]
 
@@ -34,5 +38,6 @@ from .console_output import ConsoleOutputWidget
 from .graph_viewer import GraphViewer
 from .groundstation import GroundStationWidget
 from .instance_handler import InstanceHandler
+from .keybind_widget import KeybindConfigDialog, get_keybind_manager
 from .map_widget import MapOptionsHandler, run
 from .user_guide import UserGuideWidget

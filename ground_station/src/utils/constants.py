@@ -3,8 +3,6 @@
 import inspect
 import json
 import os
-import requests
-import requests.adapters
 import time
 from enum import Enum, auto
 from pathlib import Path
@@ -12,11 +10,14 @@ from types import SimpleNamespace
 from typing import Any, TypeAlias
 from urllib.parse import urljoin
 
+import requests
+import requests.adapters
 from numpy import number as np_number
+from strenum import StrEnum
+
 from qtpy.QtCore import QPoint, QRect, QSize, Qt, QUrl
 from qtpy.QtGui import QColor, QPalette
 from qtpy.QtWebEngineWidgets import QWebEnginePage
-from strenum import StrEnum
 
 from utils import misc
 from utils.data_logger import DataLogger
@@ -358,6 +359,10 @@ try:
             print("[Info] Creating buoy data directory...")
             os.makedirs(GIT_IGNORE_DIR / "buoy_data")
 
+        if "keybinds" not in os.listdir(GIT_IGNORE_DIR):
+            print("[Info] Creating keybinds directory...")
+            os.makedirs(GIT_IGNORE_DIR / "keybinds")
+
         if "data_logs" not in os.listdir(GIT_IGNORE_DIR):
             print("[Info] Creating data logs directory...")
             os.makedirs(GIT_IGNORE_DIR / "data_logs")
@@ -389,6 +394,9 @@ try:
 
     BUOY_DATA_DIR = Path(GIT_IGNORE_DIR / "buoy_data")
     misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "buoy_data", BUOY_DATA_DIR)
+
+    KEYBINDS_DIR = Path(GIT_IGNORE_DIR / "keybinds")
+    misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "keybinds", KEYBINDS_DIR)
 
 except Exception as e:
     raise RuntimeError(f"Initialization error: {e}") from e

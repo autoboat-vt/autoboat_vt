@@ -3,13 +3,15 @@ import json
 import os
 import time
 from pathlib import Path
-from requests.exceptions import RequestException
-from typing import Any, Literal
+from typing import Any, Literal, cast
 from urllib.parse import urljoin
 
 import numpy as np
 import svg
-from qtpy.QtCore import QSize, Qt, Signal, Slot
+from requests.exceptions import RequestException
+
+from qtpy.QtCore import QEvent, QObject, QSize, Qt, QTimer, Signal, Slot
+from qtpy.QtGui import QKeyEvent, QKeySequence, QShowEvent
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import (
     QFileDialog,
@@ -18,6 +20,7 @@ from qtpy.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
+    QShortcut,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
@@ -28,9 +31,15 @@ from qtpy.QtWidgets import (
 
 from utils import TextEditWindow, constants, misc, thread_classes
 from utils.constants import StrictMatchEnums
-from utils.dialog_templates import InputDialog, show_message_box
+from utils.dialog_templates import CoordinateInputDialog, InputDialog, show_message_box
 from utils.syntax_highlighters import JsonHighlighter
 
+from .keybind_widget import (
+    KeybindConfigDialog,
+    get_keybind_manager,
+    normalize_key_string,
+    qt_key_event_to_string,
+)
 from .map_widget import MapOptionsHandler
 
 MotorboatControlModes = StrictMatchEnums.MotorboatControlModes
@@ -126,8 +135,8 @@ class GroundStationWidget(QWidget):
 
         self.start_data_logging_button = misc.pushbutton_maker(
             "Start Data Logging",
-            constants.ICONS.play_circle_outline,
             self.start_data_logging,
+            constants.ICONS.play_circle_outline,
             max_width=self.left_width,
             min_height=50,
         )
@@ -135,8 +144,8 @@ class GroundStationWidget(QWidget):
 
         self.stop_data_logging_button = misc.pushbutton_maker(
             "End Data Logging",
-            constants.ICONS.stop_circle_outline,
             self.stop_data_logging,
+            constants.ICONS.stop_circle_outline,
             max_width=self.left_width,
             min_height=50,
         )
@@ -177,14 +186,25 @@ class GroundStationWidget(QWidget):
         self.telemetry_config_button.setToolTip(
             "If enabled, a popup will appear where you can alter the telemetry configuration.",
         )
-        self.telemetry_config_button.clicked.connect(self.edit_telemetry_config_window.show)
+        self.telemetry_config_button.clicked.connect(self.edit_telemetry_config_window.exec)
+
+        self.keybind_config_window = KeybindConfigDialog()
+        self.keybind_config_button = QPushButton("Keybind Configuration")
+        self.keybind_config_button.setToolTip("View and edit keyboard shortcuts.")
+        self.keybind_config_button.clicked.connect(self.keybind_config_window.exec)
 
         self.test_waypoint_rng = np.random.default_rng(69420)
         self.add_500_test_waypoints_button = QPushButton("Add 500 Test Waypoints?")
         self.add_500_test_waypoints_button.clicked.connect(self.add_500_test_waypoints)
 
+        self.manual_waypoint_button = QPushButton("Add Waypoint by Coordinates")
+        self.manual_waypoint_button.setToolTip("Manually enter latitude and longitude to add a waypoint.")
+        self.manual_waypoint_button.clicked.connect(self.add_manual_waypoint)
+
         self.middle_button_layout.addWidget(self.telemetry_config_button, 0, 0)
-        self.middle_button_layout.addWidget(self.add_500_test_waypoints_button, 0, 1)
+        self.middle_button_layout.addWidget(self.keybind_config_button, 0, 1)
+        self.middle_button_layout.addWidget(self.add_500_test_waypoints_button, 0, 2)
+        self.middle_button_layout.addWidget(self.manual_waypoint_button, 0, 3)
         self.middle_button_groupbox.setLayout(self.middle_button_layout)
 
         self.middle_layout.addWidget(self.middle_button_groupbox, 1, 1, Qt.AlignmentFlag.AlignCenter)
@@ -202,8 +222,8 @@ class GroundStationWidget(QWidget):
         self.can_send_waypoints = True
         self.send_waypoints_button = misc.pushbutton_maker(
             "Send Waypoints",
-            constants.ICONS.upload,
             self.send_waypoints,
+            constants.ICONS.upload,
             max_width=self.right_width // 2,
             min_height=50,
             is_clickable=self.can_send_waypoints,
@@ -212,8 +232,8 @@ class GroundStationWidget(QWidget):
         self.can_reset_waypoints = False
         self.clear_waypoints_button = misc.pushbutton_maker(
             "Clear Waypoints",
-            constants.ICONS.delete,
             self.clear_waypoints,
+            constants.ICONS.delete,
             max_width=self.right_width // 2,
             min_height=50,
             is_clickable=self.can_reset_waypoints,
@@ -222,8 +242,8 @@ class GroundStationWidget(QWidget):
         self.can_pull_waypoints = True
         self.pull_waypoints_button = misc.pushbutton_maker(
             "Pull Waypoints",
-            constants.ICONS.download,
             self.pull_waypoints,
+            constants.ICONS.download,
             max_width=self.right_width // 2,
             min_height=50,
             is_clickable=self.can_pull_waypoints,
@@ -231,8 +251,8 @@ class GroundStationWidget(QWidget):
 
         self.focus_boat_button = misc.pushbutton_maker(
             "Zoom to Boat",
-            constants.ICONS.boat,
             self.zoom_to_boat,
+            constants.ICONS.boat,
             max_width=self.right_width // 2,
             min_height=50,
         )
@@ -255,24 +275,24 @@ class GroundStationWidget(QWidget):
 
         self.edit_buoy_data_button = misc.pushbutton_maker(
             "Edit Buoy Data",
-            constants.ICONS.cog,
             self.edit_buoy_data,
+            constants.ICONS.cog,
             max_width=self.right_width,
             min_height=50,
         )
 
         self.save_buoy_data_button = misc.pushbutton_maker(
             "Save Buoy Data",
-            constants.ICONS.save,
             self.save_buoy_data,
+            constants.ICONS.save,
             max_width=self.right_width // 2,
             min_height=50,
         )
 
         self.load_buoy_data_button = misc.pushbutton_maker(
             "Load Buoy Data",
-            constants.ICONS.hard_drive,
             self.load_buoy_data,
+            constants.ICONS.hard_drive,
             max_width=self.right_width // 2,
             min_height=50,
         )
@@ -307,6 +327,196 @@ class GroundStationWidget(QWidget):
 
         self.boat_status_source = boat_status_source
         self.boat_status_source.connect(self.update_telemetry_display)
+
+        # region keybinds
+        self._keybind_manager = get_keybind_manager()
+        self._shortcuts: dict[str, QShortcut] = {}
+
+        self._keybind_manager.register_handler("pull_waypoints", self.pull_waypoints)
+        self._keybind_manager.register_handler("send_waypoints", self.send_waypoints)
+        self._keybind_manager.register_handler("toggle_data_logging", self.toggle_data_logging)
+        self._keybind_manager.register_handler("open_keybind_config", self.keybind_config_window.exec)
+        self._keybind_manager.register_handler("undo_waypoint", self._trigger_undo_waypoint)
+
+        self._rebuild_shortcuts()
+        self._push_map_keybinds()
+
+        self._keybind_manager.bindings_changed.connect(self._on_keybinds_changed)
+        # endregion keybinds
+
+        # we need to "install" an event filter on the QWebEngineView's internal
+        # Chromium render widget so we can intercept Ctrl+Z before it swallows it
+        self.browser.installEventFilter(self)
+        QTimer.singleShot(0, self._install_render_widget_filter)
+
+    # region keybind functions
+
+    def _rebuild_shortcuts(self) -> None:
+        """Recreate every app-scope ``QShortcut`` from the current bindings."""
+
+        # clear out the old shortcuts
+        for shortcut in self._shortcuts.values():
+            shortcut.setEnabled(False)
+            shortcut.deleteLater()
+        
+        self._shortcuts.clear()
+        for action, info in self._keybind_manager.get_actions_by_scope("app").items():
+            key = info.get("key")
+            if not key:
+                continue
+
+            sequence = QKeySequence(key, QKeySequence.SequenceFormat.PortableText)
+            if sequence.isEmpty():
+                continue
+
+            shortcut = QShortcut(sequence, self)
+            shortcut.setContext(Qt.ShortcutContext.WindowShortcut)
+            shortcut.activated.connect(lambda _checked=False, a=action: self._keybind_manager.trigger(a))
+            self._shortcuts[action] = shortcut
+
+        undo_info = self._keybind_manager.get_binding("undo_waypoint")
+        if undo_info and undo_info.get("key"):
+            sequence = QKeySequence(undo_info["key"], QKeySequence.SequenceFormat.PortableText)
+            if not sequence.isEmpty():
+                shortcut = QShortcut(sequence, self)
+                shortcut.setContext(Qt.ShortcutContext.WindowShortcut)
+                shortcut.activated.connect(lambda _checked=False: self._keybind_manager.trigger("undo_waypoint"))
+                self._shortcuts["undo_waypoint"] = shortcut
+
+    def _push_map_keybinds(self) -> None:
+        """Push the current map-scope bindings into the TS frontend."""
+
+        frontend_bindings = self._keybind_manager.to_frontend_dict()
+        js_code = f"map.set_keybinds({json.dumps(frontend_bindings)})"
+        self.browser.page().runJavaScript(misc.js_load_guard(js_code))
+
+    def _trigger_undo_waypoint(self) -> None:
+        """Trigger the undo waypoint action in the TS frontend."""
+
+        self.browser.page().runJavaScript(misc.js_load_guard("map.undo_last_waypoint();"))
+
+    def _install_render_widget_filter(self) -> None:
+        """Install the event filter on the QWebEngineView's focus proxy."""
+
+        proxy = self.browser.focusProxy()
+        if proxy is not None:
+            proxy.installEventFilter(self)
+
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        """
+        Wrapper around ``_handle_undo_keypress`` to intercept Ctrl+Z keypresses.
+        
+        Note
+        ----
+        This method exists to satisfy the Qt event filter interface.
+        See ``_handle_undo_keypress`` for details on why this is necessary.
+
+        Parameters
+        ----------
+        obj
+            The object that received the event.
+        event
+            The event that was received.
+
+        Returns
+        -------
+        bool
+            ``True`` if the event was consumed, ``False`` otherwise.
+        """
+
+        if self._handle_undo_keypress(event):
+            return True
+        
+        return super().eventFilter(obj, event)
+
+    def _handle_undo_keypress(self, event: QEvent) -> bool:
+        """
+        Intercept Ctrl+Z keypresses and trigger the undo waypoint action.
+
+        We need to do this because the QWebEngineView's internal Chromium render widget
+        swallows Ctrl+Z keypresses before they reach the TS frontend, so we have to
+        handle it in Python and trigger the action manually.
+
+        Returns
+        -------
+        bool
+            ``True`` if the event was consumed, ``False`` otherwise.
+        """
+
+        # only care about key presses that include the Control modifier — the
+        # undo binding is always a Ctrl combo, so skip everything else early
+        if not (
+            event.type() == QEvent.Type.KeyPress
+            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        ):
+            return False
+
+        event = cast("QKeyEvent", event)
+        combo = qt_key_event_to_string(event)
+        if not combo:
+            return False
+
+        undo_info = self._keybind_manager.get_binding("undo_waypoint")
+        if not (undo_info and undo_info.get("key")):
+            return False
+
+        configured = normalize_key_string(undo_info["key"])
+        if combo.lower() != configured.lower():
+            return False
+
+        self._trigger_undo_waypoint()
+        return True
+
+    @Slot(dict)
+    def _on_keybinds_changed(self, _bindings: dict) -> None:
+        """
+        Handle the ``bindings_changed`` signal from the keybind manager.
+
+        Parameters
+        ----------
+        _bindings
+            The full bindings dict from the keybind manager (unused — the
+            manager is queried directly).
+        """
+
+        self._rebuild_shortcuts()
+        self._push_map_keybinds()
+
+    @Slot()
+    def toggle_data_logging(self) -> None:
+        """Toggle telemetry data logging on or off based on current state."""
+
+        if constants.SM.read_bool("data_logging_active"):
+            self.stop_data_logging()
+        else:
+            self.start_data_logging()
+
+    # endregion keybind functions
+
+    # region focus handling
+
+    def showEvent(self, event: QShowEvent) -> None:
+        """
+        Give the map webview keyboard focus when the widget is shown.
+
+        The TS frontend's ``keydown`` listener (which dispatches map-scope
+        keybinds like ``f`` or ``c``) only fires when the ``QWebEngineView``
+        has focus. Without this, the user would have to click on the map
+        before any map-scope keybind works.
+
+        Parameters
+        ----------
+        event
+            The show event forwarded to the parent implementation.
+        """
+
+        super().showEvent(event)
+        
+        # defer the focus request to the next event loop tick so the webview
+        # has fully finished laying out before we steal focus into it
+        QTimer.singleShot(0, self.browser.setFocus)
+
+    # endregion focus handling
 
     # region button functions
 
@@ -408,6 +618,26 @@ class GroundStationWidget(QWidget):
             self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({latitude}, {longitude})"))
 
         print("[Info] Added 500 test waypoints to the map, LOL.")
+
+    @Slot()
+    def add_manual_waypoint(self) -> None:
+        """Open a coordinate-entry dialog and add a waypoint at the entered location."""
+
+        dialog = CoordinateInputDialog(self)
+        if dialog.exec() != CoordinateInputDialog.DialogCode.Accepted:
+            return
+
+        try:
+            latitude, longitude = dialog.get_coordinates()
+        except ValueError as exc:
+            show_message_box(title="Invalid Coordinates", message=str(exc))
+            return
+
+        self.browser.page().runJavaScript(
+            misc.js_load_guard(f"map.add_waypoint({latitude}, {longitude})")
+        )
+        print(f"[Info] Manually added waypoint at ({latitude}, {longitude}).")
+
 
     @Slot()
     def start_data_logging(self) -> None:

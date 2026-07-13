@@ -6,9 +6,11 @@ from collections import deque
 from collections.abc import Callable
 from datetime import datetime, timezone
 from enum import auto
-from requests.exceptions import RequestException
 from typing import Any
 from urllib.parse import urljoin
+
+from requests.exceptions import RequestException
+from strenum import StrEnum
 
 from qtpy.QtCore import Qt, Slot
 from qtpy.QtWidgets import (
@@ -24,7 +26,6 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from strenum import StrEnum
 
 from utils import constants, misc
 from utils.thread_classes import InstanceManagerThreadRouter
@@ -51,11 +52,11 @@ class InstanceInfo:
     """
 
     __slots__ = (
+        "_created_at",
         "_instance_id",
         "_instance_identifier",
-        "_user",
-        "_created_at",
         "_updated_at",
+        "_user",
     )
 
     def __init__(self, data: dict[str, Any]) -> None:
@@ -256,14 +257,14 @@ class InstanceHandler(QWidget):
 
         self.delete_all_button = misc.pushbutton_maker(
             "Delete All Instances",
-            constants.ICONS.delete,
             self.delete_all_instances,
+            constants.ICONS.delete,
             max_width=constants.WINDOW_BOX.width() // 2,
         )
         self.create_instance_button = misc.pushbutton_maker(
             "Create New Instance",
-            constants.ICONS.add,
             self.create_new_instance,
+            constants.ICONS.add,
             max_width=constants.WINDOW_BOX.width() // 2,
         )
 
@@ -321,7 +322,7 @@ class InstanceHandler(QWidget):
                 ):
                     previous_instance_id = constants.SM.read_int("telemetry_server_instance_id")
                     if previous_instance_id in available_ids:
-                        print("[Info] Found instance with matching ID on server when attempting to reconnect. Checking username to confirm match...") # noqa: E501
+                        print("[Info] Found instance with matching ID on server when attempting to reconnect. Checking username to confirm match...")
                         instance_user = constants.REQ_SESSION.get(
                                             urljoin(
                                                     misc.get_route("get_user_from_id"),
@@ -335,17 +336,17 @@ class InstanceHandler(QWidget):
                             constants.SM.write("has_telemetry_server_instance_changed", False)
                         
                         else:
-                            print("[Warning] Username does not match, possible instance ID reuse. Connecting to a new instance instead.") # noqa: E501
+                            print("[Warning] Username does not match, possible instance ID reuse. Connecting to a new instance instead.")
                     
                     else:
                         new_instance_id: int = random.choice(available_ids)
                         constants.SM.write("telemetry_server_instance_id", new_instance_id)
                         constants.SM.write("has_telemetry_server_instance_changed", True)
-                        print(f"[Info] Cannot find instance with matching ID on server when attempting to reconnect. Connected to instance with ID #{new_instance_id} instead.") # noqa: E501
+                        print(f"[Info] Cannot find instance with matching ID on server when attempting to reconnect. Connected to instance with ID #{new_instance_id} instead.")
                 
                 else:
                     print(
-                        "[Info] Cannot find any instances on server when attempting to reconnect. Creating an instance to connect to."  # noqa: E501
+                        "[Info] Cannot find any instances on server when attempting to reconnect. Creating an instance to connect to."
                     )
                     new_instance_id = constants.REQ_SESSION.get(misc.get_route("create_instance")).json()
                     constants.SM.write("telemetry_server_instance_id", new_instance_id)
@@ -379,7 +380,7 @@ class InstanceHandler(QWidget):
                     constants.SM.write("telemetry_server_instance_id", random.choice(not_deprecated_ids))
                     constants.SM.write("has_telemetry_server_instance_changed", True)
                     print(
-                        f"[Warning] The instance you were connected to, #{instance_id}, has been removed. You have been connected to instance #{constants.SM.read_int('telemetry_server_instance_id')} instead. Please select a different instance if needed."  # noqa: E501
+                        f"[Warning] The instance you were connected to, #{instance_id}, has been removed. You have been connected to instance #{constants.SM.read_int('telemetry_server_instance_id')} instead. Please select a different instance if needed."
                     )
 
                 else:
@@ -388,7 +389,7 @@ class InstanceHandler(QWidget):
                         constants.SM.write("telemetry_server_instance_id", new_instance_id)
                         constants.SM.write("has_telemetry_server_instance_changed", True)
                         print(
-                            f"[Warning] The instance you were connected to, #{instance_id}, has been removed. A new instance has been created with ID #{new_instance_id} and you have been connected to it."  # noqa: E501
+                            f"[Warning] The instance you were connected to, #{instance_id}, has been removed. A new instance has been created with ID #{new_instance_id} and you have been connected to it."
                         )
 
                     except RequestException as e:
@@ -673,15 +674,15 @@ class InstanceWidget(QFrame):
 
         self.connect_button = misc.pushbutton_maker(
             "Connect",
-            constants.ICONS.connect,
             self.on_connect_clicked,
+            constants.ICONS.connect,
             style_sheet=InstanceWidget.connect_button_stylesheet,
         )
 
         self.delete_button = misc.pushbutton_maker(
             "Delete",
-            constants.ICONS.delete,
             self.on_delete_clicked,
+            constants.ICONS.delete,
             style_sheet=InstanceWidget.delete_button_stylesheet,
         )
         self.delete_button.setObjectName("deleteButton")
@@ -751,7 +752,7 @@ class InstanceWidget(QFrame):
                 )
 
                 print(
-                    f"[Info] Instance #{self.instance_id} deleted and new instance created with ID #{constants.SM.read_int('telemetry_server_instance_id')}."  # noqa: E501
+                    f"[Info] Instance #{self.instance_id} deleted and new instance created with ID #{constants.SM.read_int('telemetry_server_instance_id')}."
                 )
 
             except RequestException as e:

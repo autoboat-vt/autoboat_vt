@@ -1,13 +1,3 @@
-"""
-Module containing custom message dialog templates.
-
-Functions:
-- show_message_box: Show a message box with specified title, message, icon, and buttons.
-- show_custom_message_box: Show a custom message dialog with custom buttons.
-"""
-
-__all__ = ["MessageBoxButton", "show_custom_message_box", "show_message_box"]
-
 from typing import NamedTuple
 
 from qtpy.QtGui import QIcon
@@ -23,6 +13,7 @@ from utils import constants
 
 from .base_dialog import BaseDialog
 
+__all__ = ["MessageBoxButton", "show_custom_message_box", "show_message_box"]
 
 class MessageBoxButton(NamedTuple):
     """

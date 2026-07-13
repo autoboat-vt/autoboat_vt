@@ -11,9 +11,9 @@ from typing import Any, ClassVar, TextIO, TypeVar, cast
 
 from utils import constants
 
-T = TypeVar("T")
-
 __all__ = ["StateManager"]
+
+T = TypeVar("T")
 
 @contextlib.contextmanager
 def _locked_file(path: constants.FileType, mode: str, lock_type: int) -> Generator[TextIO, None, None]:

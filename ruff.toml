@@ -1,7 +1,7 @@
 # This file is primarily used to configure Ruff.
-# Ruff is the formatter and linter that we use in this codebase for all of our python code.
+# Ruff is the formatter and linter that we use in this codebase for all of our Python code.
 
-# If you would like to read more about Ruff configuration then please see the following: https://docs.astral.sh/ruff/configuration/#__tabbed_1_2
+# If you would like to read more about Ruff configuration then please see the following: https://docs.astral.sh/ruff/configuration
 
 # top level
 indent-width      = 4
@@ -21,11 +21,61 @@ combine-as-imports     = true
 order-by-type          = true
 relative-imports-order = "furthest-to-closest"
 
+# Ruff will place the import sections in this order:
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "qtpy",
+    "ros",
+    "first-party",
+    "local-folder",
+]
+
 # A list of modules to consider standard-library, in addition to those known to Ruff in advance.
-extra-standard-library = ["requests"]
+extra-standard-library = []
 
 # A list of modules to consider first-party, regardless of whether they can be identified as such via introspection of the local filesystem.
-known-first-party = ["ground_station", "utils", "widgets", "map_widget"]
+known-first-party = [
+    "ground_station",
+    "utils",
+    "widgets",
+    "map_widget",
+    "autoboat_launch",
+    "autoboat_msgs",
+    "autopilot",
+    "autopilot_cpp",
+    "drivers",
+    "drivers_cpp",
+    "object_detection",
+    "old_sailboat_simulation",
+    "custom_lift_drag",
+    "foil_dynamics",
+    "sail_limits",
+    "simulation_camera_engine",
+    "simulation_models",
+    "simulation_transform",
+    "wind_arrow",
+]
+
+[lint.isort.sections]
+qtpy = ["qtpy", "pyqtgraph"]
+ros = [
+    "rclpy",
+    "rosidl_runtime_py",
+    "ament_index_python",
+    "ament_index_python.packages",
+    "ament_copyright",
+    "ament_flake8",
+    "ament_pep257",
+    "std_msgs",
+    "geometry_msgs",
+    "sensor_msgs",
+    "nav_msgs",
+    "cv_bridge",
+    "launch",
+    "launch_ros",
+]
 
 [lint]
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"

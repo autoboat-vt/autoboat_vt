@@ -16,12 +16,20 @@ export class WaypointManager extends MarkerManager {
         super(map, getIcon);
     }
 
-    add(lat: number, lon: number): void {
-        this.addPoint(lat, lon, WaypointManager.defaultColor);
+    add(lat: number, lon: number, color?: string): void {
+        this.addPoint(lat, lon, color ?? WaypointManager.defaultColor);
     }
 
     remove(index: number): void {
         this.removePoint(index);
+    }
+
+    pop(index: number): LatLngTuple | null {
+        return this.popPoint(index);
+    }
+
+    getColor(lat: number, lon: number): string | undefined {
+        return this.markerColors.get(this.makeKey(lat, lon));
     }
 
     clear(): void {

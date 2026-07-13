@@ -13,6 +13,22 @@ Functions:
 - resolve_enum_name: Resolve a telemetry enum value to its member name.
 """
 
+import os
+from collections.abc import Callable
+from enum import Enum
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, Protocol, TypeVar, cast
+
+import qtawesome as qta
+from requests import RequestException
+
+from qtpy.QtCore import QTimer
+from qtpy.QtGui import QIcon
+from qtpy.QtWidgets import QPushButton
+
+from utils import constants
+
 __all__ = [
     "cache_cdn_file",
     "copy_qtimer",
@@ -24,22 +40,6 @@ __all__ = [
     "pushbutton_maker",
     "resolve_enum_name",
 ]
-
-import os
-import textwrap
-from collections.abc import Callable
-from enum import Enum
-from pathlib import Path
-from requests import RequestException
-from types import SimpleNamespace
-from typing import Any, Protocol, TypeVar, cast
-
-import qtawesome as qta
-from qtpy.QtCore import QTimer
-from qtpy.QtGui import QIcon
-from qtpy.QtWidgets import QPushButton
-
-from utils import constants
 
 T = TypeVar("T")
 
@@ -155,8 +155,8 @@ def get_route(route_name: str) -> str:
 
 def pushbutton_maker(
     button_text: str,
-    icon: QIcon,
     function: Callable[[], None],
+    icon: QIcon | None,
     style_sheet: str | None = None,
     max_width: int | None = None,
     min_height: int | None = None,
@@ -170,10 +170,10 @@ def pushbutton_maker(
     ----------
     button_text
         The text to display on the button.
-    icon
-        The icon to display on the button.
     function
         The function to connect to the button's clicked signal.
+    icon
+        The icon to display on the button.
     style_sheet
         An optional style sheet to apply to the button. If not specified, the default style is used.
     max_width
@@ -198,8 +198,10 @@ def pushbutton_maker(
 
     try:
         button = QPushButton(button_text)
-        button.setIcon(icon)
         button.clicked.connect(function)
+
+        if icon is not None:
+            button.setIcon(icon)
 
         if style_sheet is not None:
             button.setStyleSheet(style_sheet)
@@ -334,48 +336,6 @@ def create_symlinks(source_dir: Path, target_dir: Path) -> None:
                 raise RuntimeError(f"Failed to create symlink for '{item.name}': {e}") from e
 
 
-def js_load_guard(js_code: str) -> str:
-    """Run JavaScript after the map API has loaded."""
-
-    indented_js_code = textwrap.indent(js_code.strip(), " " * 12)
-
-    return textwrap.dedent(
-        f"""
-        function __runAutoboatMapCodeWhenReady() {{
-            if (
-                typeof map !== "undefined" &&
-                typeof map.update_boat_location_and_heading === "function"
-            ) {{
-{indented_js_code}
-                return;
-            }}
-
-            window.__autoboatPendingMapCode = __runAutoboatMapCodeWhenReady;
-
-            if (!window.__autoboatPendingMapListenerAdded) {{
-                window.__autoboatPendingMapListenerAdded = true;
-
-                document.addEventListener(
-                    "mapLoaded",
-                    function handleMapLoaded() {{
-                        window.__autoboatPendingMapListenerAdded = false;
-
-                        if (window.__autoboatPendingMapCode) {{
-                            const pendingMapCode = window.__autoboatPendingMapCode;
-                            window.__autoboatPendingMapCode = null;
-                            pendingMapCode();
-                        }}
-                    }},
-                    {{ once: true }}
-                );
-            }}
-        }}
-
-        __runAutoboatMapCodeWhenReady();
-        """
-    ).strip()
-
-
 def resolve_enum_name(enum_class: type[Enum], value: Any) -> str:
     """
     Resolve a telemetry enum value to its member name.
@@ -407,3 +367,41 @@ def resolve_enum_name(enum_class: type[Enum], value: Any) -> str:
         pass
 
     return str(value) if value is not None else "N/A"
+
+def js_load_guard(js_code: str) -> str:
+    """Run JavaScript after the map API has loaded."""
+
+    # note that when using curly braces in f-strings, you need to double them to escape them
+    return f"""
+        function __runAutoboatMapCodeWhenReady() {{
+            if (
+                typeof map !== 'undefined' &&
+                typeof map.update_boat_location_and_heading === 'function'
+            ) {{
+                {js_code.strip()}
+                return;
+            }}
+
+            window.__autoboatPendingMapCode = __runAutoboatMapCodeWhenReady;
+
+            if (!window.__autoboatPendingMapListenerAdded) {{
+                window.__autoboatPendingMapListenerAdded = true;
+
+                document.addEventListener(
+                    'mapLoaded',
+                    function handleMapLoaded() {{
+                        window.__autoboatPendingMapListenerAdded = false;
+
+                        if (window.__autoboatPendingMapCode) {{
+                            const pendingMapCode = window.__autoboatPendingMapCode;
+                            window.__autoboatPendingMapCode = null;
+                            pendingMapCode();
+                        }}
+                    }},
+                    {{ once: true }}
+                );
+            }}
+        }}
+
+        __runAutoboatMapCodeWhenReady();
+    """.strip()

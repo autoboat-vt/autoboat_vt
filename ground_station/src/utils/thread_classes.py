@@ -11,9 +11,10 @@ both from the ``waypoints`` endpoint and the local server.
 """
 
 import pathlib
-from requests import RequestException
 from typing import Any
 from urllib.parse import urljoin
+
+from requests import RequestException
 
 from qtpy.QtCore import QMutex, QMutexLocker, QThread, Signal
 

@@ -13,18 +13,27 @@ import "leaflet-rotatedmarker";
 
 import { BoatManager } from "./boat";
 import { BuoyManager } from "./buoys";
+import { KeybindHandler, type KeybindMap } from "./keybinds";
 import { SVGManager } from "./svg";
 import type { LatLngTuple } from "./types";
 import { WaypointManager } from "./waypoints";
 
 class MapInterface {
-    static readonly mapOptions: MapOptions = { center: [0, 0], zoom: 13 };
+    static readonly mapOptions: MapOptions = {
+        center: [0, 0],
+        zoom: 13,
+        preferCanvas: true
+    };
     static readonly iconCache = new Map<string, Icon>();
-    static readonly assetsUrl = "http://localhost:8000/";
+    static readonly assetsUrl = "http://localhost:8000";
 
-    lastFocusedTimestamp = performance.now();
-    readonly minZoom = 5;
+    // note that lower zoom levels are more zoomed out
+    // and higher zoom levels are more zoomed in
+    readonly minZoom = 3;
     readonly maxZoom = 20;
+
+    lastFocusedTimestamp = 0;
+    private waypointHistory: { type: "add" | "remove"; waypoint: LatLngTuple; color?: string }[] = [];
 
     map: LeafletMapType;
 
@@ -32,6 +41,7 @@ class MapInterface {
     readonly buoy_manager: BuoyManager;
     readonly boat_manager: BoatManager;
     readonly svg_manager: SVGManager;
+    readonly keybind_handler: KeybindHandler;
 
     static getMarkerIcon(color: string): Icon {
         const key = `marker-${color}`;
@@ -42,8 +52,8 @@ class MapInterface {
         }
 
         const markerIcon = icon({
-            iconUrl: `${MapInterface.assetsUrl}marker-icon-${color}.png`,
-            shadowUrl: `${MapInterface.assetsUrl}marker-shadow.png`,
+            iconUrl: new URL(`marker-icon-${color}.png`, MapInterface.assetsUrl).toString(),
+            shadowUrl: new URL("marker-shadow.png", MapInterface.assetsUrl).toString(),
             iconSize: [25, 41],
             iconAnchor: [12, 41],
             shadowSize: [41, 41]
@@ -55,7 +65,7 @@ class MapInterface {
 
     static getBoatIcon(scale = 1): Icon {
         return icon({
-            iconUrl: `${MapInterface.assetsUrl}boat.png`,
+            iconUrl: new URL("boat-icon.png", MapInterface.assetsUrl).toString(),
             iconSize: [50 * scale, 50 * scale],
             iconAnchor: [25 * scale, 25 * scale]
         });
@@ -71,6 +81,13 @@ class MapInterface {
         this.buoy_manager = new BuoyManager(this.map, MapInterface.getMarkerIcon.bind(MapInterface));
         this.boat_manager = new BoatManager(this.map, MapInterface.getBoatIcon.bind(MapInterface));
         this.svg_manager = new SVGManager(this.map);
+        this.keybind_handler = new KeybindHandler();
+
+        this.keybind_handler.register("focus_boat", () => this.focus_map_on_boat());
+        this.keybind_handler.register("clear_waypoints", () => this.clear_waypoints());
+        this.keybind_handler.register("zoom_in", () => this.map.zoomIn());
+        this.keybind_handler.register("zoom_out", () => this.map.zoomOut());
+        this.keybind_handler.register("undo_waypoint", () => this.undo_last_waypoint());
 
         const mapTilerKey = "M9yBkV9J49pYUg5o8SGC";
         tileLayer(`https://api.maptiler.com/maps/openstreetmap/{z}/{x}/{y}.jpg?key=${mapTilerKey}`, {
@@ -96,6 +113,7 @@ class MapInterface {
 
         this.map.on("click", (event: LeafletMouseEvent) => {
             this.waypoint_manager.add(event.latlng.lat, event.latlng.lng);
+            this.waypointHistory.push({ type: "add", waypoint: [event.latlng.lat, event.latlng.lng] });
         });
 
         // contextmenu is right click
@@ -103,7 +121,14 @@ class MapInterface {
             const closestIndex = this.waypoint_manager.findClosestIndex(event.latlng.lat, event.latlng.lng);
 
             if (closestIndex !== -1) {
-                this.waypoint_manager.remove(closestIndex);
+                const waypoint = this.waypoint_manager.waypoints[closestIndex];
+                if (waypoint) {
+                    const color = this.waypoint_manager.getColor(waypoint[0], waypoint[1]);
+                    const removed = this.waypoint_manager.pop(closestIndex);
+                    if (removed) {
+                        this.waypointHistory.push({ type: "remove", waypoint: removed, color });
+                    }
+                }
             }
         });
     }
@@ -174,7 +199,15 @@ class MapInterface {
     }
 
     remove_waypoint(index: number): void {
-        this.waypoint_manager.remove(index);
+        const waypoint = this.waypoint_manager.waypoints[index];
+        if (!waypoint) {
+            return;
+        }
+        const color = this.waypoint_manager.getColor(waypoint[0], waypoint[1]);
+        const removed = this.waypoint_manager.pop(index);
+        if (removed) {
+            this.waypointHistory.push({ type: "remove", waypoint: removed, color });
+        }
     }
 
     change_color_waypoints(color: string): void {
@@ -183,6 +216,23 @@ class MapInterface {
 
     clear_waypoints(): void {
         this.waypoint_manager.clear();
+        this.waypointHistory = [];
+    }
+
+    undo_last_waypoint(): void {
+        const op = this.waypointHistory.pop();
+        if (!op) {
+            return;
+        }
+
+        if (op.type === "add") {
+            const index = this.waypoint_manager.findClosestIndex(op.waypoint[0], op.waypoint[1]);
+            if (index !== -1) {
+                this.waypoint_manager.pop(index);
+            }
+        } else {
+            this.waypoint_manager.add(op.waypoint[0], op.waypoint[1], op.color);
+        }
     }
 
     add_buoy(lat: number, lon: number): void {
@@ -215,6 +265,10 @@ class MapInterface {
 
     update_compass_svg(degree: number): void {
         this.svg_manager.updateCompassSvg(degree);
+    }
+
+    set_keybinds(bindings: KeybindMap): void {
+        this.keybind_handler.setBindings(bindings);
     }
 }
 

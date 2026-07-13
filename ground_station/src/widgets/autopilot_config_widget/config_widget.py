@@ -4,6 +4,7 @@ from qtpy.QtWidgets import QTabWidget
 from .config_editor import AutopilotConfigEditor
 from .config_manager import AutopilotConfigManager
 
+__all__ = ["AutopilotConfigWidget"]
 
 class AutopilotConfigWidget(QTabWidget):
     """

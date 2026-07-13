@@ -2,9 +2,11 @@ import json
 from collections.abc import Callable
 from datetime import datetime, timezone
 from enum import auto
-from requests import RequestException
 from typing import Any
 from urllib.parse import urljoin
+
+from requests import RequestException
+from strenum import StrEnum
 
 from qtpy.QtCore import Qt, Slot
 from qtpy.QtWidgets import (
@@ -21,7 +23,6 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from strenum import StrEnum
 
 from utils import TextEditWindow, constants, misc, syntax_highlighters, thread_classes
 
@@ -178,18 +179,18 @@ class AutopilotConfigManager(QWidget):
 
         self.manual_refresh_button = misc.pushbutton_maker(
             "Refresh Configs",
+            self.hash_fetcher_starter,
             constants.ICONS.refresh,
-            self.hash_fetcher_starter
         )
         self.create_new_config_button = misc.pushbutton_maker(
             "Create New Config",
-            constants.ICONS.add,
             self.create_new_config,
+            constants.ICONS.add,
         )
         self.download_all_button = misc.pushbutton_maker(
             "Download All Configs",
-            constants.ICONS.download,
             self.on_download_all_clicked,
+            constants.ICONS.download,
         )
 
         self.button_layout.addWidget(self.manual_refresh_button)
@@ -574,15 +575,15 @@ class ConfigWidget(QFrame):
 
         self.download_button = misc.pushbutton_maker(
             "Download Config",
-            constants.ICONS.download,
             self.on_download_clicked,
+            constants.ICONS.download,
             style_sheet=ConfigWidget.download_button_style_sheet,
         )
 
         self.delete_button = misc.pushbutton_maker(
             "Delete Config",
-            constants.ICONS.delete,
             self.on_delete_clicked,
+            constants.ICONS.delete,
             style_sheet=ConfigWidget.delete_button_style_sheet,
         )
 

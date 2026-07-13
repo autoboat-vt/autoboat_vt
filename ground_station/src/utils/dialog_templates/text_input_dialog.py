@@ -1,10 +1,3 @@
-"""
-Module containing text input dialog templates.
-
-Classes:
-- InputDialog: A dialog for getting user input with a specified type.
-"""
-
 __all__ = ["InputDialog"]
 
 from collections.abc import Callable

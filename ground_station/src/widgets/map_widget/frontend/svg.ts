@@ -9,7 +9,7 @@ export class CompassControl extends Control {
         super({ position: "bottomleft", ...options });
     }
 
-    override onAdd(map: LeafletMap): HTMLElement {
+    override onAdd(_map: LeafletMap): HTMLElement {
         this.compass_svg = DomUtil.create("div", "leaflet-control");
         this.compass_svg.innerHTML = `
         <svg viewBox="0 0 100 100" width="75" height="75">

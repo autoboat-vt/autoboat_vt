@@ -1,0 +1,56 @@
+{
+    "focus_boat": {
+        "name": "Focus Map on Boat",
+        "description": "Center and zoom the map on the boat's current position.",
+        "scope": "map",
+        "key": "f"
+    },
+    "clear_waypoints": {
+        "name": "Clear Waypoints",
+        "description": "Remove every waypoint currently placed on the map.",
+        "scope": "map",
+        "key": "c"
+    },
+    "zoom_in": {
+        "name": "Zoom In",
+        "description": "Zoom the map one level closer in.",
+        "scope": "map",
+        "key": "+"
+    },
+    "zoom_out": {
+        "name": "Zoom Out",
+        "description": "Zoom the map one level further out.",
+        "scope": "map",
+        "key": "-"
+    },
+    "undo_waypoint": {
+        "name": "Undo Last Waypoint",
+        "description": "Remove the most recently placed waypoint from the map.",
+        "scope": "map",
+        "key": "Ctrl+Z"
+    },
+    "pull_waypoints": {
+        "name": "Pull Waypoints from Server",
+        "description": "Fetch waypoints from the telemetry server and add them to the map.",
+        "scope": "app",
+        "key": "Ctrl+Shift+P"
+    },
+    "send_waypoints": {
+        "name": "Send Waypoints to Server",
+        "description": "Push the current waypoints to the telemetry server.",
+        "scope": "app",
+        "key": "Ctrl+Shift+S"
+    },
+    "toggle_data_logging": {
+        "name": "Toggle Data Logging",
+        "description": "Start or stop logging telemetry data to a file.",
+        "scope": "app",
+        "key": "Ctrl+L"
+    },
+    "open_keybind_config": {
+        "name": "Open Keybind Configuration",
+        "description": "Open the keybind configuration dialog.",
+        "scope": "app",
+        "key": "Ctrl+K"
+    }
+}

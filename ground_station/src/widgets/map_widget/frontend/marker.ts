@@ -78,6 +78,19 @@ export abstract class MarkerManager {
         this.afterChange();
     }
 
+    protected popPoint(index: number): LatLngTuple | null {
+        if (index < 0 || index >= this.points.length) {
+            return null;
+        }
+
+        const removedPoint = this.points[index];
+        if (removedPoint === undefined) {
+            return null;
+        }
+        this.removePoint(index);
+        return removedPoint;
+    }
+
     protected clearPoints(): void {
         this.markers.forEach((pointMarker) => {
             this.map.removeLayer(pointMarker);
@@ -97,7 +110,7 @@ export abstract class MarkerManager {
         });
     }
 
-    protected getDisplayColor(key: string, storedColor: string): string {
+    protected getDisplayColor(_key: string, storedColor: string): string {
         return storedColor;
     }
 

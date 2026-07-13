@@ -1,11 +1,12 @@
 import time
 from collections import deque
-from requests.exceptions import RequestException
 from typing import Any
 from urllib.parse import urljoin
 
 import numpy as np
 import numpy.typing as npt
+from requests.exceptions import RequestException
+
 import pyqtgraph as pg
 from qtpy.QtCore import Qt, Signal, Slot
 from qtpy.QtGui import QCloseEvent
@@ -49,8 +50,8 @@ class GraphViewer(QWidget):
         self.graph_layout_widget = pg.GraphicsLayoutWidget()
         self.main_layout.addWidget(self.graph_layout_widget, 0, 0, 1, 2)
 
-        self.open_graphs_dialog_button = misc.pushbutton_maker("Select Graphs", constants.ICONS.cog, self.select_graphs)
-        self.clear_graphs_button = misc.pushbutton_maker("Clear Graphs", constants.ICONS.refresh, self.clear_graphs)
+        self.open_graphs_dialog_button = misc.pushbutton_maker("Select Graphs", self.select_graphs, constants.ICONS.cog)
+        self.clear_graphs_button = misc.pushbutton_maker("Clear Graphs", self.clear_graphs, constants.ICONS.refresh)
 
         self.main_layout.addWidget(self.clear_graphs_button, 1, 0)
         self.main_layout.addWidget(self.open_graphs_dialog_button, 1, 1)
@@ -280,7 +281,7 @@ class GraphSelectionDialog(QDialog):
             self.checkboxes[key] = checkbox
             self.layout.addWidget(checkbox, i // 2, i % 2)
 
-        self.apply_button = misc.pushbutton_maker("Apply", constants.ICONS.save, self.on_apply_clicked)
+        self.apply_button = misc.pushbutton_maker("Apply", self.on_apply_clicked, constants.ICONS.save)
         self.layout.addWidget(self.apply_button, (len(self.available_keys) + 1) // 2, 0, 1, 2)
 
         self.setLayout(self.layout)

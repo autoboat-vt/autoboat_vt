@@ -27,7 +27,7 @@ class UserGuideWidget(QWidget):
         self.web_view.setPage(QWebEnginePage(self.web_profile, self.web_view))
         self.web_view.load(constants.DOCUMENTATION_URL)
 
-        self.home_button = misc.pushbutton_maker("Return to home page", constants.ICONS.home, self.navigate_home)
+        self.home_button = misc.pushbutton_maker("Return to home page", self.navigate_home, constants.ICONS.home)
 
         self.layout.addWidget(self.web_view)
         self.layout.addWidget(self.home_button)

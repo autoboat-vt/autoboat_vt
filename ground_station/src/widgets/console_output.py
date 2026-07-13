@@ -2,6 +2,7 @@ import sys
 from datetime import datetime
 
 import pytz
+
 from qtpy.QtCore import QObject, Signal, Slot
 from qtpy.QtGui import QCloseEvent, QTextCursor
 from qtpy.QtWidgets import QTextEdit, QVBoxLayout, QWidget
