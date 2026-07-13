@@ -1,11 +1,12 @@
 import http.server
 import mimetypes
+import os
 import socketserver
 import sys
 import threading
 from typing import NoReturn
 
-from qtpy.QtCore import QThread
+from qtpy.QtCore import QThread, QtMsgType, qInstallMessageHandler
 from qtpy.QtGui import QCloseEvent, QIcon
 from qtpy.QtWebEngineWidgets import QWebEnginePage
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
@@ -130,6 +131,25 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
+    # Suppress Qt Multimedia ffmpeg-backend log spam (e.g. "FFmpeg log: ...",
+    # "mp3float: Could not update timestamps...") and CoreAudio channel warnings
+    # ("audio device has unrecognized channel...") that pollute the console.
+    _SPAM_PREFIXES = (
+        "FFmpeg log:",
+        "mp3float",
+        "audio device has unrecognized channel",
+    )
+
+    def _filter_qt_messages(msg_type, _context, message):
+        if msg_type in (QtMsgType.QtDebugMsg, QtMsgType.QtWarningMsg) and any(
+            message.startswith(p) or p in message for p in _SPAM_PREFIXES
+        ):
+            return
+        # fall through to default handler for everything else
+        _DEFAULT_MSG_HANDLER(msg_type, _context, message)
+
+    _DEFAULT_MSG_HANDLER = qInstallMessageHandler(_filter_qt_messages)
+
     app = QApplication(sys.argv)
     constants.ICONS = misc.get_icons()
 

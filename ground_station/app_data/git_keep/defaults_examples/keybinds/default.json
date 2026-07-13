@@ -58,5 +58,17 @@
         "description": "Can you play tetris on the phallic ice cream?",
         "scope": "app",
         "key": ""
+    },
+    "open_snake": {
+        "name": "Open Snake",
+        "description": "Eat the apples, don't bite your tail.",
+        "scope": "app",
+        "key": ""
+    },
+    "open_pong": {
+        "name": "Open Pong",
+        "description": "The classic arcade duel — 1- or 2-player.",
+        "scope": "app",
+        "key": ""
     }
 }

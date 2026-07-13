@@ -34,6 +34,7 @@ from utils.constants import StrictMatchEnums
 from utils.dialog_templates import CoordinateInputDialog, InputDialog, show_message_box
 from utils.syntax_highlighters import JsonHighlighter
 
+from .easter_eggs import PongDialog, SnakeDialog, TetrisDialog
 from .keybind_widget import (
     KeybindConfigDialog,
     get_keybind_manager,
@@ -41,7 +42,6 @@ from .keybind_widget import (
     qt_key_event_to_string,
 )
 from .map_widget import MapOptionsHandler
-from .tetris_widget import TetrisDialog
 
 MotorboatControlModes = StrictMatchEnums.MotorboatControlModes
 SailboatAutopilotStates = StrictMatchEnums.SailboatAutopilotStates
@@ -195,6 +195,8 @@ class GroundStationWidget(QWidget):
         self.keybind_config_button.clicked.connect(self.keybind_config_window.exec)
 
         self.tetris_window = TetrisDialog()
+        self.snake_window = SnakeDialog()
+        self.pong_window = PongDialog()
 
         self.test_waypoint_rng = np.random.default_rng(69420)
         self.add_500_test_waypoints_button = QPushButton("Add 500 Test Waypoints?")
@@ -341,6 +343,8 @@ class GroundStationWidget(QWidget):
         self._keybind_manager.register_handler("open_keybind_config", self.keybind_config_window.exec)
         self._keybind_manager.register_handler("undo_waypoint", self._trigger_undo_waypoint)
         self._keybind_manager.register_handler("open_tetris", self._show_tetris)
+        self._keybind_manager.register_handler("open_snake", self._show_snake)
+        self._keybind_manager.register_handler("open_pong", self._show_pong)
 
         self._rebuild_shortcuts()
         self._push_map_keybinds()
@@ -406,6 +410,22 @@ class GroundStationWidget(QWidget):
         self.tetris_window.raise_()
         self.tetris_window.activateWindow()
         self.tetris_window._board.setFocus()  # grab focus for key events
+
+    def _show_snake(self) -> None:
+        """Show the hidden Snake easter egg."""
+
+        self.snake_window.show()
+        self.snake_window.raise_()
+        self.snake_window.activateWindow()
+        self.snake_window._board.setFocus()  # grab focus for key events
+
+    def _show_pong(self) -> None:
+        """Show the hidden Pong easter egg."""
+
+        self.pong_window.show()
+        self.pong_window.raise_()
+        self.pong_window.activateWindow()
+        self.pong_window._board.setFocus()  # grab focus for key events
 
     def _install_render_widget_filter(self) -> None:
         """Install the event filter on the QWebEngineView's focus proxy."""
