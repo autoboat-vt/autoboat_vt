@@ -197,8 +197,8 @@ setup_linux() {
 	sudo echo 'ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="A9001WL3", SYMLINK+="rc", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
 	sudo echo 'ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="ABSCDYAB", SYMLINK+="wind_sensor", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
 
-	sudo udevadm control --reload-rules
-	sudo udevadm trigger
+	sudo udevadm control --reload-rules || true
+	sudo udevadm trigger || true
 
 
 
@@ -265,7 +265,13 @@ setup_linux() {
 			sudo apt install -y nvidia-container-toolkit
 			log_info "Configuring Docker runtime for NVIDIA..."
 			sudo nvidia-ctk runtime configure --runtime=docker
-			sudo systemctl restart docker
+			
+			if ps -p 1 -o comm= | grep -q systemd; then
+				sudo systemctl restart docker
+			else
+				sudo service docker restart
+			fi
+
 
 		else
 			log_info "NVIDIA Container Toolkit already installed."
