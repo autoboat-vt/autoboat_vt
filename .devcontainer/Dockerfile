@@ -63,6 +63,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
     libasound2 \
     docker.io \
     ccache \
+    libpulse-mainloop-glib0 \
     mold \
     libcurl4-openssl-dev \
     nlohmann-json3-dev \
