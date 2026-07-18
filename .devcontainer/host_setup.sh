@@ -266,7 +266,7 @@ setup_linux() {
 			log_info "Configuring Docker runtime for NVIDIA..."
 			sudo nvidia-ctk runtime configure --runtime=docker
 			sudo systemctl restart docker
-			fi
+
 
 
 		else
