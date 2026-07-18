@@ -265,11 +265,7 @@ setup_linux() {
 			sudo apt install -y nvidia-container-toolkit
 			log_info "Configuring Docker runtime for NVIDIA..."
 			sudo nvidia-ctk runtime configure --runtime=docker
-			
-			if ps -p 1 -o comm= | grep -q systemd; then
-				sudo systemctl restart docker
-			else
-				sudo service docker restart
+			sudo systemctl restart docker
 			fi
 
 
