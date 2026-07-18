@@ -432,27 +432,38 @@ class TetrisDialog(QDialog):
         main_layout.addWidget(self._board)
         main_layout.addLayout(info_layout)
 
-        self._board.start()
+        # NOTE: do NOT start the board here. The game timer must only run
+        # while the dialog is visible — otherwise pieces keep falling in the
+        # background and the game-over SFX eventually plays audibly even when
+        # nobody is playing. See showEvent / hideEvent.
         self._board.setFocus()
 
         self._music_started: bool = False
+        self._game_started: bool = False
 
     # ------------------------------------------------------------------
-    # show / hide — keep audio tied to visibility
+    # show / hide — keep audio + game tied to visibility
     # ------------------------------------------------------------------
 
     def showEvent(self, event: QShowEvent) -> None:
-        """Start music the first time the dialog becomes visible."""
+        """Start the game and music the first time the dialog becomes visible."""
 
         super().showEvent(event)
+        if not self._game_started:
+            self._board.start()
+            self._game_started = True
         if not self._music_started and not self._board.is_game_over():
             self._audio.start_music()
             self._music_started = True
+        self._board.setFocus()
 
     def hideEvent(self, event: QHideEvent) -> None:
-        """Stop music when the dialog is hidden (e.g. closed)."""
+        """Stop music and pause the game when the dialog is hidden."""
 
         self._audio.stop_music()
+        if not self._board.is_game_over() and not self._board.is_paused():
+            self._board.pause()
+            self._pause_button.setText("Resume")
         super().hideEvent(event)
 
     # ------------------------------------------------------------------
@@ -525,6 +536,7 @@ class TetrisDialog(QDialog):
         self._board.start()
         self._update_labels(0)
         self._pause_button.setText("Pause")
+        self._game_started = True
         self._music_started = True
         self._audio.start_music()
         self._board.setFocus()
@@ -545,7 +557,7 @@ class TetrisDialog(QDialog):
         self._mute_button.setText("Unmute" if muted else "Mute")
         self._audio.set_music_enabled(not muted)
         self._audio.set_sfx_enabled(not muted)
-        if not muted and not self._board.is_game_over() and self._music_started:
+        if not muted and not self._board.is_game_over() and self._game_started and self._music_started:
             self._audio.start_music()
         self._board.setFocus()
 
