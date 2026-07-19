@@ -380,7 +380,7 @@ class KeybindConfigDialog(QDialog):
         item.start_listening()
         self.update_feedback_text(f"Press a new key for '{item.action}'. Delete to clear. Esc to cancel.")
 
-    @Slot(object)
+    @Slot(QPoint)
     def _on_context_menu(self, position: QPoint) -> None:
         """
         Show a context menu on right-click of a key cell.

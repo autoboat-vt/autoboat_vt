@@ -7,6 +7,10 @@ from pathlib import Path
 
 from qtpy.QtCore import QUrl
 from qtpy.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
+try:
+    from qtpy.QtMultimedia import QMediaContent
+except ImportError:
+    QMediaContent = None
 
 from utils import constants
 
@@ -57,9 +61,13 @@ class SnakeAudio:
 
         if self._music_tracks:
             self._music_player = QMediaPlayer()
-            self._music_output = QAudioOutput()
-            self._music_player.setAudioOutput(self._music_output)
-            self._music_output.setVolume(0.4)
+            if hasattr(self._music_player, "setAudioOutput"):
+                self._music_output = QAudioOutput()
+                self._music_player.setAudioOutput(self._music_output)
+                self._music_output.setVolume(0.4)
+            else:
+                self._music_output = None
+                self._music_player.setVolume(40)
             self._music_player.mediaStatusChanged.connect(self._on_media_status_changed)
 
     def _load_sfx(self) -> None:
@@ -146,6 +154,8 @@ class SnakeAudio:
 
         if self._music_output is not None:
             self._music_output.setVolume(max(0.0, min(1.0, volume)))
+        elif self._music_player is not None:
+            self._music_player.setVolume(int(max(0.0, min(1.0, volume)) * 100))
 
     def _play_current_track(self) -> None:
         """Load and play the track at the current index."""
@@ -154,7 +164,12 @@ class SnakeAudio:
             return
 
         track = self._music_tracks[self._current_track_index]
-        self._music_player.setSource(QUrl.fromLocalFile(track.as_posix()))
+        url = QUrl.fromLocalFile(track.as_posix())
+        if hasattr(self._music_player, "setSource"):
+            self._music_player.setSource(url)
+        else:
+            if QMediaContent is not None:
+                self._music_player.setMedia(QMediaContent(url))
         self._music_player.play()
 
     def _on_media_status_changed(self, status: QMediaPlayer.MediaStatus) -> None:

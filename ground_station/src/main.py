@@ -146,7 +146,8 @@ if __name__ == "__main__":
         ):
             return
         # fall through to default handler for everything else
-        _DEFAULT_MSG_HANDLER(msg_type, _context, message)
+        if _DEFAULT_MSG_HANDLER is not None:
+            _DEFAULT_MSG_HANDLER(msg_type, _context, message)
 
     _DEFAULT_MSG_HANDLER = qInstallMessageHandler(_filter_qt_messages)
 
