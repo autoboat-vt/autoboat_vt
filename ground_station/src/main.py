@@ -1,10 +1,10 @@
 import http.server
 import mimetypes
-import os
 import socketserver
 import sys
 import threading
-from typing import NoReturn
+from collections.abc import Callable
+from typing import Any, NoReturn
 
 from qtpy.QtCore import QThread, QtMsgType, qInstallMessageHandler
 from qtpy.QtGui import QCloseEvent, QIcon
@@ -140,16 +140,25 @@ if __name__ == "__main__":
         "audio device has unrecognized channel",
     )
 
-    def _filter_qt_messages(msg_type, _context, message):
+    # Captures the previously installed handler (Qt's default message printer
+    # on first install) so non-spam messages can be forwarded to it. Using a
+    # one-element list avoids the discouraged `global` statement while still
+    # allowing the closure to update the reference after install.
+    _default_handler: list[Callable[[QtMsgType, Any, str], None] | None] = [None]
+
+    def _filter_qt_messages(msg_type: QtMsgType, _context: Any, message: str) -> None:
         if msg_type in (QtMsgType.QtDebugMsg, QtMsgType.QtWarningMsg) and any(
             message.startswith(p) or p in message for p in _SPAM_PREFIXES
         ):
             return
-        # fall through to default handler for everything else
-        if _DEFAULT_MSG_HANDLER is not None:
-            _DEFAULT_MSG_HANDLER(msg_type, _context, message)
+        # fall through to the previously installed handler for everything else
+        handler = _default_handler[0]
+        if handler is not None:
+            handler(msg_type, _context, message)
 
-    _DEFAULT_MSG_HANDLER = qInstallMessageHandler(_filter_qt_messages)
+    # qInstallMessageHandler returns the previously installed handler (or None),
+    # which we store so _filter_qt_messages can forward non-spam messages to it.
+    _default_handler[0] = qInstallMessageHandler(_filter_qt_messages)
 
     app = QApplication(sys.argv)
     constants.ICONS = misc.get_icons()
