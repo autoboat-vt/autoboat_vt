@@ -1176,11 +1176,11 @@ class GroundStationWidget(QWidget):
                 f"Connection Status: {connection_status.name}\n"
                 f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
                 f"Velocity Vector: [{fix_formatting(self.boat_data.get('velocity_x', -69.420))}, {fix_formatting(self.boat_data.get('velocity_y', -69.420))}]\n"  # noqa: E501
-                f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
+                f"Speed: {fix_formatting(self.boat_data.get('speed'))} m/s\n"
                 f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
-                f"True Wind Speed: {fix_formatting(self.boat_data.get('true_wind_speed'))} knots\n"
+                f"True Wind Speed: {fix_formatting(self.boat_data.get('true_wind_speed'))} m/s\n"
                 f"True Wind Angle: {fix_formatting(self.boat_data.get('true_wind_angle'))}°\n"
-                f"Apparent Wind Speed: {fix_formatting(self.boat_data.get('apparent_wind_speed'))} knots\n"
+                f"Apparent Wind Speed: {fix_formatting(self.boat_data.get('apparent_wind_speed'))} m/s\n"
                 f"Apparent Wind Angle: {fix_formatting(self.boat_data.get('apparent_wind_angle'))}°\n"
                 f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
                 f"Desired Heading: {fix_formatting(self.boat_data.get('desired_heading'))}°\n"
@@ -1206,7 +1206,7 @@ class GroundStationWidget(QWidget):
                 f"Autopilot State: {self.boat_data.get('boat_autopilot_state', 'N/A')}\n"
                 f"Current Waypoint Index: {self.boat_data.get('current_waypoint_index') + 1 if isinstance(self.boat_data.get('current_waypoint_index'), int) else 'N/A'}\n"  # noqa: E501
                 f"Velocity Vector: [{fix_formatting(self.boat_data.get('velocity_x', -69.420))}, {fix_formatting(self.boat_data.get('velocity_y', -69.420))}]\n"  # noqa: E501
-                f"Speed: {fix_formatting(self.boat_data.get('speed'))} knots\n"
+                f"Speed: {fix_formatting(self.boat_data.get('speed'))} m/s\n"
                 f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
                 f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
                 f"Desired Rudder Angle: {fix_formatting(self.boat_data.get('desired_rudder_angle'))}°\n"
