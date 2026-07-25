@@ -35,14 +35,6 @@ class BuoyDetectionNode(Node):
     def __init__(self) -> None:
         super().__init__('buoy_detection_node')
         self.parameters = {
-            "buffer_window_size": None, # The number of frames to keep in the buffer for triangulation.
-                                        # Should be large enough to have multiple observations of the same object,
-                                        # but small enough to not cause too much delay in publishing results.
-            "iou_threshold": None, # If two detections are less than this distance apart, they are considered the same
-                                   # object and the older one is deleted.
-                                   # This is to prevent duplicate detections in triangulation.
-            "update_rate": None, # How often to publish detection results in seconds. We only publish the most recent
-                                 # detection for each object, so we don't need to publish every frame.
             "model_name": None, # model name without .onnx. Ex. yolo11m.onnx -> yolo11m
             "threshold": None # detection threshold
         }
@@ -52,19 +44,9 @@ class BuoyDetectionNode(Node):
         self.object_detection_results_publisher = self.create_publisher(
             msg_type=ObjectDetectionResultsList, topic="/object_detection_results_list", qos_profile=10
         )
-        self.triangulation_results_publisher = self.create_publisher(
-            msg_type=TriangulationResultsList, topic="/triangulation_results_list", qos_profile=10
-        )
-        self.create_subscription(msg_type=NavSatFix, topic="/position", callback=self._position_callback,
-                                 qos_profile=qos_profile_sensor_data)
-        self.create_subscription(msg_type=Float32, topic="/heading", callback=self._heading_callback,
-                                 qos_profile=qos_profile_sensor_data)
         self.create_subscription(msg_type=String, topic="/cv_parameters", callback=self._cv_parameters_callback, qos_profile=10)
         self.vision_engine = DeepStreamEngine(
-            buffer_window_size=self.parameters["buffer_window_size"],
-            iou_threshold=self.parameters["iou_threshold"],
             detection_callback=self._publish_detection_results,
-            triangulation_callback=self._publish_triangulation_results,
             info_callback=self._info_callback,
             warn_callback=self._warn_callback,
             error_callback=self._error_callback
@@ -72,8 +54,6 @@ class BuoyDetectionNode(Node):
 
         vs = threading.Thread(target=self.vision_engine.run, daemon=True)
         vs.start()
-
-        self.timer = self.create_timer(timer_period_sec=self.parameters["update_rate"], callback=self.vision_engine.triangulate)
 
     def close_pipeline(self) -> None:
         """Cleanly close the pipeline and shutdown the node."""
@@ -96,16 +76,8 @@ class BuoyDetectionNode(Node):
             for key in parameters:
                 if key in self.parameters:
                     self.parameters[key] = parameters[key]["default"]
-                else:
-                    self.get_logger().warn(f"Parameter {key} not found in self.parameters")
         except Exception as e:
             self.get_logger().error(f"Error reading parameters file: {e}")
-    
-    def _position_callback(self, msg: NavSatFix) -> None:
-        self.vision_engine.update_position(msg.latitude, msg.longitude)
-    
-    def _heading_callback(self, msg: Float32) -> None:
-        self.vision_engine.update_heading(msg.data)
     
     def _cv_parameters_callback(self, msg: String) -> None:
         new_parameters_json = json.loads(msg.data)
@@ -126,18 +98,6 @@ class BuoyDetectionNode(Node):
                 case _:
                     self.get_logger().warn(f"Parameter {key} not recognized, ignoring")
         self.vision_engine.update_model_or_threshold(model_to_update, threshold_to_update)
-
-    def _update_publish_frequency(self, new_update_frequency: float) -> None:
-        if hasattr(self, 'timer'):
-            if new_update_frequency > 0:
-                self.update_frequency = new_update_frequency
-                self.timer.cancel()
-                self.timer = self.create_timer(timer_period_sec=self.update_frequency, callback=self.vision_engine.triangulate)
-                self.get_logger().info(f"Updated update frequency to {new_update_frequency}")
-            else:
-                self.get_logger().info(f"Bad update frequency {new_update_frequency}, must be > 0, not updating")
-        else:
-            self.get_logger().warn("Inference is disabled, not updating update frequency")
 
     def _publish_detection_results(self, detection_results: dict) -> None:
         msg = ObjectDetectionResultsList()
@@ -160,20 +120,6 @@ class BuoyDetectionNode(Node):
             detection_msg.angle_to_object = detection["angle_to_object"]
             msg.detection_results.append(detection_msg)
         self.object_detection_results_publisher.publish(msg)
-
-    def _publish_triangulation_results(self, triangulation_results: dict) -> None:
-        msg = TriangulationResultsList()
-        msg.iou_threshold = triangulation_results["iou_threshold"]
-        msg.triangulation_results = []
-        for obj_id in triangulation_results["triangulation_results"]:
-            triangulation_result_msg = TriangulationResult()
-            triangulation_result_msg.object_id = obj_id
-            triangulation_result_msg.class_id = triangulation_results["triangulation_results"][obj_id]["class_id"]
-            triangulation_result_msg.label = triangulation_results["triangulation_results"][obj_id]["label"]
-            triangulation_result_msg.latitude = triangulation_results["triangulation_results"][obj_id]["lat"]
-            triangulation_result_msg.longitude = triangulation_results["triangulation_results"][obj_id]["lon"]
-            msg.triangulation_results.append(triangulation_result_msg)
-        self.triangulation_results_publisher.publish(msg)
 
 def main() -> None:
     rclpy.init()

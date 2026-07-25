@@ -9,15 +9,13 @@ import shutil
 import subprocess
 import time
 from collections.abc import Callable
-from math import pi, tan
+from math import pi
 from threading import Lock
 
 import numpy as np
 import pyds
 import yaml
 from gi.repository import GLib, Gst
-
-from .triangulation import ObjectDetection, ObjectTriangulator
 
 os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
 # os.environ['GST_DEBUG'] = "3"
@@ -62,56 +60,23 @@ class DeepStreamEngine:
     """
     
     def __init__(
-      self, buffer_window_size: int, iou_threshold: float,
-      detection_callback:Callable[[dict], None],
-      triangulation_callback:Callable[[dict], None],
+      self, detection_callback:Callable[[dict], None],
       info_callback:Callable[[str], None],
       warn_callback:Callable[[str], None],
       error_callback:Callable[[str], None]
     ) -> None:
         self.parameters = {
-            "buffer_window_size": buffer_window_size, # The number of frames to keep in the buffer for triangulation.
-                                                      # Should be large enough to have multiple observations of the same object,
-                                                      # but small enough to not cause too much delay in publishing results.
-            "iou_threshold": iou_threshold, # If two detections are less than this distance apart, they are considered the same
-                                            # object and the older one is deleted.
-                                            # This is to prevent duplicate detections in triangulation.
             "model_name": "", # model name without .onnx. Ex. yolo11m.onnx -> yolo11m
             "threshold": "" # detection threshold
         }
         self.detection_callback = detection_callback
-        self.triangulation_callback = triangulation_callback
         self.info_callback = info_callback
         self.warn_callback = warn_callback
         self.error_callback = error_callback
 
         self.cam_list = self._read_camera_config()
         self.cam_list[0]["name"] = self._find_camera(self.cam_list[0]["v4l2_format"]) if CAMERA else "videotestsrc"
-        self.camera_baseline = 59 # Distance between cameras in mm
-        self.camera_HFOV = 90 # Horizontal Field of View in degrees (from datasheet)
-
-        # Focal length of the camera is 1.93 mm or 640 px.
-        self.camera_focal_px = (self.cam_list[0]["width"] * 0.5) / tan(self.camera_HFOV * 0.5 * pi / 180) # 640 px
-        self.camera_K = np.array([[self.camera_focal_px, 0, self.cam_list[0]["width"] * 0.5],
-                                  [0, self.camera_focal_px, self.cam_list[0]["height"] * 0.5],
-                                  [0, 0, 1]])
-        self.camera_K_inv = np.linalg.inv(self.camera_K)
-        self.triangulator = ObjectTriangulator(camera_matrix=self.camera_K,
-                                               frame_size=(self.cam_list[0]["width"], self.cam_list[0]["height"]),
-                                               buffer_window_size=self.parameters["buffer_window_size"],
-                                               iou_threshold=self.parameters["iou_threshold"],
-                                               logger=self.info_callback)
-
-        self.current_position = {
-            "latitude": 0,
-            "longitude": 0
-        }
-        self.origin_position = {
-            "latitude": 0,
-            "longitude": 0
-        }
-        self.valid_origin_position = False
-        self.current_heading = 0 # default to true east. Heading is counterclockwise of true east
+        self.camera_focal_px = self.cam_list[0]["focal_px"]
 
         # DeepStream Initialization
         Gst.init(None)
@@ -366,9 +331,6 @@ class DeepStreamEngine:
                 self.info_callback(f"Frame: {frame_meta.frame_num}, avg FPS: {fps:.2f}")
             l_obj = frame_meta.obj_meta_list
 
-            pose_matrix = self._get_current_pose(self.current_position["latitude"], self.current_position["longitude"],
-                                                 self.current_heading)
-
             # Iterate through each object in frame
             while l_obj is not None:
                 try:
@@ -392,34 +354,8 @@ class DeepStreamEngine:
                 obj_results["angle_to_object"] = np.arctan((mid_x - self.cam_list[0]["width"] * 0.5)
                                                            / self.camera_focal_px) * 180 / pi
                 msg["detection_results"].append(obj_results)
-                if (self.valid_origin_position):
-                    self.triangulator.add_observation(ObjectDetection(
-                                                        frame_number = frame_meta.frame_num,
-                                                        detector_confidence = obj_meta.confidence,
-                                                        tracker_confidence = obj_meta.tracker_confidence,
-                                                        x_position = mid_x,
-                                                        y_position = mid_y,
-                                                        width = obj_meta.tracker_bbox_info.org_bbox_coords.width,
-                                                        height = obj_meta.tracker_bbox_info.org_bbox_coords.height,
-                                                        object_id = obj_meta.object_id,
-                                                        class_id = obj_meta.class_id,
-                                                        obj_label = obj_meta.obj_label,
-                                                        pose_matrix = pose_matrix,
-                                                        camera_matrix_inv = self.camera_K_inv
-                    ))
-                if obj_meta.object_id in self.triangulator.observations:
-                    track = self.triangulator.observations[obj_meta.object_id]
-                    if track.last_world_pos is not None:
-                        x_world, y_world, z_world = track.last_world_pos
-                        obj_meta.text_params.display_text = (f"{obj_meta.obj_label} {obj_meta.object_id} "
-                                                             f"{obj_meta.confidence:.2f}. "
-                                                             f"Pos: [ {x_world:.01f}, {y_world:.01f}, {z_world:.01f} ]")
-                    else:
-                        obj_meta.text_params.display_text = (f"{obj_meta.obj_label} {obj_meta.object_id} "
-                                                             f"{obj_meta.confidence:.2f}. Pos: N/A")
-                else:
-                    obj_meta.text_params.display_text = (f"{obj_meta.obj_label} {obj_meta.object_id} "
-                                                         f"{obj_meta.confidence:.2f}.")
+
+                obj_meta.text_params.display_text = f"{obj_meta.obj_label} {obj_meta.object_id} {obj_meta.confidence:.2f}."
 
                 try:
                     l_obj = l_obj.next
@@ -456,47 +392,6 @@ class DeepStreamEngine:
         self.detection_callback(msg)
 
         return Gst.PadProbeReturn.OK
-    
-    def _get_current_pose(self, lat: float, long: float, heading: float) -> np.ndarray:
-        # Delta lat/lon in radians
-        d_lat = np.radians(lat - self.origin_position["latitude"])
-        d_lon = np.radians(long - self.origin_position["longitude"])
-        
-        # Calculate Easting (x) and Northing (y)
-        t_y = d_lat * EARTH_RADIUS
-        t_x = d_lon * EARTH_RADIUS * np.cos(np.radians(self.origin_position["latitude"]))
-        t_z = 0  # Assume sea level
-        # if (self.origin_position["latitude"] != 0 and self.origin_position["longitude"] != 0):
-        #     self.info_callback(f"Pose translation: {t_x} {t_y}")
-        
-        # 2. Calculate Rotation (R) from Heading
-        psi = np.radians(heading)
-        r_yaw = np.array([
-            [ np.cos(psi), -np.sin(psi), 0],
-            [ np.sin(psi),  np.cos(psi), 0],
-            [ 0,            0,           1]
-        ])
-        
-        # Columns are world-space representations of Camera X, Y, and Z
-        # R = np.array([
-        #     [ cos_p,  0,  sin_p],
-        #     [-sin_p,  0,  cos_p],
-        #     [     0, -1,      0]
-        # ])
-        r_cam_to_enu = np.array([
-            [0, 0, 1],
-            [-1, 0, 0],
-            [0, -1, 0]
-        ])
-
-        r = r_yaw @ r_cam_to_enu
-        
-        # 3. Assemble 4x4 Matrix
-        pose = np.eye(4)
-        pose[:3, :3] = r
-        pose[:3, 3] = [t_x, t_y, t_z]
-
-        return pose
 
     def _read_camera_config(self) -> dict:
         with open(CAMERA_CONFIG, 'r') as file:
@@ -539,33 +434,6 @@ class DeepStreamEngine:
                 raise OSError(f"Command v4l2-ctl failed for device {device}.") from err
         self.error_callback(f"Could not find RealSense camera device with {camera_format} format")
         raise OSError("Camera device not found")
-
-    def update_position(self, latitude: float, longitude: float) -> None:
-        """
-        Updates the current position of the boat.
-        This is used to calculate the pose matrix for triangulation and to set the origin position if it is not valid.
-        """
-        self.current_position["latitude"] = latitude
-        self.current_position["longitude"] = longitude
-        if not self.valid_origin_position:
-            self.origin_position["latitude"] = latitude
-            self.origin_position["longitude"] = longitude
-            self.valid_origin_position = True
-            self.info_callback(f"Set origin position to {self.origin_position['latitude']}, {self.origin_position['longitude']}")
-    
-    def update_heading(self, heading: float) -> None:
-        """
-        Updates the current heading of the boat.
-        This is used to calculate the pose matrix for triangulation.
-        """
-        self.current_heading = heading
-
-    def triangulate(self) -> None:
-        """Runs the triangulation algorithm on the current buffer of observations and publishes the results."""
-        if not INFERENCE or not self.valid_origin_position:
-            return
-        results = self.triangulator.triangulate(self.origin_position)
-        self.triangulation_callback(results)
 
     def _read_file(self, file_name:str) -> tuple[list[str], str, float]:
         # Open file
@@ -705,18 +573,3 @@ class DeepStreamEngine:
             self.info_callback("Reloaded config file in nvinfer")
         else:
             self.info_callback("Not reloading config file in nvinfer since INFERENCE is disabled")
-
-    def update_buffer_window(self, new_buffer_window: int) -> None:
-        """Updates the buffer window size for triangulation."""
-        if new_buffer_window != self.triangulator.buffer_window:
-            self.triangulator.buffer_window = new_buffer_window
-            self.parameters["buffer_window_size"] = new_buffer_window
-            self.info_callback(f"Updated buffer window to {new_buffer_window}")
-        else:
-            self.info_callback(f"Buffer window is already {new_buffer_window}, not updating")
-
-    def update_iou_threshold(self, new_iou_threshold: float) -> None:
-        """Updates the IOU threshold for triangulation."""
-        self.triangulator.iou_threshold = new_iou_threshold
-        self.parameters["iou_threshold"] = new_iou_threshold
-        self.info_callback(f"Updated IOU threshold to {new_iou_threshold}")
