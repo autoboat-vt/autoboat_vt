@@ -1,0 +1,49 @@
+name: Update CITATION.cff date-released
+
+# Keeps the `date-released` field in CITATION.cff in sync with the latest
+# commit on main. Runs on every push to main; if date-released is stale
+# (not today's date in UTC), the workflow updates it, commits, and pushes.
+# This makes date-released "dynamic" - it always reflects the date of the
+# most recent release/push to main, without requiring manual edits.
+
+on:
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: write
+
+jobs:
+    update-date:
+        name: Bump date-released to today (UTC)
+        runs-on: ubuntu-latest
+        # Don't loop: skip if the last commit was from this workflow.
+        if: github.actor != 'github-actions[bot]'
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Update date-released to today (UTC)
+              run: |
+                  set -euo pipefail
+                  TODAY=$(date -u +%Y-%m-%d)
+                  # Update the date-released line in CITATION.cff
+                  sed -i -E "s|^date-released: \".*\"$|date-released: \"${TODAY}\"|" CITATION.cff
+                  echo "Updated date-released to ${TODAY}"
+
+            - name: Commit and push if changed
+              run: |
+                  if git diff --quiet CITATION.cff; then
+                    echo "date-released is already current; no commit needed."
+                    exit 0
+                  fi
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git add CITATION.cff
+                  git commit -m "chore: bump CITATION.cff date-released to today"
+                  git push
+                  echo "Pushed updated date-released."
