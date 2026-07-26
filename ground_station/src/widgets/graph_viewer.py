@@ -8,6 +8,7 @@ import numpy.typing as npt
 from requests.exceptions import RequestException
 
 import pyqtgraph as pg
+from pyqtgraph.graphicsItems.PlotItem.PlotItem import PlotItem
 from qtpy.QtCore import Qt, Signal, Slot
 from qtpy.QtGui import QCloseEvent
 from qtpy.QtWidgets import QCheckBox, QDialog, QGridLayout, QWidget
@@ -35,8 +36,7 @@ class GraphViewer(QWidget):
 
     def __init__(self) -> None:
         super().__init__()
-
-        self.plots: list[pg.PlotItem] = []
+        self.plots: list[PlotItem] = []
 
         self.important_keys: list[str] = ["speed", "distance_to_next_waypoint", "desired_heading", "heading", "true_wind_speed"]
         self.available_keys: list[str] = []
@@ -107,11 +107,7 @@ class GraphViewer(QWidget):
 
         try:
             self.available_keys = {
-                key for key in boat_data if
-                (
-                    isinstance(boat_data[key], constants.NumberType)
-                    and key != "current_waypoint_index"
-                )
+                key for key in boat_data if (isinstance(boat_data[key], constants.NumberType) and key != "current_waypoint_index")
             }
             filtered_values = {key: float(boat_data.get(key, np.nan)) for key in self.important_keys}
 
@@ -138,10 +134,8 @@ class GraphViewer(QWidget):
                         col_span = 1
 
                     plot_title = key.replace("_", " ").title()
-                    
-                    plot_item = self.graph_layout_widget.addPlot(
-                        row=plot_row, col=plot_col, colspan=col_span, title=plot_title
-                    )
+
+                    plot_item = self.graph_layout_widget.addPlot(row=plot_row, col=plot_col, colspan=col_span, title=plot_title)
                     if not isinstance(plot_item, pg.PlotItem):
                         print(f"[Error] Failed to create plot for key '{key}', continuing with next key.")
                         continue
@@ -178,10 +172,7 @@ class GraphViewer(QWidget):
             print("[Info] Pulling available boat data fields from telemetry server for graph selection...")
             try:
                 response = constants.REQ_SESSION.get(
-                    urljoin(
-                        misc.get_route("get_boat_status"),
-                        str(constants.SM.read_int("telemetry_server_instance_id"))
-                    )
+                    urljoin(misc.get_route("get_boat_status"), str(constants.SM.read_int("telemetry_server_instance_id")))
                 ).json()
 
                 if not isinstance(response, dict):
@@ -254,6 +245,7 @@ class GraphViewer(QWidget):
         self.telemetry_handler.wait()
         super().closeEvent(event)
 
+
 class GraphSelectionDialog(QDialog):
     """
     A dialog for selecting which graphs to display in the ``GraphViewer``.
@@ -267,7 +259,7 @@ class GraphSelectionDialog(QDialog):
 
     def __init__(self, available_keys: list[str], selected_keys: list[str]) -> None:
         super().__init__()
-        
+
         self.setWindowTitle("Select Graphs")
         self._available_keys = available_keys
         self._selected_keys = selected_keys
@@ -291,13 +283,13 @@ class GraphSelectionDialog(QDialog):
         """Get the currently selected keys from the checkboxes."""
 
         return self._selected_keys
-    
+
     @selected_keys.setter
     def selected_keys(self, keys: list[str]) -> None:
         """
         Set the selected keys and ensure they are a subset of the available keys.
         Also updates the state of the checkboxes to reflect the new selection.
-        
+
         Parameters
         ----------
         keys
@@ -308,19 +300,19 @@ class GraphSelectionDialog(QDialog):
         ValueError
             If any of the selected keys are not in the available keys.
         """
-        
+
         if not set(keys).issubset(set(self.available_keys)):
             raise ValueError("Selected keys must be a subset of available keys.")
-        
+
         self._selected_keys = keys
         self.update_checkboxes()
-    
+
     @property
     def available_keys(self) -> list[str]:
         """Get the available keys for graph selection."""
 
         return self._available_keys
-    
+
     @available_keys.setter
     def available_keys(self, keys: list[str]) -> None:
         """Set the available keys for graph selection and update the checkboxes."""

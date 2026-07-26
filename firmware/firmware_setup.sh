@@ -1,21 +1,19 @@
+#!/bin/bash
+
 # -----------------------
 # DEPRICATED FILE
 # -----------------------
-
-
-#!/bin/bash
 set -e
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 
 REPOSITORY_ROOT="/home/ws"
 
 # Install dependencies
-sudo apt-get update || true  # continue even if this "fails" for whatever reason
+sudo apt-get update || true # continue even if this "fails" for whatever reason
 # sudo apt install -y cmake g++ gcc-arm-none-eabi doxygen libnewlib-arm-none-eabi git python3 build-essential pkg-config libusb-1.0-0-dev
 sudo apt install -y cmake g++ gcc-arm-none-eabi doxygen libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib libstdc++-arm-none-eabi-dev git python3 build-essential pkg-config libusb-1.0-0-dev
 sudo apt-get upgrade -y --allow-downgrades
 source /opt/ros/humble/setup.bash
-
 
 # Install Pico SDK if it is not currently installed
 if [ ! -d "$REPOSITORY_ROOT/firmware/dependencies/pico-sdk" ]; then
@@ -24,18 +22,12 @@ fi
 
 export PICO_SDK_PATH=$REPOSITORY_ROOT/firmware/dependencies/pico-sdk
 
-
-
-
 # Install Microros Pico SDK if it is not currently installed
 if [ ! -d "$REPOSITORY_ROOT/firmware/dependencies/micro_ros_raspberrypi_pico_sdk" ]; then
   git clone -b humble https://github.com/micro-ROS/micro_ros_raspberrypi_pico_sdk.git $REPOSITORY_ROOT/firmware/dependencies/micro_ros_raspberrypi_pico_sdk
 fi
 
 export PICO_MICROROS_SDK_PATH=$REPOSITORY_ROOT/firmware/dependencies/micro_ros_raspberrypi_pico_sdk
-
-
-
 
 # Install Picotool if it is not already installed
 if [ ! -d "$REPOSITORY_ROOT/firmware/dependencies/picotool" ]; then
@@ -47,9 +39,6 @@ export PICOTOOL_PATH=$REPOSITORY_ROOT/firmware/dependencies/picotool
 mkdir -p build && cd build
 cmake .. && cmake --build . -j16
 
-
-
-
 # Create and build microros workspace
 if [ ! -d "$REPOSITORY_ROOT/firmware/dependencies/micro_ros_agent/src/micro_ros_setup" ]; then
   git clone -b humble https://github.com/micro-ROS/micro_ros_setup.git $REPOSITORY_ROOT/firmware/dependencies/micro_ros_agent/src/micro_ros_setup
@@ -57,21 +46,17 @@ if [ ! -d "$REPOSITORY_ROOT/firmware/dependencies/micro_ros_agent/src/micro_ros_
   git reset --hard 5abfdaa59b0f18dc152b47b564d8e27012b05ac8 # They introduced a change that broke a lot of stuff. This is the only commit that works
 fi
 
-
-
 # Update ROS dependencies
 cd $REPOSITORY_ROOT/firmware/dependencies/micro_ros_agent
 sudo rosdep init && rosdep update && rosdep install --from-paths src --ignore-src -r -y
 
-
-# Clean up stale symlinks 
+# Clean up stale symlinks
 find $REPOSITORY_ROOT/firmware/dependencies/micro_ros_agent/build -type d -name "ament_cmake_python" -exec rm -rf {} + || true
 find $REPOSITORY_ROOT/firmware/dependencies/micro_ros_agent/install -type d -name "micro_ros_msgs" -exec rm -rf {} + || true
 
 # Build the micro_ros_agent package
 colcon build --symlink-install --parallel-workers 16
 source $REPOSITORY_ROOT/firmware/dependencies/micro_ros_agent/install/local_setup.bash
-
 
 # Clean up a potentially old microros firware installation
 rm -rf $REPOSITORY_ROOT/firmware/dependencies/micro_ros_agent/firmware
@@ -83,7 +68,6 @@ source install/local_setup.bash
 ros2 run micro_ros_setup create_agent_ws.sh
 ros2 run micro_ros_setup build_agent.sh
 source install/local_setup.sh
-
 
 # Move this to the opt folder since that is where the microros dependencies should be
 sudo mkdir -p /opt/autoboat/firmware_dependencies
@@ -100,8 +84,7 @@ rm -rf $REPOSITORY_ROOT/firmware/dependencies
   echo "alias picotool='$PICOTOOL_PATH/build/picotool'"
   echo "alias picotool_load='sudo $PICOTOOL_PATH/build/picotool load'"
   echo "alias picotool_reboot='sudo $PICOTOOL_PATH/build/picotool reboot'"
-} >> ~/.bashrc
-
+} >>~/.bashrc
 
 # Source bash
 source ~/.bashrc
