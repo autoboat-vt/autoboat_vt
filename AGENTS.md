@@ -52,6 +52,7 @@ When adding to this file:
 | `.devcontainer/` | Docker | Dev container variants: base, jetson, deepstream, firmware_dependencies |
 | `scripts/` | Bash | Docker image build/push, Jetson install helpers |
 | `install.sh` | Bash | End-user apt install of prebuilt `.deb` packages |
+| `CITATION.cff` | YAML (CFF 1.2.0) | Citation metadata for the repo; `date-released` is auto-bumped by `.github/workflows/update-citation-date.yml` |
 | `biome.jsonc` | — | Linter/formatter for TS/JS/CSS/HTML/JSON (root config) |
 | `ruff.toml` | — | Linter/formatter for all Python |
 | `taplo.toml` | — | Formatter for TOML |
@@ -83,6 +84,10 @@ cd ground_station && ./run.sh
 This starts the Vite map server on `127.0.0.1:5173` and launches the PyQt app.
 
 CI release build: `.github/workflows/build_ros_packages.sh` (expects `DEB_VERSION`, `DEB_ARCH`, `IGNORE_PACKAGES` env vars; uses `mold` linker).
+
+CI workflows (`.github/workflows/`):
+- `build-and-release.yml` — cross-arch (amd64 + arm64) ROS package build on `main` pushes, `v*` tags, and PRs to `main`.
+- `update-citation-date.yml` — on every push to `main`, bumps `CITATION.cff`'s `date-released` to today (UTC) and commits via `github-actions[bot]`. Skips itself (`if: github.actor != 'github-actions[bot]'`) to avoid loops. Note: this makes `date-released` track "last push to main" rather than tagged-release dates - revisit if you start cutting semantic-version tags.
 
 ## Conventions
 

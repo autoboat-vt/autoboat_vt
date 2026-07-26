@@ -1,5 +1,5 @@
 ---
-description: "Use when writing or editing .devcontainer/, scripts/, install.sh, or .github/workflows/. Covers the container architecture (base + 3 variants: jetson, deepstream, firmware_dependencies), base Dockerfile (ros:humble, autoboat_user UID 1000, passwordless sudo, apt incl Qt/X11 + mold + nlohmann-json3-dev + ros-humble-serial-driver, RealSense+Gazebo amd64-only, PyQt5 platform split arm64 apt vs amd64 pip, libcpr from source, required_pip_packages.txt, Bun), variant Dockerfiles, helper scripts (install_deepstream_helper_script.sh DeepStream 7.1/CUDA 12.6/TensorRT 10.3/pyds 1.2.0/glib 2.76 from source; install_firmware_dependencies_helper_script.sh Pico SDK + micro-ros + picotool + micro_ros_setup pinned commit), initializeCommand.sh, host_setup.sh udev rules, required_pip_packages.txt (numpy==1.26.4 pinned), postCreateCommand.sh (GZ_SIM_SYSTEM_PLUGIN_PATH, build/build_python aliases), scripts/ (build_and_push 3 variants × 2 arches, copy_nth_image, Jetson installers), CI workflow. Image is vtautoboat/development_image_firmware (no _dependencies suffix)."
+description: "Use when writing or editing .devcontainer/, scripts/, install.sh, or .github/workflows/. Covers the container architecture (base + 3 variants: jetson, deepstream, firmware_dependencies), base Dockerfile (ros:humble, autoboat_user UID 1000, passwordless sudo, apt incl Qt/X11 + mold + nlohmann-json3-dev + ros-humble-serial-driver, RealSense+Gazebo amd64-only, PyQt5 platform split arm64 apt vs amd64 pip, libcpr from source, required_pip_packages.txt, Bun), variant Dockerfiles, helper scripts (install_deepstream_helper_script.sh DeepStream 7.1/CUDA 12.6/TensorRT 10.3/pyds 1.2.0/glib 2.76 from source; install_firmware_dependencies_helper_script.sh Pico SDK + micro-ros + picotool + micro_ros_setup pinned commit), initializeCommand.sh, host_setup.sh udev rules, required_pip_packages.txt (numpy==1.26.4 pinned), postCreateCommand.sh (GZ_SIM_SYSTEM_PLUGIN_PATH, build/build_python aliases), scripts/ (build_and_push 3 variants × 2 arches, copy_nth_image, Jetson installers), CI workflows (build-and-release.yml cross-arch .deb build using mold; update-citation-date.yml bumps CITATION.cff date-released on every push to main via github-actions[bot] with self-skip to avoid loops). Image is vtautoboat/development_image_firmware (no _dependencies suffix)."
 applyTo: ".devcontainer/**, scripts/**, install.sh, .github/workflows/**"
 ---
 
@@ -292,14 +292,22 @@ Bare-metal DeepStream + YOLO installer for **Jetpack 6.2 (arm64)**. Different fr
 
 Bare-metal ROS + librealsense installer for Jetson. Builds librealsense from source (no apt package for arm64). Installs ROS Humble from source if not present.
 
-## CI workflow
+## CI workflows
+
+### Release build
 
 File: `.github/workflows/build_ros_packages.sh`. Builds `.deb` packages for release. Expects env vars:
 - `DEB_VERSION` — semantic version string
 - `DEB_ARCH` — target arch (`amd64` or `arm64`)
 - `IGNORE_PACKAGES` — space-separated list of packages to skip
 
-Uses `mold` linker. Invoked by `.github/workflows/*.yml` on release tags.
+Uses `mold` linker. Invoked by `.github/workflows/build-and-release.yml` on `main` pushes, `v*` tags, and PRs to `main`.
+
+### CITATION.cff date-released bumper
+
+File: `.github/workflows/update-citation-date.yml`. On every push to `main`, sets `CITATION.cff`'s `date-released` to today (UTC) via `sed -i -E`, commits as `github-actions[bot]`, and pushes. Skips itself with `if: github.actor != 'github-actions[bot]'` to avoid loops. Idempotent via `git diff --quiet CITATION.cff`.
+
+> ⚠️ This makes `date-released` track "last commit date on main" rather than tagged-release dates. If you start cutting semantic-version tags, consider switching the trigger to `tags: ['v*']` and bumping `version` in the same step — otherwise Zenodo/DOI citations will report today's date for an old release.
 
 ## Things to avoid
 
