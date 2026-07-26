@@ -4,6 +4,44 @@ This repository is the main software package for the **Virginia Tech AutoBoat** 
 
 Public docs: <https://autoboat-vt.github.io/documentation>
 
+## Project at a glance
+
+| Property | Value |
+| --- | --- |
+| Primary stack | ROS 2 Humble (Python + C++) |
+| Ground station | Python (qtpy/PySide) + embedded Vite/TypeScript + Leaflet map widget |
+| Firmware | C/C++ (RP2040 Pico SDK + micro-ROS) |
+| Canonical env | Devcontainer (ROS Humble, `/home/ws` mount) |
+| ROS network | `ROS_DOMAIN_ID=42`, `ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST` (devcontainer) |
+| Python lint/format | Ruff (`ruff.toml`, `select = ["ALL"]` + curated ignore; numpy docstrings; 130 cols; 4-space indent) |
+| TS/JS/CSS/HTML/JSON lint/format | Biome (root `biome.jsonc`; double quotes; semicolons; 4-space indent; 130-char lines / 100 for HTML/CSS) |
+| TOML formatter | taplo (`align_entries = true`, 4-space indent) |
+| C++ | C++23 (`autopilot_cpp`) / C++17 (`firmware`, Pico SDK); `-Wall -Wextra -Wpedantic`; `ccache` + `mold` when available |
+| CI release | `.github/workflows/build_ros_packages.sh` (expects `DEB_VERSION`, `DEB_ARCH`, `IGNORE_PACKAGES`; uses `mold` linker) |
+| Public docs site | <https://autoboat-vt.github.io/documentation> (sibling repo) |
+
+## Maintaining This File
+
+**This file is the living source of truth for project knowledge.** Update it frequently and proactively - every time you learn something new, change a convention, fix a gotcha, bump a version, add a node/topic, or discover a footgun. A stale `AGENTS.md` is worse than none because it actively misleads the next agent.
+
+When you discover or establish new project information, **add it to this file** (for always-relevant conventions) or to a `.github/instructions/*.instructions.md` file (for topic-specific details that only apply when editing certain files - see "Instruction Files" below). When you CHANGE something (refactor, rename, remove a file, alter a config, fix a bug that was documented as a workaround), **update the corresponding entry in the same change** - don't let the docs drift from the code.
+
+Things worth recording:
+
+- **Conventions & patterns** - naming, file organization, import rules, node/topic conventions, message definitions.
+- **Gotchas** - non-obvious behavior, footguns, environment quirks, config discovery issues (e.g. the Biome `--config-path` gotcha).
+- **Architecture decisions** - why a package is structured a certain way, data flow, key constants and their rationale.
+- **Build/deploy/CI details** - commands, env vars, devcontainer variants, what runs where.
+- **Verified facts** - dependency versions, topic tables, message fields (verify against the actual codebase before recording, don't trust stale docs).
+
+When adding to this file:
+
+1. **Find the right section.** Use the existing structure. Add a subsection under the most relevant top-level section rather than appending to the end.
+2. **Be concise.** Bullet points and short prose, not essays. Link to files/symbols with backticks.
+3. **Don't duplicate.** Search the file first - if it's already covered, edit/update rather than adding a parallel entry. If a topic only applies when editing specific files, put it in a `.github/instructions/*.instructions.md` file instead of here.
+4. **Keep it accurate and in sync.** If you correct a stale claim, update it in place. Verify versions/paths against the actual source before recording them as fact. When you change code or config that this file describes, update the relevant entry in the same change.
+5. **Don't move or rewrite unrelated sections** unless asked - make targeted additions/edits.
+
 ## Repository Layout
 
 | Path | Stack | Purpose |
@@ -98,3 +136,35 @@ Stack-specific guidance lives in `.github/instructions/*.instructions.md`. Each 
 - Using `applyTo: ["a", "b"]` array form in any `.instructions.md` frontmatter — VS Code Copilot rejects it; use comma-separated string form (`applyTo: "a, b"`).
 - Adding PyQt/PySide code that imports `PyQt5` or `PyQt6` directly — always go through `qtpy` for Qt abstraction.
 - Adding new TS files for the map widget outside `ground_station/src/widgets/map_widget/frontend/` — `tsconfig.json` `include` is hard-scoped to that directory.
+
+## Cross-repo contracts
+
+- **Telemetry node → server**: The boat's telemetry node publishes to the `autoboat-vt/telemetry_server` Flask app. Two wire-format invariants must be preserved on this side:
+  - The telemetry node sends JSON bodies as **JSON-encoded strings** (double-encoded: the body is a JSON string whose content is itself JSON). The server's `json.loads(request.json)` decode depends on this - do not "simplify" the node to send a plain JSON body. See `telemetry_server` AGENTS.md §5 ("Request body parsing - the `json.loads(request.json)` gotcha").
+  - `boat_status` fast-update binary payloads (`/boat_status/set_fast/<id>`) are positional and MUST match the instance's `boat_status_mapping` field order exactly. `from_buffer_copy` is positional - if you add or reorder a field in the mapping on the firmware side, fast updates will silently decode to garbage on the server. Coordinate field-order changes with the server's `set_mapping` route and the website's display. See `telemetry_server` AGENTS.md §3.4.
+- **Enums shared across this repo**: `ground_station/src/utils/constants.py::StrictMatchEnums` MUST stay in sync with `ros_packages/autopilot/autopilot/autopilot_library/utils/constants.py` (already noted in Conventions above).
+- **Enum sync with telemetry_server**: `DiagnosticMessageIntensity` (1=INFO, 2=WARNING, 3=ERROR) is defined on the server and consumed by both the ground station and the website. If the server changes the int mapping, this repo's display/interpretation must follow.
+- **Public docs**: <https://autoboat-vt.github.io/documentation> is a sibling repo (`autoboat-vt/documentation`). Doc changes go there, not in this repo.
+
+## Commit Message Conventions
+
+This repo doesn't enforce conventional commits, but the existing history uses short lowercase prefixes in the imperative mood ("add node", not "added node"):
+
+- `feat: ...` / `fix: ...` - ROS package, ground station, or firmware code
+- `ros: ...` - ROS message, topic, launch, or node changes
+- `firmware: ...` - RP2040 firmware changes
+- `ground_station: ...` - PyQt ground station or map widget changes
+- `sim: ...` - Gazebo simulation plugin or launch changes
+- `docker: ...` / `devcontainer: ...` - Dockerfile or devcontainer changes
+- `ci: ...` - GitHub workflow changes
+- `docs: ...` - README/docs only
+
+## Working Style Notes
+
+- **Terminal output exceeds scrollback** in this environment. Redirect long output to `/tmp/*.log` and `read_file` it back rather than reading terminal output directly.
+- When making multiple independent edits, batch them for efficiency.
+- Prefer reading large file chunks over many small reads.
+- Don't pass `...existing code...` markers or omitted-line markers to edit tools - include exact literal text with 3-5 lines of context before and after.
+- If a task touches ROS packages, ground station, and firmware, update all three in the same pass rather than leaving the repo half-finished.
+- Use the existing repo scripts (`ruff check`, `biome check --write`, `colcon build`) before reporting success; do not rely on assumptions or partial inspection.
+- After Python edits, run `ruff check --fix` and `ruff format` on the changed files. After TS/JS/CSS edits, run `biome check --write` from `ground_station/` (Biome config discovery walks up; pass `--config-path` if a parent dir has its own `biome.json`).
