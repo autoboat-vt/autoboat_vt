@@ -7,6 +7,7 @@ from pathlib import Path
 
 from qtpy.QtCore import QUrl
 from qtpy.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
+
 try:
     from qtpy.QtMultimedia import QMediaContent
 except ImportError:
@@ -167,9 +168,8 @@ class SnakeAudio:
         url = QUrl.fromLocalFile(track.as_posix())
         if hasattr(self._music_player, "setSource"):
             self._music_player.setSource(url)
-        else:
-            if QMediaContent is not None:
-                self._music_player.setMedia(QMediaContent(url))
+        elif QMediaContent is not None:
+            self._music_player.setMedia(QMediaContent(url))
         self._music_player.play()
 
     def _on_media_status_changed(self, status: QMediaPlayer.MediaStatus) -> None:
