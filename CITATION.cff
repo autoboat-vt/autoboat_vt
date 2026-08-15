@@ -13,7 +13,7 @@ type: software
 license: GPL-3.0-or-later
 repository-code: "https://github.com/autoboat-vt/autoboat_vt"
 version: "1.0.0"
-date-released: "2026-07-26"
+date-released: "2026-08-15"
 keywords:
   - robotics
   - autonomous-surface-vessel
