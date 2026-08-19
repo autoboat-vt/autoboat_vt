@@ -58,27 +58,8 @@ class GraphViewer(QWidget):
         self.setLayout(self.main_layout)
 
         self.telemetry_handler = BoatStatusThreadRouter.BoatStatusFetcherThread()
+        self.telemetry_handler.data_fetched.connect(self.update_graph)
         self.telemetry_handler.start()
-
-        # ``BoatStatusFetcherThread.response`` is a thread-safe property (not a
-        # Signal), so the UI polls it on a timer instead of connecting a slot.
-        # ``_last_response`` is tracked so we only call ``update_graph`` when
-        # the fetcher has produced a new result.
-        self._last_response: tuple[dict[str, Any], constants.TelemetryStatus] | None = None
-        self.poll_timer = misc.copy_qtimer(constants.HALF_SECOND_TIMER)
-        self.poll_timer.timeout.connect(self._poll_telemetry)
-        self.poll_timer.start()
-
-    @Slot()
-    def _poll_telemetry(self) -> None:
-        """Poll the telemetry fetcher thread and update graphs when new data arrives."""
-
-        latest = self.telemetry_handler.response
-        if latest is None or latest is self._last_response:
-            return
-
-        self._last_response = latest
-        self.update_graph(latest)
 
     @Slot(tuple)
     def update_graph(self, request_result: tuple[dict[str, Any], constants.TelemetryStatus]) -> None:
@@ -240,7 +221,6 @@ class GraphViewer(QWidget):
             The close event that triggered this method.
         """
 
-        self.poll_timer.stop()
         self.telemetry_handler.requestInterruption()
         self.telemetry_handler.wait()
         super().closeEvent(event)

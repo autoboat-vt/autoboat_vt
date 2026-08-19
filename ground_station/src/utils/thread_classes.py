@@ -11,12 +11,11 @@ both from the ``waypoints`` endpoint and the local server.
 """
 
 import pathlib
-from typing import Any
 from urllib.parse import urljoin
 
 from requests import RequestException
 
-from qtpy.QtCore import QMutex, QMutexLocker, QThread, Signal
+from qtpy.QtCore import QThread, Signal
 
 from utils import constants, misc
 
@@ -27,6 +26,7 @@ __all__ = [
     "InstanceManagerThreadRouter",
     "WaypointThreadRouter",
 ]
+
 
 class AutopilotThreadRouter:
     """
@@ -117,9 +117,7 @@ class AutopilotThreadRouter:
             """Fetch available default autopilot parameter hashes and emit them."""
 
             try:
-                data = constants.REQ_SESSION.get(
-                    misc.get_route("get_all_hashes")
-                ).json()
+                data = constants.REQ_SESSION.get(misc.get_route("get_all_hashes")).json()
 
                 if not isinstance(data, list):
                     raise TypeError
@@ -156,37 +154,17 @@ class BoatStatusThreadRouter:
 
         Attributes
         ----------
-        response
-            Property to get the most recent fetch result. Returns a tuple containing:
+        data_fetched
+            A ``Signal`` emitted whenever a new boat status fetch completes.
+            Emits a tuple containing:
                 - a dictionary representing the boat status,
                 - a ``TelemetryStatus`` enum value indicating the status of the request.
-
-        Note
-        ----
-        This class uses a mutex to ensure thread-safe access to the
-        ``response`` property, allowing the main thread to safely read
-        the latest boat status while the fetcher thread is running.
         """
 
-        def __init__(self) -> None:
-            super().__init__()
-            self._lock = QMutex()
-            self._response: tuple[dict[str, Any], constants.TelemetryStatus] | None = None
-
-        @property
-        def response(self) -> tuple[dict[str, Any], constants.TelemetryStatus] | None:
-            """Return the most recent fetch result, or ``None`` if none yet."""
-
-            with QMutexLocker(self._lock):
-                return self._response
+        data_fetched = Signal(tuple)
 
         def run(self) -> None:
             """Run the thread to fetch boat status from the telemetry server."""
-
-            self.get_boat_status()
-
-        def get_boat_status(self) -> None:
-            """Fetch boat status from the telemetry server continuously."""
 
             while not self.isInterruptionRequested():
                 try:
@@ -206,8 +184,7 @@ class BoatStatusThreadRouter:
                 else:
                     result = (data, constants.TelemetryStatus.SUCCESS)
 
-                with QMutexLocker(self._lock):
-                    self._response = result
+                self.data_fetched.emit(result)
 
 
 class InstanceManagerThreadRouter:
@@ -411,7 +388,7 @@ class ImageFetcher(QThread):
     def get_image(self) -> None:
         """
         Fetch an image from the telemetry server and emit it as a base64 encoded string.
-        
+
         Raises
         ------
         ValueError
