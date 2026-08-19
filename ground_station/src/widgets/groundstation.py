@@ -182,12 +182,15 @@ class GroundStationWidget(QWidget):
         self.middle_button_groupbox = QGroupBox()
         self.middle_button_layout = QGridLayout()
 
-        self.edit_telemetry_config_window = MapOptionsHandler()
+        self.edit_telemetry_config_window = MapOptionsHandler(self.on_map_feature_toggled)
         self.telemetry_config_button = QPushButton("Map Appearance Configuration")
         self.telemetry_config_button.setToolTip(
             "If enabled, a popup will appear where you can alter the telemetry configuration.",
         )
         self.telemetry_config_button.clicked.connect(self.edit_telemetry_config_window.exec)
+
+        if constants.SM.read_dict("map_features")["boat_track"]["status"]:
+            self.browser.page().runJavaScript(misc.js_load_guard("map.set_track_visible(true)"))
 
         self.keybind_config_window = KeybindConfigDialog()
         self.keybind_config_button = QPushButton("Keybind Configuration")
@@ -366,7 +369,7 @@ class GroundStationWidget(QWidget):
         for shortcut in self._shortcuts.values():
             shortcut.setEnabled(False)
             shortcut.deleteLater()
-        
+
         self._shortcuts.clear()
         for action, info in self._keybind_manager.get_actions_by_scope("app").items():
             key = info.get("key")
@@ -437,7 +440,7 @@ class GroundStationWidget(QWidget):
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         """
         Wrapper around ``_handle_undo_keypress`` to intercept Ctrl+Z keypresses.
-        
+
         Note
         ----
         This method exists to satisfy the Qt event filter interface.
@@ -458,7 +461,7 @@ class GroundStationWidget(QWidget):
 
         if self._handle_undo_keypress(event):
             return True
-        
+
         return super().eventFilter(obj, event)
 
     def _handle_undo_keypress(self, event: QEvent) -> bool:
@@ -477,10 +480,7 @@ class GroundStationWidget(QWidget):
 
         # only care about key presses that include the Control modifier — the
         # undo binding is always a Ctrl combo, so skip everything else early
-        if not (
-            event.type() == QEvent.Type.KeyPress
-            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
-        ):
+        if not (event.type() == QEvent.Type.KeyPress and event.modifiers() & Qt.KeyboardModifier.ControlModifier):
             return False
 
         event = cast("QKeyEvent", event)
@@ -543,7 +543,7 @@ class GroundStationWidget(QWidget):
         """
 
         super().showEvent(event)
-        
+
         # defer the focus request to the next event loop tick so the webview
         # has fully finished laying out before we steal focus into it
         QTimer.singleShot(0, self.browser.setFocus)
@@ -665,11 +665,8 @@ class GroundStationWidget(QWidget):
             show_message_box(title="Invalid Coordinates", message=str(exc))
             return
 
-        self.browser.page().runJavaScript(
-            misc.js_load_guard(f"map.add_waypoint({latitude}, {longitude})")
-        )
+        self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({latitude}, {longitude})"))
         print(f"[Info] Manually added waypoint at ({latitude}, {longitude}).")
-
 
     @Slot()
     def start_data_logging(self) -> None:
@@ -842,6 +839,22 @@ class GroundStationWidget(QWidget):
         """Center the view on the boat's position."""
 
         self.browser.page().runJavaScript(misc.js_load_guard("map.focus_map_on_boat()"))
+
+    def on_map_feature_toggled(self, feature: str, enabled: bool) -> None:
+        """
+        Handle a map feature toggle from the Map Appearance Configuration dialog.
+
+        Parameters
+        ----------
+        feature
+            The feature key that was toggled.
+        enabled
+            Whether the feature was enabled or disabled.
+        """
+
+        if feature == "boat_track":
+            js_code = f"map.set_track_visible({str(enabled).lower()})"
+            self.browser.page().runJavaScript(misc.js_load_guard(js_code))
 
     @Slot(int, str)
     def zoom_to_marker(self, row: int, table: Literal["waypoints", "buoys"] = "waypoints") -> None:
@@ -1163,9 +1176,7 @@ class GroundStationWidget(QWidget):
             self.boat_data["boat_autopilot_state"] = misc.resolve_enum_name(
                 SailboatAutopilotStates, boat_data["boat_autopilot_state"]
             )
-            self.boat_data["boat_control_mode"] = misc.resolve_enum_name(
-                SailboatControlModes, boat_data["boat_control_mode"]
-            )
+            self.boat_data["boat_control_mode"] = misc.resolve_enum_name(SailboatControlModes, boat_data["boat_control_mode"])
 
             return (
                 "Position: "
@@ -1193,9 +1204,7 @@ class GroundStationWidget(QWidget):
             )
 
         def motorboat_mode(boat_data: dict[str, Any]) -> str:
-            self.boat_data["boat_control_mode"] = misc.resolve_enum_name(
-                MotorboatControlModes, boat_data["boat_control_mode"]
-            )
+            self.boat_data["boat_control_mode"] = misc.resolve_enum_name(MotorboatControlModes, boat_data["boat_control_mode"])
 
             return (
                 "Position: "

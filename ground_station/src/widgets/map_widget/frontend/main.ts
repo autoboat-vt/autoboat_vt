@@ -15,6 +15,7 @@ import { BoatManager } from "./boat";
 import { BuoyManager } from "./buoys";
 import { KeybindHandler, type KeybindMap } from "./keybinds";
 import { SVGManager } from "./svg";
+import { TrackManager } from "./track";
 import type { LatLngTuple } from "./types";
 import { WaypointManager } from "./waypoints";
 
@@ -42,6 +43,7 @@ class MapInterface {
     readonly boat_manager: BoatManager;
     readonly svg_manager: SVGManager;
     readonly keybind_handler: KeybindHandler;
+    readonly track_manager: TrackManager;
 
     static getMarkerIcon(color: string): Icon {
         const key = `marker-${color}`;
@@ -82,6 +84,7 @@ class MapInterface {
         this.boat_manager = new BoatManager(this.map, MapInterface.getBoatIcon.bind(MapInterface));
         this.svg_manager = new SVGManager(this.map);
         this.keybind_handler = new KeybindHandler();
+        this.track_manager = new TrackManager(this.map);
 
         this.keybind_handler.register("focus_boat", () => this.focus_map_on_boat());
         this.keybind_handler.register("clear_waypoints", () => this.clear_waypoints());
@@ -169,6 +172,7 @@ class MapInterface {
 
     update_boat_location(lat: number, lon: number): void {
         this.boat_manager.setLocation(lat, lon);
+        this.track_manager.record(lat, lon);
     }
 
     update_boat_heading(heading: number): void {
@@ -177,6 +181,7 @@ class MapInterface {
 
     update_boat_location_and_heading(lat: number, lon: number, heading: number): void {
         this.boat_manager.setLocationAndHeading(lat, lon, heading);
+        this.track_manager.record(lat, lon);
     }
 
     focus_map_on_boat(): void {
@@ -245,6 +250,14 @@ class MapInterface {
 
     clear_buoys(): void {
         this.buoy_manager.clear();
+    }
+
+    clear_track(): void {
+        this.track_manager.clear();
+    }
+
+    set_track_visible(visible: boolean): void {
+        this.track_manager.setVisible(visible);
     }
 
     remove_all_svgs(): void {

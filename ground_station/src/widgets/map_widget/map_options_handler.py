@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from qtpy.QtCore import Qt, Slot
 from qtpy.QtWidgets import (
     QCheckBox,
@@ -20,6 +22,7 @@ from qtpy.QtWidgets import (
 from utils import constants, misc
 
 __all__ = ["MapOptionsHandler"]
+
 
 class MapOptionsHandler(QDialog):
     """
@@ -71,14 +74,17 @@ class MapOptionsHandler(QDialog):
     }
     """
 
-    def __init__(self) -> None:
+    def __init__(self, on_feature_toggled: Callable[[str, bool], None] | None = None) -> None:
         super().__init__()
+
+        self._on_feature_toggled = on_feature_toggled
 
         self.setWindowTitle("Map Appearance Configuration")
         self.setModal(True)
         self.layout = QVBoxLayout(self)
 
-        self.feature_table = QTableWidget(2, 3, self)
+        map_features: dict[str, dict[str, str | bool]] = constants.SM.read_dict("map_features")
+        self.feature_table = QTableWidget(len(map_features), 3, self)
         self.feature_table.setHorizontalHeaderLabels(["Feature Name", "Description", "Enabled"])
         self.feature_table.setStyleSheet(self.table_style)
         self.feature_table.verticalHeader().setVisible(False)
@@ -107,7 +113,6 @@ class MapOptionsHandler(QDialog):
         self.feedback_text_clear_timer.setSingleShot(True)
         self.feedback_text_clear_timer.timeout.connect(self.clear_feedback_text)
 
-        map_features: dict[str, dict[str, str | bool]] = constants.SM.read_dict("map_features")
         for row, feature in enumerate(map_features):
             feature_info = map_features[feature]
 
@@ -163,7 +168,7 @@ class MapOptionsHandler(QDialog):
     ) -> None:
         """
         Add a row to the feature table for a diagnostic feature.
-        
+
         Parameters
         ----------
         row
@@ -193,9 +198,7 @@ class MapOptionsHandler(QDialog):
         checkbox.setStyleSheet(MapOptionsHandler.checkbox_style)
         checkbox.setChecked(enabled)
         checkbox.setToolTip(description)
-        checkbox.toggled.connect(
-            lambda _checked, text=feedback_text: self.update_feedback_text(text)
-        )
+        checkbox.toggled.connect(lambda _checked, text=feedback_text: self.update_feedback_text(text))
 
         @Slot(bool)
         def on_checkbox_toggled(checked: bool) -> None:
@@ -203,6 +206,8 @@ class MapOptionsHandler(QDialog):
             edited_map_features = constants.SM.read_dict("map_features")
             edited_map_features[key]["status"] = checked
             constants.SM.write("map_features", edited_map_features)
+            if self._on_feature_toggled is not None:
+                self._on_feature_toggled(key, checked)
 
         checkbox.toggled.connect(on_checkbox_toggled)
 
@@ -218,7 +223,7 @@ class MapOptionsHandler(QDialog):
     def update_feedback_text(self, text: str) -> None:
         """
         Update the feedback text in the dialog.
-        
+
         Parameters
         ----------
         text
@@ -227,12 +232,13 @@ class MapOptionsHandler(QDialog):
 
         self.feedback_text.setPlainText(text)
         self.feedback_text_clear_timer.start()
-    
+
     @Slot()
     def clear_feedback_text(self) -> None:
         """Clear the feedback text, resetting it to the default message."""
 
         self.feedback_text.setPlainText(self.feedback_text_default)
+
 
 class FeatureInfoItem(QTableWidgetItem):
     """
@@ -274,7 +280,7 @@ class FeatureInfoItem(QTableWidgetItem):
         """The name of the diagnostic feature."""
 
         return self._name
-        
+
     @property
     def description(self) -> str:
         """The description of the diagnostic feature."""
@@ -286,7 +292,7 @@ class FeatureInfoItem(QTableWidgetItem):
         """Whether the diagnostic feature is enabled."""
 
         return self._enabled
-    
+
     @enabled.setter
     def enabled(self, value: bool) -> None:
         """Set whether the diagnostic feature is enabled."""

@@ -48,8 +48,6 @@ class StrictMatchEnums:
         WAYPOINT_MISSION = 5
         EMERGENCY_STOP = 6
 
-
-
     class SailboatAutopilotStates(Enum):
         """
         An enum containing the different states that the sailboat can be in.
@@ -66,14 +64,12 @@ class StrictMatchEnums:
 
         NA = 0
         DOWNWIND_SAILING = 1
-        PORT_TACK = 2          # On a tack where the wind vector is to the left of the boat (port and left both have 4 letters)
-        STARBOARD_TACK = 3     # On a tack where the wind vector is to the right of the boat
-        CW_TACKING = 4         # Switching tacks from starboard to port tack
-        CCW_TACKING = 5        # Switching tacks from port to staboard tack
-        STALL_WIGGLE_TO_PORT_TACK = 6         # We have stalled in the no sail zone and need to wiggle to port tack
-        STALL_WIGGLE_TO_STARBOARD_TACK = 7    # We have stalled in the no sail zone and need to wiggle to the starboard tack
-
-
+        PORT_TACK = 2  # On a tack where the wind vector is to the left of the boat (port and left both have 4 letters)
+        STARBOARD_TACK = 3  # On a tack where the wind vector is to the right of the boat
+        CW_TACKING = 4  # Switching tacks from starboard to port tack
+        CCW_TACKING = 5  # Switching tacks from port to staboard tack
+        STALL_WIGGLE_TO_PORT_TACK = 6  # We have stalled in the no sail zone and need to wiggle to port tack
+        STALL_WIGGLE_TO_STARBOARD_TACK = 7  # We have stalled in the no sail zone and need to wiggle to the starboard tack
 
     class MotorboatControlModes(Enum):
         """An enum containing the different control modes that the motorboat can be in."""
@@ -82,8 +78,6 @@ class StrictMatchEnums:
         FULL_RC = 1
         HOLD_HEADING = 2
         WAYPOINT_MISSION = 3
-
-
 
 
 class TelemetryStatus(StrEnum):
@@ -283,20 +277,22 @@ _map_features: dict[str, dict[str, str | bool]] = {
         "name": "Waypoints Popup",
         "description": "Show a popup when the waypoints on the telemetry server change.",
         "feedback_text": "Updated Waypoints Popup Config.",
-        "status": False
+        "status": False,
     },
     "sailboat_debug_symbols": {
         "name": "Sailboat Debugging Symbols",
         "description": "Show sailboat debugging symbols on the map.",
         "feedback_text": (
-            "Updated Debugging Symbols Config.\n"
-            "orange, wind\n"
-            "black, velocity\n"
-            "red, no-go zone\n"
-            "pink, decision zone 2"
+            "Updated Debugging Symbols Config.\norange, wind\nblack, velocity\nred, no-go zone\npink, decision zone 2"
         ),
-        "status": False
-    }
+        "status": False,
+    },
+    "boat_track": {
+        "name": "Boat Track",
+        "description": "Show a history of recent boat positions as points on the map.",
+        "feedback_text": "Updated Boat Track Config.",
+        "status": False,
+    },
 }
 
 _data_logging_active: bool = False
@@ -391,8 +387,7 @@ try:
 
         else:
             raise RuntimeError(
-                f"Stale app state file found at {APP_STATE_PATH}, please delete this file "
-                "and restart the application."
+                f"Stale app state file found at {APP_STATE_PATH}, please delete this file and restart the application."
             )
 
     DATA_LOGS_DIR = Path(GIT_IGNORE_DIR / "data_logs")

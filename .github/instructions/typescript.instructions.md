@@ -89,7 +89,21 @@ export class MapInterface {
 
 ## Manager pattern
 
-`MapInterface` owns composable managers: `BoatManager`, `BuoyManager`, `WaypointManager`, `SVGManager`, `KeybindHandler`. Add new map features as a new manager class following the same pattern. `iconCache: Map<string, Icon>` is static — reuse icons, don't recreate per marker.
+`MapInterface` owns composable managers: `BoatManager`, `BuoyManager`, `WaypointManager`, `SVGManager`, `KeybindHandler`, `TrackManager`. Add new map features as a new manager class following the same pattern. `iconCache: Map<string, Icon>` is static — reuse icons, don't recreate per marker.
+
+## `TrackManager`
+
+File: `ground_station/src/widgets/map_widget/frontend/track.ts`. Records a history of recent boat positions rendered as **individual point markers** (Leaflet `CircleMarker`s, not a connected polyline).
+
+- `TrackManager.record(lat, lon)` is called from `MapInterface.update_boat_location` and `update_boat_location_and_heading` on every boat position update.
+- Each recorded point is a `circleMarker` with fixed pixel radius (`POINT_RADIUS_PX = 3`), so point size is independent of zoom.
+- Points are pruned FIFO at `DEFAULT_MAX_POINTS = 1000` (~17 min at 1 Hz telemetry); the oldest `CircleMarker` is removed from the map when pruned.
+- GPS jitter filter: drops points within `MIN_DISTANCE_METERS = 0.5` of the last recorded point.
+- No discontinuity handling (no polyline to draw a long line across the map); each point stands alone.
+- `setVisible(bool)` toggles layer visibility without losing accumulated history. `clear()` wipes history.
+- Track color is teal (`#0891b2`) to stay distinct from blue waypoints, orange buoys, and violet focused waypoints.
+- **Toggle lives in Map Appearance Configuration**, not on the map or in the waypoint tab. `MapInterface.set_track_visible(visible: boolean)` is the JS bridge method. The ground station's `MapOptionsHandler` dialog (opened via the "Map Appearance Configuration" button) has a "Boat Track" row driven by `constants._map_features["boat_track"]`; toggling it fires `GroundStationWidget.on_map_feature_toggled("boat_track", enabled)` which calls `map.set_track_visible(...)` via `runJavaScript(misc.js_load_guard(...))`. On startup, if `boat_track` status is persisted as enabled, the ground station calls `map.set_track_visible(true)` to restore the layer.
+- `MapInterface.clear_track()` exposes history clearing to Python if needed (not currently called from Python).
 
 ## `MarkerManager` (abstract base)
 
