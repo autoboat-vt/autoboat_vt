@@ -81,7 +81,7 @@ Ground station (run on a host with display, not in the headless container):
 ```bash
 cd ground_station && ./run.sh
 ```
-This starts the Vite map server on `127.0.0.1:5173` and launches the PyQt app.
+This starts the Vite map server on `127.0.0.1:{VITE_PORT}` (default `5173`) and launches the PyQt app. The three local server ports (`MAP_SERVER_PORT`, `VITE_PORT`, `ASSET_SERVER_PORT`) are defined in `ground_station/server_ports.env` (the single source of truth, sourced by `run.sh`, read by `constants.py` via `os.environ`, and parsed by `vite.config.ts` via `node:fs`). Edit `server_ports.env` to change a port - do not hardcode port numbers in the consumers.
 
 CI release build: `.github/workflows/build_ros_packages.sh` (expects `DEB_VERSION`, `DEB_ARCH`, `IGNORE_PACKAGES` env vars; uses `mold` linker).
 
@@ -116,7 +116,7 @@ Stack-specific guidance lives in `.github/instructions/*.instructions.md`. Each 
 | File | `applyTo` | Domain |
 |------|-----------|--------|
 | `python.instructions.md` | `**/*.py` | ruff, ROS 2 Python nodes, StateManager, telemetry |
-| `typescript.instructions.md` | `**/*.ts, **/*.js, **/*.css, **/*.html, **/*.jsonc, **/biome.json, **/biome.jsonc` | Biome, Vite/Leaflet map widget, MapInterface, MarkerManager |
+| `typescript.instructions.md` | `**/*.ts, **/*.js, **/*.css, **/*.html, **/*.jsonc, **/biome.json, **/biome.jsonc` | Biome, Vite/Leaflet map widget, MapInterface, MapBridge, MarkerManager |
 | `cpp.instructions.md` | `**/*.cpp, **/*.hpp, **/*.h, **/*.cc, **/CMakeLists.txt` | C++23/C++17, CMakeLists, autopilot_cpp/drivers_cpp |
 | `ros-packages.instructions.md` | `ros_packages/**` | ament_python/cmake, autoboat_msgs, launch files, Gazebo plugins |
 | `ground-station.instructions.md` | `ground_station/**` | PyQt, StateManager, AutopilotConfigWidget, map_widget server |

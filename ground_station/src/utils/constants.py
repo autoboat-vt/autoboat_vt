@@ -177,9 +177,9 @@ ONE_MS_TIMER = misc.create_timer(1)
 _start_time: float = time.time()
 
 # server ports
-ASSET_SERVER_PORT = 8000
-MAP_SERVER_PORT = 3002
-VITE_PORT = 5173
+ASSET_SERVER_PORT = int(os.environ.get("ASSET_SERVER_PORT", "8000"))
+MAP_SERVER_PORT = int(os.environ.get("MAP_SERVER_PORT", "3002"))
+VITE_PORT = int(os.environ.get("VITE_PORT", "5173"))
 
 # url for local vite server hosting the map
 MAP_URL = QUrl(f"http://127.0.0.1:{VITE_PORT}")

@@ -4,6 +4,22 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 cd "$SCRIPT_DIR"
 
+# Source the shared server_ports.env so the server ports stay in sync with
+# constants.py and vite.config.ts. server_ports.env is the single source of
+# truth for all three local server ports (MAP_SERVER_PORT, VITE_PORT,
+# ASSET_SERVER_PORT).
+# shellcheck source=server_ports.env
+if [[ -f server_ports.env ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    . ./server_ports.env
+    set +a
+fi
+
+# Fallback defaults if server_ports.env is missing or doesn't set these.
+: "${MAP_SERVER_PORT:=3002}"
+: "${VITE_PORT:=5173}"
+
 query_port() {
     local port=$1
     if lsof -iTCP:"$port" -sTCP:LISTEN -t >/dev/null; then
@@ -56,9 +72,6 @@ check_port() {
         esac
     fi
 }
-
-MAP_SERVER_PORT=3002
-VITE_PORT=5173
 
 echo "Checking map server port $MAP_SERVER_PORT..."
 check_port "$MAP_SERVER_PORT"

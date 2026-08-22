@@ -23,10 +23,15 @@ class MapInterface {
     static readonly mapOptions: MapOptions = {
         center: [0, 0],
         zoom: 13,
-        preferCanvas: true
+        preferCanvas: true,
+        worldCopyJump: true
     };
     static readonly iconCache = new Map<string, Icon>();
-    static readonly assetsUrl = "http://localhost:8000";
+    // Injected by vite.config.ts via `define` from ground_station/server_ports.env.
+    // Falls back to the defaults if the env vars aren't set (e.g. running
+    // outside the ground_station cwd).
+    static readonly assetsUrl = `http://localhost:${import.meta.env.ASSET_SERVER_PORT ?? "8000"}`;
+    static readonly waypointsUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/waypoints`;
 
     // note that lower zoom levels are more zoomed out
     // and higher zoom levels are more zoomed in
@@ -142,7 +147,7 @@ class MapInterface {
     async syncWaypoints(waypoints: LatLngTuple[]): Promise<void> {
         const snapshot = [...waypoints];
         try {
-            const response = await fetch("http://localhost:3002/waypoints", {
+            const response = await fetch(MapInterface.waypointsUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ waypoints: snapshot })
@@ -282,6 +287,48 @@ class MapInterface {
 
     set_keybinds(bindings: KeybindMap): void {
         this.keybind_handler.setBindings(bindings);
+    }
+
+    /**
+     * Introspect the public API of MapInterface.
+     *
+     * Returns one entry per public method (those not starting with "_"),
+     * capturing the method name and the names of its parameters. Used by the
+     * Python MapBridge to detect drift between the two sides at runtime.
+     *
+     * Returns
+     * -------
+     * Array<{name: string, params: string[]}>
+     */
+    getApi(): Array<{ name: string; params: string[] }> {
+        const api: Array<{ name: string; params: string[] }> = [];
+
+        // Methods that are internal to the TS side (introspection, event
+        // handlers, TS->Python callbacks) and are not part of the Python->JS
+        // API surface. Excluding them here keeps MapBridge.verify_api quiet.
+        const exclude = new Set(["getApi", "handleMapMove", "syncWaypoints"]);
+
+        const proto = Object.getPrototypeOf(this) as object;
+        for (const name of Object.getOwnPropertyNames(proto)) {
+            if (name.startsWith("_") || name === "constructor" || exclude.has(name)) {
+                continue;
+            }
+            const descriptor = Object.getOwnPropertyDescriptor(proto, name);
+            if (descriptor === undefined || typeof descriptor.value !== "function") {
+                continue;
+            }
+            const fn = descriptor.value as (...args: unknown[]) => unknown;
+            // strip leading/trailing whitespace and parens from the param list
+            const raw = String(fn).slice(0, String(fn).indexOf(")"));
+            const paramStart = raw.indexOf("(");
+            const paramList = paramStart === -1 ? "" : raw.slice(paramStart + 1);
+            const params = paramList
+                .split(",")
+                .map((p) => p.trim())
+                .filter((p) => p.length > 0 && p !== "this");
+            api.push({ name, params });
+        }
+        return api;
     }
 }
 

@@ -41,7 +41,7 @@ from .keybind_widget import (
     normalize_key_string,
     qt_key_event_to_string,
 )
-from .map_widget import MapOptionsHandler
+from .map_widget import MapBridge, MapOptionsHandler
 
 MotorboatControlModes = StrictMatchEnums.MotorboatControlModes
 SailboatAutopilotStates = StrictMatchEnums.SailboatAutopilotStates
@@ -179,6 +179,9 @@ class GroundStationWidget(QWidget):
         self.middle_layout.addWidget(self.browser, 0, 1)
         self.middle_layout.setRowStretch(0, 1)
 
+        self.map_bridge = MapBridge(self.browser)
+        QTimer.singleShot(0, self.map_bridge.verify_api)
+
         self.middle_button_groupbox = QGroupBox()
         self.middle_button_layout = QGridLayout()
 
@@ -190,7 +193,7 @@ class GroundStationWidget(QWidget):
         self.telemetry_config_button.clicked.connect(self.edit_telemetry_config_window.exec)
 
         if constants.SM.read_dict("map_features")["boat_track"]["status"]:
-            self.browser.page().runJavaScript(misc.js_load_guard("map.set_track_visible(true)"))
+            self.map_bridge.set_track_visible(True)
 
         self.keybind_config_window = KeybindConfigDialog()
         self.keybind_config_button = QPushButton("Keybind Configuration")
@@ -398,13 +401,12 @@ class GroundStationWidget(QWidget):
         """Push the current map-scope bindings into the TS frontend."""
 
         frontend_bindings = self._keybind_manager.to_frontend_dict()
-        js_code = f"map.set_keybinds({json.dumps(frontend_bindings)})"
-        self.browser.page().runJavaScript(misc.js_load_guard(js_code))
+        self.map_bridge.set_keybinds(frontend_bindings)
 
     def _trigger_undo_waypoint(self) -> None:
         """Trigger the undo waypoint action in the TS frontend."""
 
-        self.browser.page().runJavaScript(misc.js_load_guard("map.undo_last_waypoint();"))
+        self.map_bridge.undo_last_waypoint()
 
     def _show_tetris(self) -> None:
         """Show the hidden Tetris easter egg."""
@@ -412,7 +414,7 @@ class GroundStationWidget(QWidget):
         self.tetris_window.show()
         self.tetris_window.raise_()
         self.tetris_window.activateWindow()
-        self.tetris_window._board.setFocus()  # grab focus for key events
+        self.tetris_window._board.setFocus()
 
     def _show_snake(self) -> None:
         """Show the hidden Snake easter egg."""
@@ -420,7 +422,7 @@ class GroundStationWidget(QWidget):
         self.snake_window.show()
         self.snake_window.raise_()
         self.snake_window.activateWindow()
-        self.snake_window._board.setFocus()  # grab focus for key events
+        self.snake_window._board.setFocus()
 
     def _show_pong(self) -> None:
         """Show the hidden Pong easter egg."""
@@ -428,7 +430,7 @@ class GroundStationWidget(QWidget):
         self.pong_window.show()
         self.pong_window.raise_()
         self.pong_window.activateWindow()
-        self.pong_window._board.setFocus()  # grab focus for key events
+        self.pong_window._board.setFocus()
 
     def _install_render_widget_filter(self) -> None:
         """Install the event filter on the QWebEngineView's focus proxy."""
@@ -571,8 +573,7 @@ class GroundStationWidget(QWidget):
                     json=self.waypoints,
                 )
 
-                js_code = "map.change_color_waypoints('red')"
-                self.browser.page().runJavaScript(misc.js_load_guard(js_code))
+                self.map_bridge.change_color_waypoints("red")
                 print(f"[Info] Waypoints sent successfully. Waypoints: {self.waypoints}")
 
             except RequestException as e:
@@ -611,15 +612,15 @@ class GroundStationWidget(QWidget):
                     print(f"[Info] Fetched waypoints from server: {remote_waypoints}")
 
                 existing_waypoints = self.waypoints.copy()
-                self.browser.page().runJavaScript(misc.js_load_guard("map.clear_waypoints()"))
+                self.map_bridge.clear_waypoints()
 
                 for waypoint in remote_waypoints:
-                    self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"))
+                    self.map_bridge.add_waypoint(waypoint[0], waypoint[1])
 
-                self.browser.page().runJavaScript(misc.js_load_guard("map.change_color_waypoints('red')"))
+                self.map_bridge.change_color_waypoints("red")
 
                 for waypoint in existing_waypoints:
-                    self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"))
+                    self.map_bridge.add_waypoint(waypoint[0], waypoint[1])
 
             else:
                 print("[Warning] No waypoints found on the server.")
@@ -637,8 +638,7 @@ class GroundStationWidget(QWidget):
         self.can_reset_waypoints = False
         self.can_pull_waypoints = True
         self.pull_waypoints_button.setDisabled(not self.can_pull_waypoints)
-        js_code = "map.clear_waypoints()"
-        self.browser.page().runJavaScript(misc.js_load_guard(js_code))
+        self.map_bridge.clear_waypoints()
 
     @Slot()
     def add_500_test_waypoints(self) -> None:
@@ -647,7 +647,7 @@ class GroundStationWidget(QWidget):
         for _ in range(500):
             latitude = self.test_waypoint_rng.uniform(-90, 90)
             longitude = self.test_waypoint_rng.uniform(-180, 180)
-            self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({latitude}, {longitude})"))
+            self.map_bridge.add_waypoint(latitude, longitude)
 
         print("[Info] Added 500 test waypoints to the map, LOL.")
 
@@ -665,7 +665,7 @@ class GroundStationWidget(QWidget):
             show_message_box(title="Invalid Coordinates", message=str(exc))
             return
 
-        self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({latitude}, {longitude})"))
+        self.map_bridge.add_waypoint(latitude, longitude)
         print(f"[Info] Manually added waypoint at ({latitude}, {longitude}).")
 
     @Slot()
@@ -765,13 +765,11 @@ class GroundStationWidget(QWidget):
         self.right_tab2_table.setColumnCount(2)
         self.right_tab2_table.setHorizontalHeaderLabels(["Latitude", "Longitude"])
 
-        clear_js_buoys = "map.clear_buoys()"
-        self.browser.page().runJavaScript(misc.js_load_guard(clear_js_buoys))
+        self.map_bridge.clear_buoys()
 
         for buoy in self.buoys:
             self.right_tab2_table.insertRow(self.right_tab2_table.rowCount())
-            add_js_buoy = f"map.add_buoy({self.buoys[buoy]['lat']}, {self.buoys[buoy]['lon']})"
-            self.browser.page().runJavaScript(misc.js_load_guard(add_js_buoy))
+            self.map_bridge.add_buoy(self.buoys[buoy]["lat"], self.buoys[buoy]["lon"])
 
             for i, coord in enumerate(["lat", "lon"]):
                 item = QTableWidgetItem(f"{float(self.buoys[buoy][coord]):.13f}")
@@ -838,7 +836,7 @@ class GroundStationWidget(QWidget):
     def zoom_to_boat(self) -> None:
         """Center the view on the boat's position."""
 
-        self.browser.page().runJavaScript(misc.js_load_guard("map.focus_map_on_boat()"))
+        self.map_bridge.focus_map_on_boat()
 
     def on_map_feature_toggled(self, feature: str, enabled: bool) -> None:
         """
@@ -853,8 +851,7 @@ class GroundStationWidget(QWidget):
         """
 
         if feature == "boat_track":
-            js_code = f"map.set_track_visible({str(enabled).lower()})"
-            self.browser.page().runJavaScript(misc.js_load_guard(js_code))
+            self.map_bridge.set_track_visible(enabled)
 
     @Slot(int, str)
     def zoom_to_marker(self, row: int, table: Literal["waypoints", "buoys"] = "waypoints") -> None:
@@ -888,8 +885,7 @@ class GroundStationWidget(QWidget):
                             break
 
                     if lat is not None and lon is not None:
-                        js_code = f"map.focus_map_on_marker({lat}, {lon})"
-                        self.browser.page().runJavaScript(misc.js_load_guard(js_code))
+                        self.map_bridge.focus_map_on_marker(lat, lon)
                     else:
                         print(f"[Warning] Waypoint not found for coordinates ({approx_lat}, {approx_lon})")
 
@@ -916,8 +912,7 @@ class GroundStationWidget(QWidget):
                             break
 
                     if lat is not None and lon is not None:
-                        js_code = f"map.focus_map_on_marker({lat}, {lon})"
-                        self.browser.page().runJavaScript(misc.js_load_guard(js_code))
+                        self.map_bridge.focus_map_on_marker(lat, lon)
                     else:
                         print(f"[Warning] Buoy not found for coordinates ({approx_lat}, {approx_lon})")
 
@@ -1040,15 +1035,15 @@ class GroundStationWidget(QWidget):
             if response == QMessageBox.StandardButton.Yes:
                 not_uploaded_waypoints = [waypoint for waypoint in self.waypoints if waypoint not in waypoints]
                 self.waypoints = waypoints.copy()
-                self.browser.page().runJavaScript(misc.js_load_guard("map.clear_waypoints()"))
+                self.map_bridge.clear_waypoints()
 
                 for waypoint in self.waypoints:
-                    self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"))
+                    self.map_bridge.add_waypoint(waypoint[0], waypoint[1])
 
-                self.browser.page().runJavaScript(misc.js_load_guard("map.change_color_waypoints('red')"))
+                self.map_bridge.change_color_waypoints("red")
 
                 for waypoint in not_uploaded_waypoints:
-                    self.browser.page().runJavaScript(misc.js_load_guard(f"map.add_waypoint({waypoint[0]}, {waypoint[1]})"))
+                    self.map_bridge.add_waypoint(waypoint[0], waypoint[1])
 
                 print("[Info] Local waypoints updated from telemetry server.")
 
@@ -1355,15 +1350,10 @@ class GroundStationWidget(QWidget):
             size = 0.2
             svg_str = no_go_html.as_str() + decision_zone_html.as_str()
 
-            js_code = "\n".join(
-                [
-                    f"map.update_no_sail_svg({json.dumps(svg_str)}, {size});",
-                    f"map.update_velocity_svg({json.dumps(velocity_html.as_str())}, {size});",
-                    f"map.update_wind_svg({json.dumps(wind_html.as_str())});",
-                    f"map.update_compass_svg({heading + wind_direction});",
-                ]
-            )
-            self.browser.page().runJavaScript(misc.js_load_guard(js_code))
+            self.map_bridge.update_no_sail_svg(svg_str, size)
+            self.map_bridge.update_velocity_svg(velocity_html.as_str(), size)
+            self.map_bridge.update_wind_svg(wind_html.as_str())
+            self.map_bridge.update_compass_svg(heading + wind_direction)
 
         # region data validation and defaulting
         try:
@@ -1402,14 +1392,14 @@ class GroundStationWidget(QWidget):
 
         # endregion data validation and defaulting
 
-        self.browser.page().runJavaScript(misc.js_load_guard(f"map.update_boat_location_and_heading({lat}, {lon}, {heading})"))
+        self.map_bridge.update_boat_location_and_heading(lat, lon, heading)
 
         if constants.SM.read_dict("map_features")["sailboat_debug_symbols"]["status"]:
             draw_map_diagnostics(heading)
             self.need_to_clear_diagnostics = True
 
         elif self.need_to_clear_diagnostics:
-            self.browser.page().runJavaScript(misc.js_load_guard("map.remove_all_svgs()"))
+            self.map_bridge.remove_all_svgs()
             self.need_to_clear_diagnostics = False
 
         if "desired_sail_angle" in self.boat_data:

@@ -34,18 +34,24 @@ This is the **only** TS surface in the repo. It is a vanilla-TS Leaflet app — 
 ### Vite
 
 - `vite.config.ts` root = `src/widgets/map_widget/frontend`, publicDir = `app_data/`.
-- Dev server: `127.0.0.1:5173` (`VITE_PORT`), `strictPort: true`, `hmr: false`.
+- Dev server: `127.0.0.1:{VITE_PORT}` (default `5173`), `strictPort: true`, `hmr: false`.
 - Started by `ground_station/run.sh` via `bun run serve` alongside the PyQt app (`src/main.py`).
+- **Ports come from `ground_station/server_ports.env`** (single source of truth shared with `run.sh` and `constants.py`). Because Vite's `loadEnv` only reads files named `.env*`, `vite.config.ts` uses a small `parseEnvFile()` helper (via `node:fs.readFileSync`) to read `server_ports.env` directly, then uses `define` to inject the values into client code as `import.meta.env.MAP_SERVER_PORT` / `import.meta.env.ASSET_SERVER_PORT`. Do not hardcode port numbers in TS — read them from `import.meta.env` (typed in `frontend/global.d.ts` via `/// <reference types="vite/client" />` + `interface ImportMetaEnv` augmentation) with `??` fallback defaults.
 
 ## Python↔JS bridge
 
 - `main.ts` exports a singleton `MapInterface` instance attached to `window.map` (`window.map = new MapInterface(...)`).
-- Python calls JS via `browser.page().runJavaScript(...)`. Always wrap JS strings with `ground_station/src/utils/misc.py::js_load_guard(js_code)` (Python side). It polls `typeof map === "object"` on a 100 ms `setTimeout` retry until the TS frontend has set `window.map`.
+- **Python calls JS through `MapBridge`** (`ground_station/src/widgets/map_widget/bridge.py`), a hand-maintained class with one typed method per public `MapInterface` method. Never call `browser.page().runJavaScript(...)` directly from widget code — add a method to `MapBridge` and call that instead. `MapBridge` internally wraps every call in `misc.js_load_guard(...)` and serializes args via `json.dumps`, so callers just pass Python values.
+- `MapBridge` is constructed with the `QWebEngineView` (`self.map_bridge = MapBridge(self.browser)`) and exposes methods like `add_waypoint(lat, lon)`, `clear_waypoints()`, `set_track_visible(visible)`, `set_keybinds(bindings_dict)`, `update_boat_location_and_heading(lat, lon, heading)`, etc. Adding a new TS method requires adding the matching Python method to `MapBridge` (decorated with `@_map_api`).
+- For batched multi-statement JS (e.g. several SVG updates at once), call the individual `MapBridge` methods in sequence rather than building a single JS string — each is queued by `js_load_guard` independently.
+- **Drift detection:** `MapInterface.getApi()` (TS) returns `[{name, params}]` for every public method via prototype introspection. `MapBridge.verify_api()` (Python) queries it after map load and logs mismatches (TS methods missing from Python, Python methods missing from TS, param count/reorder mismatches) via `print`. It does not raise — the bridge still works; this is informational. `verify_api` is called automatically on startup (`QTimer.singleShot(0, self.map_bridge.verify_api)` in `GroundStationWidget.__init__`).
+  - **Excluded TS methods:** `getApi` (introspection), `handleMapMove` (internal event handler), and `syncWaypoints` (TS→Python callback, not a Python→JS call) are excluded from `getApi()` output via an `exclude` Set. If you add a new TS method that Python should NOT call, add it to that Set.
+  - **Param name normalization:** Python uses snake_case (`inner_html`), TS uses camelCase (`innerHTML`). Since `MapBridge` passes args positionally, `verify_api` normalizes param names (strip `_`, lowercase) before comparing — only a count mismatch or genuine reordering triggers a warning, not a naming-style difference.
 
-> ⚠️ **Docs drift to avoid:** an older comment in the codebase claimed `main.ts` dispatches a `mapLoaded` CustomEvent that Python listens for. It does **not**. There is no event — `js_load_guard` polls `typeof map`. Do not add a `mapLoaded` listener.
+> ⚠️ **Docs drift to avoid:** an older comment in the codebase claimed `main.ts` dispatches a `mapLoaded` CustomEvent that Python listens for. It does **not**. There is no event — `js_load_guard` polls `typeof map` (via a retry/ready-check wrapper). Do not add a `mapLoaded` listener.
 
-- Frontend exposes methods on `MapInterface` (e.g. `focus_map_on_boat`, `add_waypoint`, `clear_waypoints`, `change_color_waypoints`, `set_keybinds`). Keep the public API stable — Python calls it by string name.
-- TS→Python side of the bridge: `WaypointManager` takes a `syncWaypoints: (waypoints: LatLngTuple[]) => void` callback (bound to `MapInterface.syncWaypoints`) and calls it on every mutation via the `afterChange` hook. It POSTs the waypoint list to `http://localhost:3002/waypoints` (the Python `ThreadingHTTPServer` started by `map_widget/server.py`).
+- Frontend exposes methods on `MapInterface` (e.g. `focus_map_on_boat`, `add_waypoint`, `clear_waypoints`, `change_color_waypoints`, `set_keybinds`, `getApi`). Keep the public API stable — Python calls it by string name.
+- TS→Python side of the bridge: `WaypointManager` takes a `syncWaypoints: (waypoints: LatLngTuple[]) => void` callback (bound to `MapInterface.syncWaypoints`) and calls it on every mutation via the `afterChange` hook. It POSTs the waypoint list to `MapInterface.waypointsUrl` (`http://localhost:{MAP_SERVER_PORT}/waypoints`, where the port comes from `import.meta.env.MAP_SERVER_PORT` injected by `vite.config.ts` from `ground_station/server_ports.env`) — the Python `ThreadingHTTPServer` started by `map_widget/server.py`.
 
 ## `MapInterface` class
 
@@ -77,8 +83,10 @@ export class MapInterface {
     // ... etc
 
     private syncWaypoints(waypoints: LatLngTuple[]): void {
-        // POST to http://localhost:3002/waypoints
-        fetch("http://localhost:3002/waypoints", {
+        // POST to MapInterface.waypointsUrl (http://localhost:{MAP_SERVER_PORT}/waypoints,
+        // where MAP_SERVER_PORT comes from import.meta.env, injected by vite.config.ts
+        // from ground_station/server_ports.env)
+        fetch(MapInterface.waypointsUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ waypoints }),

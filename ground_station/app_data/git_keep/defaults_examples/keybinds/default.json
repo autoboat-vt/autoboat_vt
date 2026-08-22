@@ -11,18 +11,6 @@
         "scope": "map",
         "key": "c"
     },
-    "zoom_in": {
-        "name": "Zoom In",
-        "description": "Zoom the map one level closer in.",
-        "scope": "map",
-        "key": ""
-    },
-    "zoom_out": {
-        "name": "Zoom Out",
-        "description": "Zoom the map one level further out.",
-        "scope": "map",
-        "key": ""
-    },
     "undo_waypoint": {
         "name": "Undo Last Waypoint",
         "description": "Remove the most recently placed waypoint from the map.",

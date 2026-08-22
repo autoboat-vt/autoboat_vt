@@ -1,5 +1,5 @@
 ---
-description: "Use when writing, editing, or reviewing Python code in this ROS 2 / PyQt ground station workspace. Covers ruff config (select=ALL), strict typing, numpy docstrings, ROS 2 node patterns, StateManager API, js_load_guard bridge, thread_classes Router pattern, and ground_station Qt conventions."
+description: "Use when writing, editing, or reviewing Python code in this ROS 2 / PyQt ground station workspace. Covers ruff config (select=ALL), strict typing, numpy docstrings, ROS 2 node patterns, StateManager API, MapBridge typed Python→JS bridge (js_load_guard internal), thread_classes Router pattern, and ground_station Qt conventions."
 applyTo: "**/*.py"
 ---
 
@@ -209,34 +209,38 @@ constants.SM.read_dict("current_autopilot_parameters")       # dict
 
 **Critical rule:** before reading a key, add it to `constants.STATE_FILE_CONTENTS` with a sensible default — `StateManager.__init__` merges missing keys from that dict on startup. Reading a key not in `STATE_FILE_CONTENTS` works but returns `None`/default and is a latent bug (e.g. `keybind_widget` reads `"keybindings"` which is **not** in `STATE_FILE_CONTENTS` — flagged for fix).
 
-### `js_load_guard` — Python→JS bridge wrapper
+### `MapBridge` — the Python→JS bridge (preferred)
 
-**Every** `browser.page().runJavaScript(...)` call MUST be wrapped in `misc.js_load_guard(...)`:
-
-```python
-from ground_station.utils import misc
-
-js_code = "map.clear_waypoints()"
-self.browser.page().runJavaScript(misc.js_load_guard(js_code))
-```
-
-`js_load_guard` polls `typeof map === "object"` until the TS frontend has finished initializing (the `map` global is set by `main.ts` after `new MapInterface(...)`). Without it, calls fire into an empty page and silently no-op. Source (verbatim):
+**All** map JS calls from Python go through `MapBridge` (`ground_station/src/widgets/map_widget/bridge.py`), a hand-maintained typed wrapper over the TS `MapInterface`. Never call `browser.page().runJavaScript(...)` directly from widget code — add a method to `MapBridge` and call that.
 
 ```python
-def js_load_guard(js_code: str) -> str:
-    """Wrap JS code so it only runs once the TS frontend's ``map`` global exists."""
-    return (
-        "if (typeof map === 'object' && map !== null) {"
-        f"  {js_code}"
-        "} else {"
-        "  setTimeout(() => { if (typeof map === 'object' && map !== null) {"
-        f"    {js_code}"
-        "  } }, 100);"
-        "}"
-    )
+from ground_station.utils import constants
+from widgets.map_widget import MapBridge
+
+# in widget __init__, right after the QWebEngineView is created:
+self.map_bridge = MapBridge(self.browser)
+QTimer.singleShot(0, self.map_bridge.verify_api)   # drift check after load
+
+# call typed methods — args serialized via json.dumps, wrapped in js_load_guard internally:
+self.map_bridge.add_waypoint(lat, lon)
+self.map_bridge.set_track_visible(True)
+self.map_bridge.update_boat_location_and_heading(lat, lon, heading)
+self.map_bridge.set_keybinds({"focus_boat": "F"})
 ```
 
-> ⚠️ **Docs drift:** an older comment claimed `main.ts` dispatches a `mapLoaded` event that Python listens for. It does **not**. The guard polls `typeof map` on a 100 ms `setTimeout` retry. Do not add a `mapLoaded` listener — use `js_load_guard`.
+**Conventions:**
+- One `@_map_api`-decorated Python method per TS `MapInterface` method. All fire-and-forget (`-> None`).
+- For batched multi-statement JS, call individual `MapBridge` methods in sequence — each is queued independently by `js_load_guard`.
+- **Adding a new TS method:** (1) add it to `MapInterface` in `main.ts` (auto-discovered by `getApi()`), (2) add the matching `@_map_api` method to `MapBridge`.
+- **Drift detection:** `MapInterface.getApi()` (TS) returns `[{name, params}]` via prototype introspection; `MapBridge.verify_api()` (Python) queries it post-load and logs mismatches via `print` (does not raise).
+
+### `js_load_guard` — low-level JS wrapper (used by `MapBridge`)
+
+`MapBridge._call` wraps every JS string in `misc.js_load_guard(...)`, which polls `typeof map === "object"` until the TS frontend has finished initializing (the `map` global is set by `main.ts` after `new MapInterface(...)`). Without it, calls fire into an empty page and silently no-op. Widget code should NOT call `js_load_guard`/`runJavaScript` directly — use `MapBridge` methods.
+
+> ⚠️ **`js_load_guard` is for fire-and-forget calls only.** It wraps the JS in a function with `return;` (no value) and queues via `__autoboatPendingMapCode` when the map isn't ready. This means the return value of the wrapped JS expression is **discarded** — the Python `runJavaScript` callback receives `undefined`. If you need a return value from JS (e.g. `MapBridge.verify_api()` querying `map.getApi()`), do NOT use `js_load_guard` — call `runJavaScript` directly with a JS expression that returns `null` when not ready, and poll via `QTimer.singleShot` until it returns a value.
+
+> ⚠️ **Docs drift:** an older comment claimed `main.ts` dispatches a `mapLoaded` event that Python listens for. It does **not**. The guard polls `typeof map` on a retry/ready-check. Do not add a `mapLoaded` listener — `MapBridge` handles readiness internally.
 
 ### `thread_classes` — the `Router` pattern for QThread fetchers
 
@@ -307,7 +311,7 @@ Representative endpoints (URL filled by `get_route`):
 
 - Editing files under `build/`, `install/`, `log/`, `__pycache__/`, `*.egg-info/` — colcon build artifacts.
 - Importing `PyQt5`/`PyQt6`/`PySide2`/`PySide6` directly — always go through `qtpy`.
-- Calling `browser.page().runJavaScript(...)` without `misc.js_load_guard(...)`.
+- Calling `browser.page().runJavaScript(...)` directly from widget code — go through `MapBridge` (`widgets/map_widget/bridge.py`), which wraps every call in `js_load_guard` and serializes args via `json.dumps`. Add a new `@_map_api` method to `MapBridge` for each new TS `MapInterface` method.
 - Reading a StateManager key without first adding it to `constants.STATE_FILE_CONTENTS`.
 - Starting a `QThread` directly from a timer callback without the `isRunning()` gate.
 - Adding a new ignore to `ruff.toml` without justification in a comment.

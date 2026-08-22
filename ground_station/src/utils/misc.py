@@ -8,7 +8,6 @@ Functions:
 - create_timer: Create a QTimer with specified interval and single-shot status.
 - copy_qtimer: Create a copy of a QTimer with the same interval and single-shot status.
 - cache_cdn_file: Download and cache a file to serve in a local CDN server.
-- js_load_guard: Run JavaScript after the map API has loaded.
 - create_symlinks: Create symbolic links for all files in the source directory to the target directory.
 - resolve_enum_name: Resolve a telemetry enum value to its member name.
 """
@@ -36,7 +35,6 @@ __all__ = [
     "create_timer",
     "get_icons",
     "get_route",
-    "js_load_guard",
     "pushbutton_maker",
     "resolve_enum_name",
 ]
@@ -292,7 +290,7 @@ def cache_cdn_file(url: str, save_dir: str) -> None:
         response.raise_for_status()
 
         Path(save_path).write_bytes(response.content)
-        
+
         print(f"[Info] Cached CDN file '{file_name}' to '{save_path}'.")
     
     except RequestException as e:
@@ -328,7 +326,7 @@ def create_symlinks(source_dir: Path, target_dir: Path) -> None:
                 
                 target_path.symlink_to(item.resolve())
 
-                # make file in git_ignore unwritable to prevent accidental edits
+                # make file in target_dir read-only to prevent accidental edits
                 target_path.chmod(0o444)
                 print(f"[Info] Created symlink for '{item.name}' at '{target_path}'.")
             
@@ -367,41 +365,3 @@ def resolve_enum_name(enum_class: type[Enum], value: Any) -> str:
         pass
 
     return str(value) if value is not None else "N/A"
-
-def js_load_guard(js_code: str) -> str:
-    """Run JavaScript after the map API has loaded."""
-
-    # note that when using curly braces in f-strings, you need to double them to escape them
-    return f"""
-        function __runAutoboatMapCodeWhenReady() {{
-            if (
-                typeof map !== 'undefined' &&
-                typeof map.update_boat_location_and_heading === 'function'
-            ) {{
-                {js_code.strip()}
-                return;
-            }}
-
-            window.__autoboatPendingMapCode = __runAutoboatMapCodeWhenReady;
-
-            if (!window.__autoboatPendingMapListenerAdded) {{
-                window.__autoboatPendingMapListenerAdded = true;
-
-                document.addEventListener(
-                    'mapLoaded',
-                    function handleMapLoaded() {{
-                        window.__autoboatPendingMapListenerAdded = false;
-
-                        if (window.__autoboatPendingMapCode) {{
-                            const pendingMapCode = window.__autoboatPendingMapCode;
-                            window.__autoboatPendingMapCode = null;
-                            pendingMapCode();
-                        }}
-                    }},
-                    {{ once: true }}
-                );
-            }}
-        }}
-
-        __runAutoboatMapCodeWhenReady();
-    """.strip()

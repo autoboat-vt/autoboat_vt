@@ -1,5 +1,5 @@
 ---
-description: "Use when writing or editing the PyQt ground station or its Vite/TS map widget. Covers StateManager singleton + STATE_FILE_CONTENTS defaults, GroundStationWidget 3-section layout + QWebEngineView singleton MAP_PAGE + 2 timers, AutopilotConfigWidget/Editor/ParamWidget/Manager (content-addressed by hash), CameraWidget (QWebEngineView + JS setBase64Image), InstanceHandler (connection_history deque + ID reuse detection), widgets/__init__.py registration pattern, dialog_templates BaseDialog, map_widget Python ThreadingHTTPServer on MAP_SERVER_PORT 3002 (NOT Vite), waypoints_handler CORS GET/POST, GraphViewer pyqtgraph source, run.sh (bun run serve on VITE_PORT 5173 + python src/main.py)."
+description: "Use when writing or editing the PyQt ground station or its Vite/TS map widget. Covers StateManager singleton + STATE_FILE_CONTENTS defaults, GroundStationWidget 3-section layout + QWebEngineView singleton MAP_PAGE + 2 timers, MapBridge typed Python→JS bridge (@_map_api methods + verify_api drift detection), AutopilotConfigWidget/Editor/ParamWidget/Manager (content-addressed by hash), CameraWidget (QWebEngineView + JS setBase64Image), InstanceHandler (connection_history deque + ID reuse detection), widgets/__init__.py registration pattern, dialog_templates BaseDialog, map_widget Python ThreadingHTTPServer on MAP_SERVER_PORT 3002 (NOT Vite), waypoints_handler CORS GET/POST, GraphViewer pyqtgraph source, run.sh (bun run serve on VITE_PORT 5173 + python src/main.py)."
 applyTo: "ground_station/**"
 ---
 
@@ -14,10 +14,25 @@ cd ground_station && ./run.sh
 ```
 
 `run.sh`:
+- Sources `ground_station/server_ports.env` (the single source of truth for all three local server ports — see below).
 - Starts the Vite map server: `bun run serve` on `VITE_PORT` (default `5173`), `127.0.0.1`.
 - Launches the PyQt app: `python src/main.py`.
 
 > ⚠️ **The map widget is served by Vite, NOT by `map_widget/server.py`.** `server.py` is a separate Python `ThreadingHTTPServer` on `MAP_SERVER_PORT` (default `3002`) that the map widget's JS calls to GET/POST waypoints (CORS-enabled). These are two different servers on two different ports — don't conflate them.
+
+### Server ports — `ground_station/server_ports.env` (single source of truth)
+
+The three local server ports (`MAP_SERVER_PORT`, `VITE_PORT`, `ASSET_SERVER_PORT`) are defined in `ground_station/server_ports.env` and consumed by all three runtimes:
+
+| Consumer | How it reads `server_ports.env` |
+|----------|--------------------|
+| `run.sh` | `set -a; . ./server_ports.env; set +a` — sources the file, exports vars into the process environment so child processes (Python, Bun/Vite) inherit them |
+| `constants.py` | `int(os.environ.get("MAP_SERVER_PORT", "3002"))` etc. — reads from the environment (inherited from `run.sh`), with fallback defaults for IDE launches where `server_ports.env` wasn't sourced |
+| `vite.config.ts` | A small `parseEnvFile()` helper reads `server_ports.env` directly with `node:fs` (Vite's `loadEnv` only reads files named `.env*`, so we can't use it for a custom filename), then injects the values into client code via `define` as `import.meta.env.MAP_SERVER_PORT` / `import.meta.env.ASSET_SERVER_PORT` |
+
+`main.ts` reads the injected values via `import.meta.env.MAP_SERVER_PORT` and `import.meta.env.ASSET_SERVER_PORT` (typed in `frontend/global.d.ts` via `/// <reference types="vite/client" />` + `interface ImportMetaEnv` augmentation), with `?? "3002"` / `?? "8000"` fallbacks.
+
+**To change a port, edit `ground_station/server_ports.env` ONLY.** Do not hardcode port numbers in `run.sh`, `constants.py`, `vite.config.ts`, or `main.ts` — they all derive from `server_ports.env`. The file is committed (not gitignored) because it holds default config, not secrets.
 
 ## Persistent state — `StateManager` singleton
 
@@ -164,6 +179,32 @@ class AutopilotConfigManager:
             self._configs[h] = ConfigInfo(hash=h, json=config_json, ...)
         return self._configs[h]
 ```
+
+## `MapBridge` — Python→JS bridge for the map widget
+
+File: `ground_station/src/widgets/map_widget/bridge.py`. A hand-maintained typed wrapper over the TS `MapInterface` (`window.map`). **All** map JS calls from Python go through this class — never call `browser.page().runJavaScript(...)` directly from widget code.
+
+```python
+from widgets.map_widget import MapBridge
+
+# in GroundStationWidget.__init__, right after the QWebEngineView is created:
+self.map_bridge = MapBridge(self.browser)
+QTimer.singleShot(0, self.map_bridge.verify_api)   # drift check after load
+
+# call typed methods — args serialized via json.dumps, wrapped in js_load_guard internally:
+self.map_bridge.add_waypoint(lat, lon)
+self.map_bridge.set_track_visible(True)
+self.map_bridge.update_boat_location_and_heading(lat, lon, heading)
+self.map_bridge.set_keybinds({"focus_boat": "F"})
+```
+
+**Conventions:**
+- One `@_map_api`-decorated Python method per TS `MapInterface` method. All fire-and-forget (`-> None`).
+- For batched multi-statement JS, call individual `MapBridge` methods in sequence — each is queued independently by `js_load_guard`.
+- **Adding a new TS method:** (1) add it to `MapInterface` in `main.ts` (auto-discovered by `getApi()`), (2) add the matching `@_map_api` method to `MapBridge`.
+- **Drift detection:** `MapInterface.getApi()` (TS) returns `[{name, params}]` via prototype introspection; `MapBridge.verify_api()` (Python) queries it post-load and logs mismatches via `print` (does not raise). `verify_api` bypasses `js_load_guard` (which is fire-and-forget and discards return values) and instead polls `map.getApi()` directly via `QTimer.singleShot` until the map is ready.
+  - **Excluded TS methods:** `getApi`, `handleMapMove`, `syncWaypoints` are excluded from `getApi()` output (introspection / internal handler / TS→Python callback — not part of the Python→JS surface). Add new TS-only methods to the `exclude` Set in `getApi()`.
+  - **Param name normalization:** `verify_api` compares param names case/underscore-insensitively (Python snake_case `inner_html` vs TS camelCase `innerHTML`). Only count mismatches or genuine reorderings are flagged.
 
 ## `CameraWidget` — `QWebEngineView` + base64 image
 
@@ -337,3 +378,4 @@ class GraphViewer(QWidget):
 - Forgetting the `threading.Lock` around `_WAYPOINTS` — the HTTP handler runs in its own thread.
 - Forgetting to register new widgets in `widgets/__init__.py` and add to `__all__`.
 - Putting PyQt signal definitions in `__init__` — they must be class attributes.
+- Calling `browser.page().runJavaScript(...)` directly from widget code — go through `MapBridge` (`widgets/map_widget/bridge.py`), which wraps every call in `js_load_guard` and serializes args via `json.dumps`. Add a new `@_map_api` method to `MapBridge` for each new TS `MapInterface` method.
