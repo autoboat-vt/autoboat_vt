@@ -19,6 +19,7 @@
                 "donjayamanne.python-environment-manager",
                 "ms-python.debugpy",
                 "charliermarsh.ruff",
+                "oven.bun-vscode",
                 "biomejs.biome",
                 "jannchie.ruff-ignore-explainer",
                 "dbaeumer.vscode-eslint",

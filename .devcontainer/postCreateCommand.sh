@@ -26,7 +26,8 @@ echo 'alias build_python="build --packages-ignore-regex .*cpp"' >> ~/.bashrc
 pip install -e /home/ws/ros_packages/old_sailboat_simulation/sailboat_gym/
 pip install -r /home/ws/.devcontainer/required_pip_packages.txt
 
-
+# Install Typescript packages
+bun install --cwd /home/ws/ground_station
 
 # Build the ros2 workspace for the first time
 # Building with symlink-install will allow us to edit python files without having to rebuild (which is super annoying!) 
