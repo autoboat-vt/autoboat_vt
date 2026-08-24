@@ -20,23 +20,26 @@ import type { LatLngTuple } from "./types";
 import { WaypointManager } from "./waypoints";
 
 class MapInterface {
+    // note that lower zoom levels are more zoomed out
+    // and higher zoom levels are more zoomed in
+    static readonly MIN_ZOOM = 3;
+    static readonly MAX_ZOOM = 20;
+
     static readonly mapOptions: MapOptions = {
         center: [0, 0],
         zoom: 13,
+        minZoom: MapInterface.MIN_ZOOM,
+        maxZoom: MapInterface.MAX_ZOOM,
         preferCanvas: true,
-        worldCopyJump: true
+        maxBounds: [
+            [-90, -180],
+            [90, 180]
+        ],
+        maxBoundsViscosity: 1.0
     };
     static readonly iconCache = new Map<string, Icon>();
-    // Injected by vite.config.ts via `define` from ground_station/server_ports.env.
-    // Falls back to the defaults if the env vars aren't set (e.g. running
-    // outside the ground_station cwd).
     static readonly assetsUrl = `http://localhost:${import.meta.env.ASSET_SERVER_PORT ?? "8000"}`;
     static readonly waypointsUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/waypoints`;
-
-    // note that lower zoom levels are more zoomed out
-    // and higher zoom levels are more zoomed in
-    readonly minZoom = 3;
-    readonly maxZoom = 20;
 
     lastFocusedTimestamp = 0;
     private waypointHistory: { type: "add" | "remove"; waypoint: LatLngTuple; color?: string }[] = [];
@@ -99,10 +102,11 @@ class MapInterface {
 
         const mapTilerKey = "M9yBkV9J49pYUg5o8SGC";
         tileLayer(`https://api.maptiler.com/maps/openstreetmap/{z}/{x}/{y}.jpg?key=${mapTilerKey}`, {
-            minZoom: this.minZoom,
-            maxZoom: this.maxZoom,
+            minZoom: MapInterface.MIN_ZOOM,
+            maxZoom: MapInterface.MAX_ZOOM,
             tileSize: 512,
             zoomOffset: -1,
+            noWrap: true,
             attribution:
                 '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>',
             crossOrigin: true

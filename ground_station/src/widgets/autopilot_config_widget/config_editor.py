@@ -28,6 +28,9 @@ from qtpy.QtWidgets import (
 
 from utils import TextEditWindow, constants, misc, syntax_highlighters
 from utils.dialog_templates import MessageBoxButton, show_message_box
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class AutopilotConfigEditor(QWidget):
@@ -36,13 +39,13 @@ class AutopilotConfigEditor(QWidget):
 
     Parameters
     ----------
-    refresh_signal: ``Signal``
+    refresh_signal: :class:`Signal`
         Signal emitted when the autopilot configuration needs to be refreshed. This
         typically occurs after switching telemetry server instances.
 
     Inherits
     --------
-    ``QWidget``
+    :class:`QWidget`
     """
 
     def __init__(self, refresh_signal: Signal) -> None:
@@ -110,10 +113,10 @@ class AutopilotConfigEditor(QWidget):
 
             constants.SM.write("current_autopilot_parameters", self.config)
             constants.SM.write("local_autopilot_param_hash", constants.SM.read_str("remote_autopilot_param_hash"))
-            print("[Info] Fetched default autopilot parameters successfully.")
+            logger.info("Fetched default autopilot parameters successfully.")
 
         except RequestException as e:
-            print(f"[Error] Failed to fetch default autopilot parameters: {e}")
+            logger.error(f"Failed to fetch default autopilot parameters: {e}")
             self.config = {}
 
         self.params_container = QWidget()
@@ -154,23 +157,23 @@ class AutopilotConfigEditor(QWidget):
         This method handles three scenarios when sending parameters:
         1. If the telemetry server does not have default parameters set (indicated by an empty remote hash),
         the user will be prompted to set the current parameters as the default configuration on the telemetry server.
-        
+
         2. If the remote hash does not match the local hash, it indicates a potential mismatch between the
         local and remote configurations. The user will be prompted to set the current local parameters as the default
         configuration on the telemetry server to avoid unintended consequences of sending an update with mismatched fields.
-        
+
         3. If the remote hash matches the local hash, the parameters will be sent as an update since the
         available fields are known to match and there won't be any unexpected fields.
         """
 
-        print("[Info] Sending all parameters...")
+        logger.info("Sending all parameters...")
 
         try:
             tmp_parameters = deepcopy(self.config)
             for parameter in tmp_parameters.values():
                 if "current" in parameter:
                     parameter["default"] = parameter.pop("current")
-            
+
             remote_hash = constants.SM.read_str("remote_autopilot_param_hash")
 
             if remote_hash == "":
@@ -186,29 +189,27 @@ class AutopilotConfigEditor(QWidget):
                 )
 
                 if response == QMessageBox.StandardButton.No:
-                    print("[Info] Sending all parameters cancelled by user.")
+                    logger.info("Sending all parameters cancelled by user.")
                     return
-                
-                print("[Info] Setting current parameters as default configuration on telemetry server.")
+
+                logger.info("Setting current parameters as default configuration on telemetry server.")
                 response = constants.REQ_SESSION.post(
                     urljoin(
                         misc.get_route("set_default_autopilot_parameters"),
                         str(constants.SM.read_int("telemetry_server_instance_id")),
                     ),
-                    json=json.dumps(tmp_parameters, indent=None)
+                    json=json.dumps(tmp_parameters, indent=None),
                 )
                 # endregion get user input
                 # region handle response
                 status_message = response.text.strip().replace('"', "")
 
                 if response.status_code == 200:
-                    print("[Info] Current parameters set as default successfully.")
+                    logger.info("Current parameters set as default successfully.")
 
                 elif status_message == "Configuration hash already exists.":
                     local_ = hashlib.sha256(
-                        json.dumps(
-                            tmp_parameters, sort_keys=True, separators=(",", ":")
-                        ).encode(encoding="utf-8")
+                        json.dumps(tmp_parameters, sort_keys=True, separators=(",", ":")).encode(encoding="utf-8")
                     ).hexdigest()
 
                     response = constants.REQ_SESSION.post(
@@ -219,21 +220,18 @@ class AutopilotConfigEditor(QWidget):
                     )
 
                     if response.status_code == 200:
-                        print(
-                            f"[Info] Default parameters set successfully from existing config with "
-                            f"matching hash {local_}."
-                        )
+                        logger.info(f"Default parameters set successfully from existing config with matching hash {local_}.")
 
                     else:
-                        print(
-                            f"[Warning] Failed to set default parameters from existing config with "
+                        logger.warning(
+                            f"Failed to set default parameters from existing config with "
                             f"matching hash {local_}; status {response.status_code}: "
                             f"{status_message}"
                         )
 
                 else:
                     raise RequestException(status_message)
-                
+
                 # endregion handle response
 
             elif remote_hash != constants.SM.read_str("local_autopilot_param_hash"):
@@ -252,26 +250,23 @@ class AutopilotConfigEditor(QWidget):
                 )
 
                 if response == QMessageBox.StandardButton.No:
-                    print("[Info] Sending all parameters cancelled by user due to hash mismatch.")
+                    logger.info("Sending all parameters cancelled by user due to hash mismatch.")
                     return
 
-                print(
-                    "[Info] Setting current local parameters as default configuration on telemetry "
-                    "server due to hash mismatch."
-                )
+                logger.info("Setting current local parameters as default configuration on telemetry server due to hash mismatch.")
                 response = constants.REQ_SESSION.post(
                     urljoin(
                         misc.get_route("set_default_autopilot_parameters"),
                         str(constants.SM.read_int("telemetry_server_instance_id")),
                     ),
-                    json=json.dumps(tmp_parameters, indent=None)
+                    json=json.dumps(tmp_parameters, indent=None),
                 )
                 # endregion get user input
                 # region handle response
                 status_message = response.text.strip().replace('"', "")
 
                 if response.status_code == 200:
-                    print("[Info] Current parameters set as default successfully.")
+                    logger.info("Current parameters set as default successfully.")
 
                 elif status_message == "Configuration hash already exists.":
                     hash_from_local_config = hashlib.sha256(
@@ -286,47 +281,43 @@ class AutopilotConfigEditor(QWidget):
                     )
 
                     if response.status_code == 200:
-                        print(
-                            f"[Info] Default parameters set successfully from existing config with "
+                        logger.info(
+                            f"Default parameters set successfully from existing config with "
                             f"matching hash {hash_from_local_config}."
                         )
 
                     else:
-                        print(
-                            f"[Warning] Failed to set default parameters from existing config with "
+                        logger.warning(
+                            f"Failed to set default parameters from existing config with "
                             f"matching hash {hash_from_local_config}; status {response.status_code}: "
                             f"{status_message}"
                         )
 
                 else:
                     raise RequestException(status_message)
-                
+
                 # endregion handle response
 
             else:
-                print("[Info] Remote hash matches local hash. Sending parameters as an update.")
+                logger.info("Remote hash matches local hash. Sending parameters as an update.")
                 response = constants.REQ_SESSION.post(
                     urljoin(
                         misc.get_route("set_autopilot_parameters"),
                         str(constants.SM.read_int("telemetry_server_instance_id")),
                     ),
-                    json=json.dumps(tmp_parameters, indent=None)
+                    json=json.dumps(tmp_parameters, indent=None),
                 )
                 status_message = response.text.strip().replace('"', "")
 
                 if response.status_code == 200:
-                    print("[Info] All parameters sent successfully.")
+                    logger.info("All parameters sent successfully.")
                     constants.SM.write("current_autopilot_parameters", tmp_parameters)
 
                 else:
                     raise RequestException(status_message)
 
         except RequestException as e:
-            response = show_message_box(
-                title="Failed to Send Parameters",
-                message=str(e),
-                icon=constants.ICONS.warning
-            )
+            response = show_message_box(title="Failed to Send Parameters", message=str(e), icon=constants.ICONS.warning)
 
     @Slot()
     def pull_all_parameters(self) -> None:
@@ -345,7 +336,7 @@ class AutopilotConfigEditor(QWidget):
         configuration will be updated with the pulled values since there won't be any unexpected fields.
         """
 
-        print("[Info] Pulling all parameters...")
+        logger.info("Pulling all parameters...")
 
         rememeber_choice: bool = False
         response = QMessageBox.StandardButton.No
@@ -353,7 +344,7 @@ class AutopilotConfigEditor(QWidget):
         try:
             remote_hash = constants.SM.read_str("remote_autopilot_param_hash")
             if remote_hash == "":
-                print("[Warning] Default parameters are not set on the telemetry server. Aborting pull operation.")
+                logger.warning("Default parameters are not set on the telemetry server. Aborting pull operation.")
                 return
 
             remote_parameters = constants.REQ_SESSION.get(
@@ -371,7 +362,7 @@ class AutopilotConfigEditor(QWidget):
             temp_params: dict[str, dict[str, Any]] = deepcopy(self.config)
             for widget in self.widgets:
                 raw_value = remote_parameters.get(widget.name)
-                
+
                 if isinstance(raw_value, dict):
                     if "current" in raw_value:
                         new_value = raw_value["current"]
@@ -382,7 +373,7 @@ class AutopilotConfigEditor(QWidget):
                             f"Unexpected data format for parameter '{widget.name}': "
                             f"expected a dictionary with 'current' or 'default' keys, but got {raw_value}."
                         )
-                    
+
                     widget.current_value = new_value
                     if isinstance(widget.modify_element, QLineEdit):
                         widget.modify_element.setText(str(widget.current_value))
@@ -404,7 +395,7 @@ class AutopilotConfigEditor(QWidget):
                     )
 
                 else:
-                    print(f"[Warning] {widget.name} not found in pulled data.")
+                    logger.warning(f"{widget.name} not found in pulled data.")
                     if not rememeber_choice and response == QMessageBox.StandardButton.No:
                         response, rememeber_choice = show_message_box(
                             title="Parameter Not Found",
@@ -418,8 +409,8 @@ class AutopilotConfigEditor(QWidget):
                         )
 
                         if response == QMessageBox.StandardButton.Yes:
-                            print("[Info] Replacing existing config with pulled data.")
-                            
+                            logger.info("Replacing existing config with pulled data.")
+
                             default_params = constants.REQ_SESSION.get(
                                 urljoin(
                                     misc.get_route("get_default_autopilot_parameters"),
@@ -432,19 +423,19 @@ class AutopilotConfigEditor(QWidget):
                                     "Unexpected data format for default parameters: "
                                     f"expected a dictionary, but got {type(default_params).__name__}."
                                 )
-                            
+
                             temp_params = default_params
                             self.add_parameters()
                             self.update_status_label()
 
-            print("[Info] All parameters pulled successfully.")
+            logger.info("All parameters pulled successfully.")
             constants.SM.write("current_autopilot_parameters", temp_params)
 
         except RequestException as e:
-            print(f"[Error] Failed to pull all parameters: {e}")
+            logger.error(f"Failed to pull all parameters: {e}")
 
         except TypeError as e:
-            print(f"[Error] {e}")
+            logger.error(f"{e}")
 
     def clear_local_config(self) -> None:
         """Clear the local configuration and reset the UI."""
@@ -454,7 +445,7 @@ class AutopilotConfigEditor(QWidget):
         constants.SM.write("local_autopilot_param_hash", "")
         self.add_parameters()
         self.update_status_label()
-        print("[Info] Local configuration cleared.")
+        logger.info("Local configuration cleared.")
 
     def clear_remote_config(self) -> None:
         """Clear the remote configuration on the telemetry server."""
@@ -468,14 +459,14 @@ class AutopilotConfigEditor(QWidget):
             )
 
             if response.status_code == 200:
-                print("[Info] Remote configuration cleared successfully.")
+                logger.info("Remote configuration cleared successfully.")
                 self.clear_local_config()
 
             else:
-                print(f"[Warning] Failed to clear remote configuration; status {response.status_code}: {response.text.strip()}")
+                logger.warning(f"Failed to clear remote configuration; status {response.status_code}: {response.text.strip()}")
 
         except RequestException as e:
-            print(f"[Error] Failed to clear remote configuration: {e}")
+            logger.error(f"Failed to clear remote configuration: {e}")
 
     @Slot()
     def load_parameters_from_file(self) -> None:
@@ -494,11 +485,11 @@ class AutopilotConfigEditor(QWidget):
                 self.show_load_warning = response != QMessageBox.Yes
 
             if response == QMessageBox.No:
-                print("[Info] Load parameters from file operation cancelled by user.")
+                logger.info("Load parameters from file operation cancelled by user.")
                 return
 
         else:
-            print("[Info] Loading parameters from file without warning as per user preference.")
+            logger.info("Loading parameters from file without warning as per user preference.")
 
         file_path, _ = QFileDialog.getOpenFileName(
             self,
@@ -522,10 +513,10 @@ class AutopilotConfigEditor(QWidget):
 
             self.add_parameters()
             self.update_status_label()
-            print(f"[Info] Loaded parameters from {file_path}.")
+            logger.info(f"Loaded parameters from {file_path}.")
 
         except Exception as e:
-            print(f"[Error] Unable to load parameters from file: {e}")
+            logger.error(f"Unable to load parameters from file: {e}")
 
     @Slot()
     def save_parameters_to_file(self) -> None:
@@ -543,10 +534,10 @@ class AutopilotConfigEditor(QWidget):
         try:
             with open(file_path, mode="w", encoding="utf-8") as file:
                 json.dump(self.config, file, indent=4)
-                print(f"[Info] Saved parameters to {file_path}.")
+                logger.info(f"Saved parameters to {file_path}.")
 
         except Exception as e:
-            print(f"[Error] Unable to save parameters to file: {e}")
+            logger.error(f"Unable to save parameters to file: {e}")
 
     def add_parameters(self) -> None:
         """Add all parameters to the layout."""
@@ -565,7 +556,7 @@ class AutopilotConfigEditor(QWidget):
                 self.widgets.append(param_widget)
 
             except Exception as e:
-                print(f"Error creating widget for parameter '{key}': {e}")
+                logger.error(f"Error creating widget for parameter '{key}': {e}")
 
         # add spacer to push content to top
         if hasattr(self, "spacer"):
@@ -577,7 +568,7 @@ class AutopilotConfigEditor(QWidget):
     def refresh_config(self, instance_changed: bool) -> None:
         """
         Refresh the configuration from the telemetry server, typically after switching telemetry server instances.
-        
+
         Parameters
         ----------
         instance_changed
@@ -589,20 +580,24 @@ class AutopilotConfigEditor(QWidget):
             return
 
         try:
-            remote_hash = constants.REQ_SESSION.get(
-                urljoin(
-                    misc.get_route("get_current_hash"),
-                    str(constants.SM.read_int("telemetry_server_instance_id")),
+            remote_hash = (
+                constants.REQ_SESSION.get(
+                    urljoin(
+                        misc.get_route("get_current_hash"),
+                        str(constants.SM.read_int("telemetry_server_instance_id")),
+                    )
                 )
-            ).text.strip().replace('"', "")
+                .text.strip()
+                .replace('"', "")
+            )
 
             if not remote_hash:
                 self.config = {}
-            
+
             elif remote_hash in [config.stem for config in constants.AUTOPILOT_PARAMS_DIR.glob("*.json")]:
                 with open(constants.AUTOPILOT_PARAMS_DIR / f"{remote_hash}.json", mode="r", encoding="utf-8") as file:
                     self.config = json.load(file)
-            
+
             else:
                 self.config = constants.REQ_SESSION.get(
                     urljoin(
@@ -612,16 +607,16 @@ class AutopilotConfigEditor(QWidget):
                 ).json()
 
         except RequestException as e:
-            print(f"[Error] Failed to refresh config after telemetry server instance switch: {e}")
+            logger.error(f"Failed to refresh config after telemetry server instance switch: {e}")
             self.config = {}
-        
+
         constants.SM.write("current_autopilot_parameters", self.config)
         constants.SM.write("local_autopilot_param_hash", remote_hash)
 
         self.add_parameters()
         self.pull_all_parameters()
         self.update_status_label()
-        
+
     @Slot(str)
     def filter_parameters(self, search_text: str = "") -> None:
         """
@@ -693,7 +688,7 @@ class AutopilotParamWidget(QFrame):
 
     Inherits
     --------
-    ``QFrame``
+    :class:`QFrame`
     """
 
     def __init__(self, config: dict) -> None:
@@ -740,7 +735,7 @@ class AutopilotParamWidget(QFrame):
             self.modify_element = QPushButton("Edit")
             self.modify_element.setIcon(constants.ICONS.pencil)
             self.modify_element.clicked.connect(self.edit_grouped_data)
-            
+
             self.value_display = QLabel(str(self.current_value))
             self.value_display.setWordWrap(True)
             self.value_display.setStyleSheet("font-family: monospace;")
@@ -788,7 +783,7 @@ class AutopilotParamWidget(QFrame):
             max_width=100,
             min_height=30,
             is_clickable=False,
-            tooltip="Reset to default value."
+            tooltip="Reset to default value.",
         )
 
         self.right_layout.addWidget(self.send_button)
@@ -806,11 +801,11 @@ class AutopilotParamWidget(QFrame):
     def send_value(self) -> None:
         """
         Send the current value of the parameter to the telemetry endpoint.
-        
+
         DONE
         """
 
-        print(f"[Info] Sending value for {self.name}: {self.current_value}")
+        logger.info(f"Sending value for {self.name}: {self.current_value}")
         try:
             existing_data = constants.REQ_SESSION.get(
                 urljoin(
@@ -820,7 +815,7 @@ class AutopilotParamWidget(QFrame):
             ).json()
 
         except RequestException as e:
-            print(f"[Error] Failed to fetch existing autopilot parameters. Cannot update {self.name}: {e}")
+            logger.error(f"Failed to fetch existing autopilot parameters. Cannot update {self.name}: {e}")
             return
 
         if isinstance(existing_data, dict):
@@ -850,7 +845,7 @@ class AutopilotParamWidget(QFrame):
                         ),
                     ],
                 )
-                
+
                 if response == "create_config":
                     local_autopilot_params = constants.SM.read_dict("current_autopilot_parameters")
                     try:
@@ -859,20 +854,20 @@ class AutopilotParamWidget(QFrame):
                                 misc.get_route("create_config"),
                                 str(constants.SM.read_int("telemetry_server_instance_id")),
                             ),
-                            json=json.dumps(local_autopilot_params, indent=None)
+                            json=json.dumps(local_autopilot_params, indent=None),
                         )
                         status_message = response.text.strip().replace('"', "")
 
                         if response.status_code == 200:
-                            print("[Info] New config created and switched to successfully.")
-                        
+                            logger.info("New config created and switched to successfully.")
+
                         else:
                             raise RequestException(status_message)
-                        
+
                     except RequestException as e:
-                        print(f"[Error] Failed to create new config on telemetry server: {e}")
+                        logger.error(f"Failed to create new config on telemetry server: {e}")
                         return
-                    
+
                 elif response == "create_config_urgent":
                     local_autopilot_params = constants.SM.read_dict("current_autopilot_parameters")
                     try:
@@ -886,17 +881,17 @@ class AutopilotParamWidget(QFrame):
                         status_message = response.text.strip().replace('"', "")
 
                         if response.status_code == 200:
-                            print("[Info] New config created and switched to successfully.")
-                        
+                            logger.info("New config created and switched to successfully.")
+
                         else:
                             raise RequestException(status_message)
-                        
+
                     except RequestException as e:
-                        print(f"[Error] Failed to create new config on telemetry server: {e}")
+                        logger.error(f"Failed to create new config on telemetry server: {e}")
                         return
-                    
+
                 else:
-                    print(f"[Info] User chose to do nothing about missing parameter {self.name}.")
+                    logger.info(f"User chose to do nothing about missing parameter {self.name}.")
                     return
 
             elif isinstance(existing_data[self.name], dict) and "current" in existing_data[self.name]:
@@ -913,14 +908,14 @@ class AutopilotParamWidget(QFrame):
                     ),
                     json=json.dumps(existing_data, indent=None),
                 )
-                print(f"[Info] Successfully sent {self.name} with value {self.current_value}.")
+                logger.info(f"Successfully sent {self.name} with value {self.current_value}.")
 
             except RequestException as e:
-                print(f"[Error] Failed to send {self.name} with value {self.current_value}: {e}")
+                logger.error(f"Failed to send {self.name} with value {self.current_value}: {e}")
                 return
 
         else:
-            print(f"[Error] Unexpected data format from telemetry server: {existing_data}. Expected a dictionary of parameters.")
+            logger.error(f"Unexpected data format from telemetry server: {existing_data}. Expected a dictionary of parameters.")
             return
 
         self.reset_button.setEnabled(True)
@@ -941,13 +936,13 @@ class AutopilotParamWidget(QFrame):
 
             if self.name in data:
                 self.current_value = data[self.name]
-                
+
                 if isinstance(self.modify_element, QLineEdit):
                     self.modify_element.setText(str(self.current_value))
-                
+
                 elif self.value_display:
                     self.value_display.setText(str(self.current_value))
-                print(f"[Info] Pulled {self.name} with value {self.current_value}.")
+                logger.info(f"Pulled {self.name} with value {self.current_value}.")
 
                 temp_params = constants.SM.read_dict("current_autopilot_parameters")
                 temp_params[self.name] = {"current": self.current_value, "description": self.description}
@@ -976,8 +971,7 @@ class AutopilotParamWidget(QFrame):
                 )
 
                 if response == "use_remote":
-                    print("[Info] Replacing local config with remote config.")
-                    
+                    logger.info("Replacing local config with remote config.")
 
         except RequestException as e:
             response = show_message_box(
@@ -993,8 +987,7 @@ class AutopilotParamWidget(QFrame):
             )
 
             if response == QMessageBox.Yes:
-                print("[Info] Pulling updated configuration from telemetry server.")
-                
+                logger.info("Pulling updated configuration from telemetry server.")
 
         self.reset_button.setEnabled(True)
         self.send_button.setEnabled(False)
@@ -1007,11 +1000,11 @@ class AutopilotParamWidget(QFrame):
         self.current_value = deepcopy(self.default_val)
         if isinstance(self.modify_element, QLineEdit):
             self.modify_element.setText(str(self.current_value))
-            print(f"[Info] {self.name} reset to default value: {self.current_value}.")
+            logger.info(f"{self.name} reset to default value: {self.current_value}.")
 
         elif self.value_display:
             self.value_display.setText(str(self.current_value))
-            print(f"[Info] {self.name} reset to default value: {self.current_value}.")
+            logger.info(f"{self.name} reset to default value: {self.current_value}.")
 
         temp_params = constants.SM.read_dict("current_autopilot_parameters")
         temp_params[self.name] = {"current": self.current_value, "description": self.description}
@@ -1024,7 +1017,7 @@ class AutopilotParamWidget(QFrame):
     @Slot()
     def update_value_from_lineedit(self) -> None:
         """
-        Update value from ``QLineEdit`` input.
+        Update value from :class:`QLineEdit` input.
 
         Raises
         ------
@@ -1069,12 +1062,12 @@ class AutopilotParamWidget(QFrame):
             constants.SM.write("current_autopilot_parameters", temp_params)
 
         except TypeError:
-            print(f"[Error] Invalid value for {self.name}. Resetting to previous value.")
+            logger.error(f"Invalid value for {self.name}. Resetting to previous value.")
             self.modify_element.setText(str(self.current_value))
             return
 
         except Exception as e:
-            print(f"[Error] Failed to update value for {self.name}: {e}")
+            logger.error(f"Failed to update value for {self.name}: {e}")
             return
 
         self.current_value = edited_data
@@ -1096,7 +1089,7 @@ class AutopilotParamWidget(QFrame):
             self.text_edit_window.show()
 
         except Exception as e:
-            print(f"[Error] Failed to open text edit window for {self.name}: {e}")
+            logger.error(f"Failed to open text edit window for {self.name}: {e}")
 
     @Slot(str)
     def edit_grouped_data_callback(self, text: str) -> None:
@@ -1122,13 +1115,13 @@ class AutopilotParamWidget(QFrame):
 
             if not isinstance(edited_data, self.type):
                 raise TypeError(f"Edited data must be of type {self.type.__name__}, but got {type(edited_data).__name__}.")
-            
+
             temp_params = constants.SM.read_dict("current_autopilot_parameters")
             temp_params[self.name] = {"current": edited_data, "default": self.default_val, "description": self.description}
             constants.SM.write("current_autopilot_parameters", temp_params)
 
         except (ValueError, TypeError):
-            print(f"[Error] Invalid value for {self.name}. Resetting to previous value.")
+            logger.error(f"Invalid value for {self.name}. Resetting to previous value.")
             self.value_display.setText(str(self.current_value))
             return
 

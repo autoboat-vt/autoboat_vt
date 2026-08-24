@@ -5,6 +5,10 @@ from typing import Generic, TypeVar
 
 from qtpy.QtWidgets import QInputDialog, QWidget
 
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 T = TypeVar("T")
 
 
@@ -25,7 +29,7 @@ class InputDialog(QWidget, Generic[T]):
 
     Inherits
     --------
-    ``QWidget`` and ``Generic[T]``
+    :class:`QWidget` and ``Generic[T]``
     """
 
     def __init__(
@@ -70,5 +74,5 @@ class InputDialog(QWidget, Generic[T]):
         try:
             return self._input_type(text)
         except ValueError:
-            print(f"[Error] Failed to convert '{text}' to {self._input_type.__name__}.")
+            logger.error(f"Failed to convert '{text}' to {self._input_type.__name__}.")
             return None

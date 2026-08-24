@@ -22,8 +22,8 @@ class TetrisAudio:
     """
     Manage music and sound effects for Tetris.
 
-    Uses ``QMediaPlayer`` for looping background music (so we get gapless
-    playback and volume control) and ``QSoundEffect`` for short one-shot SFX
+    Uses :class:`QMediaPlayer` for looping background music (so we get gapless
+    playback and volume control) and :class:`QSoundEffect` for short one-shot SFX
     (low latency, supports overlapping plays).
 
     All file paths are resolved from ``constants.TETRIS_MUSIC_DIR`` and
@@ -82,7 +82,7 @@ class TetrisAudio:
     @staticmethod
     def _make_sound_effect(path: Path) -> QSoundEffect | None:
         """
-        Create a pre-loaded ``QSoundEffect`` for ``path``, or ``None``.
+        Create a pre-loaded :class:`QSoundEffect` for ``path``, or ``None``.
 
         Parameters
         ----------

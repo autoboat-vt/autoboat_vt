@@ -202,7 +202,7 @@ self.map_bridge.set_keybinds({"focus_boat": "F"})
 - One `@_map_api`-decorated Python method per TS `MapInterface` method. All fire-and-forget (`-> None`).
 - For batched multi-statement JS, call individual `MapBridge` methods in sequence — each is queued independently by `js_load_guard`.
 - **Adding a new TS method:** (1) add it to `MapInterface` in `main.ts` (auto-discovered by `getApi()`), (2) add the matching `@_map_api` method to `MapBridge`.
-- **Drift detection:** `MapInterface.getApi()` (TS) returns `[{name, params}]` via prototype introspection; `MapBridge.verify_api()` (Python) queries it post-load and logs mismatches via `print` (does not raise). `verify_api` bypasses `js_load_guard` (which is fire-and-forget and discards return values) and instead polls `map.getApi()` directly via `QTimer.singleShot` until the map is ready.
+- **Drift detection:** `MapInterface.getApi()` (TS) returns `[{name, params}]` via prototype introspection; `MapBridge.verify_api()` (Python) queries it post-load and logs mismatches via `logger.warning` (does not raise). `verify_api` bypasses `js_load_guard` (which is fire-and-forget and discards return values) and instead polls `map.getApi()` directly via `QTimer.singleShot` until the map is ready.
   - **Excluded TS methods:** `getApi`, `handleMapMove`, `syncWaypoints` are excluded from `getApi()` output (introspection / internal handler / TS→Python callback — not part of the Python→JS surface). Add new TS-only methods to the `exclude` Set in `getApi()`.
   - **Param name normalization:** `verify_api` compares param names case/underscore-insensitively (Python snake_case `inner_html` vs TS camelCase `innerHTML`). Only count mismatches or genuine reorderings are flagged.
 
@@ -372,6 +372,7 @@ class GraphViewer(QWidget):
 - Editing `app_data/git_ignore/app_state.json` directly — always go through `StateManager`.
 - Reading a `StateManager` key without first adding it to `STATE_FILE_CONTENTS` — it'll fall back to a default but won't persist on fresh installs.
 - Importing `PyQt5` or `PyQt6` directly — always go through `qtpy` for Qt abstraction.
+- Using `print()` in ground station code — use `get_logger(__name__)` from `utils.logger` and call `logger.info`/`logger.warning`/`logger.error`. Logs flow to `ConsoleOutputWidget` (via `QtConsoleHandler`) and to a rotating file at `app_data/git_ignore/logs/ground_station.log`. The formatter emits `[Info]`/`[Warning]`/`[Error]` prefixes so the existing `ConsoleHighlighter` regex keeps working. See `.github/instructions/python.instructions.md` → "Logging (ground station)" for the full pattern.
 - Adding new TS files for the map widget outside `ground_station/src/widgets/map_widget/frontend/` — `tsconfig.json` `include` is hard-scoped to that directory.
 - Conflating `MAP_SERVER_PORT` (3002, Python `ThreadingHTTPServer` for waypoints) with `VITE_PORT` (5173, Vite dev server for the map HTML/JS) — they're different servers.
 - Creating more than one `QWebEngineView` for the map — reuse the `MAP_PAGE` singleton.

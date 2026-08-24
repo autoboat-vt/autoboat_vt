@@ -22,8 +22,8 @@ class PongAudio:
     """
     Manage music and sound effects for Pong.
 
-    Uses ``QMediaPlayer`` for looping background music (gapless playback,
-    volume control) and ``QSoundEffect`` for short one-shot SFX (low latency,
+    Uses :class:`QMediaPlayer` for looping background music (gapless playback,
+    volume control) and :class:`QSoundEffect` for short one-shot SFX (low latency,
     overlapping plays).
 
     All file paths are resolved from ``constants.PONG_MUSIC_DIR`` and
@@ -80,7 +80,7 @@ class PongAudio:
     @staticmethod
     def _make_sound_effect(path: Path) -> QSoundEffect | None:
         """
-        Create a pre-loaded ``QSoundEffect`` for ``path``, or ``None``.
+        Create a pre-loaded :class:`QSoundEffect` for ``path``, or ``None``.
 
         Parameters
         ----------

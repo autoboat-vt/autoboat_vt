@@ -36,13 +36,12 @@ class CoordinateInputDialog(QDialog):
 
     Inherits
     --------
-    ``QDialog``
+    :class:`QDialog`
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Manual Coordinate Entry")
-
         # these maps make it easier to navigate between fields with arrow keys
         self._down_map: dict[QWidget, QWidget] = {}
         self._up_map: dict[QWidget, QWidget] = {}
@@ -364,12 +363,10 @@ class CoordinateInputDialog(QDialog):
         """
 
         idx = self._stack.currentIndex()
-
         # decimal degrees
         if idx == 0:
             lat = self._parse_float(self._dd_lat, "Latitude")
             lon = self._parse_float(self._dd_lon, "Longitude")
-
         # degrees decimal minutes
         elif idx == 1:
             lat = self._dms_to_decimal(

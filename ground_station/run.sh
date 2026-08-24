@@ -19,6 +19,7 @@ fi
 # Fallback defaults if server_ports.env is missing or doesn't set these.
 : "${MAP_SERVER_PORT:=3002}"
 : "${VITE_PORT:=5173}"
+: "${ASSET_SERVER_PORT:=8000}"
 
 query_port() {
     local port=$1
@@ -71,6 +72,7 @@ check_port() {
             ;;
         esac
     fi
+    echo "Port $port is free."
 }
 
 echo "Checking map server port $MAP_SERVER_PORT..."
@@ -78,6 +80,9 @@ check_port "$MAP_SERVER_PORT"
 
 echo "Checking Vite server port $VITE_PORT..."
 check_port "$VITE_PORT"
+
+echo "Checking asset server port $ASSET_SERVER_PORT..."
+check_port "$ASSET_SERVER_PORT"
 
 os_type=$(uname -s | tr '[:upper:]' '[:lower:]')
 if [[ "$os_type" == "linux"* ]]; then

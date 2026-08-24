@@ -16,7 +16,7 @@ class ConsoleHighlighter(BaseHighlighter):
 
     Inherits
     -------
-    ``BaseHighlighter``
+    :class:`BaseHighlighter`
     """
 
     def __init__(self, parent: QTextDocument | None = None) -> None:

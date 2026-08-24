@@ -27,6 +27,7 @@ from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QPushButton
 
 from utils import constants
+from utils.logger import get_logger
 
 __all__ = [
     "cache_cdn_file",
@@ -39,7 +40,10 @@ __all__ = [
     "resolve_enum_name",
 ]
 
+logger = get_logger(__name__)
+
 T = TypeVar("T")
+
 
 class IconProtocol(Protocol):
     upload: QIcon
@@ -69,6 +73,7 @@ class IconProtocol(Protocol):
     warning: QIcon
     question: QIcon
 
+
 def get_icons() -> IconProtocol:
     """
     Load and return a set of icons for the application.
@@ -85,7 +90,7 @@ def get_icons() -> IconProtocol:
 
     Notes
     -----
-    The icons cannot be loaded until a ``QApplication`` instance is created.
+    The icons cannot be loaded until a :class:`QApplication` instance is created.
     """
 
     icons: dict[str, QIcon] = {
@@ -123,6 +128,7 @@ def get_icons() -> IconProtocol:
 
     return cast("IconProtocol", SimpleNamespace(**icons))
 
+
 def get_route(route_name: str) -> str:
     """
     Get the full URL for a given route name.
@@ -147,7 +153,7 @@ def get_route(route_name: str) -> str:
 
     if isinstance(endpoints, dict) and endpoints.get(route_name) is not None:
         return endpoints[route_name]
-    
+
     raise ValueError(f"Route name '{route_name}' not found in telemetry server endpoints.")
 
 
@@ -162,7 +168,7 @@ def pushbutton_maker(
     tooltip: str | None = None,
 ) -> QPushButton:
     """
-    Create a ``QPushButton`` with the specified features.
+    Create a :class:`QPushButton` with the specified features.
 
     Parameters
     ----------
@@ -291,14 +297,15 @@ def cache_cdn_file(url: str, save_dir: str) -> None:
 
         Path(save_path).write_bytes(response.content)
 
-        print(f"[Info] Cached CDN file '{file_name}' to '{save_path}'.")
-    
+        logger.info(f"Cached CDN file '{file_name}' to '{save_path}'.")
+
     except RequestException as e:
         if file_name in os.listdir(save_dir):
-            print(f"[Warning] Failed to download '{file_name}' from CDN, using cached version. Error: {e}")
+            logger.warning(f"Failed to download '{file_name}' from CDN, using cached version. Error: {e}")
 
         else:
             raise RuntimeError(f"Failed to download and cache CDN file '{file_name}': {e}") from e
+
 
 def create_symlinks(source_dir: Path, target_dir: Path) -> None:
     """
@@ -323,13 +330,12 @@ def create_symlinks(source_dir: Path, target_dir: Path) -> None:
             try:
                 if target_path.exists() or target_path.is_symlink():
                     target_path.unlink()
-                
-                target_path.symlink_to(item.resolve())
 
+                target_path.symlink_to(item.resolve())
                 # make file in target_dir read-only to prevent accidental edits
                 target_path.chmod(0o444)
-                print(f"[Info] Created symlink for '{item.name}' at '{target_path}'.")
-            
+                logger.info(f"Created symlink for '{item.name}' at '{target_path}'.")
+
             except Exception as e:
                 raise RuntimeError(f"Failed to create symlink for '{item.name}': {e}") from e
 
@@ -346,7 +352,7 @@ def resolve_enum_name(enum_class: type[Enum], value: Any) -> str:
     Parameters
     ----------
     enum_class
-        The enum class to resolve against (e.g., ``SailboatAutopilotStates``).
+        The enum class to resolve against (e.g., :class:`SailboatAutopilotStates`).
     value
         The raw value received from the telemetry server.
 

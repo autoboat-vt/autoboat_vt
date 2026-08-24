@@ -8,15 +8,19 @@ from qtpy.QtCore import QObject, Qt, Signal
 from qtpy.QtGui import QKeyEvent, QKeySequence
 
 from utils import constants
+from utils.logger import get_logger
 
 __all__ = ["KeybindManager", "get_keybind_manager", "normalize_key_string", "qt_key_event_to_string"]
+
+logger = get_logger(__name__)
 
 # we do this to avoid a circular import between this module and `constants.py`
 _KeybindManagerInstance: KeybindManager | None = None
 
+
 def get_keybind_manager() -> KeybindManager:
     """
-    Return the shared ```KeybindManager``` instance.
+    Return the shared :class:`KeybindManager` instance.
 
     The instance is created on first call. Subsequent calls return the same
     object so that widgets, shortcuts, and the frontend bridge all stay synced.
@@ -66,13 +70,13 @@ class KeybindManager(QObject):
 
     Attributes
     ----------
-    bindings_changed: ``Signal``
+    bindings_changed: :class:`Signal`
         Emitted whenever a binding is added, removed, or changed. Carries the
         full bindings dict so listeners can re-register shortcuts.
 
     Inherits
     -------
-    ``QObject``
+    :class:`QObject`
     """
 
     bindings_changed = Signal(dict)
@@ -100,10 +104,10 @@ class KeybindManager(QObject):
         self._bindings = {}
         for action, info in stored.items():
             entry = dict(info)
-            
+
             if "key" in entry and isinstance(entry["key"], str):
                 entry["key"] = normalize_key_string(entry["key"])
-            
+
             self._bindings[action] = entry
 
         # merge in any actions that exist in the defaults but not in the cached state
@@ -132,10 +136,7 @@ class KeybindManager(QObject):
         with open(file=default_path, mode="r", encoding="utf-8") as f:
             raw = json.load(f)
 
-        return {
-            action: {**info, "key": normalize_key_string(info["key"])}
-            for action, info in raw.items()
-        }
+        return {action: {**info, "key": normalize_key_string(info["key"])} for action, info in raw.items()}
 
     def get_bindings(self) -> dict[str, dict[str, str]]:
         """
@@ -185,7 +186,7 @@ class KeybindManager(QObject):
         info = self._bindings.get(action)
         if info is None:
             return None
-        
+
         key = info.get("key")
         return normalize_key_string(key) if isinstance(key, str) else None
 
@@ -204,11 +205,7 @@ class KeybindManager(QObject):
             A dict of action key -> binding info for the matching scope.
         """
 
-        return {
-            action: dict(info)
-            for action, info in self._bindings.items()
-            if info.get("scope") == scope
-        }
+        return {action: dict(info) for action, info in self._bindings.items() if info.get("scope") == scope}
 
     def find_conflict(self, key: str, ignore_action: str | None = None) -> str | None:
         """
@@ -238,11 +235,11 @@ class KeybindManager(QObject):
         for action, info in self._bindings.items():
             if action == ignore_action:
                 continue
-            
+
             existing = info.get("key")
             if isinstance(existing, str) and existing and normalize_key_string(existing) == normalized:
                 return action
-        
+
         return None
 
     def set_key(self, action: str, key: str) -> str | None:
@@ -302,7 +299,7 @@ class KeybindManager(QObject):
 
         path = Path(file_path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         with open(path, mode="w", encoding="utf-8") as f:
             json.dump(self.get_bindings(), f, indent=4)
 
@@ -334,17 +331,15 @@ class KeybindManager(QObject):
             msg = f"Keybind file {path} does not contain a JSON object."
             raise TypeError(msg)
 
-        new_bindings: dict[str, dict[str, str]] = {
-            action: dict(info) for action, info in self._bindings.items()
-        }
+        new_bindings: dict[str, dict[str, str]] = {action: dict(info) for action, info in self._bindings.items()}
         for action, info in data.items():
             if action not in new_bindings or not isinstance(info, dict):
                 continue
-            
+
             entry = dict(new_bindings[action])
             if isinstance(info.get("key"), str):
                 entry["key"] = normalize_key_string(info["key"])
-            
+
             new_bindings[action] = entry
 
         self._bindings = new_bindings
@@ -364,9 +359,9 @@ class KeybindManager(QObject):
         """
 
         if action not in self._bindings:
-            print(f"[Warning] Cannot register handler for unknown action '{action}'.")
+            logger.warning(f"Cannot register handler for unknown action '{action}'.")
             return
-        
+
         self._handlers[action] = handler
 
     def trigger(self, action: str) -> None:
@@ -381,14 +376,14 @@ class KeybindManager(QObject):
 
         handler = self._handlers.get(action)
         if handler is None:
-            print(f"[Warning] No handler registered for action '{action}'.")
+            logger.warning(f"No handler registered for action '{action}'.")
             return
-        
+
         handler()
 
     def to_qkeysequence(self, action: str) -> QKeySequence:
         """
-        Build a ``QKeySequence`` from the key string for an action.
+        Build a :class:`QKeySequence` from the key string for an action.
 
         Parameters
         ----------
@@ -398,14 +393,14 @@ class KeybindManager(QObject):
         Returns
         -------
         QKeySequence
-            A ``QKeySequence`` constructed from the action's key string. Empty
+            A :class:`QKeySequence` constructed from the action's key string. Empty
             if the action is unknown or has no key.
         """
 
         key = self.get_key(action)
         if key is None:
             return QKeySequence()
-        
+
         return QKeySequence(key, QKeySequence.SequenceFormat.PortableText)
 
     def to_frontend_dict(self) -> dict[str, str]:
@@ -437,7 +432,7 @@ def qt_key_to_string(key: Qt.Key, modifiers: Qt.KeyboardModifier) -> str:
     """
     Convert a Qt key + modifiers into a normalized combination string.
 
-    Used by the key-capture dialog to turn a ``QKeyEvent`` into the stored
+    Used by the key-capture dialog to turn a :class:`QKeyEvent` into the stored
     string form (e.g. ``"Ctrl+Shift+P"``).
 
     Parameters
@@ -466,13 +461,13 @@ def qt_key_to_string(key: Qt.Key, modifiers: Qt.KeyboardModifier) -> str:
     parts: list[str] = []
     if modifiers & Qt.KeyboardModifier.ControlModifier:
         parts.append("Ctrl")
-    
+
     if modifiers & Qt.KeyboardModifier.ShiftModifier:
         parts.append("Shift")
-    
+
     if modifiers & Qt.KeyboardModifier.AltModifier:
         parts.append("Alt")
-    
+
     if modifiers & Qt.KeyboardModifier.MetaModifier:
         parts.append("Meta")
 
@@ -483,12 +478,12 @@ def qt_key_to_string(key: Qt.Key, modifiers: Qt.KeyboardModifier) -> str:
 
 # expose the helper for type-checkers that want the Any-typed version
 def qt_key_event_to_string(event: QKeyEvent) -> str:
-    """Convert a ``QKeyEvent`` into a normalized combination string.
+    """Convert a :class:`QKeyEvent` into a normalized combination string.
 
     Parameters
     ----------
     event
-        A ``QKeyEvent`` instance.
+        A :class:`QKeyEvent` instance.
 
     Returns
     -------

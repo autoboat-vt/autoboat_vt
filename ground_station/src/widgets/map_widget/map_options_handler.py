@@ -30,7 +30,7 @@ class MapOptionsHandler(QDialog):
 
     Inherits
     -------
-    ``QDialog``
+    :class:`QDialog`
     """
 
     checkbox_style = """
@@ -255,7 +255,7 @@ class FeatureInfoItem(QTableWidgetItem):
 
     Inherits
     -------
-    ``QTableWidgetItem``
+    :class:`QTableWidgetItem`
     """
 
     __slots__ = (

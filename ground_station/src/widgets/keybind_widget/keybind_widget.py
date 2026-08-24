@@ -31,7 +31,7 @@ class KeybindConfigWidget(QTableWidget):
     """
     A table widget that captures key presses for rebinding.
 
-    While a ```KeyCaptureItem``` cell has focus, the next key press is
+    While a :class:`KeyCaptureItem` cell has focus, the next key press is
     interpreted as a new binding rather than a normal table navigation event.
 
     Parameters
@@ -41,7 +41,7 @@ class KeybindConfigWidget(QTableWidget):
 
     Inherits
     -------
-    ``QTableWidget``
+    :class:`QTableWidget`
     """
 
     def __init__(self, rows: int) -> None:
@@ -81,7 +81,7 @@ class KeyCaptureItem(QTableWidgetItem):
 
     When the user clicks the item (or it gains focus), it enters "listening"
     mode and displays a prompt. The next captured key press updates the
-    binding via the ```KeybindManager``` and exits listening mode.
+    binding via the :class:`KeybindManager` and exits listening mode.
 
     Parameters
     ----------
@@ -92,14 +92,14 @@ class KeyCaptureItem(QTableWidgetItem):
 
     Inherits
     -------
-    ``QTableWidgetItem``
+    :class:`QTableWidgetItem`
     """
 
     __slots__ = ("_action", "_listening", "_combo")
 
     def __init__(self, action: str, initial_key: str) -> None:
         super().__init__(initial_key or KeybindConfigWidget.UNBOUND_DISPLAY)
-        
+
         self._action = action
         self._listening = False
         self._combo = initial_key
@@ -157,7 +157,7 @@ class KeyCaptureItem(QTableWidgetItem):
 
         manager = get_keybind_manager()
         conflict = manager.set_key(self._action, combo)
-        
+
         table = self.tableWidget()
         if table is not None and hasattr(table, "parent") and isinstance(table.parent(), KeybindConfigDialog):
             table.parent()._handle_conflict(self._action, conflict)
@@ -177,7 +177,7 @@ class KeybindConfigDialog(QDialog):
 
     Inherits
     -------
-    ``QDialog``
+    :class:`QDialog`
     """
 
     table_style = """
@@ -222,7 +222,7 @@ class KeybindConfigDialog(QDialog):
         if not embedded:
             self.setWindowTitle("Keybind Configuration")
             self.setModal(True)
-        
+
         self.layout = QVBoxLayout(self)
 
         manager = get_keybind_manager()
@@ -285,7 +285,7 @@ class KeybindConfigDialog(QDialog):
             constants.ICONS.hard_drive,
             min_height=30,
         )
-        
+
         # adding stretch to both sides -> buttons are centered
         button_row.addStretch()
         button_row.addWidget(self.reset_button)
@@ -426,10 +426,9 @@ class KeybindConfigDialog(QDialog):
         conflict_name = conflict_info.get("name", conflict) if conflict_info else conflict
         action_info = manager.get_binding(action)
         action_name = action_info.get("name", action) if action_info else action
-        
+
         self.update_feedback_text(
-            f"Note: '{conflict_name}' is also bound to this key. "
-            f"Both '{action_name}' and '{conflict_name}' will fire."
+            f"Note: '{conflict_name}' is also bound to this key. Both '{action_name}' and '{conflict_name}' will fire."
         )
 
     @Slot(dict)
@@ -477,7 +476,7 @@ class KeybindConfigDialog(QDialog):
 
         try:
             manager.save_to_file(file_path)
-        
+
         except OSError as e:
             self.update_feedback_text(f"Failed to save: {e}")
             return
@@ -515,7 +514,7 @@ class KeybindConfigDialog(QDialog):
         for item in self._key_items.values():
             if item.listening:
                 item.cancel_listening()
-        
+
         self.close()
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
@@ -534,7 +533,7 @@ class KeybindConfigDialog(QDialog):
                     item.cancel_listening()
                     self.update_feedback_text("Cancelled.")
                     return
-        
+
         super().keyPressEvent(event)
 
     @Slot(str)

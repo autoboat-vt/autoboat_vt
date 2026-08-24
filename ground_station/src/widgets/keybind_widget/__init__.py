@@ -9,7 +9,8 @@ Exposes:
 
 Contains:
 - `keybind_manager.py`: Module containing the keybind manager (registry, persistence, and dispatch).
-- `keybind_widget.py`: Module containing the ``KeybindConfigDialog`` and the ``KeyCaptureItem`` used to capture new bindings.
+- `keybind_widget.py`: Module containing the :class:`KeybindConfigDialog` and the
+    :class:`KeyCaptureItem` used to capture new bindings.
 """
 
 __all__ = [

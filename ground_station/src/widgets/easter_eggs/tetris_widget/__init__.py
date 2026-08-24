@@ -5,8 +5,8 @@ Exposes:
 - TetrisDialog: A dialog window containing a playable Tetris game.
 
 Contains:
-- `tetris_game.py`: Module containing the ``TetrisDialog``, ``TetrisBoard``, and ``Tetromino`` classes.
-- `tetris_audio.py`: Module containing the ``TetrisAudio`` class for music and sound-effect playback.
+- `tetris_game.py`: Module containing the :class:`TetrisDialog`, :class:`TetrisBoard`, and :class:`Tetromino` classes.
+- `tetris_audio.py`: Module containing the :class:`TetrisAudio` class for music and sound-effect playback.
 """
 
 __all__ = ["TetrisDialog"]

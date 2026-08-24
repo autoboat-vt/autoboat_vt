@@ -30,12 +30,12 @@ class TextEditWindow(QWidget):
 
     Attributes
     ----------
-    user_text_emitter: ``Signal``
+    user_text_emitter: :class:`Signal`
         Signal emitted when the window is closed, carrying the entered text.
 
     Inherits
     -------
-    ``QWidget``
+    :class:`QWidget`
     """
 
     user_text_emitter = Signal(str)
@@ -76,7 +76,7 @@ class TextEditWindow(QWidget):
 
         Inherits
         -------
-        ``QWidget``
+        :class:`QWidget`
 
         Parameters
         ----------

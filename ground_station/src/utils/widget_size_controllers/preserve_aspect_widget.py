@@ -12,7 +12,7 @@ class PreserveAspectWidget(QWidget):
     Parameters
     ----------
     child
-        The ``QWidget`` to resize inside this container.
+        The :class:`QWidget` to resize inside this container.
     aspect_ratio
         The target width divided by height.
 
@@ -23,7 +23,7 @@ class PreserveAspectWidget(QWidget):
 
     Inherits
     --------
-    ``QWidget``
+    :class:`QWidget`
     """
 
     def __init__(self, child: QWidget, aspect_ratio: float = 1.0) -> None:

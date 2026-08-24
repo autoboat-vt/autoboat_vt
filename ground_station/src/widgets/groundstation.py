@@ -32,6 +32,7 @@ from qtpy.QtWidgets import (
 from utils import TextEditWindow, constants, misc, thread_classes
 from utils.constants import StrictMatchEnums
 from utils.dialog_templates import CoordinateInputDialog, InputDialog, show_message_box
+from utils.logger import get_logger
 from utils.syntax_highlighters import JsonHighlighter
 
 from .easter_eggs import PongDialog, SnakeDialog, TetrisDialog
@@ -42,6 +43,8 @@ from .keybind_widget import (
     qt_key_event_to_string,
 )
 from .map_widget import MapBridge, MapOptionsHandler
+
+logger = get_logger(__name__)
 
 MotorboatControlModes = StrictMatchEnums.MotorboatControlModes
 SailboatAutopilotStates = StrictMatchEnums.SailboatAutopilotStates
@@ -55,16 +58,16 @@ class GroundStationWidget(QWidget):
     Parameters
     ----------
     boat_status_source
-        A ``Signal`` that provides boat status updates.
+        A :class:`Signal` that provides boat status updates.
 
     Attributes
     ----------
-    refresh_autopilot_config_signal: ``Signal``
+    refresh_autopilot_config_signal: :class:`Signal`
         Signal emitted when the autopilot configuration needs to be refreshed.
 
     Inherits
     -------
-    ``QWidget``
+    :class:`QWidget`
     """
 
     refresh_autopilot_config_signal = Signal(bool)
@@ -357,7 +360,6 @@ class GroundStationWidget(QWidget):
 
         self._keybind_manager.bindings_changed.connect(self._on_keybinds_changed)
         # endregion keybinds
-
         # we need to "install" an event filter on the QWebEngineView's internal
         # Chromium render widget so we can intercept Ctrl+Z before it swallows it
         self.browser.installEventFilter(self)
@@ -366,8 +368,7 @@ class GroundStationWidget(QWidget):
     # region keybind functions
 
     def _rebuild_shortcuts(self) -> None:
-        """Recreate every app-scope ``QShortcut`` from the current bindings."""
-
+        """Recreate every app-scope :class:`QShortcut` from the current bindings."""
         # clear out the old shortcuts
         for shortcut in self._shortcuts.values():
             shortcut.setEnabled(False)
@@ -479,7 +480,6 @@ class GroundStationWidget(QWidget):
         bool
             ``True`` if the event was consumed, ``False`` otherwise.
         """
-
         # only care about key presses that include the Control modifier — the
         # undo binding is always a Ctrl combo, so skip everything else early
         if not (event.type() == QEvent.Type.KeyPress and event.modifiers() & Qt.KeyboardModifier.ControlModifier):
@@ -534,7 +534,7 @@ class GroundStationWidget(QWidget):
         Give the map webview keyboard focus when the widget is shown.
 
         The TS frontend's ``keydown`` listener (which dispatches map-scope
-        keybinds like ``f`` or ``c``) only fires when the ``QWebEngineView``
+        keybinds like ``f`` or ``c``) only fires when the :class:`QWebEngineView`
         has focus. Without this, the user would have to click on the map
         before any map-scope keybind works.
 
@@ -545,7 +545,6 @@ class GroundStationWidget(QWidget):
         """
 
         super().showEvent(event)
-
         # defer the focus request to the next event loop tick so the webview
         # has fully finished laying out before we steal focus into it
         QTimer.singleShot(0, self.browser.setFocus)
@@ -574,10 +573,10 @@ class GroundStationWidget(QWidget):
                 )
 
                 self.map_bridge.change_color_waypoints("red")
-                print(f"[Info] Waypoints sent successfully. Waypoints: {self.waypoints}")
+                logger.info(f"Waypoints sent successfully. Waypoints: {self.waypoints}")
 
             except RequestException as e:
-                print(f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")
+                logger.error(f"Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")
 
         else:
             try:
@@ -590,7 +589,7 @@ class GroundStationWidget(QWidget):
                 )
 
             except RequestException as e:
-                print(f"[Error] Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")
+                logger.error(f"Failed to send waypoints: {e}\nWaypoints: {self.waypoints}")
 
     @Slot()
     def pull_waypoints(self) -> None:
@@ -604,12 +603,12 @@ class GroundStationWidget(QWidget):
 
             if remote_waypoints:
                 if len(remote_waypoints) > 10:
-                    print(
-                        f"[Info] Pulled {len(remote_waypoints)} waypoints from server. "
+                    logger.info(
+                        f"Pulled {len(remote_waypoints)} waypoints from server. "
                         f"Displaying first 10 waypoints: {remote_waypoints[:10]}"
                     )
                 else:
-                    print(f"[Info] Fetched waypoints from server: {remote_waypoints}")
+                    logger.info(f"Fetched waypoints from server: {remote_waypoints}")
 
                 existing_waypoints = self.waypoints.copy()
                 self.map_bridge.clear_waypoints()
@@ -623,13 +622,13 @@ class GroundStationWidget(QWidget):
                     self.map_bridge.add_waypoint(waypoint[0], waypoint[1])
 
             else:
-                print("[Warning] No waypoints found on the server.")
+                logger.warning("No waypoints found on the server.")
 
             self.can_pull_waypoints = False
             self.pull_waypoints_button.setDisabled(not self.can_pull_waypoints)
 
         except RequestException as e:
-            print(f"[Error] Failed to pull waypoints. Exception: {e}")
+            logger.error(f"Failed to pull waypoints. Exception: {e}")
 
     @Slot()
     def clear_waypoints(self) -> None:
@@ -649,7 +648,7 @@ class GroundStationWidget(QWidget):
             longitude = self.test_waypoint_rng.uniform(-180, 180)
             self.map_bridge.add_waypoint(latitude, longitude)
 
-        print("[Info] Added 500 test waypoints to the map, LOL.")
+        logger.info("Added 500 test waypoints to the map, LOL.")
 
     @Slot()
     def add_manual_waypoint(self) -> None:
@@ -666,7 +665,7 @@ class GroundStationWidget(QWidget):
             return
 
         self.map_bridge.add_waypoint(latitude, longitude)
-        print(f"[Info] Manually added waypoint at ({latitude}, {longitude}).")
+        logger.info(f"Manually added waypoint at ({latitude}, {longitude}).")
 
     @Slot()
     def start_data_logging(self) -> None:
@@ -683,7 +682,7 @@ class GroundStationWidget(QWidget):
         self.start_data_logging_button.setDisabled(True)
         self.stop_data_logging_button.setDisabled(False)
 
-        print("[Info] Data logging started.")
+        logger.info("Data logging started.")
 
     @Slot()
     def stop_data_logging(self) -> None:
@@ -707,8 +706,8 @@ class GroundStationWidget(QWidget):
 
             compressed_file_size = os.path.getsize(compressed_file_path) / (1024 * 1024)
             file_size_percent_difference = (file_size - compressed_file_size) / file_size * 100
-            print(
-                f"[Info] Data logging stopped. Log file compressed to {compressed_file_path}, "
+            logger.info(
+                f"Data logging stopped. Log file compressed to {compressed_file_path}, "
                 f"reduced file size by {file_size_percent_difference:.2f}%."
             )
 
@@ -732,7 +731,7 @@ class GroundStationWidget(QWidget):
             self.text_edit_window.show()
 
         except Exception as e:
-            print(f"[Error] Failed to open buoy data edit window: {e}")
+            logger.error(f"Failed to open buoy data edit window: {e}")
 
     @Slot(str)
     def edit_buoy_data_callback(self, text: str) -> None:
@@ -755,7 +754,7 @@ class GroundStationWidget(QWidget):
                 self.update_buoy_table()
 
         except Exception as e:
-            print(f"[Error] Failed to edit buoy data: {e}")
+            logger.error(f"Failed to edit buoy data: {e}")
 
     def update_buoy_table(self) -> None:
         """Update the buoy table with the latest buoy data."""
@@ -792,10 +791,10 @@ class GroundStationWidget(QWidget):
             file_path = Path(constants.BUOY_DATA_DIR / f"buoy_data_{time.time_ns()}.json")
             with open(file_path, mode="w", encoding="utf-8") as f:
                 json.dump(self.buoys, f, indent=4)
-            print(f"[Info] Buoy data saved to {file_path}")
+            logger.info(f"Buoy data saved to {file_path}")
 
         except Exception as e:
-            print(f"[Error] Failed to save buoy data: {e}")
+            logger.error(f"Failed to save buoy data: {e}")
 
     @Slot()
     def load_buoy_data(self) -> None:
@@ -809,7 +808,7 @@ class GroundStationWidget(QWidget):
         try:
             buoy_files = os.listdir(constants.BUOY_DATA_DIR)
             if not buoy_files:
-                print("[Warning] No buoy data files found.")
+                logger.warning("No buoy data files found.")
 
             else:
                 chosen_file = QFileDialog.getOpenFileName(
@@ -827,10 +826,10 @@ class GroundStationWidget(QWidget):
                     self.buoys = json.load(f)
 
                 self.update_buoy_table()
-                print(f"[Info] Buoy data loaded from {chosen_file_path}")
+                logger.info(f"Buoy data loaded from {chosen_file_path}")
 
         except Exception as e:
-            print(f"[Error] Failed to load buoy data: {e}")
+            logger.error(f"Failed to load buoy data: {e}")
 
     @Slot()
     def zoom_to_boat(self) -> None:
@@ -887,12 +886,12 @@ class GroundStationWidget(QWidget):
                     if lat is not None and lon is not None:
                         self.map_bridge.focus_map_on_marker(lat, lon)
                     else:
-                        print(f"[Warning] Waypoint not found for coordinates ({approx_lat}, {approx_lon})")
+                        logger.warning(f"Waypoint not found for coordinates ({approx_lat}, {approx_lon})")
 
                 except (ValueError, TypeError) as e:
-                    print(f"[Error] Invalid waypoint data: {e}")
+                    logger.error(f"Invalid waypoint data: {e}")
             else:
-                print("[Warning] No waypoints available to zoom to.")
+                logger.warning("No waypoints available to zoom to.")
 
         elif table == "buoys":
             if self.right_tab2_table.rowCount() > 0:
@@ -914,15 +913,15 @@ class GroundStationWidget(QWidget):
                     if lat is not None and lon is not None:
                         self.map_bridge.focus_map_on_marker(lat, lon)
                     else:
-                        print(f"[Warning] Buoy not found for coordinates ({approx_lat}, {approx_lon})")
+                        logger.warning(f"Buoy not found for coordinates ({approx_lat}, {approx_lon})")
 
                 except (ValueError, TypeError) as e:
-                    print(f"[Error] Invalid buoy data: {e}")
+                    logger.error(f"Invalid buoy data: {e}")
             else:
-                print("[Warning] No buoys available to zoom to.")
+                logger.warning("No buoys available to zoom to.")
 
         else:
-            print(f"[Error] Invalid table specified: {table}. Use 'waypoints' or 'buoys'.")
+            logger.error(f"Invalid table specified: {table}. Use 'waypoints' or 'buoys'.")
 
     # endregion button functions
 
@@ -934,7 +933,7 @@ class GroundStationWidget(QWidget):
 
         if not constants.SM.read_dict("map_features")["waypoints_popup"]["status"]:
             self.remember_waypoints_pull_service_status = False
-            print("[Info] Waypoint checker disabled, not checking for waypoint updates.")
+            logger.info("Waypoint checker disabled, not checking for waypoint updates.")
             return
 
         if not self.remote_waypoint_handler.isRunning():
@@ -957,7 +956,7 @@ class GroundStationWidget(QWidget):
         request_result
             A tuple containing:
             - a list of waypoints fetched from the local server.
-            - a ``TelemetryStatus`` enum value indicating the status of the request.
+            - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         waypoints, _ = request_result
@@ -1012,7 +1011,7 @@ class GroundStationWidget(QWidget):
         request_result
             A tuple containing:
             - a list of waypoints fetched from the telemetry server.
-            - a ``TelemetryStatus`` enum value indicating the status of the request.
+            - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         waypoints, _ = request_result
@@ -1045,20 +1044,20 @@ class GroundStationWidget(QWidget):
                 for waypoint in not_uploaded_waypoints:
                     self.map_bridge.add_waypoint(waypoint[0], waypoint[1])
 
-                print("[Info] Local waypoints updated from telemetry server.")
+                logger.info("Local waypoints updated from telemetry server.")
 
             else:
                 self.remember_waypoints_pull_service_status = temp_pull_waypoints_reminder
-                print("[Info] Local waypoints not updated.")
+                logger.info("Local waypoints not updated.")
 
             for timer in self.timers:
                 timer.start()
 
         elif not equal_flag and self.remember_waypoints_pull_service_status:
-            print("[Info] Local waypoints do not match telemetry server waypoints, but not prompting user.")
+            logger.info("Local waypoints do not match telemetry server waypoints, but not prompting user.")
 
         else:
-            print("[Info] Local waypoints match telemetry server waypoints, but not prompting user.")
+            logger.info("Local waypoints match telemetry server waypoints, but not prompting user.")
 
     def change_telemetry_server_url(self, telemetry_status: constants.TelemetryStatus) -> None:
         """
@@ -1067,7 +1066,7 @@ class GroundStationWidget(QWidget):
         Parameters
         ----------
         telemetry_status
-            A ``TelemetryStatus`` enum value indicating the status of the request. Possible values are:
+            A :class:`TelemetryStatus` enum value indicating the status of the request. Possible values are:
             - ``SUCCESS`` indicates that the telemetry server is reachable and waypoints were fetched successfully.
             - ``FAILURE`` indicates that the telemetry server is not reachable and waypoints could not be fetched.
         """
@@ -1096,8 +1095,8 @@ class GroundStationWidget(QWidget):
                 ).get_input()
 
                 if new_url:
-                    print(
-                        f"[Info] Changed telemetry server URL to {new_url}, was {constants.SM.read_str('telemetry_server_url')}."
+                    logger.info(
+                        f"Changed telemetry server URL to {new_url}, was {constants.SM.read_str('telemetry_server_url')}."
                     )
 
                     constants.SM.write("telemetry_server_url", new_url)
@@ -1110,14 +1109,14 @@ class GroundStationWidget(QWidget):
                     constants.SM.write("telemetry_server_endpoints", tmp_dict)
 
                 else:
-                    print("[Warning] No new telemetry server URL provided, keeping old one.")
+                    logger.warning("No new telemetry server URL provided, keeping old one.")
 
             elif response == QMessageBox.StandardButton.No:
                 self.remember_telemetry_server_url_status = temp_remember_telemetry_server_url_status
-                print("[Info] Telemetry server URL not changed.")
+                logger.info("Telemetry server URL not changed.")
 
             else:
-                print(f"[Error] Received unexpected response from user dialog. Got: {response}, expected Yes or No.")
+                logger.error(f"Received unexpected response from user dialog. Got: {response}, expected Yes or No.")
 
             for timer in self.timers:
                 timer.start()
@@ -1131,7 +1130,7 @@ class GroundStationWidget(QWidget):
         request_result
             A tuple containing:
             - a dictionary with the latest boat telemetry data.
-            - a ``TelemetryStatus`` enum value indicating the status of the request.
+            - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         boat_data, connection_status = request_result
@@ -1141,10 +1140,8 @@ class GroundStationWidget(QWidget):
             """
             Applies some formatting rules that multiple keys have in common.
 
-            <ol>
-            <li> If the value is None, displays "N/A".
-            <li> Otherwise, the value is rounded to 1 decimal places.
-            </ol>
+            If the value is None, displays "N/A".
+            Otherwise, the value is rounded to 1 decimal places.
 
             Examples
             --------
@@ -1329,7 +1326,7 @@ class GroundStationWidget(QWidget):
                 return
 
             elif np.isclose(speed, 0.0, rtol=1e-5, atol=1e-8):
-                print("[Warning] `speed` is very close to 0, defaulting to 1e-3 to avoid division by zero.")
+                logger.warning("`speed` is very close to 0, defaulting to 1e-3 to avoid division by zero.")
                 speed = 1e-3
 
             vx: float = self.boat_data.get("velocity_x", -69.420)

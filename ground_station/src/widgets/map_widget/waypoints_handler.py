@@ -5,17 +5,18 @@ from threading import Lock
 _WAYPOINTS_LOCK = Lock()
 _WAYPOINTS: list[tuple[float, float]] = []
 
+
 class WaypointsHandler(BaseHTTPRequestHandler):
     """
     HTTP server for receiving waypoints created by clicking on the map.
 
     The server runs in a separate thread with its own lifecycle, independent of the main PyQt event loop.
     It listens on ``constants.MAP_SERVER_PORT`` (3002). It handles CORS GET/POST requests to
-    ``/waypoints``, storing the waypoints in a global list protected by a ``threading.Lock``.
+    ``/waypoints``, storing the waypoints in a global list protected by a :class:`threading.Lock`.
 
     Inherits
     --------
-    ``BaseHTTPRequestHandler``
+    :class:`BaseHTTPRequestHandler`
     """
 
     server_version = "WaypointsHTTP/1.0"
@@ -92,6 +93,6 @@ class WaypointsHandler(BaseHTTPRequestHandler):
         self._set_headers(200)
 
     def log_message(self, format_string: str, *args: object) -> None:
-        """Suppress default request logging."""
+        """Suppress default per-request logging."""
 
         pass

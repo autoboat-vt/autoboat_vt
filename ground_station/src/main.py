@@ -12,6 +12,7 @@ from qtpy.QtWebEngineWidgets import QWebEnginePage
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 
 from utils import constants, misc
+from utils.logger import get_logger
 from widgets import (
     AutopilotConfigWidget,
     CameraWidget,
@@ -23,6 +24,8 @@ from widgets import (
 )
 from widgets.map_widget import server as map_server
 
+logger = get_logger(__name__)
+
 
 class MainWindow(QMainWindow):
     """Main window for the ground station application."""
@@ -33,12 +36,16 @@ class MainWindow(QMainWindow):
         mimetypes.add_type("image/png", ".png")
         mimetypes.add_type("text/plain", ".txt")
 
-        def handler(*args: tuple, **kwargs: dict) -> http.server.SimpleHTTPRequestHandler:
-            return http.server.SimpleHTTPRequestHandler(*args, directory=constants.ASSETS_DIR.as_posix(), **kwargs)
+        class _QuietHandler(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, format_string: str, *args: object) -> None:
+                pass
+
+        def handler(*args: tuple, **kwargs: dict) -> _QuietHandler:
+            return _QuietHandler(*args, directory=constants.ASSETS_DIR.as_posix(), **kwargs)
 
         socketserver.TCPServer.allow_reuse_address = True
         self.asset_server = socketserver.TCPServer(("", constants.ASSET_SERVER_PORT), handler)
-        print(f"[Info] Serving HTTP assets on port {constants.ASSET_SERVER_PORT}...")
+        logger.info(f"Serving HTTP assets on port {constants.ASSET_SERVER_PORT}...")
         self.asset_server.serve_forever()
 
     def start_map_server(self) -> None:
@@ -47,7 +54,7 @@ class MainWindow(QMainWindow):
         try:
             map_server.run()
         except OSError as exc:
-            print(f"[Error] Failed to start map server on port {constants.MAP_SERVER_PORT}: {exc}")
+            logger.error(f"Failed to start map server on port {constants.MAP_SERVER_PORT}: {exc}")
 
     def __init__(self) -> None:
         super().__init__()
@@ -64,7 +71,7 @@ class MainWindow(QMainWindow):
 
         try:
             self.console_widget = ConsoleOutputWidget()
-            print(f"[Info] Starting the {self.windowTitle()}...")
+            logger.info(f"Starting the {self.windowTitle()}...")
             self.instance_handler = InstanceHandler()
             self.main_widget.addTab(UserGuideWidget(), "Documentation")
             self.main_widget.addTab(self.console_widget, "Console Output")
@@ -80,7 +87,7 @@ class MainWindow(QMainWindow):
                 self.check_timer.start()
 
         except Exception as e:
-            print(f"[Error] Failed to initialize main window: {e}")
+            logger.error(f"Failed to initialize main window: {e}")
 
     def load_main_tabs(self) -> None:
         """Load the main application tabs after an instance connection is detected."""
@@ -98,10 +105,10 @@ class MainWindow(QMainWindow):
 
             self.main_widget.addTab(CameraWidget(), "Camera Feed")
             self.main_widget.setCurrentIndex(3)
-            print("[Info] Main application tabs loaded.")
+            logger.info("Main application tabs loaded.")
 
         except Exception as e:
-            print(f"[Error] Failed to load main tabs: {e}")
+            logger.error(f"Failed to load main tabs: {e}")
 
     def check_instance_connection(self) -> None:
         """Check if an instance connection has been established."""
@@ -113,45 +120,38 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event: QCloseEvent) -> NoReturn:
         """Handle the window close event."""
 
-        print("[Info] Shutting down background threads...")
+        logger.info("Shutting down background threads...")
         for thread in self.findChildren(QThread):
             thread.requestInterruption()
             thread.wait()
 
-        print("[Info] Shutting down asset server...")
+        logger.info("Shutting down asset server...")
         if hasattr(self, "asset_server"):
             self.asset_server.shutdown()
 
-        print("[Info] Releasing map page...")
+        logger.info("Releasing map page...")
         if hasattr(constants, "MAP_PAGE") and isinstance(constants.MAP_PAGE, QWebEnginePage):
             constants.MAP_PAGE.deleteLater()
 
-        print("[Info] Closing the application...")
+        logger.info("Closing the application...")
         event.accept()
 
 
 if __name__ == "__main__":
-    # Suppress Qt Multimedia ffmpeg-backend log spam (e.g. "FFmpeg log: ...",
-    # "mp3float: Could not update timestamps...") and CoreAudio channel warnings
-    # ("audio device has unrecognized channel...") that pollute the console.
-    _SPAM_PREFIXES = (
-        "FFmpeg log:",
-        "mp3float",
-        "audio device has unrecognized channel",
-    )
-
-    # Captures the previously installed handler (Qt's default message printer
-    # on first install) so non-spam messages can be forwarded to it. Using a
-    # one-element list avoids the discouraged `global` statement while still
-    # allowing the closure to update the reference after install.
     _default_handler: list[Callable[[QtMsgType, Any, str], None] | None] = [None]
 
     def _filter_qt_messages(msg_type: QtMsgType, _context: Any, message: str) -> None:
+        spam_prefixes = (
+            "FFmpeg log:",
+            "mp3float",
+            "audio device has unrecognized channel",
+        )
+
         if msg_type in (QtMsgType.QtDebugMsg, QtMsgType.QtWarningMsg) and any(
-            message.startswith(p) or p in message for p in _SPAM_PREFIXES
+            message.startswith(p) or p in message for p in spam_prefixes
         ):
             return
-        # fall through to the previously installed handler for everything else
+
         handler = _default_handler[0]
         if handler is not None:
             handler(msg_type, _context, message)
@@ -165,13 +165,13 @@ if __name__ == "__main__":
 
     window = MainWindow()
     if constants.APP_LOGO_PATH.is_file():
-        print(f"[Info] Setting application icon from {constants.APP_LOGO_PATH}...")
+        logger.info(f"Setting application icon from {constants.APP_LOGO_PATH}...")
         logo_icon = QIcon(constants.APP_LOGO_PATH.as_posix())
         app.setWindowIcon(logo_icon)
         window.setWindowIcon(logo_icon)
 
     else:
-        print(f"[Warning] Application logo not found at {constants.APP_LOGO_PATH}. Using default icon.")
+        logger.warning(f"Application logo not found at {constants.APP_LOGO_PATH}. Using default icon.")
         app.setWindowIcon(constants.ICONS.boat)
         window.setWindowIcon(constants.ICONS.boat)
 

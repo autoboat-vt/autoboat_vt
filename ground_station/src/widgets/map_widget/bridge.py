@@ -7,14 +7,18 @@ from typing import TYPE_CHECKING, Any
 
 from qtpy.QtCore import QTimer
 
+from utils.logger import get_logger
+
 if TYPE_CHECKING:
     from qtpy.QtWebEngineWidgets import QWebEngineView
 
 __all__ = ["MapBridge"]
 
+logger = get_logger(__name__)
+
+
 def _js_load_guard(js_code: str) -> str:
     """Run JavaScript after the map API has loaded."""
-
     # note that when using curly braces in f-strings, you need to double them to escape them
     return f"""
         function __runAutoboatMapCodeWhenReady() {{
@@ -50,6 +54,7 @@ def _js_load_guard(js_code: str) -> str:
         __runAutoboatMapCodeWhenReady();
     """.strip()
 
+
 def _map_api(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Mark a `MapBridge` method as part of the public API surface.
@@ -64,12 +69,12 @@ def _map_api(func: Callable[..., Any]) -> Callable[..., Any]:
 
 class MapBridge:
     """
-    Typed Python wrapper over the Typescript ``MapInterface``.
+    Typed Python wrapper over the Typescript :class:`MapInterface`.
 
     Parameters
     ----------
     browser
-        The ``QWebEngineView`` hosting the map frontend.
+        The :class:`QWebEngineView` hosting the map frontend.
     """
 
     def __init__(self, browser: QWebEngineView) -> None:
@@ -128,7 +133,7 @@ class MapBridge:
 
     def verify_api(self) -> None:
         """
-        Compare the TS ``MapInterface`` methods against the Python ``@_map_api``
+        Compare the TS :class:`MapInterface` methods against the Python ``@_map_api``
         methods and log any mismatches.
 
         Polls the frontend until ``map.getApi()`` is available (the map global
@@ -152,23 +157,23 @@ class MapBridge:
                 if attempts < max_attempts:
                     QTimer.singleShot(delay_ms, _retry)
                 else:
-                    print("[Warning] map.getApi() never became available; drift check skipped.")
+                    logger.warning("map.getApi() never became available; drift check skipped.")
 
                 return
 
             if not isinstance(result, str):
-                print("[Warning] map.getApi() did not return a JSON string; drift check skipped.")
+                logger.warning("map.getApi() did not return a JSON string; drift check skipped.")
                 return
 
             try:
                 ts_list = json.loads(result)
 
             except (json.JSONDecodeError, TypeError):
-                print("[Warning] map.getApi() returned invalid JSON; drift check skipped.")
+                logger.warning("map.getApi() returned invalid JSON; drift check skipped.")
                 return
 
             if not isinstance(ts_list, list):
-                print("[Warning] map.getApi() did not return a list; drift check skipped.")
+                logger.warning("map.getApi() did not return a list; drift check skipped.")
                 return
 
             ts_sigs: dict[str, list[str]] = {}
@@ -194,17 +199,17 @@ class MapBridge:
                     param_mismatches.append((name, ts_sigs[name], py_sigs[name]))
 
             if not (missing_in_py or missing_in_ts or param_mismatches):
-                print("[Info] MapBridge API matches TS MapInterface.")
+                logger.info("MapBridge API matches TS MapInterface.")
                 return
 
             if missing_in_py:
-                print(f"[Warning] TS methods not in MapBridge: {sorted(missing_in_py)}")
+                logger.warning(f"TS methods not in MapBridge: {sorted(missing_in_py)}")
 
             if missing_in_ts:
-                print(f"[Warning] MapBridge methods not in TS: {sorted(missing_in_ts)}")
+                logger.warning(f"MapBridge methods not in TS: {sorted(missing_in_ts)}")
 
             for name, ts_p, py_p in param_mismatches:
-                print(f"[Warning] Param mismatch for '{name}': TS={ts_p}, PY={py_p}")
+                logger.warning(f"Param mismatch for '{name}': TS={ts_p}, PY={py_p}")
 
         def _retry() -> None:
             self._browser.page().runJavaScript(js_probe, _on_result)

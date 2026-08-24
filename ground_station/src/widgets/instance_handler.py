@@ -28,7 +28,10 @@ from qtpy.QtWidgets import (
 )
 
 from utils import constants, misc
+from utils.logger import get_logger
 from utils.thread_classes import InstanceManagerThreadRouter
+
+logger = get_logger(__name__)
 
 
 class InstanceInfo:
@@ -69,40 +72,40 @@ class InstanceInfo:
 
         except Exception as e:
             raise ValueError("Invalid instance_info data!") from e
-        
+
     def __str__(self) -> str:
-        """Return a string representation of the ``InstanceInfo`` object."""
+        """Return a string representation of the :class:`InstanceInfo` object."""
 
         return (
             f"InstanceInfo(instance_id={self._instance_id}, "
             f"instance_identifier={self._instance_identifier}, user={self._user}, "
             f"created_at={self._created_at}, updated_at={self._updated_at})"
         )
-        
+
     @property
     def instance_id(self) -> int:
         """The unique identifier for the instance."""
 
         return self._instance_id
-    
+
     @property
     def instance_identifier(self) -> str:
         """A human-readable name for the instance."""
 
         return self._instance_identifier
-    
+
     @property
     def user(self) -> str:
         """The user associated with the instance."""
 
         return self._user
-    
+
     @property
     def created_at(self) -> datetime:
         """The timestamp when the instance was created (local timezone)."""
 
         return self._created_at
-    
+
     @property
     def updated_at(self) -> datetime:
         """The timestamp when the instance was last updated (local timezone)."""
@@ -157,7 +160,7 @@ class InstanceHandler(QWidget):
 
     Inherits
     --------
-    ``QWidget``
+    :class:`QWidget`
     """
 
     class SortBy(StrEnum):
@@ -183,7 +186,7 @@ class InstanceHandler(QWidget):
 
         Inherits
         --------
-        ``StrEnum``
+        :class:`StrEnum`
         """
 
         TIME_SINCE_UPDATED = auto()
@@ -282,7 +285,7 @@ class InstanceHandler(QWidget):
         self.timer.timeout.connect(self.update_instances_starter)
         self.instance_fetcher.response.connect(self.update_instances)
         self.timer.start()
-    
+
     @Slot()
     def update_instances_starter(self) -> None:
         """Start the instance fetcher thread."""
@@ -300,13 +303,12 @@ class InstanceHandler(QWidget):
         request_result
             A tuple containing:
             - a list of instance information dictionaries,
-            - a ``TelemetryStatus`` enum value indicating the status of the request.
+            - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         instances, telemetry_status = request_result
 
         self.connection_history.append(telemetry_status)
-
         # double check connection if we just reconnected to avoid false positives
         if (
             self.connection_history[-1] is constants.TelemetryStatus.SUCCESS
@@ -322,31 +324,39 @@ class InstanceHandler(QWidget):
                 ):
                     previous_instance_id = constants.SM.read_int("telemetry_server_instance_id")
                     if previous_instance_id in available_ids:
-                        print("[Info] Found instance with matching ID on server when attempting to reconnect. Checking username to confirm match...")
+                        logger.info(
+                            "Found instance with matching ID on server when attempting to reconnect. "
+                            "Checking username to confirm match..."
+                        )
                         instance_user = constants.REQ_SESSION.get(
-                                            urljoin(
-                                                    misc.get_route("get_user_from_id"),
-                                                    str(previous_instance_id),
-                                                )
-                                            ).json()
-                        
+                            urljoin(
+                                misc.get_route("get_user_from_id"),
+                                str(previous_instance_id),
+                            )
+                        ).json()
+
                         if instance_user == constants.SM.read_str("telemetry_server_instance_user"):
-                            print("[Info] Username also matches, reconnect successful.")
+                            logger.info("Username also matches, reconnect successful.")
                             constants.SM.write("telemetry_server_instance_id", previous_instance_id)
                             constants.SM.write("has_telemetry_server_instance_changed", False)
-                        
+
                         else:
-                            print("[Warning] Username does not match, possible instance ID reuse. Connecting to a new instance instead.")
-                    
+                            logger.warning(
+                                "Username does not match, possible instance ID reuse. Connecting to a new instance instead."
+                            )
+
                     else:
                         new_instance_id: int = random.choice(available_ids)
                         constants.SM.write("telemetry_server_instance_id", new_instance_id)
                         constants.SM.write("has_telemetry_server_instance_changed", True)
-                        print(f"[Info] Cannot find instance with matching ID on server when attempting to reconnect. Connected to instance with ID #{new_instance_id} instead.")
-                
+                        logger.info(
+                            "Cannot find instance with matching ID on server when attempting to reconnect. "
+                            f"Connected to instance with ID #{new_instance_id} instead."
+                        )
+
                 else:
-                    print(
-                        "[Info] Cannot find any instances on server when attempting to reconnect. Creating an instance to connect to."
+                    logger.info(
+                        "Cannot find any instances on server when attempting to reconnect. Creating an instance to connect to."
                     )
                     new_instance_id = constants.REQ_SESSION.get(misc.get_route("create_instance")).json()
                     constants.SM.write("telemetry_server_instance_id", new_instance_id)
@@ -379,8 +389,11 @@ class InstanceHandler(QWidget):
                 if len(not_deprecated_ids) >= 1:
                     constants.SM.write("telemetry_server_instance_id", random.choice(not_deprecated_ids))
                     constants.SM.write("has_telemetry_server_instance_changed", True)
-                    print(
-                        f"[Warning] The instance you were connected to, #{instance_id}, has been removed. You have been connected to instance #{constants.SM.read_int('telemetry_server_instance_id')} instead. Please select a different instance if needed."
+                    logger.warning(
+                        f"The instance you were connected to, #{instance_id}, has been removed. "
+                        f"You have been connected to instance "
+                        f"#{constants.SM.read_int('telemetry_server_instance_id')} instead. "
+                        "Please select a different instance if needed."
                     )
 
                 else:
@@ -388,21 +401,21 @@ class InstanceHandler(QWidget):
                         new_instance_id: int = constants.REQ_SESSION.get(misc.get_route("create_instance")).json()
                         constants.SM.write("telemetry_server_instance_id", new_instance_id)
                         constants.SM.write("has_telemetry_server_instance_changed", True)
-                        print(
-                            f"[Warning] The instance you were connected to, #{instance_id}, has been removed. A new instance has been created with ID #{new_instance_id} and you have been connected to it."
+                        logger.warning(
+                            f"The instance you were connected to, #{instance_id}, has been removed. "
+                            f"A new instance has been created with ID #{new_instance_id} and you have been connected to it."
                         )
 
                     except RequestException as e:
-                        print(f"[Error] Failed to create a new instance, Error: {e}")
+                        logger.error(f"Failed to create a new instance, Error: {e}")
 
         for instance in instances:
             try:
                 instance_info = InstanceInfo(instance)
 
             except ValueError as e:
-                print(f"[Warning] Skipping invalid instance data: {e}")
+                logger.warning(f"Skipping invalid instance data: {e}")
                 continue
-
             # checking if we have seen this instance before
             widget = self.widgets_by_id.get(instance_info.instance_id)
             if widget:
@@ -417,7 +430,7 @@ class InstanceHandler(QWidget):
                     self.widgets_by_id[instance_info.instance_id] = InstanceWidget(instance_info)
 
                 except ValueError as e:
-                    print(f"[Warning] Skipping invalid instance data: {e}")
+                    logger.warning(f"Skipping invalid instance data: {e}")
 
         for widget in sorted(self.widgets_by_id.values(), key=self.sort_key):
             self.instances_layout.addWidget(widget)
@@ -449,13 +462,13 @@ class InstanceHandler(QWidget):
             new_widget = InstanceWidget(instance_info)
             self.instances_layout.addWidget(new_widget)
             self.widgets_by_id[new_instance_id] = new_widget
-            print(f"[Info] Created new instance with ID #{new_instance_id}.")
+            logger.info(f"Created new instance with ID #{new_instance_id}.")
 
         except RequestException as e:
-            print(f"[Error] Failed to create a new instance: {e}")
+            logger.error(f"Failed to create a new instance: {e}")
 
         except ValueError as e:
-            print(f"[Error] Failed to create instance widget: {e}")
+            logger.error(f"Failed to create instance widget: {e}")
 
     @Slot()
     def delete_all_instances(self) -> None:
@@ -472,10 +485,10 @@ class InstanceHandler(QWidget):
                 constants.SM.write("telemetry_server_instance_id", new_instance_id)
                 constants.SM.write("has_telemetry_server_instance_changed", True)
 
-            print(f"[Info] {alert_message}")
+            logger.info(f"{alert_message}")
 
         except RequestException as e:
-            print(f"[Error] Failed to delete all instances: {e}")
+            logger.error(f"Failed to delete all instances: {e}")
 
     @Slot(str)
     def filter_instances(self, text: str) -> None:
@@ -536,11 +549,11 @@ class InstanceHandler(QWidget):
 
             elif self.sort_by == InstanceHandler.SortBy.NO_SORT:
                 self.sort_key: Callable[[InstanceWidget], int] = lambda _: 0
-            
-            print(f"[Info] Instances sorted by {sort_method}.")
+
+            logger.info(f"Instances sorted by {sort_method}.")
 
         except ValueError:
-            print(f"[Error] Unknown sort method selected: {sort_method}. Current sort method remains unchanged.")
+            logger.error(f"Unknown sort method selected: {sort_method}. Current sort method remains unchanged.")
 
     def update_status_label(self) -> None:
         """Update the status label with current connection status and instance count."""
@@ -549,21 +562,21 @@ class InstanceHandler(QWidget):
 
         if constants.SM.read_int("telemetry_server_instance_id") == constants.TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE:
             status_prefix = "NOT CONNECTED - Please select an instance | "
-        
+
         else:
             instance_id = constants.SM.read_int("telemetry_server_instance_id")
             connected_widget = self.widgets_by_id.get(instance_id)
-            
+
             if connected_widget:
                 status_prefix = f"✓ Connected to: {connected_widget.instance_identifier} (ID: {instance_id}) | "
-            
+
             else:
                 status_prefix = f"Could not find connected instance (ID: {instance_id}) - Please select a different instance | "
 
         if self.current_search_text:
             visible_count = sum(widget.isVisible() for widget in self.widgets_by_id.values())
             self.status_label.setText(f"{status_prefix}{visible_count} instances found matching '{self.current_search_text}'")
-        
+
         else:
             self.status_label.setText(f"{status_prefix}{instance_count} instances found")
 
@@ -576,7 +589,7 @@ class InstanceWidget(QFrame):
     Parameters
     ----------
     instance_info
-        An ``InstanceInfo`` object containing the instance's information.
+        An :class:`InstanceInfo` object containing the instance's information.
 
     Attributes
     ----------
@@ -588,7 +601,7 @@ class InstanceWidget(QFrame):
 
     Inherits
     --------
-    ``QFrame``
+    :class:`QFrame`
     """
 
     style_sheet = """
@@ -703,40 +716,36 @@ class InstanceWidget(QFrame):
 
         if new_name not in {"", self.instance_identifier}:
             try:
-                constants.REQ_SESSION.post(
-                    urljoin(misc.get_route("set_instance_name"), f"{self.instance_id}/{new_name}")
-                )
+                constants.REQ_SESSION.post(urljoin(misc.get_route("set_instance_name"), f"{self.instance_id}/{new_name}"))
                 self.instance_identifier = new_name
-                print(f"[Info] Instance #{self.instance_id} name updated to {self.instance_identifier}.")
+                logger.info(f"Instance #{self.instance_id} name updated to {self.instance_identifier}.")
 
             except RequestException as e:
-                print(f"[Error] Failed to update identifier for instance #{self.instance_id}: {e}")
+                logger.error(f"Failed to update identifier for instance #{self.instance_id}: {e}")
 
         else:
             self.instance_name_edit.setText(self.instance_identifier)
-            print("[Info] Reverted instance name change as it was empty or unchanged.")
+            logger.info("Reverted instance name change as it was empty or unchanged.")
 
     @Slot()
     def on_connect_clicked(self) -> None:
         """Handle the connect button click event."""
 
         if self.instance_id == constants.SM.read_int("telemetry_server_instance_id"):
-            print("[Info] Already connected to this instance.")
+            logger.info("Already connected to this instance.")
 
         else:
             try:
-                constants.REQ_SESSION.get(
-                    urljoin(misc.get_route("get_instance_info"), str(self.instance_id))
-                )
+                constants.REQ_SESSION.get(urljoin(misc.get_route("get_instance_info"), str(self.instance_id)))
 
                 constants.SM.write("telemetry_server_instance_id", self.instance_id)
                 constants.SM.write("has_telemetry_server_instance_changed", True)
                 constants.SM.write("start_time", time.time())
-                print(f"[Info] Connected to instance #{self.instance_id} ({self.instance_identifier}).")
+                logger.info(f"Connected to instance #{self.instance_id} ({self.instance_identifier}).")
 
             except RequestException as e:
-                print(f"[Error] Failed to connect to instance #{self.instance_id}: {e}")
-    
+                logger.error(f"Failed to connect to instance #{self.instance_id}: {e}")
+
     @Slot()
     def on_delete_clicked(self) -> None:
         """Handle the delete button click event."""
@@ -747,23 +756,20 @@ class InstanceWidget(QFrame):
                 constants.SM.write("telemetry_server_instance_id", new_instance_id)
                 constants.SM.write("has_telemetry_server_instance_changed", True)
 
-                constants.REQ_SESSION.delete(
-                    urljoin(misc.get_route("delete_instance"), str(self.instance_id))
-                )
+                constants.REQ_SESSION.delete(urljoin(misc.get_route("delete_instance"), str(self.instance_id)))
 
-                print(
-                    f"[Info] Instance #{self.instance_id} deleted and new instance created with ID #{constants.SM.read_int('telemetry_server_instance_id')}."
+                logger.info(
+                    f"Instance #{self.instance_id} deleted and new instance created with ID "
+                    f"#{constants.SM.read_int('telemetry_server_instance_id')}."
                 )
 
             except RequestException as e:
-                print(f"[Error] Failed to delete instance #{self.instance_id}: {e}")
+                logger.error(f"Failed to delete instance #{self.instance_id}: {e}")
 
         else:
             try:
-                constants.REQ_SESSION.delete(
-                    urljoin(misc.get_route("delete_instance"), str(self.instance_id))
-                )
-                print(f"[Info] Instance #{self.instance_id} deleted successfully.")
+                constants.REQ_SESSION.delete(urljoin(misc.get_route("delete_instance"), str(self.instance_id)))
+                logger.info(f"Instance #{self.instance_id} deleted successfully.")
 
             except RequestException as e:
-                print(f"[Error] Failed to delete instance #{self.instance_id}: {e}")
+                logger.error(f"Failed to delete instance #{self.instance_id}: {e}")

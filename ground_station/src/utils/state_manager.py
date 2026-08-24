@@ -15,6 +15,7 @@ __all__ = ["StateManager"]
 
 T = TypeVar("T")
 
+
 @contextlib.contextmanager
 def _locked_file(path: constants.FileType, mode: str, lock_type: int) -> Generator[TextIO, None, None]:
     """
@@ -275,7 +276,7 @@ class StateManager:
         """
 
         return StateManager._read(variable)
-    
+
     @staticmethod
     @_enforce_exact_return_type(list)
     def read_list(variable: str) -> list | None:
@@ -294,7 +295,7 @@ class StateManager:
         """
 
         return StateManager._read(variable)
-    
+
     @staticmethod
     @_enforce_exact_return_type(Any)
     def read_any(variable: str) -> Any | None:

@@ -2,12 +2,12 @@
 Module containing classes for handling background tasks in the Groundstation.
 
 Contains:
-- AutopilotThreadRouter: Class containing ``QThread`` classes dealing with the ``autopilot_parameters`` endpoint.
-- BoatStatusThreadRouter: Class containing ``QThread`` classes dealing with the ``boat_status`` endpoint.
-- InstanceManagerThreadRouter: Class containing ``QThread`` classes dealing with the ``instance_manager`` endpoint.
-- WaypointThreadRouter: Class containing ``QThread`` classes dealing with waypoints,
+- AutopilotThreadRouter: Class containing :class:`QThread` classes dealing with the ``autopilot_parameters`` endpoint.
+- BoatStatusThreadRouter: Class containing :class:`QThread` classes dealing with the ``boat_status`` endpoint.
+- InstanceManagerThreadRouter: Class containing :class:`QThread` classes dealing with the ``instance_manager`` endpoint.
+- WaypointThreadRouter: Class containing :class:`QThread` classes dealing with waypoints,
 both from the ``waypoints`` endpoint and the local server.
-- ImageFetcher: ``QThread`` class for fetching images from the telemetry server.
+- ImageFetcher: :class:`QThread` class for fetching images from the telemetry server.
 """
 
 import pathlib
@@ -18,6 +18,7 @@ from requests import RequestException
 from qtpy.QtCore import QThread, Signal
 
 from utils import constants, misc
+from utils.logger import get_logger
 
 __all__ = [
     "AutopilotThreadRouter",
@@ -27,15 +28,17 @@ __all__ = [
     "WaypointThreadRouter",
 ]
 
+logger = get_logger(__name__)
+
 
 class AutopilotThreadRouter:
     """
-    Class containing ``QThread`` classes dealing with the ``autopilot_parameters`` endpoint.
+    Class containing :class:`QThread` classes dealing with the ``autopilot_parameters`` endpoint.
 
     Subclasses
     ----------
-    - ``ActiveHashFetcherThread`` -> Fetches the currently active autopilot parameter configuration hash.
-    - ``AvailableHashesFetcherThread`` -> Fetches available autopilot parameter configuration hashes.
+    - :class:`ActiveHashFetcherThread` -> Fetches the currently active autopilot parameter configuration hash.
+    - :class:`AvailableHashesFetcherThread` -> Fetches available autopilot parameter configuration hashes.
     """
 
     class ActiveHashFetcherThread(QThread):
@@ -44,14 +47,14 @@ class AutopilotThreadRouter:
 
         Inherits
         -------
-        ``QThread``
+        :class:`QThread`
 
         Attributes
         ----------
         response
             Signal to send the active hash to the main thread. Emits a tuple containing:
                 - a string representing the active hash,
-                - a ``TelemetryStatus`` enum value indicating the status of the request.
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         response = Signal(tuple)
@@ -93,14 +96,14 @@ class AutopilotThreadRouter:
 
         Inherits
         -------
-        ``QThread``
+        :class:`QThread`
 
         Attributes
         ----------
         response
             Signal to send available hashes to the main thread. Emits a tuple containing:
                 - a list of available hashes,
-                - a ``TelemetryStatus`` enum value indicating the status of the request.
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         response = Signal(tuple)
@@ -137,11 +140,11 @@ class AutopilotThreadRouter:
 
 class BoatStatusThreadRouter:
     """
-    Class containing ``QThread`` classes dealing with the ``boat_status`` endpoint.
+    Class containing :class:`QThread` classes dealing with the ``boat_status`` endpoint.
 
     Subclasses
     ----------
-    - ``BoatStatusFetcherThread`` -> Fetches boat status.
+    - :class:`BoatStatusFetcherThread` -> Fetches boat status.
     """
 
     class BoatStatusFetcherThread(QThread):
@@ -150,15 +153,15 @@ class BoatStatusThreadRouter:
 
         Inherits
         -------
-        ``QThread``
+        :class:`QThread`
 
         Attributes
         ----------
         data_fetched
-            A ``Signal`` emitted whenever a new boat status fetch completes.
+            A :class:`Signal` emitted whenever a new boat status fetch completes.
             Emits a tuple containing:
                 - a dictionary representing the boat status,
-                - a ``TelemetryStatus`` enum value indicating the status of the request.
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         data_fetched = Signal(tuple)
@@ -189,11 +192,11 @@ class BoatStatusThreadRouter:
 
 class InstanceManagerThreadRouter:
     """
-    Class containing ``QThread`` classes dealing with the ``instance_manager`` endpoint.
+    Class containing :class:`QThread` classes dealing with the ``instance_manager`` endpoint.
 
     Subclasses
     ----------
-    - ``InstanceFetcherThread`` -> Fetches instances.
+    - :class:`InstanceFetcherThread` -> Fetches instances.
     """
 
     class InstanceFetcherThread(QThread):
@@ -202,14 +205,14 @@ class InstanceManagerThreadRouter:
 
         Inherits
         -------
-        ``QThread``
+        :class:`QThread`
 
         Attributes
         ----------
         response
             Signal to send instances to the main thread. Emits a tuple containing:
                 - a list of dictionaries representing instances,
-                - a ``TelemetryStatus`` enum value indicating the status of the request.
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         response = Signal(tuple)
@@ -246,12 +249,12 @@ class InstanceManagerThreadRouter:
 
 class WaypointThreadRouter:
     """
-    Class containing ``QThread`` classes dealing with waypoints.
+    Class containing :class:`QThread` classes dealing with waypoints.
 
     Subclasses
     ----------
-    - ``RemoteFetcherThread`` -> Fetches waypoints from the telemetry server.
-    - ``LocalFetcherThread`` -> Fetches waypoints from the local server.
+    - :class:`RemoteFetcherThread` -> Fetches waypoints from the telemetry server.
+    - :class:`LocalFetcherThread` -> Fetches waypoints from the local server.
     """
 
     class RemoteFetcherThread(QThread):
@@ -260,14 +263,14 @@ class WaypointThreadRouter:
 
         Inherits
         -------
-        ``QThread``
+        :class:`QThread`
 
         Attributes
         ----------
         response
             Signal to send waypoints to the main thread. Emits a tuple containing:
                 - a list of waypoints, where each waypoint is a list of ``[latitude, longitude]``,
-                - a ``TelemetryStatus`` enum value indicating the status of the request.
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         response = Signal(tuple)
@@ -316,14 +319,14 @@ class WaypointThreadRouter:
 
         Inherits
         -------
-        ``QThread``
+        :class:`QThread`
 
         Attributes
         ----------
         response
             Signal to send waypoints to the main thread. Emits a tuple containing:
                 - a list of waypoints, where each waypoint is a list of ``[latitude, longitude]``,
-                - a ``TelemetryStatus`` enum value indicating the status of the request.
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         response = Signal(tuple)
@@ -367,7 +370,7 @@ class ImageFetcher(QThread):
 
     Inherits
     -------
-    ``QThread``
+    :class:`QThread`
 
     Attributes
     ----------
@@ -408,11 +411,11 @@ class ImageFetcher(QThread):
                 raise ValueError("Image data is None")
 
         except RequestException:
-            print("[Warning] Failed to fetch image. Using cool guy image.")
+            logger.warning("Failed to fetch image. Using cool guy image.")
             base64_encoded_image = pathlib.Path(constants.ASSETS_DIR / "cool-guy-base64.txt").read_text(encoding="utf-8")
 
         except ValueError as e:
-            print(f"[Warning] {e}")
+            logger.warning(f"{e}")
             base64_encoded_image = pathlib.Path(constants.ASSETS_DIR / "cool-guy-base64.txt").read_text(encoding="utf-8")
 
         self.data_fetched.emit(base64_encoded_image)

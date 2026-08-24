@@ -8,11 +8,11 @@ __all__ = ["BaseHighlighter"]
 
 class BaseHighlighter(QSyntaxHighlighter):
     """
-    Base class for sy   ntax highlighters.
+    Base class for syntax highlighters.
 
     Inherits
     --------
-    ``QSyntaxHighlighter``
+    :class:`QSyntaxHighlighter`
     """
 
     def __init__(self, parent: QObject | None = None) -> None:
@@ -21,7 +21,7 @@ class BaseHighlighter(QSyntaxHighlighter):
     @staticmethod
     def create_format(color: QColor, weight: QFont.Weight = QFont.Weight.Normal) -> QTextCharFormat:
         """
-        Create a ``QTextCharFormat`` with the specified color and font weight.
+        Create a :class:`QTextCharFormat` with the specified color and font weight.
 
         Parameters
         ----------
@@ -32,7 +32,7 @@ class BaseHighlighter(QSyntaxHighlighter):
 
         Returns
         -------
-        ``QTextCharFormat``
+        :class:`QTextCharFormat`
             A text format with the specified color and font weight.
         """
 

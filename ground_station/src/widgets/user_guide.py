@@ -11,7 +11,7 @@ class UserGuideWidget(QWidget):
 
     Inherits
     -------
-    ``QWidget``
+    :class:`QWidget`
     """
 
     def __init__(self) -> None:

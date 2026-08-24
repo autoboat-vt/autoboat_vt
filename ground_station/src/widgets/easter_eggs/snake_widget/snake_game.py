@@ -106,7 +106,6 @@ class SnakeBoard(QFrame):
 
     def set_direction(self, d_row: int, d_col: int) -> None:
         """Queue a new direction (ignored if it would reverse the snake)."""
-
         # forbid reversing directly into yourself
         if (d_row, d_col) == (-self._direction[0], -self._direction[1]):
             return

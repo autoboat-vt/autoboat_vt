@@ -21,7 +21,10 @@ from qtpy.QtWebEngineWidgets import QWebEnginePage
 
 from utils import misc
 from utils.data_logger import DataLogger
+from utils.logger import get_logger
 from utils.state_manager import StateManager
+
+logger = get_logger(__name__)
 
 
 class StrictMatchEnums:
@@ -32,9 +35,9 @@ class StrictMatchEnums:
 
     Contains
     --------
-    - ``SailboatControlModes``
-    - ``SailboatAutopilotStates``
-    - ``MotorboatControlModes``
+    - :class:`SailboatControlModes`
+    - :class:`SailboatAutopilotStates`
+    - :class:`MotorboatControlModes`
     """
 
     class SailboatControlModes(Enum):
@@ -86,13 +89,13 @@ class TelemetryStatus(StrEnum):
 
     Attributes
     ----------
-    - ``SUCCESS``: Indicates that telemetry data was fetched successfully.
-    - ``FAILURE``: Indicates that telemetry data fetching failed.
-    - ``WRONG_FORMAT``: Indicates that the fetched telemetry data was in an incorrect format.
+    - :class:`SUCCESS`: Indicates that telemetry data was fetched successfully.
+    - :class:`FAILURE`: Indicates that telemetry data fetching failed.
+    - :class:`WRONG_FORMAT`: Indicates that the fetched telemetry data was in an incorrect format.
 
     Inherits
     --------
-    ``StrEnum``
+    :class:`StrEnum`
     """
 
     SUCCESS = auto()
@@ -349,7 +352,6 @@ try:
 
     stack = inspect.stack()
     active_flag: bool = stack[0].filename == Path(UTILS_DIR / "constants.py").as_posix()
-
     # will not break if moved outside of if block, but prevents redundant checks
     if active_flag:
         if "assets" not in os.listdir(GIT_KEEP_DIR):
@@ -359,29 +361,33 @@ try:
             raise Exception("Defaults/examples directory not found, please redownload the directory from GitHub.")
 
         if "autopilot_params" not in os.listdir(GIT_IGNORE_DIR):
-            print("[Info] Creating autopilot parameters directory...")
+            logger.info("Creating autopilot parameters directory...")
             os.makedirs(GIT_IGNORE_DIR / "autopilot_params")
 
         if "buoy_data" not in os.listdir(GIT_IGNORE_DIR):
-            print("[Info] Creating buoy data directory...")
+            logger.info("Creating buoy data directory...")
             os.makedirs(GIT_IGNORE_DIR / "buoy_data")
 
         if "keybinds" not in os.listdir(GIT_IGNORE_DIR):
-            print("[Info] Creating keybinds directory...")
+            logger.info("Creating keybinds directory...")
             os.makedirs(GIT_IGNORE_DIR / "keybinds")
 
         if "data_logs" not in os.listdir(GIT_IGNORE_DIR):
-            print("[Info] Creating data logs directory...")
+            logger.info("Creating data logs directory...")
             os.makedirs(GIT_IGNORE_DIR / "data_logs")
 
+        if "logs" not in os.listdir(GIT_IGNORE_DIR):
+            logger.info("Creating application logs directory...")
+            os.makedirs(GIT_IGNORE_DIR / "logs")
+
         if not APP_STATE_PATH.exists():
-            print("[Info] Creating app state file...")
+            logger.info("Creating app state file...")
             APP_STATE_PATH.touch()
             with open(APP_STATE_PATH, "w") as f:
                 json.dump({}, f, indent=4)
 
         if json.load(open(file=APP_STATE_PATH, mode="r", encoding="utf-8")) == {}:
-            print("[Info] Initializing app state file...")
+            logger.info("Initializing app state file...")
             with open(APP_STATE_PATH, "w", encoding="utf-8") as f:
                 json.dump(STATE_FILE_CONTENTS, f, indent=4)
 
@@ -392,6 +398,9 @@ try:
 
     DATA_LOGS_DIR = Path(GIT_IGNORE_DIR / "data_logs")
     os.makedirs(DATA_LOGS_DIR, exist_ok=True)
+
+    LOGS_DIR = Path(GIT_IGNORE_DIR / "logs")
+    os.makedirs(LOGS_DIR, exist_ok=True)
 
     DL = DataLogger()
 

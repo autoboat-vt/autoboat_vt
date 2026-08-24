@@ -27,6 +27,43 @@ ruff format <changed_files>
 
 `--symlink-install` colcon builds mean Python edits take effect on the next node launch **without a rebuild**. C++ changes always require `build` (or `build_python` to skip `*_cpp` packages).
 
+## Logging (ground station)
+
+All ground station Python code uses the stdlib `logging` module — **never `print()`**. The logger infrastructure lives in `ground_station/src/utils/logger.py`:
+
+```python
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+logger.info("Ready to send waypoints")
+logger.warning(f"Instance #{instance_id} not found on server")
+logger.error("Failed to fetch autopilot parameters", exc_info=True)
+```
+
+**How it works:**
+- `get_logger(__name__)` returns a child of the `"ground_station"` root logger. Children inherit the handlers attached to the root, so every module just calls `get_logger(__name__)` and logs flow to the console widget + file.
+- A `QtConsoleHandler` (custom `logging.Handler` subclass) emits records via a Qt signal to `ConsoleOutputWidget.append_text`, which is connected in `ConsoleOutputWidget.__init__` via `attach_console_widget(self.append_text)`.
+- A `RotatingFileHandler` writes to `constants.LOGS_DIR / "ground_station.log"` (5 MB, 5 backups). The file handler is attached lazily in `attach_console_widget` (deferred `from utils import constants` to break a circular import — `constants` imports `get_logger`).
+- On `attach_console_widget`, the stdout `StreamHandler` installed at import time is **removed** — otherwise records would double-display (once via the Qt handler, once via stdout captured by `EmittingStream`).
+- The formatter (`_PrefixFormatter`) emits `[Info]`/`[Warning]`/`[Error]` prefixes so the existing `ConsoleHighlighter` regex in `console_output.py` keeps working without changes.
+
+**Conversion pattern** (from old `print()` calls):
+
+```python
+# Before:
+print("[Info] Connected to instance")
+print("[Warning] Parameter hash mismatch")
+print("[Error] Failed to fetch parameters")
+
+# After:
+logger.info("Connected to instance")
+logger.warning("Parameter hash mismatch")
+logger.error("Failed to fetch parameters")
+```
+
+Strip the `[Info]`/`[Warning]`/`[Error]` prefix from the message — the formatter adds it back. `ruff.toml` ignores `T201` (print) globally, so the `print()` ban is by convention, not linter-enforced; always use `logger.*` in new code. ROS nodes (`ros_packages/`) use `rclpy` loggers (`node.get_logger().info(...)`), not this module.
+
 ## Module skeleton (canonical)
 
 ```python
@@ -100,6 +137,31 @@ class PublicClass:
 ## Numpy docstring sections (supported)
 
 `Parameters`, `Returns`, `Yields`, `Raises`, `Notes`, `Examples`, `See Also`, `Inherits`, `References`, `Contains`, `Attributes`. Use `Inherits` when a subclass overrides but keeps the same contract as the parent.
+
+## Docstring cross-references (Sphinx roles)
+
+In numpy-style docstrings, reference classes (and enums, which ARE classes) with the Sphinx `:class:` role instead of plain double backticks. This makes them hyperlinkable in generated docs and visually distinguishes class references from inline code/literals.
+
+```python
+# Correct - class reference:
+"""Forwards records to the :class:`QtConsoleHandler`."""
+
+# Correct - enum class reference:
+"""A :class:`TelemetryStatus` enum value indicating request status."""
+
+# Correct - module attribute / instance / literal (NOT a class):
+"""Writes to ``constants.LOGS_DIR`` (a :class:`pathlib.Path`)."""
+"""Returns ``True`` if the event was consumed."""
+
+# Wrong - class reference using plain backticks:
+"""Forwards records to the ``QtConsoleHandler``."""
+```
+
+**Rules:**
+- Use `:class:` for classes and enums (e.g. `:class:`QtConsoleHandler``, `:class:`SailboatControlModes``, `:class:`logging.Handler``, `:class:`threading.Lock``).
+- Use `:class:` for fully-qualified class paths (e.g. `:class:`logging.handlers.RotatingFileHandler``).
+- Keep plain `` `` `` double backticks for: module attributes (`constants.LOGS_DIR`), instances (`constants.SM`), function/method names (`attach_console_widget`), literals (`True`/`False`/`None`), enum *values* (`TelemetryStatus.SUCCESS`), and inline code snippets.
+- Module references use `:mod:` (e.g. `:mod:`utils.logger``).
 
 ## ROS 2 node patterns
 
@@ -232,7 +294,7 @@ self.map_bridge.set_keybinds({"focus_boat": "F"})
 - One `@_map_api`-decorated Python method per TS `MapInterface` method. All fire-and-forget (`-> None`).
 - For batched multi-statement JS, call individual `MapBridge` methods in sequence — each is queued independently by `js_load_guard`.
 - **Adding a new TS method:** (1) add it to `MapInterface` in `main.ts` (auto-discovered by `getApi()`), (2) add the matching `@_map_api` method to `MapBridge`.
-- **Drift detection:** `MapInterface.getApi()` (TS) returns `[{name, params}]` via prototype introspection; `MapBridge.verify_api()` (Python) queries it post-load and logs mismatches via `print` (does not raise).
+- **Drift detection:** `MapInterface.getApi()` (TS) returns `[{name, params}]` via prototype introspection; `MapBridge.verify_api()` (Python) queries it post-load and logs mismatches via `logger.warning` (does not raise).
 
 ### `js_load_guard` — low-level JS wrapper (used by `MapBridge`)
 
@@ -311,6 +373,7 @@ Representative endpoints (URL filled by `get_route`):
 
 - Editing files under `build/`, `install/`, `log/`, `__pycache__/`, `*.egg-info/` — colcon build artifacts.
 - Importing `PyQt5`/`PyQt6`/`PySide2`/`PySide6` directly — always go through `qtpy`.
+- Using `print()` in ground station code — use `get_logger(__name__)` and `logger.info`/`logger.warning`/`logger.error` instead (see "Logging" section above). `ruff.toml` ignores `T201` globally, so the ban is by convention.
 - Calling `browser.page().runJavaScript(...)` directly from widget code — go through `MapBridge` (`widgets/map_widget/bridge.py`), which wraps every call in `js_load_guard` and serializes args via `json.dumps`. Add a new `@_map_api` method to `MapBridge` for each new TS `MapInterface` method.
 - Reading a StateManager key without first adding it to `constants.STATE_FILE_CONTENTS`.
 - Starting a `QThread` directly from a timer callback without the `isRunning()` gate.

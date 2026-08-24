@@ -12,13 +12,15 @@ Modules
 - ``constants``: Contains constant values used throughout the application.
 - ``misc``: Contains miscellaneous utility functions.
 - ``thread_classes``: Contains classes for managing threads in the application.
+- ``logger``: Configures the standard library ``logging`` package with a Qt
+    console handler (feeds :class:`ConsoleOutputWidget`) and a rotating file handler.
 
 Classes
 -------
-- ``TextEditWindow``: A simple text edit window that emits the entered text when closed.
-- ``StateManager``: A class for managing shared application state stored in a JSON file.
-- ``TextEditWindow``: A simple text edit window that emits the entered text when closed.
-- ``DataLogger``: A class for logging data entries to a file.
+- :class:`TextEditWindow`: A simple text edit window that emits the entered text when closed.
+- :class:`StateManager`: A class for managing shared application state stored in a JSON file.
+- :class:`TextEditWindow`: A simple text edit window that emits the entered text when closed.
+- :class:`DataLogger`: A class for logging data entries to a file.
 """
 
 __all__ = [
@@ -27,13 +29,14 @@ __all__ = [
     "TextEditWindow",
     "constants",
     "dialog_templates",
+    "logger",
     "misc",
     "syntax_highlighters",
     "thread_classes",
     "widget_size_controllers",
 ]
 
-from . import constants, dialog_templates, misc, syntax_highlighters, thread_classes, widget_size_controllers
+from . import constants, dialog_templates, logger, misc, syntax_highlighters, thread_classes, widget_size_controllers
 from .data_logger import DataLogger
 from .popup_edit import TextEditWindow
 from .state_manager import StateManager

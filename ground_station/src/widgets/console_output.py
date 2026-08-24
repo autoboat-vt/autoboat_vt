@@ -8,6 +8,7 @@ from qtpy.QtGui import QCloseEvent, QTextCursor
 from qtpy.QtWidgets import QTextEdit, QVBoxLayout, QWidget
 
 from utils import syntax_highlighters
+from utils.logger import attach_console_widget
 
 
 class EmittingStream(QObject):
@@ -16,11 +17,11 @@ class EmittingStream(QObject):
 
     Inherits
     --------
-    ``QObject``
+    :class:`QObject`
 
     Attributes
     ----------
-    text_written: ``Signal``
+    text_written: :class:`Signal`
         Signal emitted when text is written to the stream.
 
     Notes
@@ -65,7 +66,7 @@ class ConsoleOutputWidget(QWidget):
 
     Inherits
     --------
-    ``QWidget``
+    :class:`QWidget`
     """
 
     def __init__(self) -> None:
@@ -91,6 +92,11 @@ class ConsoleOutputWidget(QWidget):
 
         self.stdout_stream.text_written.connect(self.append_text)
         self.stderr_stream.text_written.connect(self.append_text)
+        # Route all ``logging`` module output through this widget via the
+        # QtConsoleHandler signal.  This is the primary path for log records;
+        # the stdout/stderr capture above remains for non-logging output
+        # (Qt framework messages, third-party libs that still ``print``).
+        attach_console_widget(self.append_text)
 
     @Slot(str)
     def append_text(self, text: str) -> None:

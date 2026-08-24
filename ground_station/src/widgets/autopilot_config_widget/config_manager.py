@@ -25,6 +25,9 @@ from qtpy.QtWidgets import (
 )
 
 from utils import TextEditWindow, constants, misc, syntax_highlighters, thread_classes
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class ConfigInfo:
@@ -56,30 +59,30 @@ class ConfigInfo:
 
         except Exception as e:
             raise ValueError("Invalid hash info!") from e
-    
+
     def __str__(self) -> str:
-        """Return a string representation of the ``ConfigInfo`` object."""
+        """Return a string representation of the :class:`ConfigInfo` object."""
 
         return f"ConfigInfo(hash_value={self._hash_value}, description={self._description}, created_at={self._created_at})"
-    
+
     @property
     def hash_value(self) -> str:
         """Get the hash value of the parameter configuration."""
-        
+
         return self._hash_value
-    
+
     @property
     def description(self) -> str:
         """Get the description of the parameter configuration."""
-        
+
         return self._description
-    
+
     @property
     def created_at(self) -> datetime:
         """Get the creation timestamp of the parameter configuration."""
-        
+
         return self._created_at
-    
+
     @staticmethod
     def _utc_to_local(utc_dt: datetime) -> datetime:
         """
@@ -100,14 +103,15 @@ class ConfigInfo:
             utc_dt = utc_dt.replace(tzinfo=timezone.utc)
 
         return utc_dt.astimezone()
-    
+
+
 class AutopilotConfigManager(QWidget):
     """
     A widget to manage and display autopilot parameter configuration hashes.
 
     Inherits
     -------
-    ``QWidget``
+    :class:`QWidget`
     """
 
     class SortBy(StrEnum):
@@ -227,12 +231,10 @@ class AutopilotConfigManager(QWidget):
     def on_download_all_clicked(self) -> None:
         """Handle the download all configurations button click event."""
 
-        print("[Info] Downloading all configurations from the telemetry server...")
+        logger.info("Downloading all configurations from the telemetry server...")
 
         already_downloaded_hashes = [
-            config_path.stem
-            for config_path in constants.AUTOPILOT_PARAMS_DIR.iterdir()
-            if config_path.is_file()
+            config_path.stem for config_path in constants.AUTOPILOT_PARAMS_DIR.iterdir() if config_path.is_file()
         ]
         for hash_id in self.widgets_by_hash:
             if hash_id not in already_downloaded_hashes:
@@ -264,7 +266,7 @@ class AutopilotConfigManager(QWidget):
         request_result
             A tuple containing:
             - A list of dictionaries with information about each available configuration hash.
-            - a ``TelemetryStatus`` enum value indicating the status of the request.
+            - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         available_hashes, status = request_result
@@ -287,9 +289,9 @@ class AutopilotConfigManager(QWidget):
                     hash_info = ConfigInfo(hash_config)
 
                 except ValueError as e:
-                    print(f"[Warning] Invalid hash info received from server: {e}")
+                    logger.warning(f"Invalid hash info received from server: {e}")
                     continue
-                
+
                 widget = self.widgets_by_hash.get(hash_info.hash_value)
                 if widget:
                     if widget.hash_description != hash_info.description:
@@ -300,16 +302,16 @@ class AutopilotConfigManager(QWidget):
                     try:
                         widget = ConfigWidget(hash_info)
                         self.widgets_by_hash[hash_info.hash_value] = widget
-                    
+
                     except Exception as e:
-                        print(f"[Warning] Failed to create widget for hash {hash_info.hash_value}: {e}")
+                        logger.warning(f"Failed to create widget for hash {hash_info.hash_value}: {e}")
 
             for widget in sorted(self.widgets_by_hash.values(), key=self.sort_key):
                 self.configs_layout.addWidget(widget)
 
                 if widget.hash_value == constants.SM.read_str("remote_autopilot_param_hash"):
                     widget.setStyleSheet(ConfigWidget.activated_style_sheet)
-                
+
                 else:
                     widget.setStyleSheet(ConfigWidget.style_sheet)
 
@@ -331,7 +333,7 @@ class AutopilotConfigManager(QWidget):
         request_result
             A tuple containing:
             - The active configuration hash as a string.
-            - a ``TelemetryStatus`` enum value indicating the status of the request.
+            - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         hash_string, status = request_result
@@ -367,27 +369,27 @@ class AutopilotConfigManager(QWidget):
 
         try:
             if not config_data.strip():
-                print("[Warning] No configuration data provided.")
+                logger.warning("No configuration data provided.")
                 return
-            
+
             config_dict = json.loads(config_data)
 
             response = constants.REQ_SESSION.post(
                 misc.get_route("create_config"),
                 json=config_dict,
             )
-            
+
             if response.status_code != 200:
                 raise RequestException(f"Server returned status code {response.status_code} with message: {response.text}")
-        
+
         except json.JSONDecodeError as e:
-            print(f"[Error] Invalid JSON data: {e}")
-        
+            logger.error(f"Invalid JSON data: {e}")
+
         except RequestException as e:
-            print(f"[Error] Failed to create new configuration: {e}")
+            logger.error(f"Failed to create new configuration: {e}")
 
         self.timer.start()
-    
+
     @Slot(str)
     def on_sort_by_changed(self, sort_method: str) -> None:
         """
@@ -413,7 +415,7 @@ class AutopilotConfigManager(QWidget):
                 self.on_hashes_fetched(fake_request_result)
 
         except ValueError:
-            print(f"[Warning] Invalid sort by option: {sort_method}")
+            logger.warning(f"Invalid sort by option: {sort_method}")
             return
 
     @Slot(str)
@@ -483,7 +485,7 @@ class ConfigWidget(QFrame):
 
     Inherits
     -------
-    ``QFrame``
+    :class:`QFrame`
     """
 
     style_sheet = """
@@ -564,7 +566,6 @@ class ConfigWidget(QFrame):
         self.hash_description_edit = QLineEdit(self.hash_description)
         self.hash_description_edit.editingFinished.connect(self.on_description_changed)
 
-
         self.form_layout.addRow("Description:", self.hash_description_edit)
         self.form_layout.addRow("Hash Value:", self.hash_value_label)
         self.form_layout.addRow("Created At:", self.hash_created_at_label)
@@ -608,62 +609,52 @@ class ConfigWidget(QFrame):
 
         for config_path in constants.AUTOPILOT_PARAMS_DIR.iterdir():
             if config_path.stem == hash_value and config_path.is_file():
-                print(f"[Info] Configuration {hash_value} already exists locally.")
+                logger.info(f"Configuration {hash_value} already exists locally.")
                 return
-            
+
         try:
-            data = constants.REQ_SESSION.get(
-                    urljoin(
-                        misc.get_route("get_config_from_hash"),
-                        hash_value
-                )
-            ).json()
+            data = constants.REQ_SESSION.get(urljoin(misc.get_route("get_config_from_hash"), hash_value)).json()
 
             if not isinstance(data, dict):
                 raise TypeError
-            
+
             file_name = f"{hash_value}.json"
             config_path = constants.AUTOPILOT_PARAMS_DIR / file_name
             with open(config_path, "w") as config_file:
                 json.dump(data, config_file, indent=4)
-            
-            print(f"[Info] Configuration {hash_value} downloaded successfully!")
-            
+
+            logger.info(f"Configuration {hash_value} downloaded successfully!")
+
         except RequestException as e:
-            print(f"[Error] Failed to download configuration: {e}")
-        
+            logger.error(f"Failed to download configuration: {e}")
+
         except TypeError as e:
-            print(f"[Error] Invalid data format received from server, expected `dict` but got `{data}`: {e}")
+            logger.error(f"Invalid data format received from server, expected `dict` but got `{data}`: {e}")
 
     @Slot()
     def on_download_clicked(self) -> None:
         """Handle the download button click event."""
 
-        print(f"[Info] Downloading configuration with hash: {self.hash_value}")
+        logger.info(f"Downloading configuration with hash: {self.hash_value}")
         ConfigWidget.download_config(self.hash_value)
 
     @Slot()
     def on_delete_clicked(self) -> None:
         """Handle the delete button click event."""
 
-        print(f"[Info] Deleting configuration with hash: {self.hash_value}")
+        logger.info(f"Deleting configuration with hash: {self.hash_value}")
 
         try:
-            response = constants.REQ_SESSION.delete(
-                urljoin(
-                    misc.get_route("delete_config"),
-                    self.hash_value
-                )
-            )
+            response = constants.REQ_SESSION.delete(urljoin(misc.get_route("delete_config"), self.hash_value))
 
             if response.status_code == 200:
-                print(f"[Info] Configuration {self.hash_value} deleted successfully!")
+                logger.info(f"Configuration {self.hash_value} deleted successfully!")
 
             else:
                 raise RequestException(f"Server returned status code {response.status_code} with message: {response.text}")
 
         except RequestException as e:
-            print(f"[Error] Failed to delete configuration: {e}")
+            logger.error(f"Failed to delete configuration: {e}")
 
     @Slot()
     def on_description_changed(self) -> None:
@@ -673,18 +664,15 @@ class ConfigWidget(QFrame):
 
         if new_description not in {"", self.hash_description}:
             try:
-                url = urljoin(
-                    misc.get_route("set_hash_description"),
-                    f"{self.hash_value}/{new_description}"
-                )
+                url = urljoin(misc.get_route("set_hash_description"), f"{self.hash_value}/{new_description}")
                 response = constants.REQ_SESSION.post(url)
 
                 if response.status_code == 200:
                     self.hash_description = new_description
-                    print(f"[Info] Description for config {self.hash_value} updated successfully!")
+                    logger.info(f"Description for config {self.hash_value} updated successfully!")
 
                 else:
                     raise RequestException(f"Server returned status code {response.status_code} with message: {response.text}")
 
             except RequestException as e:
-                print(f"[Error] Failed to update description: {e}")
+                logger.error(f"Failed to update description: {e}")

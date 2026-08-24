@@ -12,7 +12,7 @@ class BoundedAspectWidget(QWidget):
     Parameters
     ----------
     child
-        The ``QWidget`` to resize inside this container.
+        The :class:`QWidget` to resize inside this container.
     min_aspect_ratio
         The minimum width divided by height.
     max_aspect_ratio
@@ -26,7 +26,7 @@ class BoundedAspectWidget(QWidget):
 
     Inherits
     --------
-    ``QWidget``
+    :class:`QWidget`
     """
 
     def __init__(self, child: QWidget, min_aspect_ratio: float, max_aspect_ratio: float) -> None:

@@ -10,18 +10,22 @@ from qtpy.QtWidgets import (
 )
 
 from utils import constants
+from utils.logger import get_logger
 
 from .base_dialog import BaseDialog
 
 __all__ = ["MessageBoxButton", "show_custom_message_box", "show_message_box"]
 
+logger = get_logger(__name__)
+
+
 class MessageBoxButton(NamedTuple):
     """
     Custom button definition for message boxes.
-    
+
     Inherits
     --------
-    ``NamedTuple``
+    :class:`NamedTuple`
     """
 
     key: str
@@ -42,18 +46,18 @@ class CustomMessageBoxDialog(BaseDialog):
     icon
         An optional icon to display next to the message.
     buttons
-        A list of ``MessageBoxButton`` tuples defining the buttons.
+        A list of :class:`MessageBoxButton` tuples defining the buttons.
     remember_choice_option
         Whether to show a "Remember my decision?" checkbox.
 
     Attributes
     ----------
-    user_text_emitter: ``Signal``
+    user_text_emitter: :class:`Signal`
         Emitted when the dialog is closed with a button press, passing the button key.
 
     Inherits
     -------
-    ``BaseDialog``
+    :class:`BaseDialog`
     """
 
     def __init__(
@@ -190,7 +194,7 @@ def show_message_box(
                 raise TypeError("Expected MessageBoxButton fallback.")
 
             response = fallback_button.key
-            print(f"[Warning] User closed the dialog without selecting a button. Using {response}.")
+            logger.warning(f"User closed the dialog without selecting a button. Using {response}.")
 
     else:
         response = QMessageBox.StandardButton(clicked)
@@ -201,7 +205,7 @@ def show_message_box(
                 raise TypeError("Expected QMessageBox.StandardButton fallback.")
 
             response = fallback_button
-            print(f"[Warning] User closed the dialog without selecting a button. Using {response}.")
+            logger.warning(f"User closed the dialog without selecting a button. Using {response}.")
 
     if remember_choice_option:
         return response, remember_checkbox.isChecked()
@@ -228,7 +232,7 @@ def show_custom_message_box(
     icon
         An optional icon to display next to the message.
     buttons
-        A list of ``MessageBoxButton`` tuples defining the buttons.
+        A list of :class:`MessageBoxButton` tuples defining the buttons.
     remember_choice_option
         Whether to show a "Remember my decision?" checkbox.
 

@@ -22,15 +22,15 @@ class BaseDialog(QDialog):
 
     Attributes
     ----------
-    user_text_emitter: ``Signal``
+    user_text_emitter: :class:`Signal`
         Emitted when the dialog is closed with a valid selection, passing
         the result value (typically the button key or selected value).
-    dialog_closed: ``Signal``
+    dialog_closed: :class:`Signal`
         Emitted when the dialog is closed, passing whether it was accepted (True) or rejected (False).
 
     Inherits
     --------
-    ``QDialog``
+    :class:`QDialog`
     """
 
     user_text_emitter = Signal(str)

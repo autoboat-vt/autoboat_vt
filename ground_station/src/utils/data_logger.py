@@ -14,8 +14,12 @@ from typing import Any, TextIO, cast
 from qtpy.QtCore import QObject, QTimer, Slot
 
 from utils import constants
+from utils.logger import get_logger
 
 __all__ = ["DataLogger"]
+
+logger = get_logger(__name__)
+
 
 @dataclass
 class DataLogEntry:
@@ -103,7 +107,7 @@ def _load_log(header_written: bool = False) -> Path:
         return log
 
     if not log.exists():
-        print(f"[Info] Creating new data log file at {log}...")
+        logger.info(f"Creating new data log file at {log}...")
 
     try:
         with _locked_file(path=log, mode="a+", lock_type=fcntl.LOCK_EX) as f:
@@ -164,7 +168,7 @@ class DataLogger(QObject):
         Parameters
         ----------
         entries
-            Tuples containing key names and data values, or ``DataLogEntry`` objects.
+            Tuples containing key names and data values, or :class:`DataLogEntry` objects.
         """
 
         rows: list[dict[str, str]] = []
@@ -176,7 +180,7 @@ class DataLogger(QObject):
                 log_entry = DataLogEntry(key_name=key_name, data=data)
 
             if not log_entry.key_name.strip():
-                print(f"[Warning] Skipping log entry with empty key name and data '{log_entry.data}'")
+                logger.warning(f"Skipping log entry with empty key name and data '{log_entry.data}'")
                 continue
 
             rows.append(log_entry.as_dict())
@@ -190,14 +194,14 @@ class DataLogger(QObject):
     @Slot(tuple)
     def write_from_qthread(self, request_result: tuple[dict[str, Any], constants.TelemetryStatus]) -> None:
         """
-        Convenience method for writing log entries from a ``QThread``, where the data is returned as a tuple.
+        Convenience method for writing log entries from a :class:`QThread`, where the data is returned as a tuple.
 
         Parameters
         ----------
         request_result
             A tuple containing:
             - a dictionary with the latest boat telemetry data.
-            - a ``TelemetryStatus`` enum value indicating the status of the request.
+            - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         boat_data, _ = request_result
@@ -225,7 +229,7 @@ class DataLogger(QObject):
         with self._buffer_lock:
             if not self._buffer:
                 return
-            
+
             rows = self._buffer
             self._buffer = []
 

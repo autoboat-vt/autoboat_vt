@@ -77,7 +77,6 @@ class Tetromino:
 
     def rotated_cells(self) -> list[tuple[int, int]]:
         """Return the cells as they would be after a clockwise rotation."""
-
         # (row, col) -> (col, -row) is a 90-degree clockwise rotation
         return [(dc, -dr) for dr, dc in self.cells]
 

@@ -12,12 +12,12 @@ class AutopilotConfigWidget(QTabWidget):
     
     Parameters
     ----------
-    refresh_signal: ``Signal``
+    refresh_signal: :class:`Signal`
         Signal emitted when the autopilot configuration needs to be refreshed.
 
     Inherits
     -------
-    ``QTabWidget``
+    :class:`QTabWidget`
     """
 
     def __init__(self, refresh_signal: Signal) -> None:

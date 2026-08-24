@@ -14,7 +14,10 @@ from qtpy.QtGui import QCloseEvent
 from qtpy.QtWidgets import QCheckBox, QDialog, QGridLayout, QWidget
 
 from utils import constants, misc
+from utils.logger import get_logger
 from utils.thread_classes import BoatStatusThreadRouter
+
+logger = get_logger(__name__)
 
 
 class GraphViewer(QWidget):
@@ -25,11 +28,11 @@ class GraphViewer(QWidget):
     ----------
     boat_data_signal
         A signal that emits the latest boat data as a tuple containing a dictionary
-        of boat status and a ``TelemetryStatus`` enum value.
+        of boat status and a :class:`TelemetryStatus` enum value.
 
     Inherits
     -------
-    ``QWidget``
+    :class:`QWidget`
     """
 
     boat_data_signal = Signal(tuple)
@@ -70,7 +73,7 @@ class GraphViewer(QWidget):
         request_result
             A tuple containing:
                 - a dictionary of boat status,
-                - a ``TelemetryStatus`` enum value indicating the status of the request.
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         if constants.SM.read_bool("has_telemetry_server_instance_changed"):
@@ -83,7 +86,7 @@ class GraphViewer(QWidget):
         boat_data, telemetry_status = request_result
 
         if telemetry_status is not constants.TelemetryStatus.SUCCESS:
-            print("[Warning] Failed to fetch telemetry data for graphs, skipping update.")
+            logger.warning("Failed to fetch telemetry data for graphs, skipping update.")
             return
 
         try:
@@ -118,7 +121,7 @@ class GraphViewer(QWidget):
 
                     plot_item = self.graph_layout_widget.addPlot(row=plot_row, col=plot_col, colspan=col_span, title=plot_title)
                     if not isinstance(plot_item, pg.PlotItem):
-                        print(f"[Error] Failed to create plot for key '{key}', continuing with next key.")
+                        logger.error(f"Failed to create plot for key '{key}', continuing with next key.")
                         continue
 
                     if col_span == 1:
@@ -143,14 +146,14 @@ class GraphViewer(QWidget):
                     curve.setData(x, y)
 
         except Exception as e:
-            print(f"[Error] Failed to update graphs: {e}")
+            logger.error(f"Failed to update graphs: {e}")
 
     @Slot()
     def select_graphs(self) -> None:
         """Open a dialog to select which graphs to display."""
 
         if not self.available_keys:
-            print("[Info] Pulling available boat data fields from telemetry server for graph selection...")
+            logger.info("Pulling available boat data fields from telemetry server for graph selection...")
             try:
                 response = constants.REQ_SESSION.get(
                     urljoin(misc.get_route("get_boat_status"), str(constants.SM.read_int("telemetry_server_instance_id")))
@@ -162,14 +165,14 @@ class GraphViewer(QWidget):
                 self.available_keys = {
                     k: v for k, v in response.items() if isinstance(v, (int, float)) and k != "current_waypoint_index"
                 }
-                print("[Info] Successfully fetched available boat data fields for graph selection.")
+                logger.info("Successfully fetched available boat data fields for graph selection.")
 
             except RequestException:
-                print("[Error] Failed to connect to telemetry server to fetch available boat data fields for graph selection.")
+                logger.error("Failed to connect to telemetry server to fetch available boat data fields for graph selection.")
                 return
 
             except TypeError:
-                print(f"[Error] Unexpected response format from telemetry server: {response}")
+                logger.error(f"Unexpected response format from telemetry server: {response}")
                 return
 
         self.graph_dialog = GraphSelectionDialog(available_keys=self.available_keys, selected_keys=self.important_keys)
@@ -194,7 +197,7 @@ class GraphViewer(QWidget):
         self.data.clear()
         self.plots.clear()
         self.graph_layout_widget.clear()
-        print(f"[Info] Selected graphs updated: {', '.join(selected_keys)}")
+        logger.info(f"Selected graphs updated: {', '.join(selected_keys)}")
 
     def clear_graphs(self) -> None:
         """Clear all graphs and data."""
@@ -203,13 +206,13 @@ class GraphViewer(QWidget):
         self.data.clear()
         self.plots.clear()
         self.graph_layout_widget.clear()
-        print("[Info] Cleared all graphs and data.")
+        logger.info("Cleared all graphs and data.")
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """
         Stop the telemetry fetcher thread and poll timer before closing.
 
-        Without this, the ``BoatStatusFetcherThread`` is destroyed while still
+        Without this, the :class:`BoatStatusFetcherThread` is destroyed while still
         running, producing ``QThread: Destroyed while thread is still running``
         and a non-zero exit code. ``requestInterruption`` makes the fetcher's
         ``msleep`` wake early, and ``wait`` blocks until the thread has fully
@@ -228,11 +231,11 @@ class GraphViewer(QWidget):
 
 class GraphSelectionDialog(QDialog):
     """
-    A dialog for selecting which graphs to display in the ``GraphViewer``.
+    A dialog for selecting which graphs to display in the :class:`GraphViewer`.
 
     Inherits
     -------
-    ``QDialog``
+    :class:`QDialog`
     """
 
     __slots__ = ("_available_keys", "_selected_keys")
