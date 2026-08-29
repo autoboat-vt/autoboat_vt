@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# The model generation process is .pt -> .onnx -> .engine
+
 if [ "$#" -lt 2 ]; then
     echo -e "Usage: $0 <yolo_version> <name_of_yolo26_model_without_file_extension>"
     exit 1
