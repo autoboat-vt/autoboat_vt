@@ -309,7 +309,7 @@ setup_macos() {
 		fi
 	fi
 
-	write_host_environment_variables "DISPLAY=docker.for.mac.host.internal:0"
+	write_host_environment_variables
 	write_devcontainer_environment_variables "DISPLAY=docker.for.mac.host.internal:0"
 	ensure_host_environment_variables_are_sourced
 	log_warn "GPU passthrough not supported on Docker Desktop for macOS."
