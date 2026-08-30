@@ -8,7 +8,7 @@ from qtpy.QtGui import QCloseEvent, QTextCursor
 from qtpy.QtWidgets import QTextEdit, QVBoxLayout, QWidget
 
 from utils import syntax_highlighters
-from utils.logger import attach_console_widget
+from utils.console_logger import attach_console_widget
 
 
 class EmittingStream(QObject):

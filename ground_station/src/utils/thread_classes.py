@@ -18,7 +18,7 @@ from requests import RequestException
 from qtpy.QtCore import QThread, Signal
 
 from utils import constants, misc
-from utils.logger import get_logger
+from utils.console_logger import get_logger
 
 __all__ = [
     "AutopilotThreadRouter",

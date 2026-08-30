@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -77,6 +78,7 @@ class _PrefixFormatter(logging.Formatter):
         message = record.getMessage()
         if record.exc_info:
             message = f"{message}\n{self.formatException(record.exc_info)}"
+
         return f"{prefix} {message}"
 
 
@@ -138,11 +140,11 @@ class QtConsoleHandler(logging.Handler):
 
         try:
             message = self._formatter.format(record)
+
         except Exception:
             self.handleError(record)
             return
-        # Signal.emit is safe to call from any thread; Qt queues cross-thread
-        # connections automatically.  Noop if nothing is connected.
+
         self.signal.log_emitted.emit(message)
 
 
@@ -176,11 +178,9 @@ def _attach_file_handler(log_dir: Path) -> None:
         return
 
     log_dir.mkdir(parents=True, exist_ok=True)
-    log_path = log_dir / "ground_station.log"
+    log_path = log_dir / f"ground_station_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.log"
     handler = RotatingFileHandler(
         filename=log_path,
-        maxBytes=5 * 1024 * 1024,  # 5 MB
-        backupCount=5,
         encoding="utf-8",
     )
     handler.setLevel(logging.DEBUG)
@@ -204,6 +204,7 @@ def attach_console_widget(slot: object) -> None:
         Any callable accepted by ``Signal.connect`` - typically
         ``ConsoleOutputWidget.append_text``.
     """
+
     # Deferred import to avoid a circular dependency at module load time:
     # ``constants`` imports from ``utils`` (this package), and this function
     # needs ``constants.LOGS_DIR`` which is only defined inside the ``try``
@@ -247,8 +248,10 @@ def get_logger(name: str | None = None) -> logging.Logger:
 
     if not name or name == "root":
         return _root_logger
+
     if name == "ground_station" or name.startswith("ground_station."):
         return logging.getLogger(name)
+
     return _root_logger.getChild(name)
 
 

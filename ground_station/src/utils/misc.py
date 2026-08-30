@@ -27,7 +27,7 @@ from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QPushButton
 
 from utils import constants
-from utils.logger import get_logger
+from utils.console_logger import get_logger
 
 __all__ = [
     "cache_cdn_file",

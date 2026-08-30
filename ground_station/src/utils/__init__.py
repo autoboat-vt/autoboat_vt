@@ -27,16 +27,16 @@ __all__ = [
     "DataLogger",
     "StateManager",
     "TextEditWindow",
+    "console_logger",
     "constants",
     "dialog_templates",
-    "logger",
     "misc",
     "syntax_highlighters",
     "thread_classes",
     "widget_size_controllers",
 ]
 
-from . import constants, dialog_templates, logger, misc, syntax_highlighters, thread_classes, widget_size_controllers
+from . import console_logger, constants, dialog_templates, misc, syntax_highlighters, thread_classes, widget_size_controllers
 from .data_logger import DataLogger
 from .popup_edit import TextEditWindow
 from .state_manager import StateManager

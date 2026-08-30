@@ -8,6 +8,7 @@ Exposes:
 
 Contains:
 - `bridge.py`: Contains the `MapBridge` class - the Python->TS bridge with typed methods matching `MapInterface`.
+- `land_check.py`: Contains the `LandChecker` class for point-in-ocean lookups against the Natural Earth shapefile.
 - `map_options_handler.py`: Contains the `MapOptionsHandler` class for managing map options and features.
 - `server.py`: Contains the `run()` function that starts the HTTP server for handling waypoint requests.
 - `waypoints_handler.py`: Contains the `WaypointsHandler` class for handling HTTP requests related to waypoints.

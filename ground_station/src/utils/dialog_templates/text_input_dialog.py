@@ -5,7 +5,7 @@ from typing import Generic, TypeVar
 
 from qtpy.QtWidgets import QInputDialog, QWidget
 
-from utils.logger import get_logger
+from utils.console_logger import get_logger
 
 logger = get_logger(__name__)
 

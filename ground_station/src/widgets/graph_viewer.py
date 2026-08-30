@@ -14,7 +14,7 @@ from qtpy.QtGui import QCloseEvent
 from qtpy.QtWidgets import QCheckBox, QDialog, QGridLayout, QWidget
 
 from utils import constants, misc
-from utils.logger import get_logger
+from utils.console_logger import get_logger
 from utils.thread_classes import BoatStatusThreadRouter
 
 logger = get_logger(__name__)

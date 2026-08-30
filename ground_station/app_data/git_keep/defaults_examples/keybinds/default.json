@@ -55,7 +55,7 @@
     },
     "open_pong": {
         "name": "Open Pong",
-        "description": "The classic arcade duel — 1- or 2-player.",
+        "description": "The classic arcade duel \u2014 1- or 2-player.",
         "scope": "app",
         "key": ""
     }

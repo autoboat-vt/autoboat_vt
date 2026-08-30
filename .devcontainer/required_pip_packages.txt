@@ -65,6 +65,8 @@ PyYAML
 pytz
 StrEnum
 svg.py
+shapely               # geospatial ops for the ocean layer (blocking land waypoints)
+pyshp                 # reads the Natural Earth shapefile used by the ocean layer
 
 
 

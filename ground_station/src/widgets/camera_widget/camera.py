@@ -6,7 +6,7 @@ from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import QGridLayout, QHBoxLayout, QPushButton, QWidget
 
 from utils import constants, misc, thread_classes
-from utils.logger import get_logger
+from utils.console_logger import get_logger
 
 __all__ = ["CameraWidget"]
 

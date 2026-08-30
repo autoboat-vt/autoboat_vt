@@ -30,9 +30,9 @@ from qtpy.QtWidgets import (
 )
 
 from utils import TextEditWindow, constants, misc, thread_classes
+from utils.console_logger import get_logger
 from utils.constants import StrictMatchEnums
 from utils.dialog_templates import CoordinateInputDialog, InputDialog, show_message_box
-from utils.logger import get_logger
 from utils.syntax_highlighters import JsonHighlighter
 
 from .easter_eggs import PongDialog, SnakeDialog, TetrisDialog
@@ -346,10 +346,10 @@ class GroundStationWidget(QWidget):
         self._keybind_manager = get_keybind_manager()
         self._shortcuts: dict[str, QShortcut] = {}
 
+        self._keybind_manager.register_handler("open_keybind_config", self.keybind_config_window.exec)
         self._keybind_manager.register_handler("pull_waypoints", self.pull_waypoints)
         self._keybind_manager.register_handler("send_waypoints", self.send_waypoints)
         self._keybind_manager.register_handler("toggle_data_logging", self.toggle_data_logging)
-        self._keybind_manager.register_handler("open_keybind_config", self.keybind_config_window.exec)
         self._keybind_manager.register_handler("undo_waypoint", self._trigger_undo_waypoint)
         self._keybind_manager.register_handler("open_tetris", self._show_tetris)
         self._keybind_manager.register_handler("open_snake", self._show_snake)
@@ -360,6 +360,7 @@ class GroundStationWidget(QWidget):
 
         self._keybind_manager.bindings_changed.connect(self._on_keybinds_changed)
         # endregion keybinds
+
         # we need to "install" an event filter on the QWebEngineView's internal
         # Chromium render widget so we can intercept Ctrl+Z before it swallows it
         self.browser.installEventFilter(self)
@@ -369,7 +370,7 @@ class GroundStationWidget(QWidget):
 
     def _rebuild_shortcuts(self) -> None:
         """Recreate every app-scope :class:`QShortcut` from the current bindings."""
-        # clear out the old shortcuts
+
         for shortcut in self._shortcuts.values():
             shortcut.setEnabled(False)
             shortcut.deleteLater()
@@ -409,6 +410,7 @@ class GroundStationWidget(QWidget):
 
         self.map_bridge.undo_last_waypoint()
 
+    # region easter egg functions
     def _show_tetris(self) -> None:
         """Show the hidden Tetris easter egg."""
 
@@ -432,6 +434,8 @@ class GroundStationWidget(QWidget):
         self.pong_window.raise_()
         self.pong_window.activateWindow()
         self.pong_window._board.setFocus()
+
+    # endregion easter egg functions
 
     def _install_render_widget_filter(self) -> None:
         """Install the event filter on the QWebEngineView's focus proxy."""
@@ -480,6 +484,7 @@ class GroundStationWidget(QWidget):
         bool
             ``True`` if the event was consumed, ``False`` otherwise.
         """
+
         # only care about key presses that include the Control modifier — the
         # undo binding is always a Ctrl combo, so skip everything else early
         if not (event.type() == QEvent.Type.KeyPress and event.modifiers() & Qt.KeyboardModifier.ControlModifier):
@@ -884,6 +889,7 @@ class GroundStationWidget(QWidget):
                             break
 
                     if lat is not None and lon is not None:
+                        logger.info(f"Zooming to waypoint at ({lat}, {lon})")
                         self.map_bridge.focus_map_on_marker(lat, lon)
                     else:
                         logger.warning(f"Waypoint not found for coordinates ({approx_lat}, {approx_lon})")
@@ -911,6 +917,7 @@ class GroundStationWidget(QWidget):
                             break
 
                     if lat is not None and lon is not None:
+                        logger.info(f"Zooming to buoy at ({lat}, {lon})")
                         self.map_bridge.focus_map_on_marker(lat, lon)
                     else:
                         logger.warning(f"Buoy not found for coordinates ({approx_lat}, {approx_lon})")
@@ -1411,26 +1418,3 @@ class GroundStationWidget(QWidget):
         self.left_text_section.setText(telemetry_text)
 
     # endregion pyqt thread functions
-
-    # region helper functions
-    def safe_convert_to_float(self, x: object) -> float | Literal[0]:
-        """
-        Safely convert a value to float, returning 0 if conversion fails.
-
-        Parameters
-        ----------
-        x
-            The value to convert to float.
-
-        Returns
-        -------
-        float or Literal[0]
-            The converted float value, or ``0`` if conversion fails.
-        """
-
-        try:
-            return float(x)
-        except ValueError:
-            return 0
-
-    # endregion helper functions

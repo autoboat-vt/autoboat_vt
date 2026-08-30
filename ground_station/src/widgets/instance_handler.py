@@ -28,7 +28,7 @@ from qtpy.QtWidgets import (
 )
 
 from utils import constants, misc
-from utils.logger import get_logger
+from utils.console_logger import get_logger
 from utils.thread_classes import InstanceManagerThreadRouter
 
 logger = get_logger(__name__)

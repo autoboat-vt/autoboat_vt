@@ -10,7 +10,7 @@ from qtpy.QtWidgets import (
 )
 
 from utils import constants
-from utils.logger import get_logger
+from utils.console_logger import get_logger
 
 from .base_dialog import BaseDialog
 

@@ -8,7 +8,7 @@ from qtpy.QtCore import QObject, Qt, Signal
 from qtpy.QtGui import QKeyEvent, QKeySequence
 
 from utils import constants
-from utils.logger import get_logger
+from utils.console_logger import get_logger
 
 __all__ = ["KeybindManager", "get_keybind_manager", "normalize_key_string", "qt_key_event_to_string"]
 

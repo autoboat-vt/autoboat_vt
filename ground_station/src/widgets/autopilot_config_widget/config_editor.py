@@ -27,8 +27,8 @@ from qtpy.QtWidgets import (
 )
 
 from utils import TextEditWindow, constants, misc, syntax_highlighters
+from utils.console_logger import get_logger
 from utils.dialog_templates import MessageBoxButton, show_message_box
-from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -113,7 +113,7 @@ class AutopilotConfigEditor(QWidget):
 
             constants.SM.write("current_autopilot_parameters", self.config)
             constants.SM.write("local_autopilot_param_hash", constants.SM.read_str("remote_autopilot_param_hash"))
-            logger.info("Fetched default autopilot parameters successfully.")
+
 
         except RequestException as e:
             logger.error(f"Failed to fetch default autopilot parameters: {e}")
@@ -336,7 +336,7 @@ class AutopilotConfigEditor(QWidget):
         configuration will be updated with the pulled values since there won't be any unexpected fields.
         """
 
-        logger.info("Pulling all parameters...")
+        logger.info(f"Pulling the autopilot parameters for instance #{constants.SM.read_int('telemetry_server_instance_id')}...")
 
         rememeber_choice: bool = False
         response = QMessageBox.StandardButton.No

@@ -12,7 +12,7 @@ from qtpy.QtWebEngineWidgets import QWebEnginePage
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 
 from utils import constants, misc
-from utils.logger import get_logger
+from utils.console_logger import get_logger
 from widgets import (
     AutopilotConfigWidget,
     CameraWidget,

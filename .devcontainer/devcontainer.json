@@ -27,6 +27,7 @@
                 "twxs.cmake",
                 "ms-vscode.cmake-tools",
                 "ms-vscode.makefile-tools",
+                "theqtcompany.qt",
                 "twixes.pypi-assistant",
                 "IBM.output-colorizer",
                 "bierner.docs-view",
@@ -40,7 +41,8 @@
                 "redhat.vscode-xml",
                 "redhat.vscode-yaml",
                 "mkxml.vscode-filesize",
-                "github.vscode-github-actions"
+                "github.vscode-github-actions",
+                "nvidia.nsight-vscode-edition"
             ]
         }
     },

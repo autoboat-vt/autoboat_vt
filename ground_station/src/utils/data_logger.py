@@ -14,7 +14,7 @@ from typing import Any, TextIO, cast
 from qtpy.QtCore import QObject, QTimer, Slot
 
 from utils import constants
-from utils.logger import get_logger
+from utils.console_logger import get_logger
 
 __all__ = ["DataLogger"]
 

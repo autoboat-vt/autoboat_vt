@@ -40,6 +40,7 @@ class MapInterface {
     static readonly iconCache = new Map<string, Icon>();
     static readonly assetsUrl = `http://localhost:${import.meta.env.ASSET_SERVER_PORT ?? "8000"}`;
     static readonly waypointsUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/waypoints`;
+    static readonly checkLandUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/check_land`;
 
     lastFocusedTimestamp = 0;
     private waypointHistory: { type: "add" | "remove"; waypoint: LatLngTuple; color?: string }[] = [];
@@ -124,8 +125,7 @@ class MapInterface {
         });
 
         this.map.on("click", (event: LeafletMouseEvent) => {
-            this.waypoint_manager.add(event.latlng.lat, event.latlng.lng);
-            this.waypointHistory.push({ type: "add", waypoint: [event.latlng.lat, event.latlng.lng] });
+            void this.handleMapClick(event.latlng.lat, event.latlng.lng);
         });
 
         // contextmenu is right click
@@ -143,6 +143,44 @@ class MapInterface {
                 }
             }
         });
+    }
+
+    /**
+     * Handle a map click: add a waypoint unless the click is on land.
+     *
+     * The click coordinates are always checked against the backend's Natural
+     * Earth ocean layer first; clicks on land are ignored.
+     */
+    async handleMapClick(lat: number, lon: number): Promise<void> {
+        if (await this.isPointOnLand(lat, lon)) {
+            return;
+        }
+
+        this.waypoint_manager.add(lat, lon);
+        this.waypointHistory.push({ type: "add", waypoint: [lat, lon] });
+    }
+
+    /**
+     * Ask the backend whether a coordinate is on land.
+     *
+     * Returns false on any error so that waypoint placement is never blocked
+     * by a backend or network problem.
+     */
+    async isPointOnLand(lat: number, lon: number): Promise<boolean> {
+        const url = `${MapInterface.checkLandUrl}?lat=${lat}&lon=${lon}`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                console.error("Failed to check land status");
+                return false;
+            }
+
+            const data = (await response.json()) as { on_land?: boolean };
+            return data.on_land === true;
+        } catch (error) {
+            console.error("Error checking land status:", error);
+            return false;
+        }
     }
 
     /**
@@ -310,7 +348,7 @@ class MapInterface {
         // Methods that are internal to the TS side (introspection, event
         // handlers, TS->Python callbacks) and are not part of the Python->JS
         // API surface. Excluding them here keeps MapBridge.verify_api quiet.
-        const exclude = new Set(["getApi", "handleMapMove", "syncWaypoints"]);
+        const exclude = new Set(["getApi", "handleMapClick", "handleMapMove", "isPointOnLand", "syncWaypoints"]);
 
         const proto = Object.getPrototypeOf(this) as object;
         for (const name of Object.getOwnPropertyNames(proto)) {

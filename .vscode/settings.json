@@ -1,38 +1,49 @@
 {
-    "ROS2.distro": "humble",
-    "ruff.importStrategy": "useBundled",
-    "ruff.showSyntaxErrors": false,
-    "ruff.configurationPreference": "filesystemFirst",
-    "ruff.configuration": "${workspaceFolder}/ruff.toml",
-    "biome.configurationPath": "biome.jsonc",
-    "biome.requireConfiguration": true,
-    "evenBetterToml.taplo.configFile.path": "taplo.toml",
-    "evenBetterToml.schema.links": true,
-    "evenBetterToml.semanticTokens": true,
-    "cmake.ignoreCMakeListsMissing": true,
-    "search.followSymlinks": true,
+    "git.autofetch": true,
+    "git.mergeEditor": true,
+    "[css]": {
+        "editor.defaultFormatter": "biomejs.biome",
+        "editor.formatOnSave": true
+    },
+    "[html]": {
+        "editor.defaultFormatter": "biomejs.biome",
+        "editor.formatOnSave": true
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "biomejs.biome",
+        "editor.formatOnSave": true
+    },
+    "[json]": {
+        "editor.defaultFormatter": "biomejs.biome",
+        "editor.formatOnSave": true
+    },
     "[python]": {
-        "editor.formatOnSave": false,
         "editor.codeActionsOnSave": {
             "source.organizeImports.ruff": "explicit"
-        }
+        },
+        "editor.formatOnSave": false
     },
-    "[css]": { "editor.defaultFormatter": "biomejs.biome", "editor.formatOnSave": true },
-    "[html]": { "editor.defaultFormatter": "biomejs.biome", "editor.formatOnSave": true },
-    "[javascript]": { "editor.defaultFormatter": "biomejs.biome", "editor.formatOnSave": true },
-    "[typescript]": { "editor.defaultFormatter": "biomejs.biome", "editor.formatOnSave": true },
-    "[json]": { "editor.defaultFormatter": "biomejs.biome", "editor.formatOnSave": true },
-    "python.autoComplete.extraPaths": [
-        "/opt/ros/humble/lib/python3.10/site-packages",
-        "/opt/ros/humble/local/lib/python3.10/dist-packages",
-        "/home/ws/install/autoboat_msgs/local/lib/python3.10/dist-packages"
-    ],
-    "python.analysis.extraPaths": [
-        "/opt/ros/humble/lib/python3.10/site-packages",
-        "/opt/ros/humble/local/lib/python3.10/dist-packages",
-        "/home/ws/install/autoboat_msgs/local/lib/python3.10/dist-packages"
-    ],
+    "[typescript]": {
+        "editor.defaultFormatter": "biomejs.biome",
+        "editor.formatOnSave": true
+    },
     "C_Cpp.errorSquiggles": "disabled",
+    "ROS2.distro": "humble",
+    "biome.configurationPath": "biome.jsonc",
+    "biome.lsp.bin": {
+        "darwin-arm64": "/home/ws/ground_station/node_modules/@biomejs/cli-darwin-arm64/biome",
+        "linux-x64": "/home/ws/ground_station/node_modules/@biomejs/cli-linux-x64/biome",
+        "linux-arm64-musl": "/home/ws/ground_station/node_modules/@biomejs/cli-linux-arm64-musl/biome"
+    },
+    "biome.lsp.trace.server": "messages",
+    "biome.lsp.watcher.kind": "recommended",
+    "biome.requireConfiguration": true,
+    "biome.suggestInstallingGlobally": false,
+    "cmake.cmakePath": "/usr/bin/cmake",
+    "cmake.ignoreCMakeListsMissing": true,
+    "evenBetterToml.schema.links": true,
+    "evenBetterToml.semanticTokens": true,
+    "evenBetterToml.taplo.configFile.path": "taplo.toml",
     "files.associations": {
         "float32.h": "c",
         "pico_uart_transports.h": "c",
@@ -154,5 +165,29 @@
         "variant": "cpp",
         "strstream": "cpp"
     },
-    "python-envs.defaultEnvManager": "ms-python.python:pyenv"
+    "files.exclude": {
+        ".ruff_cache": true,
+        "**/node_modules": true,
+        "build": true,
+        "install": true
+    },
+    "python.analysis.extraPaths": [
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages",
+        "/home/ws/install/autoboat_msgs/local/lib/python3.10/dist-packages"
+    ],
+    "python.autoComplete.extraPaths": [
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages",
+        "/home/ws/install/autoboat_msgs/local/lib/python3.10/dist-packages"
+    ],
+    "qt-core.qtInstallationRoot": "/usr/lib/x86_64-linux-gnu/qt5",
+    "qt-core.showWelcomePageOnActivation": false,
+    "ruff.configuration": "${workspaceFolder}/ruff.toml",
+    "ruff.configurationPreference": "filesystemFirst",
+    "ruff.nativeServer": "on",
+    "ruff.showSyntaxErrors": true,
+    "ruff.trace.server": "messages",
+    "search.followSymlinks": true,
+    "urdf-editor.PackageSearchPaths": ["${workspaceFolder}/ros_packages"]
 }

@@ -20,8 +20,8 @@ from qtpy.QtGui import QColor, QPalette
 from qtpy.QtWebEngineWidgets import QWebEnginePage
 
 from utils import misc
+from utils.console_logger import get_logger
 from utils.data_logger import DataLogger
-from utils.logger import get_logger
 from utils.state_manager import StateManager
 
 logger = get_logger(__name__)
@@ -333,6 +333,11 @@ try:
     DEFAULTS_EXAMPLES_DIR = Path(GIT_KEEP_DIR / "defaults_examples")
     ASSETS_DIR = Path(GIT_KEEP_DIR / "assets")
     APP_LOGO_PATH = Path(ASSETS_DIR / "logo.png")
+
+    # Natural Earth 10m ocean layer used to block waypoints placed on land
+    OCEAN_LAYER_DIR = Path(ASSETS_DIR / "ocean_layer")
+    OCEAN_SHAPEFILE_PATH = Path(OCEAN_LAYER_DIR / "ne_10m_ocean.shp")
+    OCEAN_GEOMETRY_CACHE_PATH = Path(GIT_IGNORE_DIR / "ocean_geometry.wkb")
 
     EASTER_EGG_AUDIO_DIR = Path(ASSETS_DIR / "easter_egg_audio")
     TETRIS_ASSETS_DIR = Path(EASTER_EGG_AUDIO_DIR / "tetris")

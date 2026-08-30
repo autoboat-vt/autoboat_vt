@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from qtpy.QtCore import QTimer
 
-from utils.logger import get_logger
+from utils.console_logger import get_logger
 
 if TYPE_CHECKING:
     from qtpy.QtWebEngineWidgets import QWebEngineView
@@ -19,6 +19,7 @@ logger = get_logger(__name__)
 
 def _js_load_guard(js_code: str) -> str:
     """Run JavaScript after the map API has loaded."""
+
     # note that when using curly braces in f-strings, you need to double them to escape them
     return f"""
         function __runAutoboatMapCodeWhenReady() {{
@@ -57,7 +58,7 @@ def _js_load_guard(js_code: str) -> str:
 
 def _map_api(func: Callable[..., Any]) -> Callable[..., Any]:
     """
-    Mark a `MapBridge` method as part of the public API surface.
+    Mark a :class:`MapBridge` method as part of the public API surface.
 
     Methods decorated with this are included in `MapBridge.get_api_signatures`
     and compared against the TS side during `MapBridge.verify_api`.
