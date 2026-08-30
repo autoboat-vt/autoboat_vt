@@ -10,7 +10,8 @@
 
 # Note that the packages used in the object detection node are not present here but instead in 
 # `.devcontainer/devcontainer_variants/install_deepstream_helper.sh` due to their size and the fact that
-# they are only required for the object detection node.
+# they are only required for the object detection node. If you choose to use the deepstream devcontainer,
+# then these packages will be installed automatically for you.
 
 
 
