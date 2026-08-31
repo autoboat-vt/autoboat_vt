@@ -22,7 +22,7 @@ os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
 
 IS_DEV_CONTAINER = re.search("/home/ws", os.getcwd()) is not None
 
-SHOULD_SAVE_IMAGES = True
+SHOULD_DISPLAY = True
 # NUM_IMAGES_TO_SAVE = 10000
 
 # These are constants. Don't change these. Needed for a workaround with DeepStream 7.1 and JetPack 6.2
@@ -44,9 +44,6 @@ if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":
 CAMERA = True
 if "CAMERA" in os.environ and os.environ["CAMERA"] == "false":
     CAMERA = False
-
-# if SHOULD_SAVE_IMAGES and not os.path.exists(f"{PATH_TO_PKG_DIR}/object_detection/object_detection/frame_results"):
-#     os.makedirs(f"{PATH_TO_PKG_DIR}/object_detection/object_detection/frame_results")
 
 class DeepStreamEngine:
     """
@@ -75,7 +72,9 @@ class DeepStreamEngine:
         self.error_callback = error_callback
 
         self.cam_list = self._read_camera_config()
-        self.cam_list[0]["name"] = self._find_camera(self.cam_list[0]["v4l2_format"]) if CAMERA else "videotestsrc"
+        if CAMERA:
+            self.cam_list[0]["device"] = self._find_camera()
+
         self.camera_focal_px = self.cam_list[0]["focal_px"]
 
         # DeepStream Initialization
@@ -103,16 +102,17 @@ class DeepStreamEngine:
         self.pipeline = Gst.Pipeline()
 
         streammux = Gst.ElementFactory.make("nvstreammux", "muxer")
-        streammux.set_property('batch-size', 1)
+        streammux.set_property('batch-size', 2)
         
         # v4l2-ctl --list-devices
         # v4l2-ctl --device /dev/video0 --list-formats-ext
         if CAMERA:
             source0 = Gst.ElementFactory.make("v4l2src", "usb-cam-0")
-            source0.set_property('device', self.cam_list[0]["name"])
+            source0.set_property('device', self.cam_list[0]["device"])
+            self.info_callback(f"Opening camera device {self.cam_list[0]['name']} on {self.cam_list[0]['device']}")
         else:
             source0 = Gst.ElementFactory.make("videotestsrc", "usb-cam-0")
-        self.info_callback(f"Opening camera device: {self.cam_list[0]['name']}")
+            self.info_callback("Opening videotestsrc")
 
         """
         v4l2 camera settings
@@ -142,9 +142,6 @@ class DeepStreamEngine:
         nvvidconvsrc0 = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-src-0')
         nvvidconvsrc0.set_property('nvbuf-memory-type', MEMORY_TYPE)
         nvvidconvsrc0.set_property('compute-hw', COMPUTE_HW)
-        if IS_DEV_CONTAINER:
-            # This is for ease of use. Usually we're holding the camera
-            nvvidconvsrc0.set_property('flip-method', 2)
 
         caps_nvvidconvsrc0 = Gst.ElementFactory.make("capsfilter", "nvmm-caps-0")
         caps_nvvidconvsrc0.set_property(
@@ -153,7 +150,39 @@ class DeepStreamEngine:
                 f"video/x-raw(memory:NVMM), format=NV12,"
                 f"width={self.cam_list[0]['width']},"
                 f"height={self.cam_list[0]['height']}"
-            ),
+            )
+        )
+
+        src_tee = Gst.ElementFactory.make("tee", "src-tee")
+
+        nvvidconv_left = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-left')
+        nvvidconv_left.set_property('nvbuf-memory-type', MEMORY_TYPE)
+        nvvidconv_left.set_property('compute-hw', COMPUTE_HW)
+        nvvidconv_left.set_property('src-crop', f"0:0:{self.cam_list[0]['width'] // 2}:{self.cam_list[0]['height']}")
+
+        caps_nvvidconv_left = Gst.ElementFactory.make("capsfilter", "nvmm-caps-left")
+        caps_nvvidconv_left.set_property(
+            "caps",
+            Gst.Caps.from_string(
+                f"video/x-raw(memory:NVMM), format=NV12,"
+                f"width={self.cam_list[0]['width'] // 2},"
+                f"height={self.cam_list[0]['height']}"
+            )
+        )
+
+        nvvidconv_right = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-right')
+        nvvidconv_right.set_property('nvbuf-memory-type', MEMORY_TYPE)
+        nvvidconv_right.set_property('compute-hw', COMPUTE_HW)
+        nvvidconv_right.set_property('src-crop', f"{self.cam_list[0]['width'] // 2}:0:"
+                                                 f"{self.cam_list[0]['width']}:{self.cam_list[0]['height']}")
+        caps_nvvidconv_right = Gst.ElementFactory.make("capsfilter", "nvmm-caps-right")
+        caps_nvvidconv_right.set_property(
+            "caps",
+            Gst.Caps.from_string(
+                f"video/x-raw(memory:NVMM), format=NV12,"
+                f"width={self.cam_list[0]['width'] // 2},"
+                f"height={self.cam_list[0]['height']}"
+            )
         )
 
         if INFERENCE:
@@ -168,34 +197,16 @@ class DeepStreamEngine:
                                  f'{PATH_TO_PKG_DIR}/object_detection/object_detection/config/config_tracker_NvDCF_perf.yml')
             tracker.set_property("tracking-id-reset-mode", 0)
 
-        queue_multifilesink_valve = Gst.ElementFactory.make("queue", "queue-valve")
+        queue_display_valve = Gst.ElementFactory.make("queue", "queue-valve")
 
-        multifilesink_valve = Gst.ElementFactory.make('valve', 'multifilesink-valve')
-        multifilesink_valve.set_property('drop', not SHOULD_SAVE_IMAGES)
+        display_valve = Gst.ElementFactory.make('valve', 'display-valve')
+        display_valve.set_property('drop', not SHOULD_DISPLAY)
+
+        tiler = Gst.ElementFactory.make('nvmultistreamtiler', 'nvtiler')
+        tiler.set_property('width', 1344)
+        tiler.set_property('height', 376)
 
         osd = Gst.ElementFactory.make("nvdsosd", "nvosd")
-
-        # sink_tee = Gst.ElementFactory.make('tee', 'sink-tee')
-
-        # nvvidconv_jpeg = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-jpeg')
-        # nvvidconv_jpeg.set_property('nvbuf-memory-type', MEMORY_TYPE)
-        # nvvidconv_jpeg.set_property('compute-hw', COMPUTE_HW)
-        
-        # caps_nvvidconv_jpeg = Gst.ElementFactory.make('capsfilter', 'nvconverter-jpeg-caps')
-        # if (IS_DEV_CONTAINER):
-        #     caps_nvvidconv_jpeg.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=I420'))
-        #     # Dev container needs I420
-        # else:
-        #     caps_nvvidconv_jpeg.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=NV12'))
-        #     # Jetson needs NV12
-
-        # jpegenc = Gst.ElementFactory.make('nvjpegenc', 'jpegenc')
-
-        # multifilesink = Gst.ElementFactory.make('multifilesink', 'multifilesink')
-        # multifilesink.set_property('location',
-        #                            f"{PATH_TO_PKG_DIR}/object_detection/object_detection/frame_results/frame%06d.jpg")
-        # multifilesink.set_property('index', 0)
-        # multifilesink.set_property('max-files', NUM_IMAGES_TO_SAVE)
 
         sink = Gst.ElementFactory.make('nveglglessink', 'sink')
         sink.set_property('sync', False)
@@ -206,18 +217,19 @@ class DeepStreamEngine:
         self.pipeline.add(caps_videoconvert0)
         self.pipeline.add(nvvidconvsrc0)
         self.pipeline.add(caps_nvvidconvsrc0)
+        self.pipeline.add(src_tee)
+        self.pipeline.add(nvvidconv_left)
+        self.pipeline.add(caps_nvvidconv_left)
+        self.pipeline.add(nvvidconv_right)
+        self.pipeline.add(caps_nvvidconv_right)
         self.pipeline.add(streammux)
         if INFERENCE:
             self.pipeline.add(pgie)
             self.pipeline.add(tracker)
-        self.pipeline.add(queue_multifilesink_valve)
-        self.pipeline.add(multifilesink_valve)
+        self.pipeline.add(queue_display_valve)
+        self.pipeline.add(display_valve)
+        self.pipeline.add(tiler)
         self.pipeline.add(osd)
-        # self.pipeline.add(sink_tee)
-        # self.pipeline.add(nvvidconv_jpeg)
-        # self.pipeline.add(caps_nvvidconv_jpeg)
-        # self.pipeline.add(jpegenc)
-        # self.pipeline.add(multifilesink)
         self.pipeline.add(sink)
 
         source0.link(caps_source0)
@@ -225,38 +237,47 @@ class DeepStreamEngine:
         videoconvert0.link(caps_videoconvert0)
         caps_videoconvert0.link(nvvidconvsrc0)
         nvvidconvsrc0.link(caps_nvvidconvsrc0)
+        caps_nvvidconvsrc0.link(src_tee)
+
+        srcpad_left = src_tee.request_pad_simple('src_0')
+        sinkpad_left = nvvidconv_left.get_static_pad('sink')
+        srcpad_left.link(sinkpad_left)
+        nvvidconv_left.link(caps_nvvidconv_left)
+
+        srcpad_right = src_tee.request_pad_simple('src_1')
+        sinkpad_right = nvvidconv_right.get_static_pad('sink')
+        srcpad_right.link(sinkpad_right)
+        nvvidconv_right.link(caps_nvvidconv_right)
 
         sinkpad0 = streammux.request_pad_simple('sink_0')
-        srcpad0 = caps_nvvidconvsrc0.get_static_pad('src')
+        srcpad0 = caps_nvvidconv_left.get_static_pad('src')
         srcpad0.link(sinkpad0)
+
+        sinkpad1 = streammux.request_pad_simple('sink_1')
+        srcpad1 = caps_nvvidconv_right.get_static_pad('src')
+        srcpad1.link(sinkpad1)
 
         if INFERENCE:
             streammux.link(pgie)
             pgie.link(tracker)
-            tracker.link(queue_multifilesink_valve)
+            tracker.link(queue_display_valve)
         else:
-            streammux.link(queue_multifilesink_valve)
-        queue_multifilesink_valve.link(multifilesink_valve)
-        multifilesink_valve.link(osd)
+            streammux.link(queue_display_valve)
+        queue_display_valve.link(display_valve)
+        display_valve.link(tiler)
+        tiler.link(osd)
         osd.link(sink)
-
-        # osd.link(sink_tee)
-        # sink_tee.link(sink)
-
-        # sink_tee.link(nvvidconv_jpeg)
-        # nvvidconv_jpeg.link(caps_nvvidconv_jpeg)
-        # caps_nvvidconv_jpeg.link(jpegenc)
-        # jpegenc.link(multifilesink)
-
-        # Need to make file saving a toggleable option
 
         self.loop = GLib.MainLoop()
         bus = self.pipeline.get_bus()
         bus.add_signal_watch()
         bus.connect("message", self._bus_call, self.loop)
 
-        infer_probe_pad = queue_multifilesink_valve.get_static_pad('sink')
+        infer_probe_pad = queue_display_valve.get_static_pad('sink')
         infer_probe_pad.add_probe(Gst.PadProbeType.BUFFER, self._infer_probe, 0)
+
+        osd_probe_pad = osd.get_static_pad('sink')
+        osd_probe_pad.add_probe(Gst.PadProbeType.BUFFER, self._osd_probe, 0)
     
     def _bus_call(self, bus: Gst.Bus, message: Gst.Message, loop: GLib.MainLoop) -> bool: # noqa: ARG002
         t = message.type
@@ -323,6 +344,7 @@ class DeepStreamEngine:
                 break
 
             msg["ntp_timestamp"] = frame_meta.ntp_timestamp
+            msg["detection_results"].append([])
 
             if (frame_meta.source_id == 0 and frame_meta.frame_num % 60 == 0):
                 current_time = time.time()
@@ -351,9 +373,9 @@ class DeepStreamEngine:
                 obj_results["object_id"] = obj_meta.object_id
                 obj_results["class_id"] = obj_meta.class_id
                 obj_results["obj_label"] = obj_meta.obj_label
-                obj_results["angle_to_object"] = np.arctan((mid_x - self.cam_list[0]["width"] * 0.5)
-                                                           / self.camera_focal_px) * 180 / pi
-                msg["detection_results"].append(obj_results)
+                obj_results["angle_to_object"] = np.arctan((mid_x - self.cam_list[0]["width"] / 4)
+                                                           / self.cam_list[0]["focal_px"]) * 180 / pi
+                msg["detection_results"][frame_meta.source_id].append(obj_results)
 
                 obj_meta.text_params.display_text = f"{obj_meta.obj_label} {obj_meta.object_id} {obj_meta.confidence:.2f}."
 
@@ -366,7 +388,19 @@ class DeepStreamEngine:
                 l_frame = l_frame.next
             except StopIteration:
                 break
+
+        self.detection_callback(msg)
+
+        return Gst.PadProbeReturn.OK
+
+    def _osd_probe(self, pad: Gst.Pad, info: Gst.PadProbeInfo, user_data: int) -> Gst.PadProbeReturn: # noqa: ARG002
+        gst_buffer = info.get_buffer()
+        if not gst_buffer:
+            self.info_callback("Unable to get GstBuffer")
+            return None
         
+        batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
+
         display_meta = pyds.nvds_acquire_display_meta_from_pool(batch_meta)
         display_meta.num_labels = 1
         py_nvosd_text_params = display_meta.text_params[0]
@@ -389,15 +423,13 @@ class DeepStreamEngine:
         # set(red, green, blue, alpha); set to Black
         py_nvosd_text_params.text_bg_clr.set(0.0, 0.0, 0.0, 0.25)
 
-        self.detection_callback(msg)
-
         return Gst.PadProbeReturn.OK
 
     def _read_camera_config(self) -> dict:
         with open(CAMERA_CONFIG, 'r') as file:
             return yaml.safe_load(file)
 
-    def _find_camera(self, camera_format: str) -> str:
+    def _find_camera(self, cam_id: int = 0) -> str:
         """
         This is just a way to figure out which /dev/video* is the camera<br>
         The camera outputs on 3 devices<br>
@@ -409,7 +441,9 @@ class DeepStreamEngine:
         -------
             str: The /dev/video* device path.
         """
-        
+
+        cam_format = self.cam_list[cam_id]["v4l2_format"]
+        cam_name = self.cam_list[cam_id]["name"]
         ls = shutil.which("ls")
         cat = shutil.which("cat")
         v4l2_ctl = shutil.which("v4l2-ctl")
@@ -424,15 +458,15 @@ class DeepStreamEngine:
             raise OSError("Failed to list camera devices in /sys/class/video4linux/.") from err
         for device in camera_devices_output.splitlines():
             try:
-                if ((re.search("RealSense", subprocess.run([cat, f'/sys/class/video4linux/{device}/name'], # noqa: S603
+                if ((re.search(cam_name, subprocess.run([cat, f'/sys/class/video4linux/{device}/name'], # noqa: S603
                                                         capture_output=True, text=True, check=True).stdout) is not None) and
-                (re.search(camera_format, subprocess.run([v4l2_ctl, '--device', f'/dev/{device}', '--list-formats'], # noqa: S603
+                (re.search(cam_format, subprocess.run([v4l2_ctl, '--device', f'/dev/{device}', '--list-formats'], # noqa: S603
                                                             capture_output=True, text=True, check=True).stdout) is not None)):
                         return f"/dev/{device}"
             except subprocess.CalledProcessError as err:
                 self.error_callback(f"Command v4l2-ctl failed for device {device}.")
                 raise OSError(f"Command v4l2-ctl failed for device {device}.") from err
-        self.error_callback(f"Could not find RealSense camera device with {camera_format} format")
+        self.error_callback(f"Could not find {cam_name} device with {cam_format} format")
         raise OSError("Camera device not found")
 
     def _read_file(self, file_name:str) -> tuple[list[str], str, float]:

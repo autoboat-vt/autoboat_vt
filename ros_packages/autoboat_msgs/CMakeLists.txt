@@ -16,6 +16,7 @@ set(msg_files
   "msg/RCData.msg"
   "msg/WaypointList.msg"
   "msg/ObjectDetectionResult.msg"
+  "msg/ObjectDetectionFrameResults.msg"
   "msg/ObjectDetectionResultsList.msg"
   "msg/TriangulationResult.msg"
   "msg/TriangulationResultsList.msg"
