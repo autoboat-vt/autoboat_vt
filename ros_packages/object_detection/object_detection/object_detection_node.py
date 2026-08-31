@@ -22,7 +22,7 @@ from sensor_msgs.msg import NavSatFix
 # from realsense2_camera_msgs.msg import RGBD
 from std_msgs.msg import Float32, String
 
-from autoboat_msgs.msg import ObjectDetectionResult, ObjectDetectionResultsList, TriangulationResult, TriangulationResultsList
+from autoboat_msgs.msg import ObjectDetectionResult, ObjectDetectionFrameResults, ObjectDetectionResultsList
 
 from .cv_library.deepstream_engine import DeepStreamEngine
 
@@ -89,12 +89,6 @@ class BuoyDetectionNode(Node):
                     model_to_update = new_parameters_json[key]
                 case "threshold":
                     threshold_to_update = new_parameters_json[key]
-                case "buffer_window_size":
-                    self.vision_engine.update_buffer_window(new_parameters_json[key])
-                case "iou_threshold":
-                    self.vision_engine.update_iou_threshold(new_parameters_json[key])
-                case "update_rate":
-                    self._update_publish_frequency(new_parameters_json[key])
                 case _:
                     self.get_logger().warn(f"Parameter {key} not recognized, ignoring")
         self.vision_engine.update_model_or_threshold(model_to_update, threshold_to_update)
@@ -106,19 +100,23 @@ class BuoyDetectionNode(Node):
         msg.yolo_version = detection_results["yolo_version"]
         msg.threshold = detection_results["threshold"]
         msg.detection_results = []
-        for detection in detection_results["detection_results"]:
-            detection_msg = ObjectDetectionResult()
-            detection_msg.detector_confidence = detection["detector_confidence"]
-            detection_msg.tracker_confidence = detection["tracker_confidence"]
-            detection_msg.x_position = detection["x_position"]
-            detection_msg.y_position = detection["y_position"]
-            detection_msg.width = detection["width"]
-            detection_msg.height = detection["height"]
-            detection_msg.object_id = detection["object_id"]
-            detection_msg.class_id = detection["class_id"]
-            detection_msg.obj_label = detection["obj_label"]
-            detection_msg.angle_to_object = detection["angle_to_object"]
-            msg.detection_results.append(detection_msg)
+        for frame_detections in detection_results["detection_results"]:
+            frame_results = ObjectDetectionFrameResults()
+            frame_results.detection_results = []
+            for detection in frame_detections:
+                detection_msg = ObjectDetectionResult()
+                detection_msg.detector_confidence = detection["detector_confidence"]
+                detection_msg.tracker_confidence = detection["tracker_confidence"]
+                detection_msg.x_position = detection["x_position"]
+                detection_msg.y_position = detection["y_position"]
+                detection_msg.width = detection["width"]
+                detection_msg.height = detection["height"]
+                detection_msg.object_id = detection["object_id"]
+                detection_msg.class_id = detection["class_id"]
+                detection_msg.obj_label = detection["obj_label"]
+                detection_msg.angle_to_object = detection["angle_to_object"]
+                frame_results.detection_results.append(detection_msg)
+            msg.detection_results.append(frame_results)
         self.object_detection_results_publisher.publish(msg)
 
 def main() -> None:

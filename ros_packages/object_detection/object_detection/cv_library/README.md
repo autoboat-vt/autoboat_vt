@@ -16,7 +16,7 @@ This file runs the deepstream and computer vision pipeline. It is called by the 
 
 ## triangulation.py
 
-This file triangulates the positions of objects. It is called by the triangulation node.
+This file triangulates the positions of objects. It is called by the localization node.
 
 ## Model Generation
 
