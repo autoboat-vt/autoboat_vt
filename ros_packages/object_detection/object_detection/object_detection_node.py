@@ -16,8 +16,6 @@ import threading
 import rclpy
 from jsonc_parser.parser import JsoncParser
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import NavSatFix
 
 # from realsense2_camera_msgs.msg import RGBD
 from std_msgs.msg import Float32, String
