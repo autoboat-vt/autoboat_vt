@@ -18,7 +18,7 @@ from jsonc_parser.parser import JsoncParser
 from rclpy.node import Node
 
 # from realsense2_camera_msgs.msg import RGBD
-from std_msgs.msg import Float32, String
+from std_msgs.msg import String
 
 from autoboat_msgs.msg import ObjectDetectionResult, ObjectDetectionFrameResults, ObjectDetectionResultsList
 
