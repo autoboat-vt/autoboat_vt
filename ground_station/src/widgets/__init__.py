@@ -1,21 +1,9 @@
 """
-Package for widgets in the ground station application.
+Provide all top-level widgets for the ground station application.
 
-Subpackages:
-- ``map_widget``: Contains the map widget and related classes for managing waypoints and map options.
-- ``autopilot_config_widget``: Contains the autopilot configuration widget and related classes for managing autopilot settings.
-- ``camera_widget``: Contains the camera widget for displaying camera feeds.
-- ``keybind_widget``: Contains the keybind configuration dialog and the shared keybind manager.
-
-Modules:
-- GroundStationWidget: Main widget for the ground station interface.
-- ConsoleOutputWidget: Widget for displaying console output.
-- GraphViewer: Widget for viewing telemetry data.
-- InstanceHandler: Manages instances of the application, displaying their information and allowing interaction.
-- CameraWidget: Widget for displaying a camera feed.
-- AutopilotConfigWidget: Tabbed widget combining the config editor and manager.
-- KeybindConfigDialog: Dialog for viewing and editing keybinds.
-- UserGuideWidget: Widget for displaying the documentation.
+This package includes the main :class:`GroundStationWidget`, console output,
+map, camera, autopilot configuration, keybind, instance handler, and user guide
+widgets, along with several easter egg games.
 """
 
 __all__ = [

@@ -15,20 +15,18 @@ class EmittingStream(QObject):
     """
     A custom stream that emits text written to it as a signal.
 
-    Inherits
-    --------
-    :class:`QObject`
+    This stream is intended to replace ``sys.stdout`` / ``sys.stderr`` so that
+    output from :func:`print()` calls throughout the codebase is captured into the
+    console widget.
 
     Attributes
     ----------
-    text_written: :class:`Signal`
+    text_written
         Signal emitted when text is written to the stream.
 
-    Notes
-    -----
-    This stream is intended to replace ``sys.stdout`` / ``sys.stderr`` so that
-    output from ``print()`` calls throughout the codebase is captured into the
-    console widget.
+    Inherits
+    --------
+    :class:`QObject`
     """
 
     text_written = Signal(str)
@@ -92,10 +90,7 @@ class ConsoleOutputWidget(QWidget):
 
         self.stdout_stream.text_written.connect(self.append_text)
         self.stderr_stream.text_written.connect(self.append_text)
-        # Route all ``logging`` module output through this widget via the
-        # QtConsoleHandler signal.  This is the primary path for log records;
-        # the stdout/stderr capture above remains for non-logging output
-        # (Qt framework messages, third-party libs that still ``print``).
+
         attach_console_widget(self.append_text)
 
     @Slot(str)

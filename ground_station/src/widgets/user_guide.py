@@ -38,7 +38,14 @@ class UserGuideWidget(QWidget):
         self.web_view.load(constants.DOCUMENTATION_URL)
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        """Handle the close event for the widget."""
+        """
+        Handle the close event for the widget.
+        
+        Parameters
+        ----------
+        event
+            The close event to be handled.
+        """
 
         self.web_profile.clearHttpCache()
         self.web_profile.clearAllVisitedLinks()

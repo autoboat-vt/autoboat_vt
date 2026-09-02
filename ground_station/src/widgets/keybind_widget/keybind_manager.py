@@ -27,8 +27,7 @@ def get_keybind_manager() -> KeybindManager:
 
     Returns
     -------
-    KeybindManager
-        The shared keybind manager instance.
+    :class:`KeybindManager`
     """
 
     global _KeybindManagerInstance  # noqa: PLW0603 - intentional singleton, mirrors constants.SM
@@ -45,14 +44,14 @@ def normalize_key_string(raw: str) -> str:
     Parameters
     ----------
     raw
-        The raw key combination string, e.g. ``"Ctrl+Shift+P"`` or ``"f"``.
+        The raw key combination string, e.g. `"Ctrl+Shift+P"` or `"f"`.
 
     Returns
     -------
-    str
-        The normalized string with single spaces around ``+`` separators and
-        trimmed whitespace. Modifiers are title-cased so that ``"ctrl+shift+p"``
-        and ``"Ctrl+Shift+P"`` compare equal.
+    `str`
+        The normalized string with single spaces around `+` separators and
+        trimmed whitespace. Modifiers are title-cased so that `"ctrl+shift+p"`
+        and `"Ctrl+Shift+P"` compare equal.
     """
 
     parts = [part.strip().title() for part in raw.split("+") if part.strip()]
@@ -70,7 +69,7 @@ class KeybindManager(QObject):
 
     Attributes
     ----------
-    bindings_changed: :class:`Signal`
+    bindings_changed
         Emitted whenever a binding is added, removed, or changed. Carries the
         full bindings dict so listeners can re-register shortcuts.
 
@@ -128,7 +127,7 @@ class KeybindManager(QObject):
 
         Returns
         -------
-        dict[str, dict[str, str]]
+        `dict[str, dict[str, str]]`
             A fresh copy of the default bindings, with each ``key`` normalized.
         """
 
@@ -144,7 +143,7 @@ class KeybindManager(QObject):
 
         Returns
         -------
-        dict[str, dict[str, str]]
+        `dict[str, dict[str, str]]`
             A dict mapping action keys to binding info dicts.
         """
 
@@ -152,17 +151,17 @@ class KeybindManager(QObject):
 
     def get_binding(self, action: str) -> dict[str, str] | None:
         """
-        Return the binding info for a single action, or ``None``.
+        Return the binding info for a single action, or `None`.
 
         Parameters
         ----------
         action
-            The action key, e.g. ``"focus_boat"``.
+            The action key, e.g. `"focus_boat"`.
 
         Returns
         -------
-        dict[str, str] | None
-            The binding info dict, or ``None`` if the action is unknown.
+        `dict[str, str] | None`
+            The binding info dict, or `None` if the action is unknown.
         """
 
         info = self._bindings.get(action)
@@ -170,7 +169,7 @@ class KeybindManager(QObject):
 
     def get_key(self, action: str) -> str | None:
         """
-        Return the normalized key string for an action, or ``None``.
+        Return the normalized key string for an action, or `None`.
 
         Parameters
         ----------
@@ -179,8 +178,8 @@ class KeybindManager(QObject):
 
         Returns
         -------
-        str | None
-            The normalized key string (e.g. ``"Ctrl+Shift+P"``) or ``None``.
+        `str | None`
+            The normalized key string (e.g. `"Ctrl+Shift+P"`) or `None`.
         """
 
         info = self._bindings.get(action)
@@ -197,11 +196,11 @@ class KeybindManager(QObject):
         Parameters
         ----------
         scope
-            Either ``"app"`` or ``"map"``.
+            Either `"app"` or `"map"`.
 
         Returns
         -------
-        dict[str, dict[str, str]]
+        `dict[str, dict[str, str]]`
             A dict of action key -> binding info for the matching scope.
         """
 
@@ -221,8 +220,8 @@ class KeybindManager(QObject):
 
         Returns
         -------
-        str | None
-            The action key of the conflicting binding, or ``None`` if there is
+        `str | None`
+            The action key of the conflicting binding, or `None` if there is
             no conflict.
         """
 
@@ -255,10 +254,10 @@ class KeybindManager(QObject):
 
         Returns
         -------
-        str | None
+        `str | None`
             The action key of a conflicting binding if one exists (the update
             is still applied — the caller may choose to warn the user), or
-            ``None`` on a clean update. Returns ``None`` if the action is
+            `None` on a clean update. Returns `None` if the action is
             unknown (nothing was changed).
         """
 
@@ -319,7 +318,7 @@ class KeybindManager(QObject):
 
         Raises
         ------
-        TypeError
+        :class:`TypeError`
             If the file does not contain a valid JSON object.
         """
 
@@ -392,9 +391,7 @@ class KeybindManager(QObject):
 
         Returns
         -------
-        QKeySequence
-            A :class:`QKeySequence` constructed from the action's key string. Empty
-            if the action is unknown or has no key.
+        :class:`QKeySequence`
         """
 
         key = self.get_key(action)
@@ -412,8 +409,8 @@ class KeybindManager(QObject):
 
         Returns
         -------
-        dict[str, str]
-            A dict of ``action -> normalized key string`` for map-scope actions.
+        `dict[str, str]`
+            A dict of action -> normalized key string for map-scope actions.
         """
 
         return {
@@ -433,20 +430,20 @@ def qt_key_to_string(key: Qt.Key, modifiers: Qt.KeyboardModifier) -> str:
     Convert a Qt key + modifiers into a normalized combination string.
 
     Used by the key-capture dialog to turn a :class:`QKeyEvent` into the stored
-    string form (e.g. ``"Ctrl+Shift+P"``).
+    string form (e.g. `"Ctrl+Shift+P"`).
 
     Parameters
     ----------
     key
-        The Qt key code (from ``QKeyEvent.key()``).
+        The Qt key code (from :meth:`QKeyEvent.key()`).
     modifiers
-        The Qt modifier flags (from ``QKeyEvent.modifiers()``).
+        The Qt modifier flags (from :meth:`QKeyEvent.modifiers()`).
 
     Returns
     -------
-    str
+    `str`
         The normalized key combination string, or an empty string if the key
-        alone is a modifier (e.g. pressing just ``Shift``).
+        alone is a modifier (e.g. pressing just `Shift`).
     """
 
     modifier_keys = {
@@ -476,7 +473,6 @@ def qt_key_to_string(key: Qt.Key, modifiers: Qt.KeyboardModifier) -> str:
     return normalize_key_string("+".join(parts))
 
 
-# expose the helper for type-checkers that want the Any-typed version
 def qt_key_event_to_string(event: QKeyEvent) -> str:
     """Convert a :class:`QKeyEvent` into a normalized combination string.
 
@@ -487,7 +483,7 @@ def qt_key_event_to_string(event: QKeyEvent) -> str:
 
     Returns
     -------
-    str
+    `str`
         The normalized key combination string, or an empty string if the event
         is a bare modifier press.
     """

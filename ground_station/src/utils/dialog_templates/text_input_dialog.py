@@ -25,11 +25,11 @@ class InputDialog(QWidget, Generic[T]):
     default_value
         The default value to show in the input field.
     input_type
-        The type to convert the input to (int, float, or str).
+        The type to convert the input to (`int`, `float`, or `str`).
 
     Inherits
     --------
-    :class:`QWidget` and ``Generic[T]``
+    :class:`QWidget` and :class:`Generic[T]`
     """
 
     def __init__(
@@ -52,8 +52,8 @@ class InputDialog(QWidget, Generic[T]):
 
         Returns
         -------
-        T | None
-            The user input converted to the specified type, or ``None`` if the dialog was cancelled.
+        `T | None`
+            The user input converted to the specified type, or `None` if the dialog was cancelled.
         """
 
         if self._input_type is int:

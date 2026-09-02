@@ -30,9 +30,9 @@ class CoordinateInputDialog(QDialog):
     A dialog for entering a latitude/longitude pair in several coordinate formats.
 
     Supported formats:
-    - Decimal Degrees (e.g. ``37.7749, -122.4194``)
-    - Degrees Decimal Minutes (e.g. ``37 46.4933 N, 122 24.5856 W``)
-    - Degrees Minutes Seconds (e.g. ``37 46 29.6 N, 122 24 58.6 W``)
+    - Decimal Degrees (e.g. `37.7749, -122.4194`)
+    - Degrees Decimal Minutes (e.g. `37 46.4933 N, 122 24.5856 W`)
+    - Degrees Minutes Seconds (e.g. `37 46 29.6 N, 122 24 58.6 W`)
 
     Inherits
     --------
@@ -42,6 +42,7 @@ class CoordinateInputDialog(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Manual Coordinate Entry")
+
         # these maps make it easier to navigate between fields with arrow keys
         self._down_map: dict[QWidget, QWidget] = {}
         self._up_map: dict[QWidget, QWidget] = {}
@@ -92,7 +93,14 @@ class CoordinateInputDialog(QDialog):
         self._focus_first_field()
 
     def _on_format_changed(self, index: int) -> None:
-        """Switch the stacked page and focus the first field of the new format."""
+        """
+        Switch the stacked page and focus the first field of the new format.
+        
+        Parameters
+        ----------
+        index
+            The index of the newly selected format in the combo box.
+        """
 
         self._stack.setCurrentIndex(index)
         self._focus_first_field()
@@ -113,7 +121,14 @@ class CoordinateInputDialog(QDialog):
             field.setCursorPosition(len(field.text()))
 
     def _build_dd_page(self) -> QWidget:
-        """Decimal Degrees page with two text fields for latitude and longitude."""
+        """
+        Decimal Degrees page with two text fields for latitude and longitude.
+        
+        Returns
+        -------
+        :class:`QWidget`
+            The page widget containing the decimal degrees input fields.
+        """
 
         page = QWidget()
         form = QFormLayout(page)
@@ -125,7 +140,14 @@ class CoordinateInputDialog(QDialog):
         return page
 
     def _build_ddm_page(self) -> QWidget:
-        """Degrees + decimal minutes + hemisphere selector."""
+        """
+        Degrees + decimal minutes + hemisphere selector.
+        
+        Returns
+        -------
+        :class:`QWidget`
+            The page widget containing the degrees decimal minutes input fields.
+        """
 
         page = QWidget()
         form = QFormLayout(page)
@@ -160,7 +182,14 @@ class CoordinateInputDialog(QDialog):
         return page
 
     def _build_dms_page(self) -> QWidget:
-        """Degrees + minutes + seconds + hemisphere selector."""
+        """
+        Degrees + minutes + seconds + hemisphere selector.
+        
+        Returns
+        -------
+        :class:`QWidget`
+            The page widget containing the degrees minutes seconds input fields.
+        """
 
         page = QWidget()
         form = QFormLayout(page)
@@ -202,7 +231,21 @@ class CoordinateInputDialog(QDialog):
 
     @staticmethod
     def _make_text_field(default: str = "0", tooltip: str = "") -> QLineEdit:
-        """A text field for numeric coordinate entry."""
+        """
+        A text field for numeric coordinate entry.
+        
+        Parameters
+        ----------
+        default
+            The default text to display in the field.
+        tooltip
+            The tooltip text to show when hovering over the field.
+
+        Returns
+        -------
+        :class:`QLineEdit`
+            The created text field widget.
+        """
 
         field = QLineEdit(default)
         field.setClearButtonEnabled(True)
@@ -211,7 +254,19 @@ class CoordinateInputDialog(QDialog):
 
     @staticmethod
     def _make_combo(items: list[str]) -> QComboBox:
-        """A hemisphere combo box."""
+        """
+        A hemisphere combo box.
+        
+        Parameters
+        ----------
+        items
+            The list of items to populate the combo box with.
+
+        Returns
+        -------
+        :class:`QComboBox`
+            The created combo box widget.
+        """
 
         combo = QComboBox()
         combo.addItems(items)
@@ -263,8 +318,8 @@ class CoordinateInputDialog(QDialog):
 
         Returns
         -------
-        bool
-            ``True`` if the event was handled, ``False`` otherwise.
+        `bool`
+            `True` if the event was handled, `False` otherwise.
         """
 
         if event is not None and event.type() == QEvent.Type.KeyPress and obj is not None:
@@ -317,7 +372,7 @@ class CoordinateInputDialog(QDialog):
 
         Returns
         -------
-        float
+        `float`
             The decimal degrees value.
         """
 
@@ -337,7 +392,21 @@ class CoordinateInputDialog(QDialog):
 
     @staticmethod
     def _parse_float(field: QLineEdit, name: str) -> float:
-        """Parse a text field's contents into a float."""
+        """
+        Parse a text field's contents into a float.
+        
+        Parameters
+        ----------
+        field
+            The text field to parse.
+        name
+            The name of the field, used in error messages.
+
+        Returns
+        -------
+        `float`
+            The parsed float value.
+        """
 
         text = field.text().strip()
         if not text:
@@ -354,19 +423,21 @@ class CoordinateInputDialog(QDialog):
         Returns
         -------
         tuple[float, float]
-            ``(latitude, longitude)`` in decimal degrees.
+            `(latitude, longitude)` in decimal degrees.
 
         Raises
         ------
-        ValueError
+        :class:`ValueError`
             If the values are out of range for the selected format.
         """
 
         idx = self._stack.currentIndex()
+
         # decimal degrees
         if idx == 0:
             lat = self._parse_float(self._dd_lat, "Latitude")
             lon = self._parse_float(self._dd_lon, "Longitude")
+
         # degrees decimal minutes
         elif idx == 1:
             lat = self._dms_to_decimal(

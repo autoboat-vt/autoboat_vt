@@ -1,15 +1,3 @@
-"""
-Module containing classes for handling background tasks in the Groundstation.
-
-Contains:
-- AutopilotThreadRouter: Class containing :class:`QThread` classes dealing with the ``autopilot_parameters`` endpoint.
-- BoatStatusThreadRouter: Class containing :class:`QThread` classes dealing with the ``boat_status`` endpoint.
-- InstanceManagerThreadRouter: Class containing :class:`QThread` classes dealing with the ``instance_manager`` endpoint.
-- WaypointThreadRouter: Class containing :class:`QThread` classes dealing with waypoints,
-both from the ``waypoints`` endpoint and the local server.
-- ImageFetcher: :class:`QThread` class for fetching images from the telemetry server.
-"""
-
 import pathlib
 from urllib.parse import urljoin
 
@@ -35,7 +23,7 @@ class AutopilotThreadRouter:
     """
     Class containing :class:`QThread` classes dealing with the ``autopilot_parameters`` endpoint.
 
-    Subclasses
+    Attributes
     ----------
     - :class:`ActiveHashFetcherThread` -> Fetches the currently active autopilot parameter configuration hash.
     - :class:`AvailableHashesFetcherThread` -> Fetches available autopilot parameter configuration hashes.
@@ -43,18 +31,18 @@ class AutopilotThreadRouter:
 
     class ActiveHashFetcherThread(QThread):
         """
-        Thread to fetch the currently active autopilot parameter configuration hash from the telemetry server.
-
-        Inherits
-        -------
-        :class:`QThread`
+        Fetch the currently active autopilot parameter configuration hash from the telemetry server.
 
         Attributes
         ----------
         response
             Signal to send the active hash to the main thread. Emits a tuple containing:
-                - a string representing the active hash,
+                - a dictionary containing the active hash information,
                 - a :class:`TelemetryStatus` enum value indicating the status of the request.
+
+        Inherits
+        --------
+        :class:`QThread`
         """
 
         response = Signal(tuple)
@@ -94,16 +82,16 @@ class AutopilotThreadRouter:
         """
         Thread to fetch available autopilot parameter configuration hashes from the telemetry server.
 
-        Inherits
-        -------
-        :class:`QThread`
-
         Attributes
         ----------
         response
             Signal to send available hashes to the main thread. Emits a tuple containing:
-                - a list of available hashes,
+                - a list of dictionaries, where each dictionary contains information about an available hash,
                 - a :class:`TelemetryStatus` enum value indicating the status of the request.
+
+        Inherits
+        --------
+        :class:`QThread`
         """
 
         response = Signal(tuple)
@@ -142,26 +130,25 @@ class BoatStatusThreadRouter:
     """
     Class containing :class:`QThread` classes dealing with the ``boat_status`` endpoint.
 
-    Subclasses
+    Attributes
     ----------
-    - :class:`BoatStatusFetcherThread` -> Fetches boat status.
+    - :class:`BoatStatusFetcherThread` -> Fetches boat status via HTTP polling.
     """
 
     class BoatStatusFetcherThread(QThread):
         """
-        Thread to fetch boat status from the telemetry server via HTTP polling.
-
-        Inherits
-        -------
-        :class:`QThread`
+        Fetch boat status from the telemetry server via HTTP polling.
 
         Attributes
         ----------
         data_fetched
-            A :class:`Signal` emitted whenever a new boat status fetch completes.
-            Emits a tuple containing:
-                - a dictionary representing the boat status,
+            Signal emitted when a new boat status fetch completes. Emits a tuple containing:
+                - a dictionary containing the boat status data,
                 - a :class:`TelemetryStatus` enum value indicating the status of the request.
+
+        Inherits
+        --------
+        :class:`QThread`
         """
 
         data_fetched = Signal(tuple)
@@ -194,25 +181,25 @@ class InstanceManagerThreadRouter:
     """
     Class containing :class:`QThread` classes dealing with the ``instance_manager`` endpoint.
 
-    Subclasses
+    Attributes
     ----------
-    - :class:`InstanceFetcherThread` -> Fetches instances.
+    - :class:`InstanceFetcherThread` -> Fetches available instances.
     """
 
     class InstanceFetcherThread(QThread):
         """
-        Thread to fetch instances from the telemetry server.
-
-        Inherits
-        -------
-        :class:`QThread`
+        Fetch instances from the telemetry server.
 
         Attributes
         ----------
         response
             Signal to send instances to the main thread. Emits a tuple containing:
-                - a list of dictionaries representing instances,
+                - a list of dictionaries, where each dictionary contains information about an instance,
                 - a :class:`TelemetryStatus` enum value indicating the status of the request.
+
+        Inherits
+        --------
+        :class:`QThread`
         """
 
         response = Signal(tuple)
@@ -251,7 +238,7 @@ class WaypointThreadRouter:
     """
     Class containing :class:`QThread` classes dealing with waypoints.
 
-    Subclasses
+    Attributes
     ----------
     - :class:`RemoteFetcherThread` -> Fetches waypoints from the telemetry server.
     - :class:`LocalFetcherThread` -> Fetches waypoints from the local server.
@@ -269,7 +256,7 @@ class WaypointThreadRouter:
         ----------
         response
             Signal to send waypoints to the main thread. Emits a tuple containing:
-                - a list of waypoints, where each waypoint is a list of ``[latitude, longitude]``,
+                - a list of waypoints, where each waypoint is a list of `[latitude, longitude]`,
                 - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
@@ -317,16 +304,16 @@ class WaypointThreadRouter:
         """
         Thread to fetch waypoints from the local server.
 
-        Inherits
-        -------
-        :class:`QThread`
-
         Attributes
         ----------
         response
             Signal to send waypoints to the main thread. Emits a tuple containing:
-                - a list of waypoints, where each waypoint is a list of ``[latitude, longitude]``,
+                - a list of waypoints, where each waypoint is a list of `[latitude, longitude]`,
                 - a :class:`TelemetryStatus` enum value indicating the status of the request.
+
+        Inherits
+        --------
+        :class:`QThread`
         """
 
         response = Signal(tuple)
@@ -368,14 +355,14 @@ class ImageFetcher(QThread):
     """
     Thread to fetch images from the telemetry server.
 
-    Inherits
-    -------
-    :class:`QThread`
-
     Attributes
     ----------
     data_fetched
         Signal to send image to the main thread. Emits a base64 encoded string of the image.
+
+    Inherits
+    --------
+    :class:`QThread`
     """
 
     data_fetched = Signal(str)
@@ -394,8 +381,8 @@ class ImageFetcher(QThread):
 
         Raises
         ------
-        ValueError
-            If the image data is ``None``.
+        :class:`ValueError`
+            If the image data is `None`.
         """
 
         try:

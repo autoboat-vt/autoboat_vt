@@ -60,8 +60,8 @@ def _map_api(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Mark a :class:`MapBridge` method as part of the public API surface.
 
-    Methods decorated with this are included in `MapBridge.get_api_signatures`
-    and compared against the TS side during `MapBridge.verify_api`.
+    Methods decorated with this are included in :meth:`MapBridge.get_api_signatures`
+    and compared against the TS side during :meth:`MapBridge.verify_api`.
     """
 
     func._is_map_api = True
@@ -88,10 +88,10 @@ class MapBridge:
         Parameters
         ----------
         method
-            The TS method name on ``window.map``.
+            The TS method name on :attr:`window.map`.
         *args
             The arguments to pass to the TS method.  Each is serialized via
-            ``json.dumps`` to ensure proper quoting and escaping.
+            :meth:`json.dumps` to ensure proper quoting and escaping.
         """
 
         js_args = ", ".join(json.dumps(a) for a in args)
@@ -102,7 +102,7 @@ class MapBridge:
         """
         Run a pre-built JS expression through the load guard.
 
-        Use this for batch calls (multiple ``map.X()`` statements joined by
+        Use this for batch calls (multiple :meth:`map.X()` statements joined by
         newlines) where calling individual methods would be impractical.
         """
 
@@ -113,9 +113,9 @@ class MapBridge:
 
         Returns
         -------
-        dict[str, list[str]]
+        `dict[str, list[str]]`
             A mapping of method name to the list of parameter names
-            (excluding ``self``), mirroring what the TS ``getApi()`` returns.
+            (excluding ``self``), mirroring what the TS :meth:`getApi()` returns.
         """
 
         signatures: dict[str, list[str]] = {}
@@ -137,10 +137,10 @@ class MapBridge:
         Compare the TS :class:`MapInterface` methods against the Python ``@_map_api``
         methods and log any mismatches.
 
-        Polls the frontend until ``map.getApi()`` is available (the map global
+        Polls the frontend until :meth:`map.getApi()` is available (the map global
         may not be set yet when this runs at startup), then compares signatures.
-        Bypasses `js_load_guard` because we need the return value of
-        ``JSON.stringify(map.getApi())`` delivered to the Python callback.
+        Bypasses :meth:`js_load_guard` because we need the return value of
+        :meth:`JSON.stringify(map.getApi())` delivered to the Python callback.
         """
 
         max_attempts = 50
@@ -222,111 +222,133 @@ class MapBridge:
     @_map_api
     def update_boat_location(self, lat: float, lon: float) -> None:
         """Update the boat marker position without changing heading."""
+
         self._call("update_boat_location", lat, lon)
 
     @_map_api
     def update_boat_heading(self, heading: float) -> None:
         """Update the boat marker heading without changing position."""
+
         self._call("update_boat_heading", heading)
 
     @_map_api
     def update_boat_location_and_heading(self, lat: float, lon: float, heading: float) -> None:
         """Update the boat marker position and heading in one call."""
+
         self._call("update_boat_location_and_heading", lat, lon, heading)
 
     @_map_api
     def focus_map_on_boat(self) -> None:
         """Center the map on the boat's current position."""
+
         self._call("focus_map_on_boat")
 
     @_map_api
     def focus_map_on_marker(self, lat: float, lon: float) -> None:
         """Center the map on a waypoint marker and focus it."""
+
         self._call("focus_map_on_marker", lat, lon)
 
     @_map_api
     def focus_map_on_buoy(self, lat: float, lon: float) -> None:
         """Center the map on a buoy marker and focus it."""
+        
         self._call("focus_map_on_buoy", lat, lon)
 
     @_map_api
     def add_waypoint(self, lat: float, lon: float) -> None:
         """Add a waypoint at the given coordinates."""
+
         self._call("add_waypoint", lat, lon)
 
     @_map_api
     def remove_waypoint(self, index: int) -> None:
         """Remove the waypoint at the given index."""
+
         self._call("remove_waypoint", index)
 
     @_map_api
     def change_color_waypoints(self, color: str) -> None:
         """Recolor all waypoints with the given color name."""
+
         self._call("change_color_waypoints", color)
 
     @_map_api
     def clear_waypoints(self) -> None:
         """Remove all waypoints from the map."""
+
         self._call("clear_waypoints")
 
     @_map_api
     def undo_last_waypoint(self) -> None:
         """Undo the last waypoint add or remove operation."""
+
         self._call("undo_last_waypoint")
 
     @_map_api
     def add_buoy(self, lat: float, lon: float) -> None:
         """Add a buoy marker at the given coordinates."""
+
         self._call("add_buoy", lat, lon)
 
     @_map_api
     def remove_buoy(self, index: int) -> None:
         """Remove the buoy at the given index."""
+
         self._call("remove_buoy", index)
 
     @_map_api
     def clear_buoys(self) -> None:
         """Remove all buoys from the map."""
+
         self._call("clear_buoys")
 
     @_map_api
     def clear_track(self) -> None:
         """Clear the boat track history."""
+
         self._call("clear_track")
 
     @_map_api
     def set_track_visible(self, visible: bool) -> None:
         """Show or hide the boat track layer."""
+
         self._call("set_track_visible", visible)
 
     @_map_api
     def remove_all_svgs(self) -> None:
         """Remove all diagnostic SVG overlays from the map."""
+
         self._call("remove_all_svgs")
 
     @_map_api
     def update_no_sail_svg(self, inner_html: str, size: float) -> None:
         """Update the no-sail zone SVG overlay."""
+
         self._call("update_no_sail_svg", inner_html, size)
 
     @_map_api
     def update_velocity_svg(self, inner_html: str, size: float) -> None:
         """Update the velocity arrow SVG overlay."""
+
         self._call("update_velocity_svg", inner_html, size)
 
     @_map_api
     def update_wind_svg(self, inner_html: str) -> None:
         """Update the wind direction SVG overlay."""
+
         self._call("update_wind_svg", inner_html)
 
     @_map_api
     def update_compass_svg(self, degree: float) -> None:
         """Update the compass control rotation."""
+
         self._call("update_compass_svg", degree)
 
     @_map_api
     def set_keybinds(self, bindings: dict[str, str]) -> None:
         """Push a keybind map ``{action: combo}`` to the TS frontend."""
+
         self._call("set_keybinds", bindings)
 
     # endregion exposed MapInterface methods

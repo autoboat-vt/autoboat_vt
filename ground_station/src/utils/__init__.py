@@ -1,26 +1,9 @@
 """
-This package contains various utility classes and functions used throughout the application.
+Provide utility classes and functions used throughout the application.
 
-Subpackages
------------
-- ``syntax_highlighters``: Contains syntax highlighters for various text formats.
-- ``widget_size_controllers``: Contains classes for controlling the size of widgets.
-- ``dialog_templates``: Contains template classes for creating dialog windows.
-
-Modules
--------
-- ``constants``: Contains constant values used throughout the application.
-- ``misc``: Contains miscellaneous utility functions.
-- ``thread_classes``: Contains classes for managing threads in the application.
-- ``logger``: Configures the standard library ``logging`` package with a Qt
-    console handler (feeds :class:`ConsoleOutputWidget`) and a rotating file handler.
-
-Classes
--------
-- :class:`TextEditWindow`: A simple text edit window that emits the entered text when closed.
-- :class:`StateManager`: A class for managing shared application state stored in a JSON file.
-- :class:`TextEditWindow`: A simple text edit window that emits the entered text when closed.
-- :class:`DataLogger`: A class for logging data entries to a file.
+This package exposes syntax highlighters for various text formats,
+widget size controllers, dialog templates, constant values, miscellaneous
+utility functions, thread management classes, and the application logger.
 """
 
 __all__ = [

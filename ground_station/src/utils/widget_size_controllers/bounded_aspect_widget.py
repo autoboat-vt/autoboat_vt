@@ -20,7 +20,7 @@ class BoundedAspectWidget(QWidget):
 
     Raises
     ------
-    ValueError
+    :class:`ValueError`
         - If ``min_aspect_ratio`` is not greater than zero.
         - If ``max_aspect_ratio`` is less than ``min_aspect_ratio``.
 

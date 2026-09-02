@@ -18,7 +18,7 @@ class PreserveAspectWidget(QWidget):
 
     Raises
     ------
-    ValueError
+    :class:`ValueError`
         If ``aspect_ratio`` is not greater than zero.
 
     Inherits

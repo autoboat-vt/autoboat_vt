@@ -29,19 +29,24 @@ logger = get_logger(__name__)
 
 class StrictMatchEnums:
     """
-    These enums MUST match those in `src/autopilot/autopilot/autopilot_library/utils/constants.py` exactly.
+    Group enums that must match the autopilot repository exactly.
 
-    If you change any of these, you MUST change the corresponding one in the autopilot repository as well, and vice versa.
+    These enums must match those in
+    ``ros_packages/autopilot/autopilot/autopilot_library/utils/constants.py``.
+    Update both modules when changing a shared enum.
 
-    Contains
-    --------
-    - :class:`SailboatControlModes`
-    - :class:`SailboatAutopilotStates`
-    - :class:`MotorboatControlModes`
+    Attributes
+    ----------
+    SailboatControlModes
+        Sailboat control modes.
+    SailboatAutopilotStates
+        Sailboat autopilot states.
+    MotorboatControlModes
+        Motorboat control modes.
     """
 
     class SailboatControlModes(Enum):
-        """An enum containing the different control modes that the sailboat can be in."""
+        """Represent the different control modes the sailboat can be in."""
 
         DISABLED = 0
         FULL_RC = 1
@@ -53,29 +58,28 @@ class StrictMatchEnums:
 
     class SailboatAutopilotStates(Enum):
         """
-        An enum containing the different states that the sailboat can be in.
+        Represent the different states the sailboat autopilot can be in.
 
-        NOTE
-        ----
-        If you would like to learn more about the difference between a port/ starboard tack
-        and other similar terms, please look at the following resource:
-        https://rpayc.com.au/wp-content/uploads/2020/11/Basic_Terminology.pdf?srsltid=AfmBOop6ujPja2Fu5hKn8OYW-YlFAZVxAZTDO8zgEOzT3R4wk-7PCQzf
+        Notes
+        -----
+        For an explanation of sailing terminology such as port vs starboard
+        tacks, see https://rpayc.com.au/wp-content/uploads/2020/11/Basic_Terminology.pdf
 
-        For more information about what tacking and jibing are, please read the following:
+        For a description of tacking and jibing, see
         https://captainsword.com/tacking-and-jibing
         """
 
         NA = 0
         DOWNWIND_SAILING = 1
-        PORT_TACK = 2  # On a tack where the wind vector is to the left of the boat (port and left both have 4 letters)
-        STARBOARD_TACK = 3  # On a tack where the wind vector is to the right of the boat
-        CW_TACKING = 4  # Switching tacks from starboard to port tack
-        CCW_TACKING = 5  # Switching tacks from port to staboard tack
-        STALL_WIGGLE_TO_PORT_TACK = 6  # We have stalled in the no sail zone and need to wiggle to port tack
-        STALL_WIGGLE_TO_STARBOARD_TACK = 7  # We have stalled in the no sail zone and need to wiggle to the starboard tack
+        PORT_TACK = 2
+        STARBOARD_TACK = 3
+        CW_TACKING = 4
+        CCW_TACKING = 5
+        STALL_WIGGLE_TO_PORT_TACK = 6
+        STALL_WIGGLE_TO_STARBOARD_TACK = 7
 
     class MotorboatControlModes(Enum):
-        """An enum containing the different control modes that the motorboat can be in."""
+        """Represent the different control modes the motorboat can be in."""
 
         DISABLED = 0
         FULL_RC = 1
@@ -85,17 +89,18 @@ class StrictMatchEnums:
 
 class TelemetryStatus(StrEnum):
     """
-    Enum representing the status of telemetry data fetching.
+    Represent the result of a telemetry data fetch.
+
+    Inherits :class:`StrEnum`.
 
     Attributes
     ----------
-    - :class:`SUCCESS`: Indicates that telemetry data was fetched successfully.
-    - :class:`FAILURE`: Indicates that telemetry data fetching failed.
-    - :class:`WRONG_FORMAT`: Indicates that the fetched telemetry data was in an incorrect format.
-
-    Inherits
-    --------
-    :class:`StrEnum`
+    SUCCESS
+        Telemetry data was fetched successfully.
+    FAILURE
+        Telemetry data fetching failed.
+    WRONG_FORMAT
+        The fetched telemetry data was in an incorrect format.
     """
 
     SUCCESS = auto()

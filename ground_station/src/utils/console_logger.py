@@ -1,46 +1,25 @@
-"""
-Application logging for the ground station.
-
-This module configures the standard library ``logging`` package for the entire
-ground station.  All ``print()`` calls throughout the codebase should be
-replaced with calls to the logger returned by :func:`get_logger`.
-
-Two handlers are attached to the root logger:
-
-- :class:`QtConsoleHandler` - emits records via a Qt signal so the in-app
-  :class:`ConsoleOutputWidget` can display them with timestamps and syntax
-  highlighting.  The formatted message keeps the ``[Info]``/``[Warning]``/
-  ``[Error]`` prefix that :class:`ConsoleHighlighter` matches on.
-- :class:`logging.handlers.RotatingFileHandler` - writes the same records to
-  ``app_data/git_ignore/logs/ground_station.log`` (rotated at 5 MB, 5 backups)
-  so a persistent record survives across runs.
-
-Notes
------
-The Qt signal machinery is only wired up when
-:func:`attach_console_widget` is called from ``ConsoleOutputWidget.__init__`` -
-this avoids touching :class:`QObject` before :class:`QApplication` exists.  Before that
-call, records still flow to the file handler and (if ``sys.stdout`` is a real
-terminal) to the stream handler.
-"""
-
 from __future__ import annotations
 
 import logging
-import sys
+from contextlib import suppress
 from datetime import datetime, timezone
+from functools import cache
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from qtpy.QtCore import QObject, Signal
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 __all__ = [
-    "ConsoleLogSignal",
-    "QtConsoleHandler",
     "attach_console_widget",
     "get_logger",
     "root_logger",
 ]
+
+_PACKAGE_NAME = "ground_station"
 
 _LEVEL_PREFIX: dict[int, str] = {
     logging.DEBUG: "[Debug]",
@@ -52,16 +31,11 @@ _LEVEL_PREFIX: dict[int, str] = {
 
 
 class _PrefixFormatter(logging.Formatter):
-    """
-    Formatter that emits ``[Level] message`` (no timestamp).
-
-    The console widget prepends its own timestamp, and :class:`ConsoleHighlighter`
-    keys off the ``[Info]``/``[Warning]``/``[Error]`` prefix, so the formatter
-    intentionally produces only the prefix + message.
-    """
+    """Formatter that emits ``[Level] message`` (no timestamp)."""
 
     def format(self, record: logging.LogRecord) -> str:
-        """Format ``record`` as ``[Level] message``.
+        """
+        Format ``record`` as ``[Level] message``.
 
         Parameters
         ----------
@@ -70,7 +44,7 @@ class _PrefixFormatter(logging.Formatter):
 
         Returns
         -------
-        str
+        `str`
             The formatted log line.
         """
 
@@ -82,150 +56,165 @@ class _PrefixFormatter(logging.Formatter):
         return f"{prefix} {message}"
 
 
-class _FileFormatter(logging.Formatter):
-    """
-    Formatter for the on-disk log file.
-
-    Includes timestamp, level, logger name, and message so the file is useful
-    for post-mortem debugging without the console widget.
-    """
-
-    _FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
-
-    def __init__(self) -> None:
-        super().__init__(fmt=self._FORMAT, datefmt="%Y-%m-%d %H:%M:%S")
-
-
-class ConsoleLogSignal(QObject):
-    """
-    Qt object exposing the ``log_emitted`` signal.
-
-    :class:`ConsoleOutputWidget` connects ``log_emitted`` to its append slot.  Kept
-    as a separate :class:`QObject` so :class:`QtConsoleHandler` (which is a plain
-    :class:`logging.Handler`) can emit across thread boundaries safely.
-    """
+class _ConsoleLogSignal(QObject):
+    """Carry log messages across Qt threads."""
 
     log_emitted = Signal(str)
 
 
-class QtConsoleHandler(logging.Handler):
+class _QtConsoleHandler(logging.Handler):
     """
-    :class:`logging.Handler` that forwards records to the Qt console widget.
+    Forward log records to the Qt console widget through a signal.
 
-    The handler owns a :class:`ConsoleLogSignal` instance.  When
-    :func:`attach_console_widget` is called, the console widget connects to
-    ``signal.log_emitted`` and starts receiving formatted log lines.
-
-    Notes
-    -----
-    Until :func:`attach_console_widget` is called, records are formatted and
-    emitted to the signal but nothing is connected - this is fine because the
-    console widget is created very early in ``MainWindow.__init__``.
+    Records are dropped until a slot is attached via :meth:`attach`. This allows
+    the handler to be created at import time (so early startup logs are captured)
+    without requiring the console widget to exist yet. Once the widget is ready,
+    :func:`attach_console_widget` is called to connect the widget's slot and switch
+    the handler to live mode.
     """
 
     def __init__(self) -> None:
         super().__init__()
+
+        self.signal = _ConsoleLogSignal()
         self._formatter = _PrefixFormatter()
-        self.signal = ConsoleLogSignal()
+        self._attached = False
 
     def emit(self, record: logging.LogRecord) -> None:
         """
-        Format ``record`` and emit it on ``signal.log_emitted``.
+        Forward an attached log record to the Qt console signal.
 
         Parameters
         ----------
         record
-            The log record to emit.
+            Logging record to format or emit.
         """
 
-        try:
-            message = self._formatter.format(record)
-
-        except Exception:
-            self.handleError(record)
+        if not self._attached:
             return
 
-        self.signal.log_emitted.emit(message)
+        try:
+            self.signal.log_emitted.emit(self._formatter.format(record))
+        except Exception:
+            self.handleError(record)
+
+    def attach(self, slot: Callable[[str], None]) -> None:
+        """
+        Connect a console slot and enable Qt log delivery.
+
+        Parameters
+        ----------
+        slot
+            Qt-compatible callable that receives formatted log messages.
+        """
+
+        self.signal.log_emitted.connect(slot)
+        self._attached = True
 
 
-# Singleton handler instances + root logger, created at import time so the first
-# ``get_logger`` call from anywhere is already wired up.
-_console_handler = QtConsoleHandler()
-_console_handler.setLevel(logging.INFO)
-
-_root_logger = logging.getLogger("ground_station")
-_root_logger.setLevel(logging.DEBUG)  # handlers filter; root lets everything through
-_root_logger.addHandler(_console_handler)
-_root_logger.propagate = False  # avoid double-emitting to the root logger
-
-_file_handler: RotatingFileHandler | None = None
-_stream_handler: logging.StreamHandler | None = None
-
-
-def _attach_file_handler(log_dir: Path) -> None:
+def _default_log_dir() -> Path:
     """
-    Attach the rotating file handler to the root logger.
+    Locate ``app_data/git_ignore/logs`` without importing ``constants``.
+
+    Mirrors ``constants.LOGS_DIR`` (``cwd / "app_data" / "git_ignore" / "logs"``)
+    so the file handler at import time writes to the same place it would have
+    if attached later via :func:`attach_console_widget`.
+
+    Returns
+    -------
+    :class:`Path`
+        The default log directory path.
+    """
+
+    return Path.cwd() / "app_data" / "git_ignore" / "logs"
+
+
+class _HandlerRegistry:
+    """
+    Manage the file handler attached to the root logger.
 
     Parameters
     ----------
-    log_dir
-        Directory to write the log file in.  Created if it doesn't exist.
+    logger
+        The root logger to which the file handler will be attached.
     """
 
-    global _file_handler  # noqa: PLW0603 - singleton handler, intentional
+    def __init__(self, logger: logging.Logger) -> None:
+        self._logger = logger
+        self._file: RotatingFileHandler | None = None
 
-    if _file_handler is not None:
-        return
+    def install_file(self, log_dir: Path) -> None:
+        """
+        Install a rotating file handler on the root logger.
 
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log_path = log_dir / f"ground_station_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.log"
-    handler = RotatingFileHandler(
-        filename=log_path,
-        encoding="utf-8",
-    )
-    handler.setLevel(logging.DEBUG)
-    handler.setFormatter(_FileFormatter())
-    _root_logger.addHandler(handler)
-    _file_handler = handler
+        Parameters
+        ----------
+        log_dir
+            Directory where the log file will be created. The directory is
+            created if it does not exist.
+        """
+
+        if self._file is not None:
+            return
+
+        log_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        handler = RotatingFileHandler(
+            filename=log_dir / f"ground_station_{timestamp}.log",
+            encoding="utf-8",
+        )
+        handler.setLevel(logging.DEBUG)
+        handler.setFormatter(
+            logging.Formatter(
+                fmt="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            ),
+        )
+        self._logger.addHandler(handler)
+        self._file = handler
 
 
-def attach_console_widget(slot: object) -> None:
+_qt_handler = _QtConsoleHandler()
+_qt_handler.setLevel(logging.INFO)
+
+_root_logger = logging.getLogger(_PACKAGE_NAME)
+_root_logger.setLevel(logging.DEBUG)
+_root_logger.addHandler(_qt_handler)
+_root_logger.propagate = False
+
+_handlers = _HandlerRegistry(_root_logger)
+
+# attach the file handler at import time so early startup logs are captured, but
+# suppress errors in read-only environments (e.g. Qt console)
+with suppress(OSError):
+    _handlers.install_file(_default_log_dir())
+
+
+@cache
+def _cached_logger(name: str) -> logging.Logger:
     """
-    Connect the console widget's append slot to the Qt handler signal.
-
-    Called from ``ConsoleOutputWidget.__init__`` once the widget exists.  Also
-    attaches the file handler now that ``constants`` is fully imported (the
-    logger module is imported very early, before ``constants.LOGS_DIR`` is
-    defined, so file-handler setup is deferred to here).
+    Return a cached child of the root logger.
 
     Parameters
     ----------
-    slot
-        Any callable accepted by ``Signal.connect`` - typically
-        ``ConsoleOutputWidget.append_text``.
+    name
+        Name of the logger to retrieve. It must be a child of the root logger.
+
+    Returns
+    -------
+    :class:`logging.Logger`
+        A logger whose records flow to the Qt console and file handlers.
     """
 
-    # Deferred import to avoid a circular dependency at module load time:
-    # ``constants`` imports from ``utils`` (this package), and this function
-    # needs ``constants.LOGS_DIR`` which is only defined inside the ``try``
-    # block at the bottom of ``constants.py``.
-    from utils import constants  # noqa: PLC0415 - deferred to break import cycle
-
-    _attach_file_handler(constants.LOGS_DIR)
-    _console_handler.signal.log_emitted.connect(slot)
-    # Once the Qt console is attached, records flow to it via the Qt handler
-    # AND to stdout via the stream handler.  The console widget captures
-    # stdout too (via EmittingStream), which would double-display every line.
-    # Drop the stream handler now that the Qt handler is live.
-    global _stream_handler  # noqa: PLW0603 - singleton handler, intentional
-    if _stream_handler is not None:
-        _root_logger.removeHandler(_stream_handler)
-        _stream_handler = None
+    return _root_logger.getChild(name)
 
 
 def get_logger(name: str | None = None) -> logging.Logger:
     """
     Return a logger configured to publish to the console + file handlers.
+
+    Callers should typically pass ``__name__`` so the logger name mirrors the
+    module path, making it easy to filter output by subsystem.
 
     Parameters
     ----------
@@ -237,34 +226,37 @@ def get_logger(name: str | None = None) -> logging.Logger:
 
     Returns
     -------
-    logging.Logger
+    :class:`logging.Logger`
         The configured logger instance.
-
-    Notes
-    -----
-    Callers should typically pass ``__name__`` so the logger name mirrors the
-    module path, making it easy to filter output by subsystem.
     """
 
     if not name or name == "root":
         return _root_logger
 
-    if name == "ground_station" or name.startswith("ground_station."):
+    if name == _PACKAGE_NAME or name.startswith(f"{_PACKAGE_NAME}."):
         return logging.getLogger(name)
 
-    return _root_logger.getChild(name)
+    return _cached_logger(name)
 
 
-# Module-level alias for callers that want the root logger directly.
+def attach_console_widget(slot: Callable[[str], None]) -> None:
+    """
+    Connect the console widget's append slot to the Qt handler signal.
+
+    Called from :meth:`ConsoleOutputWidget.__init__` once the widget exists.  Also
+    attaches the file handler now that ``constants`` is fully imported (the
+    logger module is imported very early, before ``constants.LOGS_DIR`` is
+    defined, so file-handler setup is deferred to here).
+
+    Parameters
+    ----------
+    slot
+        Any callable accepted by :meth:`Signal.connect`.
+    """
+
+    _qt_handler.attach(slot)
+
+
+# expose the root logger for convenience, but discourage its use in favor of
+# get_logger(__name__) so the logger name mirrors the module path
 root_logger: logging.Logger = _root_logger
-
-
-# When running under ``run.sh`` (no Qt console yet), also mirror records to
-# stdout so the launching terminal shows something.  Once the console widget
-# attaches, ``attach_console_widget`` removes this handler to avoid
-# double-display (the Qt handler takes over).
-if sys.stdout is not None and not getattr(sys.stdout, "_is_autoboat_stream", False):
-    _stream_handler = logging.StreamHandler(stream=sys.stdout)
-    _stream_handler.setLevel(logging.INFO)
-    _stream_handler.setFormatter(_PrefixFormatter())
-    _root_logger.addHandler(_stream_handler)

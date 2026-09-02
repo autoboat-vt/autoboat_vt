@@ -32,7 +32,7 @@ def _locked_file(path: constants.FileType, mode: str, lock_type: int) -> Generat
 
     Yields
     ------
-    TextIO
+    :class:`TextIO`
         An open file object with the specified lock held.
     """
 
@@ -57,7 +57,7 @@ def _enforce_exact_return_type(expected_type: type[T]) -> Callable[[Callable[...
 
     Returns
     -------
-    Callable[[Callable[..., Any]], Callable[..., T | None]]
+    `Callable[[Callable[..., Any]], Callable[..., T | None]]`
         A decorator that can be applied to functions to enforce the return type.
     """
 
@@ -90,12 +90,12 @@ def _load_state(f: TextIO) -> dict[str, Any]:
 
     Returns
     -------
-    dict[str, Any]
+    `dict[str, Any]`
         The state data loaded from the file.
 
     Raises
     ------
-    TypeError
+    :class:`TypeError`
         If the file does not contain a JSON object.
     """
 
@@ -113,7 +113,16 @@ def _load_state(f: TextIO) -> dict[str, Any]:
 
 
 class StateManager:
-    """Manage shared application state stored in a JSON file."""
+    """
+    Manage shared application state stored in a JSON file.
+
+    Attributes
+    ----------
+    _cache
+        Read-through cache of the state file contents.
+    _cache_lock
+        Lock guarding concurrent access to the cache.
+    """
 
     _cache: ClassVar[dict[str, Any]] = {}
     _cache_lock: ClassVar[threading.Lock] = threading.Lock()
@@ -158,7 +167,7 @@ class StateManager:
         Read a variable's value from the state file.
 
         Uses a process-wide read-through cache to avoid re-parsing the JSON
-        file on every call. The cache is invalidated by ``write``; this is
+        file on every call. The cache is invalidated by :meth:`write`; this is
         safe because writes are rare relative to reads, and any external
         process modifying the file out-of-band is not a supported pattern
         in this application.
@@ -170,8 +179,8 @@ class StateManager:
 
         Returns
         -------
-        Any | None
-            The value associated with the variable, or ``None`` if the variable is not found.
+        `Any | None`
+            The value associated with the variable, or `None` if the variable is not found.
         """
 
         with StateManager._cache_lock:
@@ -195,8 +204,8 @@ class StateManager:
 
         Returns
         -------
-        bool | None
-            The value if it exists and is a boolean, otherwise ``None``.
+        `bool | None`
+            The value if it exists and is a boolean, otherwise `None`.
         """
 
         return StateManager._read(variable)
@@ -214,8 +223,8 @@ class StateManager:
 
         Returns
         -------
-        str | None
-            The value if it exists and is a string, otherwise ``None``.
+        `str | None`
+            The value if it exists and is a string, otherwise `None`.
         """
 
         return StateManager._read(variable)
@@ -233,8 +242,8 @@ class StateManager:
 
         Returns
         -------
-        int | None
-            The value if it exists and is an integer, otherwise ``None``.
+        `int | None`
+            The value if it exists and is an integer, otherwise `None`.
         """
 
         return StateManager._read(variable)
@@ -252,8 +261,8 @@ class StateManager:
 
         Returns
         -------
-        float | None
-            The value if it exists and is a float, otherwise ``None``.
+        `float | None`
+            The value if it exists and is a float, otherwise `None`.
         """
 
         return StateManager._read(variable)
@@ -271,8 +280,8 @@ class StateManager:
 
         Returns
         -------
-        dict | None
-            The value if it exists and is a dictionary, otherwise ``None``.
+        `dict | None`
+            The value if it exists and is a dictionary, otherwise `None`.
         """
 
         return StateManager._read(variable)
@@ -290,8 +299,8 @@ class StateManager:
 
         Returns
         -------
-        list | None
-            The value if it exists and is a list, otherwise ``None``.
+        `list | None`
+            The value if it exists and is a list, otherwise `None`.
         """
 
         return StateManager._read(variable)
@@ -309,8 +318,8 @@ class StateManager:
 
         Returns
         -------
-        Any | None
-            The value if it exists, otherwise ``None``.
+        `Any | None`
+            The value if it exists, otherwise `None`.
         """
 
         return StateManager._read(variable)

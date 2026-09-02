@@ -40,7 +40,7 @@ class KeybindConfigWidget(QTableWidget):
         The number of rows in the table.
 
     Inherits
-    -------
+    --------
     :class:`QTableWidget`
     """
 
@@ -53,7 +53,7 @@ class KeybindConfigWidget(QTableWidget):
         """
         Capture a key press if a key-capture cell is focused.
 
-        ``Delete`` and ``Backspace`` clear the binding instead of capturing.
+        `Delete` and `Backspace` clear the binding instead of capturing.
 
         Parameters
         ----------
@@ -170,13 +170,12 @@ class KeybindConfigDialog(QDialog):
     Parameters
     ----------
     embedded
-        When ``True`` (e.g. used as a tab), the dialog omits the window title
-        and the Close button and uses an expanding size policy. When
-        ``False`` (standalone dialog), it gets a fixed size and a Close
-        button.
+        When `True` (e.g. used as a tab), the dialog omits the window title
+        and the Close button and uses an expanding size policy. When `False`
+        (standalone dialog), it gets a fixed size and a Close button.
 
     Inherits
-    -------
+    --------
     :class:`QDialog`
     """
 
@@ -414,7 +413,7 @@ class KeybindConfigDialog(QDialog):
         action
             The action that was just rebound.
         conflict
-            The action key of a conflicting binding, or ``None``.
+            The action key of a conflicting binding, or `None`.
         """
 
         if conflict is None:

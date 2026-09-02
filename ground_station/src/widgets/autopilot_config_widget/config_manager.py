@@ -45,7 +45,7 @@ class ConfigInfo:
 
     Raises
     ------
-    ValueError
+    :class:`ValueError`
         If the provided hash information is invalid.
     """
 
@@ -95,7 +95,7 @@ class ConfigInfo:
 
         Returns
         -------
-        datetime
+        :class:`datetime`
             The converted local datetime.
         """
 
@@ -110,7 +110,7 @@ class AutopilotConfigManager(QWidget):
     A widget to manage and display autopilot parameter configuration hashes.
 
     Inherits
-    -------
+    --------
     :class:`QWidget`
     """
 
@@ -118,12 +118,16 @@ class AutopilotConfigManager(QWidget):
         """
         Enum representing the options for sorting configuration hashes.
 
-        Options
-        -------
+        Attributes
+        ----------
         HASH_VALUE
             Sort by hash value.
         DESCRIPTION
             Sort by description.
+
+        Inherits
+        --------
+        :class:`StrEnum`
         """
 
         HASH_VALUE = auto()
@@ -451,7 +455,7 @@ class AutopilotConfigManager(QWidget):
         Parameters
         ----------
         visible_count
-            The number of currently visible configuration widgets. If ``None``, counts all widgets.
+            The number of currently visible configuration widgets. If `None`, counts all widgets.
         """
 
         if visible_count is None:

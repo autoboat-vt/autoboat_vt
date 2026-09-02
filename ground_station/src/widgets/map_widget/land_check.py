@@ -28,7 +28,7 @@ class LandChecker:
     Point-in-ocean lookup backed by the Natural Earth 10m ocean shapefile.
 
     The ocean polygons are loaded once from ``app_data/git_keep/assets/ocean_layer``,
-    repaired with :func:`shapely.make_valid`, and cached as WKB so subsequent
+    repaired with :meth:`shapely.make_valid`, and cached as WKB so subsequent
     launches skip the expensive repair step. The prepared geometry is then used
     for vectorized ``contains_xy`` queries, where "not contained in the ocean"
     means the point is on land.
@@ -41,19 +41,19 @@ class LandChecker:
     Parameters
     ----------
     shapefile_path
-        Path to the ``.shp`` file (without extension is also accepted by pyshp).
+        Path to the `.shp` file (without extension is also accepted by pyshp).
     cache_path
         Path to the WKB cache file, e.g. ``app_data/git_ignore/ocean_geometry.wkb``.
-        Pass ``None`` to disable caching (rebuild the geometry on every init).
+        Pass `None` to disable caching (rebuild the geometry on every init).
     boundary_tolerance_m
         Distance in meters within which a point near the ocean boundary counts
-        as ocean. Use ``0`` for the strict, exact-polygon behavior.
+        as ocean. Use `0` for the strict, exact-polygon behavior.
 
     Attributes
     ----------
     ready
-        True once the ocean geometry has been loaded and prepared. All checks
-        fail open (return False, i.e. "not on land") while this is False.
+        `True` once the ocean geometry has been loaded and prepared. All checks
+        fail open (return `False`, i.e. "not on land") while this is `False`.
     """
 
     def __init__(
@@ -102,7 +102,7 @@ class LandChecker:
 
         Returns
         -------
-        BaseGeometry | None
+        `BaseGeometry | None`
             The cached geometry, or None if there is no usable cache.
         """
 
@@ -138,14 +138,14 @@ class LandChecker:
 
         Returns
         -------
-        BaseGeometry
-            The repaired ocean MultiPolygon.
+        :class:`BaseGeometry`
+            The repaired ocean geometry, ready for vectorized ``contains_xy`` queries.
 
         Raises
         ------
-        FileNotFoundError
+        :class:`FileNotFoundError`
             If the shapefile is missing.
-        RuntimeError
+        :class:`RuntimeError`
             If the shapefile contains no polygon shapes.
         """
 
@@ -192,7 +192,7 @@ class LandChecker:
 
         Returns
         -------
-        bool
+        `bool`
             True if the point is on land (or the check is unavailable).
         """
 
@@ -229,7 +229,7 @@ class LandChecker:
 
         Returns
         -------
-        BaseGeometry
+        :class:`BaseGeometry`
             A small :class:`shapely.geometry.polygon.Polygon` (a box) centered
             on the point.
         """

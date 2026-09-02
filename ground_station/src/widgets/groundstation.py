@@ -62,11 +62,11 @@ class GroundStationWidget(QWidget):
 
     Attributes
     ----------
-    refresh_autopilot_config_signal: :class:`Signal`
+    refresh_autopilot_config_signal
         Signal emitted when the autopilot configuration needs to be refreshed.
 
     Inherits
-    -------
+    --------
     :class:`QWidget`
     """
 
@@ -438,7 +438,7 @@ class GroundStationWidget(QWidget):
     # endregion easter egg functions
 
     def _install_render_widget_filter(self) -> None:
-        """Install the event filter on the QWebEngineView's focus proxy."""
+        """Install the event filter on the focus policy of the :class:`QWebEngineView`'s internal Chromium render widget."""
 
         proxy = self.browser.focusProxy()
         if proxy is not None:
@@ -446,12 +446,12 @@ class GroundStationWidget(QWidget):
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         """
-        Wrapper around ``_handle_undo_keypress`` to intercept Ctrl+Z keypresses.
+        Wrapper around :meth:`_handle_undo_keypress` to intercept Ctrl+Z keypresses.
 
         Note
         ----
         This method exists to satisfy the Qt event filter interface.
-        See ``_handle_undo_keypress`` for details on why this is necessary.
+        See :meth:`_handle_undo_keypress` for details on why this is necessary.
 
         Parameters
         ----------
@@ -462,8 +462,8 @@ class GroundStationWidget(QWidget):
 
         Returns
         -------
-        bool
-            ``True`` if the event was consumed, ``False`` otherwise.
+        `bool`
+            `True` if the event was consumed, `False` otherwise.
         """
 
         if self._handle_undo_keypress(event):
@@ -481,8 +481,8 @@ class GroundStationWidget(QWidget):
 
         Returns
         -------
-        bool
-            ``True`` if the event was consumed, ``False`` otherwise.
+        `bool`
+            `True` if the event was consumed, `False` otherwise.
         """
 
         # only care about key presses that include the Control modifier — the
@@ -514,8 +514,8 @@ class GroundStationWidget(QWidget):
         Parameters
         ----------
         _bindings
-            The full bindings dict from the keybind manager (unused — the
-            manager is queried directly).
+            The new keybinds dictionary. This parameter is unused because we
+            always fetch the latest bindings from the keybind manager directly.
         """
 
         self._rebuild_shortcuts()
@@ -539,7 +539,7 @@ class GroundStationWidget(QWidget):
         Give the map webview keyboard focus when the widget is shown.
 
         The TS frontend's ``keydown`` listener (which dispatches map-scope
-        keybinds like ``f`` or ``c``) only fires when the :class:`QWebEngineView`
+        keybinds like `f` or `c`) only fires when the :class:`QWebEngineView`
         has focus. Without this, the user would have to click on the map
         before any map-scope keybind works.
 
@@ -550,6 +550,7 @@ class GroundStationWidget(QWidget):
         """
 
         super().showEvent(event)
+
         # defer the focus request to the next event loop tick so the webview
         # has fully finished laying out before we steal focus into it
         QTimer.singleShot(0, self.browser.setFocus)
@@ -566,7 +567,7 @@ class GroundStationWidget(QWidget):
         Parameters
         ----------
         test
-            If ``True``, use the test waypoint endpoint. Defaults to ``False``.
+            If `True`, use the test waypoint endpoint. Defaults to `False`.
         """
 
         if not test:
@@ -741,7 +742,7 @@ class GroundStationWidget(QWidget):
     @Slot(str)
     def edit_buoy_data_callback(self, text: str) -> None:
         """
-        Callback function for the ``edit_buoy_data`` function.
+        Callback function for :meth:`edit_buoy_data`.
 
         This function is called when the user closes the text edit window.
         It retrieves the edited text and saves it to the ``self.buoys`` variable and closes the window.
@@ -788,8 +789,8 @@ class GroundStationWidget(QWidget):
         """
         Saves latest entry in the ``self.buoys`` array to a file.
 
-        Files are stored in the ``buoy_data`` directory and are named ``buoy_data_<timestamp>.json``
-        where ``<timestamp>`` is nanoseconds since unix epoch.
+        Files are stored in the `buoy_data` directory and are named `buoy_data_<timestamp>.json`
+        where `<timestamp>` is nanoseconds since unix epoch.
         """
 
         try:
@@ -804,10 +805,10 @@ class GroundStationWidget(QWidget):
     @Slot()
     def load_buoy_data(self) -> None:
         """
-        Load buoy data from the ``buoy_data`` directory, if none selected use ``default.json``.
+        Load buoy data from the `buoy_data` directory, if none selected use `default.json`.
 
-        Files are stored in the ``buoy_data`` directory and are named ``buoy_data_<timestamp>.json``
-        where ``<timestamp>`` is nanoseconds since unix epoch.
+        Files are stored in the `buoy_data` directory and are named `buoy_data_<timestamp>.json`
+        where `<timestamp>` is nanoseconds since unix epoch.
         """
 
         try:
@@ -962,8 +963,8 @@ class GroundStationWidget(QWidget):
         ----------
         request_result
             A tuple containing:
-            - a list of waypoints fetched from the local server.
-            - a :class:`TelemetryStatus` enum value indicating the status of the request.
+                - a list of waypoints fetched from the local server.
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         waypoints, _ = request_result
@@ -1017,8 +1018,8 @@ class GroundStationWidget(QWidget):
         ----------
         request_result
             A tuple containing:
-            - a list of waypoints fetched from the telemetry server.
-            - a :class:`TelemetryStatus` enum value indicating the status of the request.
+                - a list of waypoints fetched from the telemetry server.
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         waypoints, _ = request_result
@@ -1074,8 +1075,8 @@ class GroundStationWidget(QWidget):
         ----------
         telemetry_status
             A :class:`TelemetryStatus` enum value indicating the status of the request. Possible values are:
-            - ``SUCCESS`` indicates that the telemetry server is reachable and waypoints were fetched successfully.
-            - ``FAILURE`` indicates that the telemetry server is not reachable and waypoints could not be fetched.
+                - ``SUCCESS`` indicates that the telemetry server is reachable and waypoints were fetched successfully.
+                - ``FAILURE`` indicates that the telemetry server is not reachable and waypoints could not be fetched.
         """
 
         if telemetry_status == constants.TelemetryStatus.FAILURE and not self.remember_telemetry_server_url_status:
@@ -1136,8 +1137,8 @@ class GroundStationWidget(QWidget):
         ----------
         request_result
             A tuple containing:
-            - a dictionary with the latest boat telemetry data.
-            - a :class:`TelemetryStatus` enum value indicating the status of the request.
+                - a dictionary with the latest boat telemetry data.
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         boat_data, connection_status = request_result
@@ -1147,7 +1148,7 @@ class GroundStationWidget(QWidget):
             """
             Applies some formatting rules that multiple keys have in common.
 
-            If the value is None, displays "N/A".
+            If the value is `None`, displays "N/A".
             Otherwise, the value is rounded to 1 decimal places.
 
             Examples
@@ -1164,7 +1165,7 @@ class GroundStationWidget(QWidget):
 
             Returns
             -------
-            str
+            `str`
                 The formatted value.
             """
 

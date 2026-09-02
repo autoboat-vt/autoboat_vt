@@ -29,7 +29,7 @@ class MapOptionsHandler(QDialog):
     A dialog for controlling which diagnostics appear on the map.
 
     Inherits
-    -------
+    --------
     :class:`QDialog`
     """
 
@@ -254,7 +254,7 @@ class FeatureInfoItem(QTableWidgetItem):
         Whether the feature is initially enabled.
 
     Inherits
-    -------
+    --------
     :class:`QTableWidgetItem`
     """
 

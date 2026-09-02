@@ -39,7 +39,7 @@ class AutopilotConfigEditor(QWidget):
 
     Parameters
     ----------
-    refresh_signal: :class:`Signal`
+    refresh_signal
         Signal emitted when the autopilot configuration needs to be refreshed. This
         typically occurs after switching telemetry server instances.
 
@@ -573,7 +573,7 @@ class AutopilotConfigEditor(QWidget):
         ----------
         instance_changed
             A boolean indicating whether the telemetry server instance has changed.
-            If ``False``, the config will not be refreshed.
+            If `False`, the config will not be refreshed.
         """
 
         if not instance_changed:
@@ -652,8 +652,7 @@ class AutopilotConfigEditor(QWidget):
         ----------
         visible_count
             The number of parameters currently visible after filtering.
-            If ``None``, it will be calculated from the number of current widgets.
-
+            If `None`, it will be calculated from the number of current widgets.
         search_text
             The text used for filtering parameters. If empty, it indicates that all parameters are shown.
         """
@@ -799,11 +798,7 @@ class AutopilotParamWidget(QFrame):
 
     @Slot()
     def send_value(self) -> None:
-        """
-        Send the current value of the parameter to the telemetry endpoint.
-
-        DONE
-        """
+        """Send the current value of the parameter to the telemetry endpoint."""
 
         logger.info(f"Sending value for {self.name}: {self.current_value}")
         try:
@@ -1021,7 +1016,7 @@ class AutopilotParamWidget(QFrame):
 
         Raises
         ------
-        TypeError
+        :class:`TypeError`
             If the edited data is not of the expected type.
         """
 
@@ -1094,7 +1089,7 @@ class AutopilotParamWidget(QFrame):
     @Slot(str)
     def edit_grouped_data_callback(self, text: str) -> None:
         """
-        Callback function for the ``edit_grouped_data`` function.
+        Callback function for :meth:`edit_grouped_data`.
 
         Parameters
         ----------
@@ -1103,7 +1098,7 @@ class AutopilotParamWidget(QFrame):
 
         Raises
         ------
-        TypeError
+        :class:`TypeError`
             If the edited data is not of the expected type.
         """
 

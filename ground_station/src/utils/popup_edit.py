@@ -15,12 +15,13 @@ __all__ = ["TextEditWindow"]
 
 class TextEditWindow(QWidget):
     """
-    A simple text edit window that emits the entered text when closed.
+    Display a text edit window that emits the entered text when closed.
 
     Parameters
     ----------
     highlighter
-        An optional syntax highlighter to apply to the text edit area. If not provided, no syntax highlighting will be applied.
+        An optional syntax highlighter class to apply to the text edit area.
+        If not provided, no syntax highlighting will be applied.
     initial_text
         The initial text to display in the text edit area. Default is an empty string.
     tab_width
@@ -30,11 +31,11 @@ class TextEditWindow(QWidget):
 
     Attributes
     ----------
-    user_text_emitter: :class:`Signal`
+    user_text_emitter
         Signal emitted when the window is closed, carrying the entered text.
 
     Inherits
-    -------
+    --------
     :class:`QWidget`
     """
 
@@ -72,16 +73,16 @@ class TextEditWindow(QWidget):
 
     class LineNumberArea(QWidget):
         """
-        A widget to display line numbers in the text editor.
-
-        Inherits
-        -------
-        :class:`QWidget`
+        Display line numbers alongside the text editor.
 
         Parameters
         ----------
         editor
             The text editor instance to which this line number area belongs.
+
+        Inherits
+        --------
+        :class:`QWidget`
         """
 
         def __init__(self, editor: QPlainTextEdit) -> None:
@@ -95,7 +96,7 @@ class TextEditWindow(QWidget):
 
             Returns
             -------
-            QSize
+            :class:`QSize`
                 The preferred size of the line number area.
             """
 
@@ -146,7 +147,7 @@ class TextEditWindow(QWidget):
 
         Returns
         -------
-        int
+        `int`
             The width in pixels required for the line number area.
         """
 
@@ -172,7 +173,6 @@ class TextEditWindow(QWidget):
         ----------
         rect
             The rectangle area that needs to be updated.
-
         dy
             The vertical scroll offset. If 0, the area is updated without scrolling.
         """

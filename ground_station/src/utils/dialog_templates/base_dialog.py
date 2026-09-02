@@ -22,11 +22,11 @@ class BaseDialog(QDialog):
 
     Attributes
     ----------
-    user_text_emitter: :class:`Signal`
+    user_text_emitter
         Emitted when the dialog is closed with a valid selection, passing
         the result value (typically the button key or selected value).
-    dialog_closed: :class:`Signal`
-        Emitted when the dialog is closed, passing whether it was accepted (True) or rejected (False).
+    dialog_closed
+        Emitted when the dialog is closed, passing whether it was accepted (`True`) or rejected (`False`).
 
     Inherits
     --------
@@ -52,19 +52,8 @@ class BaseDialog(QDialog):
         self._result: str = ""
         self._remember_choice: bool = False
 
-        self._setup_ui(message, icon, remember_choice_option)
-
-    def _setup_ui(
-        self,
-        message: str | None,
-        icon: QIcon | None,
-        remember_choice_option: bool,
-    ) -> None:
-        """Set up the dialog UI layout and widgets."""
-
         main_layout = QVBoxLayout(self)
 
-        # Message and icon
         if message is not None:
             if icon is not None:
                 top_layout = QHBoxLayout()
@@ -75,29 +64,50 @@ class BaseDialog(QDialog):
                 top_layout.addWidget(icon_label)
                 top_layout.addWidget(message_label, stretch=1)
                 main_layout.addLayout(top_layout)
+
             else:
                 message_label = QLabel(message)
                 message_label.setWordWrap(True)
                 main_layout.addWidget(message_label)
 
-        # Remember choice checkbox
         self._remember_checkbox: QCheckBox | None = None
         if remember_choice_option:
             self._remember_checkbox = QCheckBox("Remember my decision?")
             main_layout.addWidget(self._remember_checkbox)
 
     def get_result(self) -> str:
-        """Get the dialog result value."""
+        """
+        Get the dialog result value.
+        
+        Returns
+        -------
+        `str`
+            The result value set by the dialog.
+        """
 
         return self._result
 
     def set_result(self, value: str) -> None:
-        """Set the dialog result value."""
+        """
+        Set the dialog result value.
+        
+        Parameters
+        ----------
+        value
+            The result value to set for the dialog.
+        """
 
         self._result = value
 
     def get_remember_choice(self) -> bool:
-        """Get the remember choice checkbox state."""
+        """
+        Get the remember choice checkbox state.
+        
+        Returns
+        -------
+        `bool`
+            The state of the "Remember my decision?" checkbox.
+        """
 
         return self._remember_choice
 
@@ -120,6 +130,13 @@ class BaseDialog(QDialog):
         self.dialog_closed.emit(False)
 
     def get_result_with_remember(self) -> tuple[str, bool]:
-        """Return a tuple of (result, remember_choice)."""
+        """
+        Get the dialog result value along with the remember choice state.
+        
+        Returns
+        -------
+        `tuple[str, bool]`
+            A tuple containing the result value and the state of the "Remember my decision?" checkbox.
+        """
 
         return self._result, self._remember_choice

@@ -31,7 +31,7 @@ class GraphViewer(QWidget):
         of boat status and a :class:`TelemetryStatus` enum value.
 
     Inherits
-    -------
+    --------
     :class:`QWidget`
     """
 
@@ -213,10 +213,10 @@ class GraphViewer(QWidget):
         Stop the telemetry fetcher thread and poll timer before closing.
 
         Without this, the :class:`BoatStatusFetcherThread` is destroyed while still
-        running, producing ``QThread: Destroyed while thread is still running``
-        and a non-zero exit code. ``requestInterruption`` makes the fetcher's
-        ``msleep`` wake early, and ``wait`` blocks until the thread has fully
-        exited before the QObject is torn down.
+        running, producing "QThread: Destroyed while thread is still running"
+        and a non-zero exit code. :meth:`requestInterruption` makes the fetcher's
+        ``msleep`` wake early, and :meth:`wait` blocks until the thread has fully
+        exited before the widget is destroyed.
 
         Parameters
         ----------
@@ -280,7 +280,7 @@ class GraphSelectionDialog(QDialog):
 
         Raises
         ------
-        ValueError
+        :class:`ValueError`
             If any of the selected keys are not in the available keys.
         """
 

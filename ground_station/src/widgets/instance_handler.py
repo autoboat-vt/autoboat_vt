@@ -50,7 +50,7 @@ class InstanceInfo:
 
     Raises
     ------
-    ValueError
+    :class:`ValueError`
         If the ``data`` dictionary does not contain the required fields or if they are of incorrect types.
     """
 
@@ -118,7 +118,7 @@ class InstanceInfo:
 
         Returns
         -------
-        dict[str, Any]
+        `dict[str, Any]`
             A dictionary containing the instance information.
         """
 
@@ -142,7 +142,7 @@ class InstanceInfo:
 
         Returns
         -------
-        datetime
+        :class:`datetime`
             The converted local datetime.
         """
 
@@ -302,8 +302,8 @@ class InstanceHandler(QWidget):
         ----------
         request_result
             A tuple containing:
-            - a list of instance information dictionaries,
-            - a :class:`TelemetryStatus` enum value indicating the status of the request.
+                - a list of instance information dictionaries,
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         instances, telemetry_status = request_result
@@ -593,10 +593,9 @@ class InstanceWidget(QFrame):
 
     Attributes
     ----------
-    style_sheet: ``str``
+    style_sheet
         The default style sheet for the widget.
-
-    activated_style_sheet: ``str``
+    activated_style_sheet
         The style sheet for the widget when it is the active instance.
 
     Inherits

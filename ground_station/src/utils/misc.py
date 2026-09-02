@@ -80,11 +80,11 @@ def get_icons() -> IconProtocol:
 
     Returns
     -------
-    IconProtocol
+    :class:`IconProtocol`
         An object containing the loaded icons as attributes.
 
-    Example
-    -------
+    Examples
+    --------
     >>> icons = get_icons()
     >>> icons.upload
 
@@ -140,12 +140,12 @@ def get_route(route_name: str) -> str:
 
     Returns
     -------
-    str
+    `str`
         The full URL for the given route name.
 
     Raises
     ------
-    ValueError
+    :class:`ValueError`
         If the route name is not found in the telemetry server endpoints.
     """
 
@@ -185,18 +185,18 @@ def pushbutton_maker(
     min_height
         The minimum height of the button. If not specified, not used.
     is_clickable
-        Whether the button should be clickable. Defaults to ``True``.
+        Whether the button should be clickable. Defaults to `True`.
     tooltip
         An optional tooltip to show when hovering over the button.
 
     Returns
     -------
-    QPushButton
+    :class:`QPushButton`
         The created button.
 
     Raises
     ------
-    RuntimeError
+    :class:`RuntimeError`
         If the button could not be created.
     """
 
@@ -229,19 +229,18 @@ def pushbutton_maker(
 
 def create_timer(interval_ms: int, single_shot: bool = False) -> QTimer:
     """
-    Create a QTimer with the specified interval and single-shot status.
+    Create a :class:`QTimer` with the specified interval and single-shot status.
 
     Parameters
     ----------
     interval_ms
         The interval in milliseconds for the timer.
     single_shot
-        Whether the timer should be single-shot. Defaults to ``False``.
+        Whether the timer should be single-shot. Defaults to `False`.
 
     Returns
     -------
-    QTimer
-        A new QTimer instance with the specified interval and single-shot status.
+    :class:`QTimer`
     """
 
     timer = QTimer()
@@ -252,7 +251,7 @@ def create_timer(interval_ms: int, single_shot: bool = False) -> QTimer:
 
 def copy_qtimer(original: QTimer) -> QTimer:
     """
-    Create a copy of a QTimer with the same interval and single-shot status but without copying connections.
+    Create a copy of a :class:`QTimer` with the same interval and single-shot status but without copying connections.
 
     Parameters
     ----------
@@ -261,8 +260,7 @@ def copy_qtimer(original: QTimer) -> QTimer:
 
     Returns
     -------
-    QTimer
-        A new QTimer instance with the same interval and single-shot status as the original.
+    :class:`QTimer`
     """
 
     new_timer = QTimer()
@@ -284,7 +282,7 @@ def cache_cdn_file(url: str, save_dir: str) -> None:
 
     Raises
     ------
-    RuntimeError
+    :class:`RuntimeError`
         If the file could not be downloaded and is not already cached.
     """
 
@@ -320,7 +318,7 @@ def create_symlinks(source_dir: Path, target_dir: Path) -> None:
 
     Raises
     ------
-    RuntimeError
+    :class:`RuntimeError`
         If a symbolic link cannot be created.
     """
 
@@ -344,8 +342,8 @@ def resolve_enum_name(enum_class: type[Enum], value: Any) -> str:
     """
     Resolve a telemetry enum value to its member name.
 
-    The telemetry server may send either the enum's integer value (e.g., ``4``) or its
-    member name as a string (e.g., ``"CW_TACKING"``). This helper handles both formats
+    The telemetry server may send either the enum's integer value (e.g., `4`) or its
+    member name as a string (e.g., `"CW_TACKING"`). This helper handles both formats
     and falls back to a string representation of the raw value if it cannot be resolved,
     so that a single unexpected value does not crash the telemetry display.
 
@@ -358,7 +356,7 @@ def resolve_enum_name(enum_class: type[Enum], value: Any) -> str:
 
     Returns
     -------
-    str
+    `str`
         The resolved enum member name, or a stringified fallback.
     """
 

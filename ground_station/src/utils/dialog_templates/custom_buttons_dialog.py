@@ -23,6 +23,15 @@ class MessageBoxButton(NamedTuple):
     """
     Custom button definition for message boxes.
 
+    Attributes
+    ----------
+    key
+        A unique identifier for the button.
+    text
+        The text to display on the button.
+    role
+        The role of the button, determining its behavior in the dialog.
+
     Inherits
     --------
     :class:`NamedTuple`
@@ -46,13 +55,13 @@ class CustomMessageBoxDialog(BaseDialog):
     icon
         An optional icon to display next to the message.
     buttons
-        A list of :class:`MessageBoxButton` tuples defining the buttons.
+        A list of :class:`MessageBoxButton` which define the buttons to display in the dialog.
     remember_choice_option
         Whether to show a "Remember my decision?" checkbox.
 
     Attributes
     ----------
-    user_text_emitter: :class:`Signal`
+    user_text_emitter
         Emitted when the dialog is closed with a button press, passing the button key.
 
     Inherits
@@ -111,20 +120,20 @@ def show_message_box(
         An optional icon to display in the message box.
     buttons
         An optional list of buttons to display in the message box. Supports either
-        standard buttons or custom MessageBoxButton values. Do not mix both types.
+        standard buttons or custom :class:`MessageBoxButton` buttons. Do not mix both types.
         Defaults to a single OK button.
     remember_choice_option
         Whether to include a "Remember my decision?" checkbox.
 
     Returns
     -------
-    QMessageBox.StandardButton | str | tuple[QMessageBox.StandardButton | str, bool]
+    `QMessageBox.StandardButton | str | tuple[QMessageBox.StandardButton | str, bool]`
         The selected standard button, custom button key, or the same value with
-        the checkbox state when remember_choice_option is True.
+        the checkbox state when ``remember_choice_option`` is `True`.
 
     Raises
     ------
-    TypeError
+    :class:`TypeError`
         If both standard buttons and custom buttons are included.
     """
 
@@ -238,9 +247,9 @@ def show_custom_message_box(
 
     Returns
     -------
-    str | tuple[str, bool]
+    `str | tuple[str, bool]`
         The selected button key, or the same value with the checkbox state
-        when remember_choice_option is True.
+        when ``remember_choice_option`` is `True`.
     """
 
     dialog = CustomMessageBoxDialog(title, message, icon, buttons, remember_choice_option)

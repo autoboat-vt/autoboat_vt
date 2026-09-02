@@ -52,7 +52,7 @@ class BaseHighlighter(QSyntaxHighlighter):
 
         Raises
         ------
-        NotImplementedError
+        :class:`NotImplementedError`
             If the method is not implemented in a subclass.
         """
 

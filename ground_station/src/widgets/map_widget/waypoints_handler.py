@@ -34,7 +34,7 @@ class WaypointsHandler(BaseHTTPRequestHandler):
     HTTP server for receiving waypoints created by clicking on the map.
 
     The server runs in a separate thread with its own lifecycle, independent of the main PyQt event loop.
-    It listens on ``constants.MAP_SERVER_PORT`` (3002). It handles CORS GET/POST requests to
+    It listens on ``constants.MAP_SERVER_PORT``. It handles CORS GET/POST requests to
     ``/waypoints``, storing the waypoints in a global list protected by a :class:`threading.Lock`.
 
     Also serves ``GET /check_land?lat=...&lon=...`` which reports whether a coordinate is on land,
@@ -85,9 +85,9 @@ class WaypointsHandler(BaseHTTPRequestHandler):
         """
         Handle ``GET /check_land?lat=...&lon=...`` requests.
 
-        Responds with ``{"on_land": bool}``. Unknown or malformed coordinates
+        Responds with `{"on_land": bool}`. Unknown or malformed coordinates
         result in a 400 response; a missing land checker results in
-        ``{"on_land": false}`` so waypoint placement is never blocked.
+        `{"on_land": false}` so waypoint placement is never blocked.
         """
 
         query = parse_qs(urlparse(self.path).query)

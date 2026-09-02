@@ -23,7 +23,18 @@ logger = get_logger(__name__)
 
 @dataclass
 class DataLogEntry:
-    """Data class representing a single log entry."""
+    """
+    Represent a single log entry.
+
+    Attributes
+    ----------
+    key_name
+        The name of the data key being logged.
+    data
+        The value of the data being logged.
+    write_time
+        Timestamp when the entry was created, in UTC.
+    """
 
     key_name: str
     data: object
@@ -35,7 +46,7 @@ class DataLogEntry:
 
         Returns
         -------
-        dict[str, str]
+        `dict[str, str]`
             A dictionary representation of the log entry.
         """
 
@@ -65,7 +76,7 @@ def _locked_file(path: constants.FileType, mode: str, lock_type: int) -> Generat
 
     Yields
     ------
-    TextIO
+    :class:`TextIO`
         An open file object with the specified lock held.
     """
 
@@ -87,17 +98,17 @@ def _load_log(header_written: bool = False) -> Path:
     ----------
     header_written
         Whether the CSV header has already been written during this logging
-        session. When ``True``, the file is known to exist and be initialized,
-        so this function avoids re-opening it in ``a+`` mode just to check.
+        session. When `True`, the file is known to exist and be initialized,
+        so this function avoids re-opening it in `a+` mode just to check.
 
     Returns
     -------
-    Path
+    :class:`Path`
         The path to the log file.
 
     Raises
     ------
-    RuntimeError
+    :class:`RuntimeError`
         If the log file cannot be loaded or created.
     """
 
@@ -128,10 +139,10 @@ def _load_log(header_written: bool = False) -> Path:
 class DataLogger(QObject):
     """Class for managing the logging of data within the ground station.
 
-    Telemetry arrives at a high rate via ``write_from_qthread``. Writing each
-    tick straight to disk would mean one file open, one ``flock``, and one
-    ``fsync`` call per tick on the GUI thread. Instead, incoming entries are
-    appended to an in-memory buffer and drained by a QTimer every
+    Telemetry arrives at a high rate via :meth:`write_from_qthread`. Writing each
+    tick straight to disk would mean one file open, one `flock`, and one
+    `fsync` call per tick on the GUI thread. Instead, incoming entries are
+    appended to an in-memory buffer and drained by a :class:`QTimer` every
     ``_FLUSH_INTERVAL_MS`` milliseconds in a single batched write.
     """
 
