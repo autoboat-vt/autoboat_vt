@@ -91,16 +91,19 @@ if [[ "$os_type" == "linux"* ]]; then
     export QT_QPA_PLATFORM=xcb
 fi
 
-command -v python3 >/dev/null || {
-    echo "Python 3 not installed."
+if command -v python >/dev/null; then
+    local_python=$(command -v python)
+elif command -v python3 >/dev/null; then
+    local_python=$(command -v python3)
+else
+    echo "Python is not installed."
     exit 1
-}
+fi
 command -v bun >/dev/null || {
     echo "Bun not installed."
     exit 1
 }
 
-local_python=$(command -v python3)
 local_bun=$(command -v bun)
 
 bun_packages_installed=false
