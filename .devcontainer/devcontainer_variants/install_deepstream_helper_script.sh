@@ -23,6 +23,7 @@ install_deepstream_x86() {
         gstreamer1.0-plugins-bad \
         gstreamer1.0-plugins-ugly \
         gstreamer1.0-libav \
+        gstreamer1.0-opencv \
         libgstreamer-plugins-base1.0-dev \
         libgstrtspserver-1.0-0 \
         libjansson4 \
