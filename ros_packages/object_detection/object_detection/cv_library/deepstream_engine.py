@@ -203,8 +203,9 @@ class DeepStreamEngine:
         display_valve.set_property('drop', not SHOULD_DISPLAY)
 
         tiler = Gst.ElementFactory.make('nvmultistreamtiler', 'nvtiler')
-        tiler.set_property('width', 1344)
-        tiler.set_property('height', 376)
+        tiler.set_property('width', 1792)
+        tiler.set_property('height', 504)
+        # tiler.set_property('show-source', 0)
 
         osd = Gst.ElementFactory.make("nvdsosd", "nvosd")
 
