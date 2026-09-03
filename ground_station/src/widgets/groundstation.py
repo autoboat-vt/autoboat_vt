@@ -43,6 +43,7 @@ from .keybind_widget import (
     qt_key_event_to_string,
 )
 from .map_widget import MapBridge, MapOptionsHandler
+from .map_widget.land_click_prompt import LAND_CLICK_PROMPT
 
 logger = get_logger(__name__)
 
@@ -184,6 +185,8 @@ class GroundStationWidget(QWidget):
 
         self.map_bridge = MapBridge(self.browser)
         QTimer.singleShot(0, self.map_bridge.verify_api)
+
+        LAND_CLICK_PROMPT.agreement_requested.connect(self._handle_land_click_prompt, Qt.ConnectionType.QueuedConnection)
 
         self.middle_button_groupbox = QGroupBox()
         self.middle_button_layout = QGridLayout()
@@ -672,6 +675,33 @@ class GroundStationWidget(QWidget):
 
         self.map_bridge.add_waypoint(latitude, longitude)
         logger.info(f"Manually added waypoint at ({latitude}, {longitude}).")
+
+    @Slot(float, float)
+    def _handle_land_click_prompt(self, latitude: float, longitude: float) -> None:
+        """
+        Ask the user to confirm adding a waypoint that falls on land.
+
+        Runs on the Qt main thread; invoked via the queued connection from
+        :attr:`land_click_prompt.LAND_CLICK_PROMPT` when a map click lands on
+        land. The resulting answer is posted back to the blocked HTTP thread
+        via :meth:`land_click_prompt.LandClickPrompt.answer`.
+
+        Parameters
+        ----------
+        latitude
+            Latitude of the clicked point.
+        longitude
+            Longitude of the clicked point.
+        """
+
+        response = show_message_box(
+            title="Waypoint on Land",
+            message=f"The point ({latitude:.5f}, {longitude:.5f}) appears to be on land. Add the waypoint anyway?",
+            icon=constants.ICONS.warning,
+            buttons=[QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No],
+        )
+
+        LAND_CLICK_PROMPT.answer(response == QMessageBox.StandardButton.Yes)
 
     @Slot()
     def start_data_logging(self) -> None:

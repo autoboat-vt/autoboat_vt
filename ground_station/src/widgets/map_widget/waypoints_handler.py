@@ -6,6 +6,7 @@ from urllib.parse import parse_qs, urlparse
 from utils.console_logger import get_logger
 
 from .land_check import LandChecker
+from .land_click_prompt import LAND_CLICK_PROMPT
 
 logger = get_logger(__name__)
 
@@ -38,7 +39,9 @@ class WaypointsHandler(BaseHTTPRequestHandler):
     ``/waypoints``, storing the waypoints in a global list protected by a :class:`threading.Lock`.
 
     Also serves ``GET /check_land?lat=...&lon=...`` which reports whether a coordinate is on land,
-    according to the Natural Earth ocean layer. Used by the frontend to reject clicks on land.
+    according to the Natural Earth ocean layer. When a point is on land, the frontend asks for
+    user confirmation; this endpoint blocks on the Qt-side dialog via the shared
+    :class:`land_click_prompt.LandClickPrompt` and reports the user's decision to the frontend.
 
     Inherits
     --------
@@ -109,8 +112,10 @@ class WaypointsHandler(BaseHTTPRequestHandler):
         land_checker = _LAND_CHECKER_HOLDER[0]
         on_land = land_checker.is_on_land(lat, lon) if land_checker is not None else False
 
+        add_waypoint = not on_land or LAND_CLICK_PROMPT.ask(lat, lon)
+
         self._set_headers(200)
-        self.wfile.write(json.dumps({"on_land": on_land}).encode("utf-8"))
+        self.wfile.write(json.dumps({"on_land": on_land, "add_waypoint": add_waypoint}).encode("utf-8"))
 
     def do_POST(self) -> None:
         """Handle POST requests to update waypoints."""

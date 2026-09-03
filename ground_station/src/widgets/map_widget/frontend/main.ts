@@ -146,40 +146,45 @@ class MapInterface {
     }
 
     /**
-     * Handle a map click: add a waypoint unless the click is on land.
+     * Handle a map click: add a waypoint after confirming with the user if the
+     * click is on land.
      *
      * The click coordinates are always checked against the backend's Natural
-     * Earth ocean layer first; clicks on land are ignored.
+     * Earth ocean layer first. When the backend reports the point is on land,
+     * it blocks on a Qt confirmation dialog; the response tells us whether the
+     * user chose to add the waypoint anyway.
      */
     async handleMapClick(lat: number, lon: number): Promise<void> {
-        if (await this.isPointOnLand(lat, lon)) {
+        if (!(await this.shouldAddWaypoint(lat, lon))) {
             return;
         }
 
-        this.waypoint_manager.add(lat, lon);
-        this.waypointHistory.push({ type: "add", waypoint: [lat, lon] });
+        this.add_waypoint(lat, lon);
     }
 
     /**
-     * Ask the backend whether a coordinate is on land.
+     * Ask the backend whether a waypoint at the given coordinates should be added.
      *
-     * Returns false on any error so that waypoint placement is never blocked
+     * The backend checks the point against its land layer. If the point is on
+     * water, the backend answers immediately. If the point is on land, the backend
+     * blocks on a Qt confirmation dialog and this method waits for the user's
+     * answer. Returns `true` on any error so waypoint placement is never blocked
      * by a backend or network problem.
      */
-    async isPointOnLand(lat: number, lon: number): Promise<boolean> {
+    async shouldAddWaypoint(lat: number, lon: number): Promise<boolean> {
         const url = `${MapInterface.checkLandUrl}?lat=${lat}&lon=${lon}`;
         try {
             const response = await fetch(url);
             if (!response.ok) {
                 console.error("Failed to check land status");
-                return false;
+                return true;
             }
 
-            const data = (await response.json()) as { on_land?: boolean };
-            return data.on_land === true;
+            const data = (await response.json()) as { on_land?: boolean; add_waypoint?: boolean };
+            return data.add_waypoint === true;
         } catch (error) {
             console.error("Error checking land status:", error);
-            return false;
+            return true;
         }
     }
 
@@ -248,6 +253,7 @@ class MapInterface {
 
     add_waypoint(lat: number, lon: number): void {
         this.waypoint_manager.add(lat, lon);
+        this.waypointHistory.push({ type: "add", waypoint: [lat, lon] });
     }
 
     remove_waypoint(index: number): void {
@@ -348,7 +354,7 @@ class MapInterface {
         // Methods that are internal to the TS side (introspection, event
         // handlers, TS->Python callbacks) and are not part of the Python->JS
         // API surface. Excluding them here keeps MapBridge.verify_api quiet.
-        const exclude = new Set(["getApi", "handleMapClick", "handleMapMove", "isPointOnLand", "syncWaypoints"]);
+        const exclude = new Set(["getApi", "handleMapClick", "handleMapMove", "shouldAddWaypoint", "syncWaypoints"]);
 
         const proto = Object.getPrototypeOf(this) as object;
         for (const name of Object.getOwnPropertyNames(proto)) {
