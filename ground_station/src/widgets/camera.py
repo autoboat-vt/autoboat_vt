@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import json
-
-from qtpy.QtWebEngineWidgets import QWebEngineView
-from qtpy.QtWidgets import QGridLayout, QHBoxLayout, QPushButton, QWidget
+from qtpy.QtCore import QByteArray, Qt
+from qtpy.QtGui import QPixmap, QResizeEvent
+from qtpy.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
 
 from utils import constants, misc, thread_classes
 from utils.console_logger import get_logger
@@ -15,7 +14,7 @@ logger = get_logger(__name__)
 
 class CameraWidget(QWidget):
     """
-    A widget to display a camera feed using :class:`QWebEngineView`.
+    A widget to display a camera feed using :class:`QLabel` + :class:`QPixmap`.
 
     Inherits
     -------
@@ -44,10 +43,15 @@ class CameraWidget(QWidget):
 
         self.web_view_layout = QHBoxLayout()
 
-        self.web_view = QWebEngineView()
-        self.web_view.setHtml(open(constants.HTML_CAMERA_PATH, encoding="utf-8").read())
+        self.current_pixmap: QPixmap | None = None
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_label.setStyleSheet("background-color: black;")
 
-        self.web_view_layout.addWidget(self.web_view)
+        self.image_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
+        self.image_label.setMinimumSize(1, 1)
+
+        self.web_view_layout.addWidget(self.image_label)
         self.main_layout.addLayout(self.web_view_layout, 0, 0)
         self.setLayout(self.main_layout)
 
@@ -73,8 +77,7 @@ class CameraWidget(QWidget):
         self.timer.stop()
         self.is_running = False
         self.is_paused = True
-        js_image_str = json.dumps(self.paused_icon_base64)
-        self.web_view.page().runJavaScript(f"setBase64Image({js_image_str});")
+        self.update_camera_feed(self.paused_icon_base64)
         self.pause_button.setDisabled(self.is_paused)
         self.run_button.setDisabled(self.is_running)
         logger.info("Paused camera feed timer.")
@@ -95,6 +98,30 @@ class CameraWidget(QWidget):
             The base64 encoded string of the image to display.
         """
 
-        js_image_str = json.dumps(base64_encoded_image)
+        pixmap = QPixmap()
+        if not pixmap.loadFromData(QByteArray.fromBase64(base64_encoded_image.encode("utf-8"))):
+            logger.warning("Failed to decode camera image.")
+            return
 
-        self.web_view.page().runJavaScript(f"setBase64Image({js_image_str});")
+        self.current_pixmap = pixmap
+        self._update_pixmap()
+
+    def _update_pixmap(self) -> None:
+        """Scale the current frame to fill the widget while preserving aspect ratio."""
+
+        if self.current_pixmap is None or self.current_pixmap.isNull():
+            return
+
+        self.image_label.setPixmap(
+            self.current_pixmap.scaled(
+                self.image_label.size(),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+        )
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        """Rescale the displayed frame when the widget changes size."""
+
+        super().resizeEvent(event)
+        self._update_pixmap()

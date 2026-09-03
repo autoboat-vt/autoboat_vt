@@ -21,7 +21,7 @@ __all__ = [
 ]
 
 from .autopilot_config_widget import AutopilotConfigWidget
-from .camera_widget import CameraWidget
+from .camera import CameraWidget
 from .console_output import ConsoleOutputWidget
 from .graph_viewer import GraphViewer
 from .groundstation import GroundStationWidget
