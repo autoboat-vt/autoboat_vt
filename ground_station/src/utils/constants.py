@@ -181,6 +181,7 @@ ONE_SECOND_TIMER = misc.create_timer(1_000)
 HALF_SECOND_TIMER = misc.create_timer(500)
 TEN_MS_TIMER = misc.create_timer(10)
 ONE_MS_TIMER = misc.create_timer(1)
+ZERO_MS_TIMER = misc.create_timer(0, single_shot=True)
 
 _start_time: float = time.time()
 
