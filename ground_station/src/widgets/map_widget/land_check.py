@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 import threading
 from pathlib import Path
 
@@ -33,11 +32,6 @@ class LandChecker:
     for vectorized ``contains_xy`` queries, where "not contained in the ocean"
     means the point is on land.
 
-    Boundary points are handled flexibly: a point within ``boundary_tolerance_m``
-    meters of the ocean polygon counts as ocean, so clicks near a coastline
-    (where the 10m-resolution shapefile is coarse or slightly offset from
-    reality) are still accepted.
-
     Parameters
     ----------
     shapefile_path
@@ -45,9 +39,6 @@ class LandChecker:
     cache_path
         Path to the WKB cache file, e.g. ``app_data/git_ignore/ocean_geometry.wkb``.
         Pass `None` to disable caching (rebuild the geometry on every init).
-    boundary_tolerance_m
-        Distance in meters within which a point near the ocean boundary counts
-        as ocean. Use `0` for the strict, exact-polygon behavior.
 
     Attributes
     ----------
@@ -60,7 +51,6 @@ class LandChecker:
         self,
         shapefile_path: Path,
         cache_path: Path | None = None,
-        boundary_tolerance_m: float = 100.0,
     ) -> None:
         self._lock = threading.Lock()
         self._ocean: BaseGeometry | None = None
@@ -69,7 +59,6 @@ class LandChecker:
 
         self._shapefile_path = shapefile_path
         self._cache_path = cache_path
-        self.boundary_tolerance_m = boundary_tolerance_m
 
         self._loader = threading.Thread(target=self._load, name="LandCheckerLoader", daemon=True)
         self._loader.start()
@@ -173,12 +162,6 @@ class LandChecker:
         """
         Check whether a coordinate is on land.
 
-        Points that fall outside the ocean polygons are considered land, except
-        within ``boundary_tolerance_m`` meters of the ocean boundary where the
-        check is relaxed in favor of the ocean (the shapefile is only 10m
-        resolution, so coastline clicks are frequently a few hundred meters off
-        in either direction).
-
         If the ocean geometry is missing or still loading, this fails open and
         returns False so that waypoint placement is never blocked by a data
         problem.
@@ -202,38 +185,4 @@ class LandChecker:
         if ocean is None:
             return False
 
-        if shapely.contains_xy(ocean, lon, lat):
-            return False
-
-        if self.boundary_tolerance_m <= 0:
-            return True
-
-        # the point is outside the ocean polygon; accept it anyway if it is
-        # within the tolerance of the coastline (i.e. near the boundary)
-        tolerance_box = self._tolerance_box(lat, lon)
-        return not shapely.intersects(ocean, tolerance_box)
-
-    def _tolerance_box(self, lat: float, lon: float) -> BaseGeometry:
-        """
-        Build a lon/lat-axis-aligned box around a point spanning ``boundary_tolerance_m`` meters.
-
-        The longitude span compensates for the convergence of meridians at
-        higher latitudes so the box is roughly square in meters everywhere.
-
-        Parameters
-        ----------
-        lat
-            Latitude in decimal degrees.
-        lon
-            Longitude in decimal degrees.
-
-        Returns
-        -------
-        :class:`BaseGeometry`
-            A small :class:`shapely.geometry.polygon.Polygon` (a box) centered
-            on the point.
-        """
-
-        dx = self.boundary_tolerance_m / (_M_PER_DEG_LON_EQ * max(math.cos(math.radians(lat)), 1e-6))
-        dy = self.boundary_tolerance_m / _M_PER_DEG_LAT
-        return shapely.box(lon - dx, lat - dy, lon + dx, lat + dy)
+        return not shapely.contains_xy(ocean, lon, lat)
