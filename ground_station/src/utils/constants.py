@@ -185,17 +185,23 @@ ONE_MS_TIMER = misc.create_timer(1)
 _start_time: float = time.time()
 
 # region server ports
-ASSET_SERVER_PORT = int(os.environ.get("ASSET_SERVER_PORT"))
+ASSET_SERVER_PORT = os.environ.get("ASSET_SERVER_PORT")
 if ASSET_SERVER_PORT is None:
     raise RuntimeError("ASSET_SERVER_PORT environment variable not set.")
+else:
+    ASSET_SERVER_PORT = int(ASSET_SERVER_PORT)
 
-MAP_SERVER_PORT = int(os.environ.get("MAP_SERVER_PORT"))
+MAP_SERVER_PORT = os.environ.get("MAP_SERVER_PORT")
 if MAP_SERVER_PORT is None:
     raise RuntimeError("MAP_SERVER_PORT environment variable not set.")
+else:
+    MAP_SERVER_PORT = int(MAP_SERVER_PORT)
 
-VITE_PORT = int(os.environ.get("VITE_PORT"))
+VITE_PORT = os.environ.get("VITE_PORT")
 if VITE_PORT is None:
     raise RuntimeError("VITE_PORT environment variable not set.")
+else:
+    VITE_PORT = int(VITE_PORT)
 
 # endregion server ports
 
