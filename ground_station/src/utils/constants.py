@@ -184,10 +184,20 @@ ONE_MS_TIMER = misc.create_timer(1)
 
 _start_time: float = time.time()
 
-# server ports
-ASSET_SERVER_PORT = int(os.environ.get("ASSET_SERVER_PORT", "8000"))
-MAP_SERVER_PORT = int(os.environ.get("MAP_SERVER_PORT", "3002"))
-VITE_PORT = int(os.environ.get("VITE_PORT", "5173"))
+# region server ports
+ASSET_SERVER_PORT = int(os.environ.get("ASSET_SERVER_PORT"))
+if ASSET_SERVER_PORT is None:
+    raise RuntimeError("ASSET_SERVER_PORT environment variable not set.")
+
+MAP_SERVER_PORT = int(os.environ.get("MAP_SERVER_PORT"))
+if MAP_SERVER_PORT is None:
+    raise RuntimeError("MAP_SERVER_PORT environment variable not set.")
+
+VITE_PORT = int(os.environ.get("VITE_PORT"))
+if VITE_PORT is None:
+    raise RuntimeError("VITE_PORT environment variable not set.")
+
+# endregion server ports
 
 # url for local vite server hosting the map
 MAP_URL = QUrl(f"http://127.0.0.1:{VITE_PORT}")
