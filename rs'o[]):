@@ -1,2 +1,0 @@
-LESSOPEN="|/opt/homebrew/bin/lesspipe.sh %s"
-export LESSOPEN
