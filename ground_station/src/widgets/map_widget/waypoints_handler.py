@@ -112,7 +112,7 @@ class WaypointsHandler(BaseHTTPRequestHandler):
         land_checker = _LAND_CHECKER_HOLDER[0]
         on_land = land_checker.is_on_land(lat, lon) if land_checker is not None else False
 
-        add_waypoint = True if not on_land else bool(LAND_CLICK_PROMPT.ask(lat, lon))
+        add_waypoint = True if not on_land else LAND_CLICK_PROMPT.ask(lat, lon)
 
         self._set_headers(200)
         self.wfile.write(json.dumps({"on_land": on_land, "add_waypoint": add_waypoint}).encode("utf-8"))
