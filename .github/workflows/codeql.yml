@@ -94,6 +94,9 @@ jobs:
                   config-file: ./.github/codeql/codeql-config.yml
 
             - name: Build C++ sources for CodeQL tracing
+              # NOTE: must use bash explicitly — the container image sets a `sh`
+              # entrypoint whose shell lacks `source`.
+              shell: bash
               env:
                   # Ignore only packages that don't contain C++ or need special
                   # hardware. This is intentionally broader than the release
