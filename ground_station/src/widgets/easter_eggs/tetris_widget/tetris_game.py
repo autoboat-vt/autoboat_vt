@@ -66,6 +66,7 @@ class Tetromino:
         self.shape: str = shape
         self.color: QColor = TETROMINO_COLORS[shape]
         self.cells: list[tuple[int, int]] = list(TETROMINOES[shape])
+
         # spawn near the top-center of the board
         self.row: int = 0
         self.col: int = BOARD_WIDTH // 2 - 2
@@ -77,6 +78,7 @@ class Tetromino:
 
     def rotated_cells(self) -> list[tuple[int, int]]:
         """Return the cells as they would be after a clockwise rotation."""
+
         # (row, col) -> (col, -row) is a 90-degree clockwise rotation
         return [(dc, -dr) for dr, dc in self.cells]
 

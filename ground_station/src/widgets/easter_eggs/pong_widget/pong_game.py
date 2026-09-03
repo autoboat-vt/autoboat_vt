@@ -271,7 +271,7 @@ class PongBoard(QFrame):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        # scale the logical WIDTH x HEIGHT playfield to fit the widget,
+        # scale the logical WIDTH * HEIGHT playfield to fit the widget,
         # preserving aspect ratio and centering
         scale = min(self.width() / WIDTH, self.height() / HEIGHT)
         offset_x = (self.width() - WIDTH * scale) / 2
@@ -514,8 +514,10 @@ class PongDialog(QDialog):
         self._mute_button.setText("Unmute" if muted else "Mute")
         self._audio.set_music_enabled(not muted)
         self._audio.set_sfx_enabled(not muted)
+
         if not muted and not self._board.is_game_over() and self._game_started and self._music_started:
             self._audio.start_music()
+
         self._board.setFocus()
 
     def closeEvent(self, event: QCloseEvent) -> None:

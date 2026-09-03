@@ -80,7 +80,7 @@ class PongAudio:
     @staticmethod
     def _make_sound_effect(path: Path) -> QSoundEffect | None:
         """
-        Create a pre-loaded :class:`QSoundEffect` for ``path``, or ``None``.
+        Create a pre-loaded :class:`QSoundEffect` for ``path``, or `None`.
 
         Parameters
         ----------
@@ -134,7 +134,7 @@ class PongAudio:
         Parameters
         ----------
         enabled
-            ``True`` to allow music, ``False`` to stop and suppress it.
+            `True` to allow music, `False` to stop and suppress it.
         """
 
         self._music_enabled = enabled
@@ -209,7 +209,7 @@ class PongAudio:
         Parameters
         ----------
         enabled
-            ``True`` to play SFX, ``False`` to suppress them.
+            `True` to play SFX, `False` to suppress them.
         """
 
         self._sfx_enabled = enabled
