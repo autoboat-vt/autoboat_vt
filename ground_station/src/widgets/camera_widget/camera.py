@@ -31,7 +31,7 @@ class CameraWidget(QWidget):
         self.pause_button = QPushButton("Pause")
         self.pause_button.clicked.connect(self.pause_timer)
         self.is_paused = True
-        self.paused_icon_base64 = open(constants.ASSETS_DIR / "paused-icon-base64.txt", encoding="utf-8").read()
+        self.paused_icon_base64 = open(constants.ASSETS_DIR / "new_logo-base64.txt", encoding="utf-8").read()
         self.pause_button.setDisabled(not self.is_paused)
 
         self.run_button = QPushButton("Run")

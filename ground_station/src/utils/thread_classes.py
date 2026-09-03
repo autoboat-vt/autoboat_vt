@@ -398,11 +398,11 @@ class ImageFetcher(QThread):
                 raise ValueError("Image data is None")
 
         except RequestException:
-            logger.warning("Failed to fetch image. Using cool guy image.")
-            base64_encoded_image = pathlib.Path(constants.ASSETS_DIR / "cool-guy-base64.txt").read_text(encoding="utf-8")
+            logger.warning("Failed to fetch image. Using placeholder image.")
+            base64_encoded_image = pathlib.Path(constants.ASSETS_DIR / "new_logo-base64.txt").read_text(encoding="utf-8")
 
         except ValueError as e:
             logger.warning(f"{e}")
-            base64_encoded_image = pathlib.Path(constants.ASSETS_DIR / "cool-guy-base64.txt").read_text(encoding="utf-8")
+            base64_encoded_image = pathlib.Path(constants.ASSETS_DIR / "new_logo-base64.txt").read_text(encoding="utf-8")
 
         self.data_fetched.emit(base64_encoded_image)
