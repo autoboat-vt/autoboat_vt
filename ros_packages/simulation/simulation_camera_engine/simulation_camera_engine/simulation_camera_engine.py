@@ -4,13 +4,15 @@ from pathlib import Path
 from random import gauss
 
 import navpy
+from scipy.spatial.transform import Rotation
+
 import rclpy
-from autoboat_msgs.msg import ObjectDetectionResult, ObjectDetectionResultsList
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
-from scipy.spatial.transform import Rotation
 from sensor_msgs.msg import NavSatFix
+
+from autoboat_msgs.msg import ObjectDetectionResult, ObjectDetectionResultsList
 
 
 class SimulationCameraEngine(Node):

@@ -38,6 +38,14 @@ group "default" {
   targets = ["base", "firmware"]
 }
 
+group "amd64" {
+  targets = ["base", "firmware", "deepstream"]
+}
+
+group "arm64" {
+  targets = ["base", "firmware"]
+}
+
 target "base" {
   context = "."
   dockerfile = ".devcontainer/Dockerfile"
@@ -78,3 +86,35 @@ target "firmware" {
     IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_firmware:v${MAJOR}-${ARCHITECTURE}" : ""
   ]
 }
+
+target "deepstream" {
+  contexts = {
+    base = "target:base"
+  }
+  dockerfile = ".devcontainer/devcontainer_variants/Dockerfile.deepstream"
+  platforms = ["linux/amd64"]
+  args = {
+    BASE_IMAGE = "base"
+  }
+  tags = [
+    "${IS_OFFICIAL}" == "true" ? "vtautoboat/development_image_deepstream:latest" : "vtautoboat/development_image_deepstream:local-amd64",
+    "${IS_OFFICIAL}" == "true" ? "vtautoboat/development_image_deepstream:${ARCHITECTURE}" : "",
+    "${IS_OFFICIAL}" == "true" ? "ghcr.io/${OWNER}/development_image_deepstream:latest" : "",
+    "${IS_OFFICIAL}" == "true" ? "ghcr.io/${OWNER}/development_image_deepstream:${ARCHITECTURE}" : "",
+    IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image_deepstream:${GITHUB_SHA}" : "",
+    IS_OFFICIAL == "true" ? "ghcr.io/${OWNER}/development_image_deepstream:${substr(GITHUB_SHA, 0, 7)}" : "",
+    IS_RELEASE == "true" ? "vtautoboat/development_image_deepstream:v${VERSION}" : "",
+    IS_RELEASE == "true" ? "vtautoboat/development_image_deepstream:v${VERSION}-${ARCHITECTURE}" : "",
+    IS_RELEASE == "true" ? "vtautoboat/development_image_deepstream:v${MINOR}" : "",
+    IS_RELEASE == "true" ? "vtautoboat/development_image_deepstream:v${MINOR}-${ARCHITECTURE}" : "",
+    IS_RELEASE == "true" ? "vtautoboat/development_image_deepstream:v${MAJOR}" : "",
+    IS_RELEASE == "true" ? "vtautoboat/development_image_deepstream:v${MAJOR}-${ARCHITECTURE}" : "",
+    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_deepstream:v${VERSION}" : "",
+    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_deepstream:v${VERSION}-${ARCHITECTURE}" : "",
+    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_deepstream:v${MINOR}" : "",
+    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_deepstream:v${MINOR}-${ARCHITECTURE}" : "",
+    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_deepstream:v${MAJOR}" : "",
+    IS_RELEASE == "true" ? "ghcr.io/${OWNER}/development_image_deepstream:v${MAJOR}-${ARCHITECTURE}" : ""
+  ]
+}
+

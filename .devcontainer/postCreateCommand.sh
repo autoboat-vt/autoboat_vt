@@ -47,6 +47,9 @@ if [[ "$DEVCONTAINER_VARIANT" == "deepstream" || "$DEVCONTAINER_VARIANT" == "dee
     rm -rf ~/.cache/gstreamer-1.0/
     gst-inspect-1.0 nvstreammux
 
+    if [ ! -f /home/ws/ros_packages/object_detection/object_detection/cv_library/deepstream_yolo_library/libnvdsinfer_custom_impl_Yolo.so ] && [ -f /tmp/cv_library/deepstream_yolo_library/libnvdsinfer_custom_impl_Yolo.so ]; then
+        cp /tmp/cv_library/deepstream_yolo_library/libnvdsinfer_custom_impl_Yolo.so /home/ws/ros_packages/object_detection/object_detection/cv_library/deepstream_yolo_library/
+    fi
 fi
 
 

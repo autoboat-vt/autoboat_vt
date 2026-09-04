@@ -52,13 +52,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Free disk space on runner
+        if: matrix.architecture == 'amd64'
+        run: |
+          echo "Disk space before cleanup:"
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          echo "Disk space after cleanup:"
+          df -h /
+
       - name: Create temporary .dockerignore
         run: |
           echo "*" > .dockerignore
           echo "!/.devcontainer/" >> .dockerignore
           echo "!/.devcontainer/**" >> .dockerignore
+          echo "!/ros_packages/object_detection/object_detection/cv_library/" >> .dockerignore
+          echo "!/ros_packages/object_detection/object_detection/cv_library/**" >> .dockerignore
           echo "Building with context:"
-          du -sh .devcontainer/
+          du -sh .devcontainer/ ros_packages/object_detection/object_detection/cv_library/
 
       - name: Cache C++ Build (CCACHE)
         uses: actions/cache@v4
@@ -136,6 +147,7 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
         with:
           files: .github/workflows/docker-bake.hcl
+          targets: ${{ matrix.architecture == 'amd64' && 'base,firmware,deepstream' || 'base,firmware' }}
           push: false
           set: |
             *.platform=linux/${{ matrix.architecture }}
@@ -145,6 +157,8 @@ jobs:
             base.cache-to=type=gha,mode=max,scope=base-${{ matrix.architecture }}
             firmware.cache-from=type=gha,scope=firmware-${{ matrix.architecture }}
             firmware.cache-to=type=gha,mode=max,scope=firmware-${{ matrix.architecture }}
+            deepstream.cache-from=type=gha,scope=deepstream-${{ matrix.architecture }}
+            deepstream.cache-to=type=gha,mode=max,scope=deepstream-${{ matrix.architecture }}
 
       - name: Build and Push Docker Images (Bake)
         if: github.event_name != 'pull_request'
@@ -160,6 +174,7 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
         with:
           files: .github/workflows/docker-bake.hcl
+          targets: ${{ matrix.architecture == 'amd64' && 'base,firmware,deepstream' || 'base,firmware' }}
           push: true
           set: |
             *.platform=linux/${{ matrix.architecture }}
@@ -173,6 +188,10 @@ jobs:
             firmware.cache-from=type=registry,ref=vtautoboat/development_image_firmware:${{ matrix.architecture }}-cache
             firmware.cache-to=type=gha,mode=max,scope=firmware-${{ matrix.architecture }}
             firmware.cache-to=type=registry,ref=vtautoboat/development_image_firmware:${{ matrix.architecture }}-cache,mode=max
+            deepstream.cache-from=type=gha,scope=deepstream-${{ matrix.architecture }}
+            deepstream.cache-from=type=registry,ref=vtautoboat/development_image_deepstream:${{ matrix.architecture }}-cache
+            deepstream.cache-to=type=gha,mode=max,scope=deepstream-${{ matrix.architecture }}
+            deepstream.cache-to=type=registry,ref=vtautoboat/development_image_deepstream:${{ matrix.architecture }}-cache,mode=max
 
 
 

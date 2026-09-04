@@ -33,20 +33,38 @@ install_deepstream_x86() {
         make \
         git \
         python3
-    # Install CUDA Toolkit 12.6
-    sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/3bf863cc.pub
-    sudo add-apt-repository -y "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/ /"
+    # Setup NVIDIA repository key and source
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/3bf863cc.pub | sudo gpg --dearmor --yes -o /etc/apt/keyrings/cuda-archive-keyring.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/cuda-archive-keyring.gpg] https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/ /" | sudo tee /etc/apt/sources.list.d/cuda.list > /dev/null
     sudo apt-get update
     sudo apt-get install -y cuda-toolkit-12-6
     
     # Install TensorRT 10.3.0.26
     version="10.3.0.26-1+cuda12.5"
-    sudo apt-get install libnvinfer-dev=${version} libnvinfer-dispatch-dev=${version} libnvinfer-dispatch10=${version} libnvinfer-headers-dev=${version} \
-    libnvinfer-headers-plugin-dev=${version} libnvinfer-lean-dev=${version} libnvinfer-lean10=${version} libnvinfer-plugin-dev=${version} libnvinfer-plugin10=${version} \
-    libnvinfer-vc-plugin-dev=${version} libnvinfer-vc-plugin10=${version} libnvinfer10=${version} libnvonnxparsers-dev=${version} libnvonnxparsers10=${version} tensorrt-dev=${version}
+    sudo apt-get install -y \
+        libnvinfer-dev=${version} \
+        libnvinfer-dispatch-dev=${version} \
+        libnvinfer-dispatch10=${version} \
+        libnvinfer-headers-dev=${version} \
+        libnvinfer-headers-plugin-dev=${version} \
+        libnvinfer-lean-dev=${version} \
+        libnvinfer-lean10=${version} \
+        libnvinfer-plugin-dev=${version} \
+        libnvinfer-plugin10=${version} \
+        libnvinfer-vc-plugin-dev=${version} \
+        libnvinfer-vc-plugin10=${version} \
+        libnvinfer10=${version} \
+        libnvonnxparsers-dev=${version} \
+        libnvonnxparsers10=${version} \
+        tensorrt-dev=${version}
     
     sudo wget --content-disposition 'https://api.ngc.nvidia.com/v2/resources/org/nvidia/deepstream/7.1/files?redirect=true&path=deepstream-7.1_7.1.0-1_amd64.deb' --output-document 'deepstream-7.1_7.1.0-1_amd64.deb'
     sudo apt-get install -y ./deepstream-7.1_7.1.0-1_amd64.deb
+    sudo rm -f deepstream-7.1_7.1.0-1_amd64.deb
+    if [ ! -d /opt/nvidia/deepstream/deepstream ] && [ -d /opt/nvidia/deepstream/deepstream-7.1 ]; then
+        sudo ln -s /opt/nvidia/deepstream/deepstream-7.1 /opt/nvidia/deepstream/deepstream
+    fi
 }
 
 install_deepstream_aarch64() {
@@ -55,7 +73,6 @@ install_deepstream_aarch64() {
 }
 
 cd ~/
-sudo -v # Prompt for sudo password at start
 sudo apt update
 sudo apt install -y meson ninja-build
 sudo apt install -y python3-gi python3-dev python3-gst-1.0 \
@@ -76,6 +93,7 @@ if ! dpkg -l | grep -q deepstream-7.1; then
     cd build/
     sudo ninja install
     cd ~/
+    sudo rm -rf ~/glib
     sudo mkdir -p /opt/nvidia/deepstream/deepstream-7.1/
     cd /opt/nvidia/deepstream/deepstream-7.1/
     if uname -m | grep x86_64 -q; then
@@ -98,8 +116,13 @@ else
     sudo wget https://github.com/NVIDIA-AI-IOT/deepstream_python_apps/releases/download/v1.2.0/pyds-1.2.0-cp310-cp310-linux_aarch64.whl
 fi
 pip3 install ./pyds-1.2.0-*.whl
-# echo 'export LD_LIBRARY_PATH=/usr/local/cuda-12.6/targets/x86_64-linux/lib/stubs:$LD_LIBRARY_PATH' >> ~/.bashrc # fix from AI to fix pyds import
-# source ~/.bashrc
+sudo rm -f ./pyds-1.2.0-*.whl
+
+# Create CUDA stub symlink for libcuda.so.1 to allow pyds import when no GPU driver is mounted
+if [ -f /usr/local/cuda-12.6/targets/x86_64-linux/lib/stubs/libcuda.so ] && [ ! -f /usr/local/cuda-12.6/targets/x86_64-linux/lib/stubs/libcuda.so.1 ]; then
+    sudo ln -s libcuda.so /usr/local/cuda-12.6/targets/x86_64-linux/lib/stubs/libcuda.so.1
+fi
+echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.6/targets/x86_64-linux/lib/stubs' >> ~/.bashrc
 
 # Compile the deepstream_yolo library
 echo -e "\n\nCompiling deepstream_yolo library\n\n"
@@ -117,14 +140,11 @@ pip install --no-cache-dir numpy==1.26.4
 echo -e "\n\nInstalling Utils\n\n"
 sudo apt-get install -y v4l-utils
 
-
-# gst-inspect-1.0 > /dev/null # initialize gstreamer plugins
-
-# sudo v4l2-ctl --list-devices # TODO: can we change permissions so this doesn't need to be run?
-
 export IS_DEV_CONTAINER=true # I don't think this persists after script ends otherwise
 
+# Clean up caches to reduce container size
+sudo apt-get clean
+sudo rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+rm -rf ~/.cache/pip
 
 echo -e "\n\nDeepstream setup complete!\n\n"
-
-# cd /home/ws/

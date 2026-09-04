@@ -1,26 +1,27 @@
-FROM vtautoboat/development_image_base:latest
+ARG BASE_IMAGE=vtautoboat/development_image_base:latest
+FROM ${BASE_IMAGE}
 
 ARG USERNAME=autoboat_user
 USER $USERNAME
 
+ENV DEVCONTAINER_VARIANT=deepstream
+ENV CUDA_VER=12.6
+ENV PATH=/usr/local/cuda-12.6/bin:${PATH}
+ARG LD_LIBRARY_PATH=""
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}/usr/local/cuda-12.6/lib64:/usr/local/cuda-12.6/targets/x86_64-linux/lib/stubs
+
 RUN mkdir -p /tmp/autoboat_scripts
 
-
 COPY --chown=${USERNAME}:${USERNAME} .devcontainer/devcontainer_variants/install_deepstream_helper_script.sh /tmp/autoboat_scripts/install_deepstream_helper_script.sh
-# COPY .devcontainer/devcontainer_variants/install_deepstream_helper_script.sh /tmp/autoboat_scripts/install_deepstream_helper_script.sh
 
-RUN bash /tmp/autoboat_scripts/install_deepstream_helper_script.sh
-
+RUN bash /tmp/autoboat_scripts/install_deepstream_helper_script.sh \
+    && sudo rm -rf /tmp/autoboat_scripts
 
 # Compile the deepstream_yolo library
-# COPY ros_packages/object_detection/object_detection/cv_library/ /tmp/cv_library
 COPY --chown=${USERNAME}:${USERNAME} ros_packages/object_detection/object_detection/cv_library/ /tmp/cv_library
 RUN cd /tmp/cv_library/ \
-    && export CUDA_VER=12.6 \
     && make -C deepstream_yolo_library clean && make -C deepstream_yolo_library \
-    && gst-inspect-1.0 > /dev/null # initialize gstreamer plugins
-
-
+    && gst-inspect-1.0 > /dev/null
 
 RUN echo "export DEVCONTAINER_VARIANT=deepstream" >> ~/.bashrc
 
