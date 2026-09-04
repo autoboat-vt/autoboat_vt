@@ -34,15 +34,11 @@ variable "IS_RELEASE" {
   default = "false"
 }
 
+variable "BASE_IMAGE" {
+  default = "vtautoboat/development_image_base:latest"
+}
+
 group "default" {
-  targets = ["base", "firmware"]
-}
-
-group "amd64" {
-  targets = ["base", "firmware", "deepstream"]
-}
-
-group "arm64" {
   targets = ["base", "firmware"]
 }
 
@@ -88,13 +84,11 @@ target "firmware" {
 }
 
 target "deepstream" {
-  contexts = {
-    base = "target:base"
-  }
   dockerfile = ".devcontainer/devcontainer_variants/Dockerfile.deepstream"
   platforms = ["linux/amd64"]
+  pull = true
   args = {
-    BASE_IMAGE = "base"
+    BASE_IMAGE = "${BASE_IMAGE}"
   }
   tags = [
     "${IS_OFFICIAL}" == "true" ? "vtautoboat/development_image_deepstream:latest" : "vtautoboat/development_image_deepstream:local-amd64",

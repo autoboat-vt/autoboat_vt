@@ -147,7 +147,7 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
         with:
           files: .github/workflows/docker-bake.hcl
-          targets: ${{ matrix.architecture == 'amd64' && 'base,firmware,deepstream' || 'base,firmware' }}
+          targets: base,firmware
           push: false
           set: |
             *.platform=linux/${{ matrix.architecture }}
@@ -157,8 +157,6 @@ jobs:
             base.cache-to=type=gha,mode=max,scope=base-${{ matrix.architecture }}
             firmware.cache-from=type=gha,scope=firmware-${{ matrix.architecture }}
             firmware.cache-to=type=gha,mode=max,scope=firmware-${{ matrix.architecture }}
-            deepstream.cache-from=type=gha,scope=deepstream-${{ matrix.architecture }}
-            deepstream.cache-to=type=gha,mode=max,scope=deepstream-${{ matrix.architecture }}
 
       - name: Build and Push Docker Images (Bake)
         if: github.event_name != 'pull_request'
@@ -174,7 +172,7 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
         with:
           files: .github/workflows/docker-bake.hcl
-          targets: ${{ matrix.architecture == 'amd64' && 'base,firmware,deepstream' || 'base,firmware' }}
+          targets: base,firmware
           push: true
           set: |
             *.platform=linux/${{ matrix.architecture }}
@@ -188,10 +186,6 @@ jobs:
             firmware.cache-from=type=registry,ref=vtautoboat/development_image_firmware:${{ matrix.architecture }}-cache
             firmware.cache-to=type=gha,mode=max,scope=firmware-${{ matrix.architecture }}
             firmware.cache-to=type=registry,ref=vtautoboat/development_image_firmware:${{ matrix.architecture }}-cache,mode=max
-            deepstream.cache-from=type=gha,scope=deepstream-${{ matrix.architecture }}
-            deepstream.cache-from=type=registry,ref=vtautoboat/development_image_deepstream:${{ matrix.architecture }}-cache
-            deepstream.cache-to=type=gha,mode=max,scope=deepstream-${{ matrix.architecture }}
-            deepstream.cache-to=type=registry,ref=vtautoboat/development_image_deepstream:${{ matrix.architecture }}-cache,mode=max
 
 
 
@@ -360,3 +354,130 @@ jobs:
               docker buildx imagetools create -t ${GHCR_REPO}:${TAG} ${GHCR_REPO}:${TAG}-amd64 ${GHCR_REPO}:${TAG}-arm64
             done
           fi
+
+
+  # ============================================================================
+  # DeepStream Dev Image — runs on a dedicated runner on AMD64.
+  # Pulls vtautoboat/development_image_base:latest once built & published,
+  # keeping the main ROS2 and firmware release pipeline fast.
+  # ============================================================================
+  build-deepstream:
+    name: Build DeepStream Dev Image (amd64)
+    needs: [build, publish-dev-image]
+    if: |
+      always() &&
+      (needs.build.result == 'success') &&
+      (needs.publish-dev-image.result == 'success' || needs.publish-dev-image.result == 'skipped')
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Free disk space on runner
+        run: |
+          echo "Disk space before cleanup:"
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          echo "Disk space after cleanup:"
+          df -h /
+
+      - name: Create temporary .dockerignore
+        run: |
+          echo "*" > .dockerignore
+          echo "!/.devcontainer/" >> .dockerignore
+          echo "!/.devcontainer/**" >> .dockerignore
+          echo "!/ros_packages/object_detection/object_detection/cv_library/" >> .dockerignore
+          echo "!/ros_packages/object_detection/object_detection/cv_library/**" >> .dockerignore
+          echo "Building with context:"
+          du -sh .devcontainer/ ros_packages/object_detection/object_detection/cv_library/
+
+      - name: Lowercase repository owner
+        run: |
+          echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> ${GITHUB_ENV}
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute package version
+        id: meta
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            MAJOR=$(echo "${VERSION}" | cut -d. -f1)
+            MINOR=$(echo "${VERSION}" | cut -d. -f1,2)
+            echo "major=${MAJOR}" >> "$GITHUB_OUTPUT"
+            echo "minor=${MINOR}" >> "$GITHUB_OUTPUT"
+          else
+            VERSION="0.0.0+git$(git rev-parse --short HEAD)"
+            echo "major=0" >> "$GITHUB_OUTPUT"
+            echo "minor=0.0" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Package version: ${VERSION}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build DeepStream Docker Image (PR — GHA cache only)
+        if: github.event_name == 'pull_request'
+        uses: docker/bake-action@v6
+        env:
+          ARCHITECTURE: amd64
+          OWNER: ${{ env.OWNER_LC }}
+          IS_OFFICIAL: "false"
+          IS_RELEASE: "false"
+          VERSION: ${{ steps.meta.outputs.version }}
+          MAJOR: ${{ steps.meta.outputs.major }}
+          MINOR: ${{ steps.meta.outputs.minor }}
+          GITHUB_SHA: ${{ github.sha }}
+        with:
+          files: .github/workflows/docker-bake.hcl
+          targets: deepstream
+          push: false
+          set: |
+            *.platform=linux/amd64
+            *.cache-from=type=gha,scope=amd64
+            *.cache-to=type=gha,mode=max,scope=amd64
+            deepstream.cache-from=type=gha,scope=deepstream-amd64
+            deepstream.cache-to=type=gha,mode=max,scope=deepstream-amd64
+
+      - name: Build and Push DeepStream Docker Image (Bake)
+        if: github.event_name != 'pull_request'
+        uses: docker/bake-action@v6
+        env:
+          ARCHITECTURE: amd64
+          OWNER: ${{ env.OWNER_LC }}
+          IS_OFFICIAL: "true"
+          IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          MAJOR: ${{ steps.meta.outputs.major }}
+          MINOR: ${{ steps.meta.outputs.minor }}
+          GITHUB_SHA: ${{ github.sha }}
+        with:
+          files: .github/workflows/docker-bake.hcl
+          targets: deepstream
+          push: true
+          set: |
+            *.platform=linux/amd64
+            *.cache-from=type=gha,scope=amd64
+            *.cache-to=type=gha,mode=max,scope=amd64
+            deepstream.cache-from=type=gha,scope=deepstream-amd64
+            deepstream.cache-from=type=registry,ref=vtautoboat/development_image_deepstream:amd64-cache
+            deepstream.cache-to=type=gha,mode=max,scope=deepstream-amd64
+            deepstream.cache-to=type=registry,ref=vtautoboat/development_image_deepstream:amd64-cache,mode=max
