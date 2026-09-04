@@ -429,10 +429,6 @@ try:
                     "please redownload the assets directory from GitHub."
                 )
 
-        if "captured_images" not in os.listdir(GIT_IGNORE_DIR):
-            logger.info("Creating captured images directory...")
-            os.makedirs(GIT_IGNORE_DIR / "captured_images")
-
         if "autopilot_params" not in os.listdir(GIT_IGNORE_DIR):
             logger.info("Creating autopilot parameters directory...")
             os.makedirs(GIT_IGNORE_DIR / "autopilot_params")
@@ -471,8 +467,6 @@ try:
 
     DATA_LOGS_DIR = Path(GIT_IGNORE_DIR / "data_logs")
     DL = DataLogger()
-
-    CAPTURED_IMAGES_DIR = Path(GIT_IGNORE_DIR / "captured_images")
 
     AUTOPILOT_PARAMS_DIR = Path(GIT_IGNORE_DIR / "autopilot_params")
     misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "autopilot_params", AUTOPILOT_PARAMS_DIR)

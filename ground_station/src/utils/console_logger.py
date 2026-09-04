@@ -160,7 +160,7 @@ class _HandlerRegistry:
         log_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         handler = RotatingFileHandler(
-            filename=log_dir / f"ground_station_{timestamp}.log",
+            filename=log_dir / f"{timestamp}.log",
             encoding="utf-8",
         )
         handler.setLevel(logging.DEBUG)

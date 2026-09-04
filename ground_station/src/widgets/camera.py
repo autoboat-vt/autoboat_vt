@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 
 from qtpy.QtCore import QByteArray, Qt, Slot
 from qtpy.QtGui import QPixmap, QResizeEvent
-from qtpy.QtWidgets import QFileDialog, QGridLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
+from qtpy.QtWidgets import QFileDialog, QGridLayout, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
 from utils import constants, misc, thread_classes
 from utils.console_logger import get_logger
@@ -26,24 +26,37 @@ class CameraWidget(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.main_layout = QGridLayout()
-
         self.controls_layout = QHBoxLayout()
 
-        self.pause_button = QPushButton("Pause")
-        self.pause_button.clicked.connect(self.pause_timer)
-        self.is_paused = True
-        self.paused_image = open(constants.ASSETS_DIR / "new_logo.png", "rb").read()
-        self.pause_button.setDisabled(not self.is_paused)
+        self.run_button = misc.pushbutton_maker(
+            button_text="Start",
+            function=self.start_timer,
+            icon=constants.ICONS.play_circle_outline,
+            min_height=30,
+            is_clickable=True,
+            tooltip="Resume the camera feed timer",
+        )
 
-        self.run_button = QPushButton("Run")
-        self.run_button.clicked.connect(self.unpause_timer)
-        self.is_running = False
+        self.pause_button = misc.pushbutton_maker(
+            button_text="Pause",
+            function=self.pause_timer,
+            icon=constants.ICONS.stop_circle_outline,
+            min_height=30,
+            is_clickable=False,
+            tooltip="Pause the camera feed timer",
+        )
 
-        self.upload_button = QPushButton("Upload Image")
-        self.upload_button.clicked.connect(self.upload_image)
+        self.upload_button = misc.pushbutton_maker(
+            button_text="Upload Image",
+            function=self.upload_image,
+            icon=constants.ICONS.upload,
+            min_height=30,
+            is_clickable=True,
+            tooltip="Upload an image to the telemetry server",
+        )
 
-        self.controls_layout.addWidget(self.pause_button)
         self.controls_layout.addWidget(self.run_button)
+        self.controls_layout.addWidget(self.pause_button)
         self.controls_layout.addWidget(self.upload_button)
         self.main_layout.addLayout(self.controls_layout, 1, 0)
 
@@ -61,32 +74,27 @@ class CameraWidget(QWidget):
         self.main_layout.addLayout(self.web_view_layout, 0, 0)
         self.setLayout(self.main_layout)
 
-        self.image_fetcher = thread_classes.ImageFetcher()
+        self.image_fetcher = thread_classes.ImageThreadRouter.ImageFetcher()
         self.image_fetcher.data_fetched.connect(self.update_camera_feed)
 
-        self.timer = misc.copy_qtimer(constants.HALF_SECOND_TIMER)
+        self.timer = misc.copy_qtimer(constants.ONE_SECOND_TIMER)
         self.timer.timeout.connect(self.update_camera_feed_starter)
-
-    def unpause_timer(self) -> None:
-        """Unpause the timer that fetches images from the camera."""
-
-        self.timer.start()
-        self.is_running = True
-        self.is_paused = False
-        self.run_button.setDisabled(self.is_running)
-        self.pause_button.setDisabled(self.is_paused)
-        logger.info("Unpaused camera feed timer.")
 
     def pause_timer(self) -> None:
         """Pause the timer that fetches images from the camera."""
 
         self.timer.stop()
-        self.is_running = False
-        self.is_paused = True
-        self.update_camera_feed(self.paused_image)
-        self.pause_button.setDisabled(self.is_paused)
-        self.run_button.setDisabled(self.is_running)
+        self.pause_button.setDisabled(True)
+        self.run_button.setDisabled(False)
         logger.info("Paused camera feed timer.")
+
+    def start_timer(self) -> None:
+        """Start the timer that fetches images from the camera."""
+
+        self.timer.start()
+        self.run_button.setDisabled(True)
+        self.pause_button.setDisabled(False)
+        logger.info("Unpaused camera feed timer.")
 
     def update_camera_feed_starter(self) -> None:
         """Start the image fetcher thread to update the camera feed if it is not already running."""
