@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from qtpy.QtCore import QByteArray, Qt
+from urllib.parse import urljoin
+
+from qtpy.QtCore import QByteArray, Qt, Slot
 from qtpy.QtGui import QPixmap, QResizeEvent
-from qtpy.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
+from qtpy.QtWidgets import QFileDialog, QGridLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
 
 from utils import constants, misc, thread_classes
 from utils.console_logger import get_logger
@@ -30,15 +32,19 @@ class CameraWidget(QWidget):
         self.pause_button = QPushButton("Pause")
         self.pause_button.clicked.connect(self.pause_timer)
         self.is_paused = True
-        self.paused_icon_base64 = open(constants.ASSETS_DIR / "new_logo-base64.txt", encoding="utf-8").read()
+        self.paused_image = open(constants.ASSETS_DIR / "new_logo.png", "rb").read()
         self.pause_button.setDisabled(not self.is_paused)
 
         self.run_button = QPushButton("Run")
         self.run_button.clicked.connect(self.unpause_timer)
         self.is_running = False
 
+        self.upload_button = QPushButton("Upload Image")
+        self.upload_button.clicked.connect(self.upload_image)
+
         self.controls_layout.addWidget(self.pause_button)
         self.controls_layout.addWidget(self.run_button)
+        self.controls_layout.addWidget(self.upload_button)
         self.main_layout.addLayout(self.controls_layout, 1, 0)
 
         self.web_view_layout = QHBoxLayout()
@@ -59,7 +65,7 @@ class CameraWidget(QWidget):
         self.image_fetcher.data_fetched.connect(self.update_camera_feed)
 
         self.timer = misc.copy_qtimer(constants.HALF_SECOND_TIMER)
-        self.timer.timeout.connect(self.image_fetcher.get_image)
+        self.timer.timeout.connect(self.update_camera_feed_starter)
 
     def unpause_timer(self) -> None:
         """Unpause the timer that fetches images from the camera."""
@@ -77,7 +83,7 @@ class CameraWidget(QWidget):
         self.timer.stop()
         self.is_running = False
         self.is_paused = True
-        self.update_camera_feed(self.paused_icon_base64)
+        self.update_camera_feed(self.paused_image)
         self.pause_button.setDisabled(self.is_paused)
         self.run_button.setDisabled(self.is_running)
         logger.info("Paused camera feed timer.")
@@ -88,19 +94,23 @@ class CameraWidget(QWidget):
         if not self.image_fetcher.isRunning():
             self.image_fetcher.start()
 
-    def update_camera_feed(self, base64_encoded_image: str) -> None:
+    def update_camera_feed(self, image: bytes) -> None:
         """
         Update the camera feed with a new image.
 
         Parameters
         ----------
-        base64_encoded_image
-            The base64 encoded string of the image to display.
+        image
+            The new image data.
         """
 
         pixmap = QPixmap()
-        if not pixmap.loadFromData(QByteArray.fromBase64(base64_encoded_image.encode("utf-8"))):
-            logger.warning("Failed to decode camera image.")
+
+        try:
+            pixmap.loadFromData(QByteArray(image))
+
+        except Exception as e:
+            logger.error(f"Failed to load image from data: {e}")
             return
 
         self.current_pixmap = pixmap
@@ -125,3 +135,45 @@ class CameraWidget(QWidget):
 
         super().resizeEvent(event)
         self._update_pixmap()
+
+    @Slot()
+    def upload_image(self) -> None:
+        """
+        Open a file dialog to select an image and upload it to the telemetry server.
+
+        Raises
+        ------
+        :class:`ValueError`
+            If the image upload fails.
+        """
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            parent=self,
+            caption="Select an image to upload",
+            filter="Image Files (*.png *.jpg *.jpeg *.bmp *.gif)",
+            directory=constants.ASSETS_DIR.as_posix()
+        )
+
+        if not file_path:
+            logger.info("No image selected for upload.")
+            return
+
+        try:
+            with open(file_path, "rb") as f:
+                image_data = f.read()
+
+            response = constants.REQ_SESSION.post(
+                urljoin(
+                    misc.get_route("set_current_image"),
+                    str(constants.SM.read_int("telemetry_server_instance_id")),
+                ),
+                files={"image": image_data},
+            )
+
+            if response.status_code == 200:
+                logger.info(f"Successfully uploaded image: {file_path}")
+            else:
+                raise ValueError(response.text.strip())
+
+        except Exception as e:
+            logger.error(f"Failed to upload image: {e}")

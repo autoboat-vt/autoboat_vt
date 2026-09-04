@@ -1,4 +1,5 @@
 import pathlib
+from typing import cast
 from urllib.parse import urljoin
 
 from requests import RequestException
@@ -362,14 +363,14 @@ class ImageFetcher(QThread):
     Attributes
     ----------
     data_fetched
-        Signal to send image to the main thread. Emits a base64 encoded string of the image.
+        Signal to send image to the main thread.
 
     Inherits
     --------
     :class:`QThread`
     """
 
-    data_fetched = Signal(str)
+    data_fetched = Signal(bytes)
 
     def __init__(self) -> None:
         super().__init__()
@@ -381,32 +382,36 @@ class ImageFetcher(QThread):
 
     def get_image(self) -> None:
         """
-        Fetch an image from the telemetry server and emit it as a base64 encoded string.
+        Fetch an image from the telemetry server and emit it.
 
         Raises
         ------
         :class:`ValueError`
-            If the image data is `None`.
+            If the image data is empty.
         """
 
         try:
-            image_data = constants.REQ_SESSION.get(
+            response = constants.REQ_SESSION.get(
                 urljoin(
-                    misc.get_route("get_current_camera_image"),
+                    misc.get_route("get_current_image"),
                     str(constants.SM.read_int("telemetry_server_instance_id")),
                 )
-            ).json()
+            )
 
-            base64_encoded_image = image_data.get("current_camera_image")
-            if base64_encoded_image is None:
-                raise ValueError("Image data is None")
+            if response.status_code != 200:
+                raise RequestException(f"HTTP {response.status_code}: {response.text.strip()}")
 
-        except RequestException:
-            logger.warning("Failed to fetch image. Using placeholder image.")
-            base64_encoded_image = pathlib.Path(constants.ASSETS_DIR / "new_logo-base64.txt").read_text(encoding="utf-8")
+            image = response.content
+            if not image:
+                raise ValueError("Image data is empty")
+
+        except RequestException as e:
+            logger.warning(f"Failed to fetch image from telemetry server: {e}")
+            image = pathlib.Path(constants.ASSETS_DIR / "new_logo.png").read_bytes()
 
         except ValueError as e:
             logger.warning(f"{e}")
-            base64_encoded_image = pathlib.Path(constants.ASSETS_DIR / "new_logo-base64.txt").read_text(encoding="utf-8")
+            image = pathlib.Path(constants.ASSETS_DIR / "new_logo.png").read_bytes()
 
-        self.data_fetched.emit(base64_encoded_image)
+        image = cast("bytes", image)
+        self.data_fetched.emit(image)
