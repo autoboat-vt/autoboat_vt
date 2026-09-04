@@ -241,7 +241,7 @@ class MapInterface {
         this.boat_manager.setHeading(heading);
     }
 
-    update_boat_location_and_heading(lat: number, lon: number, heading: number, recordTrack = true): void {
+    update_boat_location_and_heading(lat: number, lon: number, heading: number, recordTrack: boolean): void {
         this.boat_manager.setLocationAndHeading(lat, lon, heading);
         if (recordTrack) {
             this.track_manager.record(lat, lon);

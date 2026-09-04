@@ -126,7 +126,7 @@ def _default_log_dir() -> Path:
         The default log directory path.
     """
 
-    return Path.cwd() / "app_data" / "git_ignore" / "logs"
+    return Path.cwd() / "app_data" / "git_ignore" / "console_logs"
 
 
 class _HandlerRegistry:
@@ -160,7 +160,7 @@ class _HandlerRegistry:
         log_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         handler = RotatingFileHandler(
-            filename=log_dir / f"ground_station_{timestamp}.log",
+            filename=log_dir / f"{timestamp}.log",
             encoding="utf-8",
         )
         handler.setLevel(logging.DEBUG)

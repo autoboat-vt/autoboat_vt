@@ -1,4 +1,5 @@
 import pathlib
+from typing import cast
 from urllib.parse import urljoin
 
 from requests import RequestException
@@ -11,7 +12,7 @@ from utils.console_logger import get_logger
 __all__ = [
     "AutopilotThreadRouter",
     "BoatStatusThreadRouter",
-    "ImageFetcher",
+    "ImageThreadRouter",
     "InstanceManagerThreadRouter",
     "WaypointThreadRouter",
 ]
@@ -354,59 +355,71 @@ class WaypointThreadRouter:
             else:
                 self.response.emit((data, constants.TelemetryStatus.SUCCESS))
 
-
-class ImageFetcher(QThread):
+class ImageThreadRouter:
     """
-    Thread to fetch images from the telemetry server.
+    Class containing :class:`QThread` classes dealing with image fetching.
 
     Attributes
     ----------
-    data_fetched
-        Signal to send image to the main thread. Emits a base64 encoded string of the image.
-
-    Inherits
-    --------
-    :class:`QThread`
+    - :class:`ImageFetcher` -> Fetches images from the telemetry server.
     """
 
-    data_fetched = Signal(str)
-
-    def __init__(self) -> None:
-        super().__init__()
-
-    def run(self) -> None:
-        """Run the thread to fetch images from the telemetry server."""
-
-        self.get_image()
-
-    def get_image(self) -> None:
+    class ImageFetcher(QThread):
         """
-        Fetch an image from the telemetry server and emit it as a base64 encoded string.
+        Thread to fetch images from the telemetry server.
 
-        Raises
-        ------
-        :class:`ValueError`
-            If the image data is `None`.
+        Attributes
+        ----------
+        data_fetched
+            Signal to send image to the main thread.
+
+        Inherits
+        --------
+        :class:`QThread`
         """
 
-        try:
-            image_data = constants.REQ_SESSION.get(
-                urljoin(
-                    misc.get_route("get_current_camera_image"),
-                    str(constants.SM.read_int("telemetry_server_instance_id")),
+        data_fetched = Signal(bytes)
+
+        def __init__(self) -> None:
+            super().__init__()
+
+        def run(self) -> None:
+            """Run the thread to fetch images from the telemetry server."""
+
+            self.get_image()
+
+        def get_image(self) -> None:
+            """
+            Fetch an image from the telemetry server and emit it.
+
+            Raises
+            ------
+            :class:`ValueError`
+                If the image data is empty.
+            """
+
+            try:
+                response = constants.REQ_SESSION.get(
+                    urljoin(
+                        misc.get_route("get_current_image"),
+                        str(constants.SM.read_int("telemetry_server_instance_id")),
+                    )
                 )
-            ).json()
 
-            base64_encoded_image = image_data.get("current_camera_image")
-            if base64_encoded_image is None:
-                raise ValueError("Image data is None")
+                if response.status_code != 200:
+                    raise RequestException(f"HTTP {response.status_code}: {response.text.strip()}")
 
-        except RequestException:
-            logger.warning("Failed to fetch image. Using placeholder image.")
-            base64_encoded_image = pathlib.Path(constants.ASSETS_DIR / "new_logo-base64.txt").read_text(encoding="utf-8")
+                image = response.content
+                if not image:
+                    raise ValueError("Image data is empty")
 
-        except ValueError as e:
-            logger.warning(f"{e}")
-            base64_encoded_image = pathlib.Path(constants.ASSETS_DIR / "new_logo-base64.txt").read_text(encoding="utf-8")
+            except RequestException as e:
+                logger.warning(f"Failed to fetch image from telemetry server: {e}")
+                image = pathlib.Path(constants.ASSETS_DIR / "new_logo.png").read_bytes()
 
-        self.data_fetched.emit(base64_encoded_image)
+            except ValueError as e:
+                logger.warning(f"{e}")
+                image = pathlib.Path(constants.ASSETS_DIR / "new_logo.png").read_bytes()
+
+            image = cast("bytes", image)
+            self.data_fetched.emit(image)

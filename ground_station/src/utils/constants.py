@@ -256,6 +256,8 @@ _instance_manager_endpoints: dict[str, str] = {
 _boat_status_endpoints: dict[str, str] = {
     "get_boat_status": urljoin(_telemetry_server_url, "boat_status/get/"),
     "get_new_boat_status": urljoin(_telemetry_server_url, "boat_status/get_new/"),
+    "get_current_image": urljoin(_telemetry_server_url, "boat_status/get_image/"),
+    "set_current_image": urljoin(_telemetry_server_url, "boat_status/set_image/"),
     "test_boat_status": urljoin(_telemetry_server_url, "boat_status/test/"),
 }
 
@@ -285,8 +287,14 @@ _waypoints_endpoints: dict[str, str] = {
     "test_waypoints": urljoin(_telemetry_server_url, "waypoints/test/"),
 }
 
-_camera_endpoints: dict[str, str] = {
-    "get_current_camera_image": urljoin(_telemetry_server_url, "camera/get_current_image/"),
+_image_manager_endpoints: dict[str, str] = {
+    "test_image_manager": urljoin(_telemetry_server_url, "image_manager/test/"),
+    "get_image": urljoin(_telemetry_server_url, "image_manager/get/"),
+    "get_image_info": urljoin(_telemetry_server_url, "image_manager/get_info/"),
+    "get_all_images": urljoin(_telemetry_server_url, "image_manager/get_all/"),
+    "upload_image": urljoin(_telemetry_server_url, "image_manager/upload/"),
+    "delete_image": urljoin(_telemetry_server_url, "image_manager/delete/"),
+    "delete_all_images": urljoin(_telemetry_server_url, "image_manager/delete_all"),
 }
 
 _telemetry_server_endpoints: dict[str, str] = dict(
@@ -294,7 +302,7 @@ _telemetry_server_endpoints: dict[str, str] = dict(
     **_boat_status_endpoints,
     **_autopilot_parameters_endpoints,
     **_waypoints_endpoints,
-    **_camera_endpoints,
+    **_image_manager_endpoints,
 )
 
 _map_features: dict[str, dict[str, str | bool]] = {
@@ -364,28 +372,33 @@ try:
     DEFAULTS_EXAMPLES_DIR = Path(GIT_KEEP_DIR / "defaults_examples")
     ASSETS_DIR = Path(GIT_KEEP_DIR / "assets")
     APP_LOGO_PATH = Path(ASSETS_DIR / "logo.png")
+    CONSOLE_LOGS_DIR = Path(GIT_IGNORE_DIR / "console_logs")
 
-    # Natural Earth 10m ocean layer used to block waypoints placed on land
     OCEAN_BOUNDARY_LAYER_DIR = Path(ASSETS_DIR / "ocean_boundary_layer")
+    OCEAN_DEPTH_LAYER_DIR = Path(ASSETS_DIR / "ocean_depth_layer")
     OCEAN_SHAPEFILE_PATH = Path(OCEAN_BOUNDARY_LAYER_DIR / "ne_10m_ocean.shp")
     OCEAN_GEOMETRY_CACHE_PATH = Path(GIT_IGNORE_DIR / "ocean_geometry.wkb")
-
-    OCEAN_DEPTH_LAYER_DIR = Path(ASSETS_DIR / "ocean_depth_layer")
     BATHYMETRY_GEOJSON_CACHE_PATH = Path(GIT_IGNORE_DIR / "bathymetry_geojson.json")
 
     EASTER_EGG_AUDIO_DIR = Path(ASSETS_DIR / "easter_egg_audio")
+
     TETRIS_ASSETS_DIR = Path(EASTER_EGG_AUDIO_DIR / "tetris")
     TETRIS_MUSIC_DIR = Path(TETRIS_ASSETS_DIR / "music")
     TETRIS_SFX_DIR = Path(TETRIS_ASSETS_DIR / "sfx")
+
     SNAKE_ASSETS_DIR = Path(EASTER_EGG_AUDIO_DIR / "snake")
     SNAKE_MUSIC_DIR = Path(SNAKE_ASSETS_DIR / "music")
     SNAKE_SFX_DIR = Path(SNAKE_ASSETS_DIR / "sfx")
+
     PONG_ASSETS_DIR = Path(EASTER_EGG_AUDIO_DIR / "pong")
     PONG_MUSIC_DIR = Path(PONG_ASSETS_DIR / "music")
     PONG_SFX_DIR = Path(PONG_ASSETS_DIR / "sfx")
 
-    CAMERA_WIDGET_DIR = Path(WIDGETS_DIR / "camera_widget")
-    HTML_CAMERA_PATH = Path(CAMERA_WIDGET_DIR / "camera.html")
+    EASTER_EGG_ASSETS_DIRS = [
+        TETRIS_ASSETS_DIR,
+        SNAKE_ASSETS_DIR,
+        PONG_ASSETS_DIR,
+    ]
 
     APP_STATE_PATH = Path(GIT_IGNORE_DIR / "app_state.json")
 
@@ -398,6 +411,23 @@ try:
 
         if "defaults_examples" not in os.listdir(GIT_KEEP_DIR):
             raise Exception("Defaults/examples directory not found, please redownload the directory from GitHub.")
+
+        if "ocean_boundary_layer" not in os.listdir(ASSETS_DIR):
+            raise Exception(
+                "Ocean boundary layer directory not found, please redownload the assets directory from GitHub."
+            )
+
+        if "ocean_depth_layer" not in os.listdir(ASSETS_DIR):
+            raise Exception(
+                "Ocean depth layer directory not found, please redownload the assets directory from GitHub."
+            )
+
+        for easter_egg_assets_dir in EASTER_EGG_ASSETS_DIRS:
+            if easter_egg_assets_dir.name not in os.listdir(EASTER_EGG_AUDIO_DIR):
+                raise Exception(
+                    f"Easter egg assets directory {easter_egg_assets_dir.name} not found, "
+                    "please redownload the assets directory from GitHub."
+                )
 
         if "autopilot_params" not in os.listdir(GIT_IGNORE_DIR):
             logger.info("Creating autopilot parameters directory...")
@@ -415,9 +445,9 @@ try:
             logger.info("Creating data logs directory...")
             os.makedirs(GIT_IGNORE_DIR / "data_logs")
 
-        if "logs" not in os.listdir(GIT_IGNORE_DIR):
-            logger.info("Creating application logs directory...")
-            os.makedirs(GIT_IGNORE_DIR / "logs")
+        if "console_logs" not in os.listdir(GIT_IGNORE_DIR):
+            logger.info("Creating console logs directory...")
+            os.makedirs(GIT_IGNORE_DIR / "console_logs")
 
         if not APP_STATE_PATH.exists():
             logger.info("Creating app state file...")
@@ -436,11 +466,6 @@ try:
             )
 
     DATA_LOGS_DIR = Path(GIT_IGNORE_DIR / "data_logs")
-    os.makedirs(DATA_LOGS_DIR, exist_ok=True)
-
-    LOGS_DIR = Path(GIT_IGNORE_DIR / "logs")
-    os.makedirs(LOGS_DIR, exist_ok=True)
-
     DL = DataLogger()
 
     AUTOPILOT_PARAMS_DIR = Path(GIT_IGNORE_DIR / "autopilot_params")
