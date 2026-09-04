@@ -201,6 +201,9 @@ class GroundStationWidget(QWidget):
         if constants.SM.read_dict("map_features")["boat_track"]["status"]:
             self.map_bridge.set_track_visible(True)
 
+        if constants.SM.read_dict("map_features")["bathymetry"]["status"]:
+            self.map_bridge.set_bathymetry_visible(True)
+
         self.keybind_config_window = KeybindConfigDialog()
         self.keybind_config_button = QPushButton("Keybind Configuration")
         self.keybind_config_button.setToolTip("View and edit keyboard shortcuts.")
@@ -887,6 +890,8 @@ class GroundStationWidget(QWidget):
 
         if feature == "boat_track":
             self.map_bridge.set_track_visible(enabled)
+        elif feature == "bathymetry":
+            self.map_bridge.set_bathymetry_visible(enabled)
 
     @Slot(int, str)
     def zoom_to_marker(self, row: int, table: Literal["waypoints", "buoys"] = "waypoints") -> None:

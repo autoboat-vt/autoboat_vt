@@ -316,6 +316,12 @@ class MapBridge:
         self._call("set_track_visible", visible)
 
     @_map_api
+    def set_bathymetry_visible(self, visible: bool) -> None:
+        """Show or hide the ocean depth layer."""
+
+        self._call("set_bathymetry_visible", visible)
+
+    @_map_api
     def remove_all_svgs(self) -> None:
         """Remove all diagnostic SVG overlays from the map."""
 

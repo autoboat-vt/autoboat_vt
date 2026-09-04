@@ -318,6 +318,15 @@ _map_features: dict[str, dict[str, str | bool]] = {
         "feedback_text": "Updated Boat Track Config.",
         "status": False,
     },
+    "bathymetry": {
+        "name": "Ocean Depth",
+        "description": (
+            "Show ocean floor depth bands on the map. Note that this layer can make base map labels harder to read.\n"
+            "The depth bands are derived from the Natural Earth 10m bathymetry layer."
+        ),
+        "feedback_text": "Updated Ocean Depth Config.",
+        "status": False,
+    },
 }
 
 _data_logging_active: bool = False
@@ -357,9 +366,12 @@ try:
     APP_LOGO_PATH = Path(ASSETS_DIR / "logo.png")
 
     # Natural Earth 10m ocean layer used to block waypoints placed on land
-    OCEAN_LAYER_DIR = Path(ASSETS_DIR / "ocean_layer")
-    OCEAN_SHAPEFILE_PATH = Path(OCEAN_LAYER_DIR / "ne_10m_ocean.shp")
+    OCEAN_BOUNDARY_LAYER_DIR = Path(ASSETS_DIR / "ocean_boundary_layer")
+    OCEAN_SHAPEFILE_PATH = Path(OCEAN_BOUNDARY_LAYER_DIR / "ne_10m_ocean.shp")
     OCEAN_GEOMETRY_CACHE_PATH = Path(GIT_IGNORE_DIR / "ocean_geometry.wkb")
+
+    OCEAN_DEPTH_LAYER_DIR = Path(ASSETS_DIR / "ocean_depth_layer")
+    BATHYMETRY_GEOJSON_CACHE_PATH = Path(GIT_IGNORE_DIR / "bathymetry_geojson.json")
 
     EASTER_EGG_AUDIO_DIR = Path(ASSETS_DIR / "easter_egg_audio")
     TETRIS_ASSETS_DIR = Path(EASTER_EGG_AUDIO_DIR / "tetris")

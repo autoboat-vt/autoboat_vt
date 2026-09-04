@@ -5,6 +5,7 @@ from urllib.parse import parse_qs, urlparse
 
 from utils.console_logger import get_logger
 
+from .bathymetry import BathymetryProvider
 from .land_check import LandChecker
 from .land_click_prompt import LAND_CLICK_PROMPT
 
@@ -15,6 +16,9 @@ _WAYPOINTS: list[tuple[float, float]] = []
 
 # mutable holder so the land checker can be swapped in without a `global` statement
 _LAND_CHECKER_HOLDER: list[LandChecker | None] = [None]
+
+# mutable holder so the bathymetry provider can be swapped in without a `global` statement
+_BATHYMETRY_HOLDER: list[BathymetryProvider | None] = [None]
 
 
 def set_land_checker(land_checker: LandChecker | None) -> None:
@@ -28,6 +32,20 @@ def set_land_checker(land_checker: LandChecker | None) -> None:
     """
 
     _LAND_CHECKER_HOLDER[0] = land_checker
+
+
+def set_bathymetry_provider(provider: BathymetryProvider | None) -> None:
+    """
+    Provide the bathymetry provider used by the ``/bathymetry`` endpoint.
+
+    Parameters
+    ----------
+    provider
+        The shared :class:`BathymetryProvider` instance, or None to disable the
+        depth layer.
+    """
+
+    _BATHYMETRY_HOLDER[0] = provider
 
 
 class WaypointsHandler(BaseHTTPRequestHandler):
@@ -78,11 +96,38 @@ class WaypointsHandler(BaseHTTPRequestHandler):
             self.wfile.write(payload)
             return
 
+        if self.path == "/bathymetry":
+            self._handle_bathymetry()
+            return
+
         if self.path.startswith("/check_land"):
             self._handle_check_land()
             return
 
         self._not_found()
+
+    def _handle_bathymetry(self) -> None:
+        """
+        Handle ``GET /bathymetry`` requests.
+
+        Serves the bathymetry depth bands as a GeoJSON ``FeatureCollection``
+        from the shared :class:`BathymetryProvider`. Responds 503 while the
+        layer is still loading, and 404 if no provider is configured, so the
+        frontend silently skips the layer in both cases.
+        """
+
+        provider = _BATHYMETRY_HOLDER[0]
+        if provider is None:
+            self._not_found()
+            return
+
+        if not provider.ready:
+            self._set_headers(503)
+            self.wfile.write(b'{"message": "Bathymetry not ready"}')
+            return
+
+        self._set_headers(200)
+        self.wfile.write(json.dumps(provider.geojson(), separators=(",", ":")).encode("utf-8"))
 
     def _handle_check_land(self) -> None:
         """
