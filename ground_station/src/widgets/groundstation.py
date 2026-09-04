@@ -198,12 +198,6 @@ class GroundStationWidget(QWidget):
         )
         self.telemetry_config_button.clicked.connect(self.edit_telemetry_config_window.exec)
 
-        if constants.SM.read_dict("map_features")["boat_track"]["status"]:
-            self.map_bridge.set_track_visible(True)
-
-        if constants.SM.read_dict("map_features")["bathymetry"]["status"]:
-            self.map_bridge.set_bathymetry_visible(True)
-
         self.keybind_config_window = KeybindConfigDialog()
         self.keybind_config_button = QPushButton("Keybind Configuration")
         self.keybind_config_button.setToolTip("View and edit keyboard shortcuts.")
@@ -1415,7 +1409,8 @@ class GroundStationWidget(QWidget):
         except AssertionError:
             lat, lon = self.fake_position
 
-        if constants.SM.read_bool("has_telemetry_server_instance_changed"):
+        instance_changed = constants.SM.read_bool("has_telemetry_server_instance_changed")
+        if instance_changed:
             constants.SM.write("remote_autopilot_param_hash", "")
             constants.SM.write("data_logging_active", False)
             constants.SM.write("data_log_file_path", "")
@@ -1432,7 +1427,7 @@ class GroundStationWidget(QWidget):
 
         # endregion data validation and defaulting
 
-        self.map_bridge.update_boat_location_and_heading(lat, lon, heading)
+        self.map_bridge.update_boat_location_and_heading(lat, lon, heading, record_track=not instance_changed)
 
         if constants.SM.read_dict("map_features")["sailboat_debug_symbols"]["status"]:
             draw_map_diagnostics(heading)

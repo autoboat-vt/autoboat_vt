@@ -232,10 +232,12 @@ class MapBridge:
         self._call("update_boat_heading", heading)
 
     @_map_api
-    def update_boat_location_and_heading(self, lat: float, lon: float, heading: float) -> None:
+    def update_boat_location_and_heading(
+        self, lat: float, lon: float, heading: float, record_track: bool = True
+    ) -> None:
         """Update the boat marker position and heading in one call."""
 
-        self._call("update_boat_location_and_heading", lat, lon, heading)
+        self._call("update_boat_location_and_heading", lat, lon, heading, record_track)
 
     @_map_api
     def focus_map_on_boat(self) -> None:
