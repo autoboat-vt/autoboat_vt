@@ -157,9 +157,10 @@ class BoatStatusThreadRouter:
             """Run the thread to fetch boat status from the telemetry server."""
 
             while not self.isInterruptionRequested():
+                instance_id = constants.SM.read_int("telemetry_server_instance_id")
                 try:
                     data = constants.REQ_SESSION.get(
-                        urljoin(misc.get_route("get_boat_status"), str(constants.SM.read_int("telemetry_server_instance_id")))
+                        urljoin(misc.get_route("get_boat_status"), str(instance_id))
                     ).json()
 
                     if not isinstance(data, dict):
@@ -173,6 +174,9 @@ class BoatStatusThreadRouter:
 
                 else:
                     result = (data, constants.TelemetryStatus.SUCCESS)
+
+                if instance_id != constants.SM.read_int("telemetry_server_instance_id"):
+                    continue
 
                 self.data_fetched.emit(result)
 

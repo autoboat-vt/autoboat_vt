@@ -232,10 +232,12 @@ class MapBridge:
         self._call("update_boat_heading", heading)
 
     @_map_api
-    def update_boat_location_and_heading(self, lat: float, lon: float, heading: float) -> None:
+    def update_boat_location_and_heading(
+        self, lat: float, lon: float, heading: float, record_track: bool = True
+    ) -> None:
         """Update the boat marker position and heading in one call."""
 
-        self._call("update_boat_location_and_heading", lat, lon, heading)
+        self._call("update_boat_location_and_heading", lat, lon, heading, record_track)
 
     @_map_api
     def focus_map_on_boat(self) -> None:
@@ -314,6 +316,12 @@ class MapBridge:
         """Show or hide the boat track layer."""
 
         self._call("set_track_visible", visible)
+
+    @_map_api
+    def set_bathymetry_visible(self, visible: bool) -> None:
+        """Show or hide the ocean depth layer."""
+
+        self._call("set_bathymetry_visible", visible)
 
     @_map_api
     def remove_all_svgs(self) -> None:

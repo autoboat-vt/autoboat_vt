@@ -11,6 +11,7 @@ import {
 import "leaflet/dist/leaflet.css";
 import "leaflet-rotatedmarker";
 
+import { BathymetryManager } from "./bathymetry";
 import { BoatManager } from "./boat";
 import { BuoyManager } from "./buoys";
 import { KeybindHandler, type KeybindMap } from "./keybinds";
@@ -41,6 +42,7 @@ class MapInterface {
     static readonly assetsUrl = `http://localhost:${import.meta.env.ASSET_SERVER_PORT ?? "8000"}`;
     static readonly waypointsUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/waypoints`;
     static readonly checkLandUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/check_land`;
+    static readonly bathymetryUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/bathymetry`;
 
     lastFocusedTimestamp = 0;
     private waypointHistory: { type: "add" | "remove"; waypoint: LatLngTuple; color?: string }[] = [];
@@ -53,6 +55,7 @@ class MapInterface {
     readonly svg_manager: SVGManager;
     readonly keybind_handler: KeybindHandler;
     readonly track_manager: TrackManager;
+    readonly bathymetry_manager: BathymetryManager;
 
     static getMarkerIcon(color: string): Icon {
         const key = `marker-${color}`;
@@ -94,6 +97,13 @@ class MapInterface {
         this.svg_manager = new SVGManager(this.map);
         this.keybind_handler = new KeybindHandler();
         this.track_manager = new TrackManager(this.map);
+        this.bathymetry_manager = new BathymetryManager(this.map, MapInterface.bathymetryUrl);
+
+        this.map.createPane("bathyPane");
+        const bathyPane = this.map.getPane("bathyPane");
+        if (bathyPane !== undefined) {
+            bathyPane.style.zIndex = "250";
+        }
 
         this.keybind_handler.register("focus_boat", () => this.focus_map_on_boat());
         this.keybind_handler.register("clear_waypoints", () => this.clear_waypoints());
@@ -231,9 +241,13 @@ class MapInterface {
         this.boat_manager.setHeading(heading);
     }
 
-    update_boat_location_and_heading(lat: number, lon: number, heading: number): void {
+    update_boat_location_and_heading(lat: number, lon: number, heading: number, recordTrack = true): void {
         this.boat_manager.setLocationAndHeading(lat, lon, heading);
-        this.track_manager.record(lat, lon);
+        if (recordTrack) {
+            this.track_manager.record(lat, lon);
+        } else {
+            this.track_manager.clear();
+        }
     }
 
     focus_map_on_boat(): void {
@@ -311,6 +325,10 @@ class MapInterface {
 
     set_track_visible(visible: boolean): void {
         this.track_manager.setVisible(visible);
+    }
+
+    set_bathymetry_visible(visible: boolean): void {
+        void this.bathymetry_manager.setVisible(visible);
     }
 
     remove_all_svgs(): void {
