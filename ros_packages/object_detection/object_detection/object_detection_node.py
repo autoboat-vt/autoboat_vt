@@ -50,7 +50,7 @@ class BuoyDetectionNode(Node):
             error_callback=self._error_callback
         )
 
-        self.create_subscription(msg_type=Int8, topic="/osd", callback=self.osd, qos_profile=10)
+        self.create_subscription(msg_type=Int8, topic="/osd", callback=self._osd_callback, qos_profile=10)
 
         vs = threading.Thread(target=self.vision_engine.run, daemon=True)
         vs.start()
@@ -119,8 +119,8 @@ class BuoyDetectionNode(Node):
             msg.detection_results.append(frame_results)
         self.object_detection_results_publisher.publish(msg)
 
-    def osd(self, msg):
-        self.vision_engine.osd()
+    def _osd_callback(self) -> None:
+        self.vision_engine.toggle_osd()
 
 def main() -> None:
     rclpy.init()
