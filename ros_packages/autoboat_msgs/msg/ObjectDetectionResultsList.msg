@@ -1,6 +1,6 @@
 # This is equivalent to detection results of a single frame.
-# This array is a list of all objects seen in the frame
-autoboat_msgs/ObjectDetectionResult[] detection_results
+# This array is a list of detection results for each frame
+autoboat_msgs/ObjectDetectionFrameResults[] detection_results
 
 # This is the ntp_timestamp of the frame reaching the muxer
 # https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_NTP_Timestamp.html
