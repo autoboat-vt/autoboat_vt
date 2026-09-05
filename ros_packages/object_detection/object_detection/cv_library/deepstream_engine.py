@@ -1,6 +1,5 @@
 # ruff: noqa:E402
 import os
-import platform
 
 import gi
 
@@ -25,7 +24,6 @@ os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
 # os.environ['GST_DEBUG'] = "3"
 
 IS_DEV_CONTAINER = re.search("/home/ws", os.getcwd()) is not None
-IS_AARCH64 = platform.machine() == "aarch64"
 
 SHOULD_DISPLAY = True
 # NUM_IMAGES_TO_SAVE = 10000
@@ -49,14 +47,6 @@ if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":
 CAMERA = True
 if "CAMERA" in os.environ and os.environ["CAMERA"] == "false":
     CAMERA = False
-
-DEBUG_READ_SINK_SURFACE = False
-if "DEBUG_READ_SINK_SURFACE" in os.environ and os.environ["DEBUG_READ_SINK_SURFACE"] == "true":
-    DEBUG_READ_SINK_SURFACE = True
-
-DEBUG_PRINT_SINK_SURFACE_META = False
-if "DEBUG_PRINT_SINK_SURFACE_META" in os.environ and os.environ["DEBUG_PRINT_SINK_SURFACE_META"] == "true":
-    DEBUG_PRINT_SINK_SURFACE_META = True
 
 class DeepStreamEngine:
     """
@@ -223,8 +213,6 @@ class DeepStreamEngine:
         tiler.set_property('show-source', -1)
 
         osd = Gst.ElementFactory.make("nvdsosd", "nvosd")
-        # osd.set_property('display-bbox', False)
-        # osd.set_property('display-text', False)
 
         videorate = Gst.ElementFactory.make('videorate', 'videorate')
         videorate.set_property('skip-to-first', False)
@@ -446,32 +434,6 @@ class DeepStreamEngine:
             return None
         
         batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
-        # self.info_callback(f"num frames: {batch_meta.num_frames_in_batch}")
-        # l_frame = batch_meta.frame_meta_list
-        # caps = pad.get_current_caps()
-        # if caps is not None:
-        #     self.info_callback(f"Osd probe caps: {caps.to_string()}")
-
-        # while l_frame is not None:
-        #     try:
-        #         # Note that l_frame.data needs a cast to pyds.NvDsFrameMeta
-        #         # The casting is done by pyds.NvDsFrameMeta.cast()
-        #         # The casting also keeps ownership of the underlying memory
-        #         # in the C code, so the Python garbage collector will leave
-        #         # it alone.
-        #         frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
-        #     except StopIteration:
-        #         break
-        #     # print(frame_meta.source_frame_width)
-        #     self.info_callback(
-        #         f"Frame {frame_meta.frame_num}: {frame_meta.source_frame_width}x"
-        #         f"{frame_meta.source_frame_height}"
-        #     )
-
-        #     try:
-        #         l_frame = l_frame.next
-        #     except StopIteration:
-        #         break
 
         display_meta = pyds.nvds_acquire_display_meta_from_pool(batch_meta)
         display_meta.num_labels = 1
@@ -503,12 +465,6 @@ class DeepStreamEngine:
             self.info_callback("Unable to get GstBuffer")
             return Gst.PadProbeReturn.OK
 
-        # This probe is after nvmultistreamtiler, so the buffer contains one
-        # composed RGBA output surface rather than one surface per source.
-        # caps = pad.get_current_caps()
-        # if caps is not None:
-        #     self.info_callback(f"Sink probe caps: {caps.to_string()}")
-
         batch_id = 0
         dtype, shape, _strides, device_ptr, _size = pyds.get_nvds_buf_surface_gpu(hash(gst_buffer), batch_id)
         device_ptr = pyds.get_ptr(device_ptr)
@@ -523,26 +479,8 @@ class DeepStreamEngine:
             self.error_callback(f"cudaMemcpy failed with status {copy_result[0]}")
             return Gst.PadProbeReturn.OK
 
-        # self.info_callback(
-        #     f"type={type(frame_rgba)}, shape={getattr(frame_rgba, 'shape', None)}, "
-        #     f"dtype={getattr(frame_rgba, 'dtype', None)}"
-        # )
-        # if DEBUG_PRINT_SINK_SURFACE_META:
-        #     self.info_callback(
-        #         f"Surface meta: ndim={getattr(frame_rgba, 'ndim', None)}, "
-        #         f"strides={getattr(frame_rgba, 'strides', None)}, "
-        #         f"flags={getattr(frame_rgba, 'flags', None)}, "
-        #         f"interface={getattr(frame_rgba, '__array_interface__', None)}"
-        #     )
-
         with self.frame_lock:
             self.latest_frame = frame_rgba
-            # print(f"Latest frame shape: {frame_rgba.shape}")
-            # print(f"Latest frame: {frame_rgba}")
-            # with open('latest_frame.txt', 'w') as f:
-            #     # f.write(f"Latest frame shape: {frame_rgba.shape}\n")
-            #     f.write(frame_rgba.tobytes().hex())
-            # cv2.imshow('Restored Image', frame_rgba)
             frame_bgr = cv2.cvtColor(frame_rgba, cv2.COLOR_RGBA2BGR)
             success, png_image = cv2.imencode('.png', frame_bgr)
             if success:
@@ -552,10 +490,6 @@ class DeepStreamEngine:
                 }
                 # r = requests.post("http://vt-autoboat-telemetry.uk/boat_status/set_image/1", files=files)
                 # self.info_callback(f"{r.status_code}")
-            cv2.imwrite('latest_frame.png', frame_bgr)
-
-        # with self.frame_lock:
-        #     self.latest_frame = frame_rgba
 
         return Gst.PadProbeReturn.OK
 
@@ -742,7 +676,8 @@ class DeepStreamEngine:
         else:
             self.info_callback("Not reloading config file in nvinfer since INFERENCE is disabled")
 
-    def osd(self):
+    def toggle_osd(self) -> None:
+        """Turn on/off the on-screen display (OSD) in the pipeline."""
         osd = self.pipeline.get_by_name('nvosd')
         osd.set_property('display-bbox', not osd.get_property('display-bbox'))
         osd.set_property('display-text', not osd.get_property('display-text'))
