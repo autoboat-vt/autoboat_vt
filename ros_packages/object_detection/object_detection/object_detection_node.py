@@ -19,8 +19,8 @@ from jsonc_parser.parser import JsoncParser
 from rclpy.node import Node
 
 # from realsense2_camera_msgs.msg import RGBD
-from std_msgs.msg import String, Bool, Int32
-
+from std_msgs.msg import String, Bool, Int32, ByteMultiArray
+from sensor_msgs.msg import Image
 from autoboat_msgs.msg import ObjectDetectionResult, ObjectDetectionFrameResults, ObjectDetectionResultsList
 
 from .cv_library.deepstream_engine import DeepStreamEngine
@@ -43,19 +43,19 @@ class BuoyDetectionNode(Node):
         self.object_detection_results_publisher = self.create_publisher(
             msg_type=ObjectDetectionResultsList, topic="/object_detection_results_list", qos_profile=10
         )
+        self.image_publisher = self.create_publisher(
+            msg_type=ByteMultiArray, topic="/object_detection_image", qos_profile=10
+        )
         self.create_subscription(msg_type=String, topic="/cv_parameters", callback=self._cv_parameters_callback, qos_profile=10)
         self.create_subscription(msg_type=Bool, topic="/osd", callback=self._osd_callback, qos_profile=10)
-        self.create_subscription(msg_type=Int32, topic="/telemetry_node_instance_id", callback=self._telemetry_instance_callback, qos_profile=10)
 
         self.vision_engine = DeepStreamEngine(
             detection_callback=self._publish_detection_results,
-            http_callback=self._publish_http,
+            image_callback=self._publish_image,
             info_callback=self._info_callback,
             warn_callback=self._warn_callback,
             error_callback=self._error_callback
         )
-
-        self.telemetry_instance_id = None
 
         vs = threading.Thread(target=self.vision_engine.run, daemon=True)
         vs.start()
@@ -126,13 +126,11 @@ class BuoyDetectionNode(Node):
 
     def _osd_callback(self, msg: Bool) -> None:
         self.vision_engine.toggle_osd(msg.data)
-    
-    def _telemetry_instance_callback(self, msg: Int32) -> None:
-        self.telemetry_instance_id = msg.data
 
-    def _publish_http(self, files: dict) -> None:
-        if self.telemetry_instance_id is not None:
-            r = requests.post(f"http://vt-autoboat-telemetry.uk/boat_status/set_image/{self.telemetry_instance_id}", files=files)
+    def _publish_image(self, image: bytes) -> None:
+        msg = ByteMultiArray()
+        msg.data = image
+        self.image_publisher.publish(msg)
 
 def main() -> None:
     rclpy.init()

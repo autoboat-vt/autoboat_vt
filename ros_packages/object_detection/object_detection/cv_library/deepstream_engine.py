@@ -60,7 +60,7 @@ class DeepStreamEngine:
     
     def __init__(
       self, detection_callback:Callable[[dict], None],
-      http_callback:Callable[[dict], None],
+      image_callback:Callable[[bytes], None],
       info_callback:Callable[[str], None],
       warn_callback:Callable[[str], None],
       error_callback:Callable[[str], None]
@@ -70,7 +70,7 @@ class DeepStreamEngine:
             "threshold": "" # detection threshold
         }
         self.detection_callback = detection_callback
-        self.http_callback = http_callback
+        self.image_callback = image_callback
         self.info_callback = info_callback
         self.warn_callback = warn_callback
         self.error_callback = error_callback
@@ -478,10 +478,7 @@ class DeepStreamEngine:
         success, png_image = cv2.imencode('.png', frame_bgr)
         if success:
             image_bytes = png_image.tobytes()
-            files = {
-                'image': ('image.png', image_bytes, 'image/png')
-            }
-            self.http_callback(files)
+            self.image_callback(image_bytes)
 
         return Gst.PadProbeReturn.OK
 
