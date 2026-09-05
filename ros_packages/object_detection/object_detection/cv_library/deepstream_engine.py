@@ -70,6 +70,7 @@ class DeepStreamEngine:
             "threshold": "" # detection threshold
         }
         self.detection_callback = detection_callback
+        self.http_callback = http_callback
         self.info_callback = info_callback
         self.warn_callback = warn_callback
         self.error_callback = error_callback

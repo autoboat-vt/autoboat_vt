@@ -55,7 +55,7 @@ class BuoyDetectionNode(Node):
             error_callback=self._error_callback
         )
 
-        self.instance_id = None
+        self.telemetry_instance_id = None
 
         vs = threading.Thread(target=self.vision_engine.run, daemon=True)
         vs.start()
@@ -128,11 +128,11 @@ class BuoyDetectionNode(Node):
         self.vision_engine.toggle_osd(msg.data)
     
     def _telemetry_instance_callback(self, msg: Int32) -> None:
-        self.http_instance_id = msg.data
+        self.telemetry_instance_id = msg.data
 
     def _publish_http(self, files: dict) -> None:
-        if self.http_instance_id is not None:
-            r = requests.post(f"http://vt-autoboat-telemetry.uk/boat_status/set_image/{self.http_instance_id}", files=files)
+        if self.telemetry_instance_id is not None:
+            r = requests.post(f"http://vt-autoboat-telemetry.uk/boat_status/set_image/{self.telemetry_instance_id}", files=files)
 
 def main() -> None:
     rclpy.init()
