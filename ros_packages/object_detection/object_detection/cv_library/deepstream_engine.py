@@ -15,7 +15,6 @@ from threading import Lock
 import cv2
 import numpy as np
 import pyds
-import requests
 import yaml
 from cuda.bindings import runtime as cuda_runtime
 from gi.repository import GLib, Gst
@@ -61,6 +60,7 @@ class DeepStreamEngine:
     
     def __init__(
       self, detection_callback:Callable[[dict], None],
+      http_callback:Callable[[dict], None],
       info_callback:Callable[[str], None],
       warn_callback:Callable[[str], None],
       error_callback:Callable[[str], None]
@@ -92,7 +92,6 @@ class DeepStreamEngine:
             self.yolo_ver = int(os.environ["YOLO_VER"])
         self.last_time = time.time() # used to calculate fps
         self.file_lock = Lock()
-        self.frame_lock = Lock()
         self.latest_frame: np.ndarray | None = None
         self.last_published_frame_number = -1
         with self.file_lock:
@@ -479,17 +478,15 @@ class DeepStreamEngine:
             self.error_callback(f"cudaMemcpy failed with status {copy_result[0]}")
             return Gst.PadProbeReturn.OK
 
-        with self.frame_lock:
-            self.latest_frame = frame_rgba
-            frame_bgr = cv2.cvtColor(frame_rgba, cv2.COLOR_RGBA2BGR)
-            success, png_image = cv2.imencode('.png', frame_bgr)
-            if success:
-                image_bytes = png_image.tobytes()
-                files = {
-                    'image': ('image.png', image_bytes, 'image/png')
-                }
-                # r = requests.post("http://vt-autoboat-telemetry.uk/boat_status/set_image/1", files=files)
-                # self.info_callback(f"{r.status_code}")
+        self.latest_frame = frame_rgba
+        frame_bgr = cv2.cvtColor(frame_rgba, cv2.COLOR_RGBA2BGR)
+        success, png_image = cv2.imencode('.png', frame_bgr)
+        if success:
+            image_bytes = png_image.tobytes()
+            files = {
+                'image': ('image.png', image_bytes, 'image/png')
+            }
+            self.http_callback(files)
 
         return Gst.PadProbeReturn.OK
 
@@ -676,8 +673,8 @@ class DeepStreamEngine:
         else:
             self.info_callback("Not reloading config file in nvinfer since INFERENCE is disabled")
 
-    def toggle_osd(self) -> None:
+    def toggle_osd(self, enable: bool) -> None:
         """Turn on/off the on-screen display (OSD) in the pipeline."""
         osd = self.pipeline.get_by_name('nvosd')
-        osd.set_property('display-bbox', not osd.get_property('display-bbox'))
-        osd.set_property('display-text', not osd.get_property('display-text'))
+        osd.set_property('display-bbox', enable)
+        osd.set_property('display-text', enable)

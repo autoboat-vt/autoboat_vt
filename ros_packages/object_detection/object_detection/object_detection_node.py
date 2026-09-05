@@ -11,6 +11,7 @@ from gi.repository import GLib, Gst
 import json
 import os
 import re
+import requests
 import threading
 
 import rclpy
@@ -18,7 +19,7 @@ from jsonc_parser.parser import JsoncParser
 from rclpy.node import Node
 
 # from realsense2_camera_msgs.msg import RGBD
-from std_msgs.msg import String, Int8
+from std_msgs.msg import String, Bool, Int32
 
 from autoboat_msgs.msg import ObjectDetectionResult, ObjectDetectionFrameResults, ObjectDetectionResultsList
 
@@ -43,14 +44,18 @@ class BuoyDetectionNode(Node):
             msg_type=ObjectDetectionResultsList, topic="/object_detection_results_list", qos_profile=10
         )
         self.create_subscription(msg_type=String, topic="/cv_parameters", callback=self._cv_parameters_callback, qos_profile=10)
+        self.create_subscription(msg_type=Bool, topic="/osd", callback=self._osd_callback, qos_profile=10)
+        self.create_subscription(msg_type=Int32, topic="/telemetry_node_instance_id", callback=self._telemetry_instance_callback, qos_profile=10)
+
         self.vision_engine = DeepStreamEngine(
             detection_callback=self._publish_detection_results,
+            http_callback=self._publish_http,
             info_callback=self._info_callback,
             warn_callback=self._warn_callback,
             error_callback=self._error_callback
         )
 
-        self.create_subscription(msg_type=Int8, topic="/osd", callback=self._osd_callback, qos_profile=10)
+        self.instance_id = None
 
         vs = threading.Thread(target=self.vision_engine.run, daemon=True)
         vs.start()
@@ -119,8 +124,15 @@ class BuoyDetectionNode(Node):
             msg.detection_results.append(frame_results)
         self.object_detection_results_publisher.publish(msg)
 
-    def _osd_callback(self) -> None:
-        self.vision_engine.toggle_osd()
+    def _osd_callback(self, msg: Bool) -> None:
+        self.vision_engine.toggle_osd(msg.data)
+    
+    def _telemetry_instance_callback(self, msg: Int32) -> None:
+        self.http_instance_id = msg.data
+
+    def _publish_http(self, files: dict) -> None:
+        if self.http_instance_id is not None:
+            r = requests.post(f"http://vt-autoboat-telemetry.uk/boat_status/set_image/{self.http_instance_id}", files=files)
 
 def main() -> None:
     rclpy.init()
