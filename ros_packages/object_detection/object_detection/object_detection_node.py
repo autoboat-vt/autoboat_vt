@@ -11,6 +11,7 @@ from gi.repository import GLib, Gst
 import json
 import os
 import re
+import sys
 import requests
 import threading
 
@@ -19,7 +20,7 @@ from jsonc_parser.parser import JsoncParser
 from rclpy.node import Node
 
 # from realsense2_camera_msgs.msg import RGBD
-from std_msgs.msg import String, Bool, Int32, ByteMultiArray
+from std_msgs.msg import String, Bool, Int32, UInt8MultiArray
 from sensor_msgs.msg import Image
 from autoboat_msgs.msg import ObjectDetectionResult, ObjectDetectionFrameResults, ObjectDetectionResultsList
 
@@ -43,9 +44,7 @@ class BuoyDetectionNode(Node):
         self.object_detection_results_publisher = self.create_publisher(
             msg_type=ObjectDetectionResultsList, topic="/object_detection_results_list", qos_profile=10
         )
-        self.image_publisher = self.create_publisher(
-            msg_type=ByteMultiArray, topic="/object_detection_image", qos_profile=10
-        )
+        self.image_publisher = self.create_publisher(msg_type=UInt8MultiArray, topic="/object_detection_image", qos_profile=10)
         self.create_subscription(msg_type=String, topic="/cv_parameters", callback=self._cv_parameters_callback, qos_profile=10)
         self.create_subscription(msg_type=Bool, topic="/osd", callback=self._osd_callback, qos_profile=10)
 
@@ -128,8 +127,8 @@ class BuoyDetectionNode(Node):
         self.vision_engine.toggle_osd(msg.data)
 
     def _publish_image(self, image: bytes) -> None:
-        msg = ByteMultiArray()
-        msg.data = image
+        msg = UInt8MultiArray()
+        msg.data = list(image)
         self.image_publisher.publish(msg)
 
 def main() -> None:

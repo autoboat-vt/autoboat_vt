@@ -24,7 +24,7 @@ os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
 
 IS_DEV_CONTAINER = re.search("/home/ws", os.getcwd()) is not None
 
-SHOULD_DISPLAY = True
+SHOULD_DISPLAY = False
 # NUM_IMAGES_TO_SAVE = 10000
 
 # These are constants. Don't change these. Needed for a workaround with DeepStream 7.1 and JetPack 6.2
@@ -117,6 +117,7 @@ class DeepStreamEngine:
             self.info_callback(f"Opening camera device {self.cam_list[0]['name']} on {self.cam_list[0]['device']}")
         else:
             source0 = Gst.ElementFactory.make("videotestsrc", "usb-cam-0")
+            source0.set_property('pattern', 18)
             self.info_callback("Opening videotestsrc")
 
         """
@@ -203,7 +204,7 @@ class DeepStreamEngine:
             tracker.set_property("tracking-id-reset-mode", 0)
 
         tiler = Gst.ElementFactory.make('nvmultistreamtiler', 'nvtiler')
-        tiler.set_property('width', 640)
+        tiler.set_property('width', 1280)
         tiler.set_property('height', 360)
         tiler.set_property('show-source', -1)
 
