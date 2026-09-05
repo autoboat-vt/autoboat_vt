@@ -202,11 +202,6 @@ class DeepStreamEngine:
                                  f'{PATH_TO_PKG_DIR}/object_detection/object_detection/config/config_tracker_NvDCF_perf.yml')
             tracker.set_property("tracking-id-reset-mode", 0)
 
-        queue_display_valve = Gst.ElementFactory.make("queue", "queue-valve")
-
-        display_valve = Gst.ElementFactory.make('valve', 'display-valve')
-        display_valve.set_property('drop', not SHOULD_DISPLAY)
-
         tiler = Gst.ElementFactory.make('nvmultistreamtiler', 'nvtiler')
         tiler.set_property('width', 640)
         tiler.set_property('height', 360)
@@ -227,8 +222,11 @@ class DeepStreamEngine:
         osd_caps = Gst.ElementFactory.make('capsfilter', 'osd-caps')
         osd_caps.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=RGBA'))
 
-        sink = Gst.ElementFactory.make('nveglglessink', 'sink')
-        sink.set_property('sync', False)
+        if SHOULD_DISPLAY:
+            sink = Gst.ElementFactory.make('nveglglessink', 'sink')
+            sink.set_property('sync', False)
+        else:
+            sink = Gst.ElementFactory.make('fakesink', 'sink')
 
         self.pipeline.add(source0)
         self.pipeline.add(caps_source0)
@@ -245,8 +243,6 @@ class DeepStreamEngine:
         if INFERENCE:
             self.pipeline.add(pgie)
             self.pipeline.add(tracker)
-        self.pipeline.add(queue_display_valve)
-        self.pipeline.add(display_valve)
         self.pipeline.add(tiler)
         self.pipeline.add(osd)
         self.pipeline.add(videorate)
@@ -283,11 +279,9 @@ class DeepStreamEngine:
         if INFERENCE:
             streammux.link(pgie)
             pgie.link(tracker)
-            tracker.link(queue_display_valve)
+            tracker.link(tiler)
         else:
-            streammux.link(queue_display_valve)
-        queue_display_valve.link(display_valve)
-        display_valve.link(tiler)
+            streammux.link(tiler)
         tiler.link(osd)
         osd.link(videorate)
         videorate.link(caps_videorate)
@@ -300,7 +294,7 @@ class DeepStreamEngine:
         bus.add_signal_watch()
         bus.connect("message", self._bus_call, self.loop)
 
-        infer_probe_pad = queue_display_valve.get_static_pad('sink')
+        infer_probe_pad = tiler.get_static_pad('sink')
         infer_probe_pad.add_probe(Gst.PadProbeType.BUFFER, self._infer_probe, 0)
 
         osd_probe_pad = osd.get_static_pad('sink')
