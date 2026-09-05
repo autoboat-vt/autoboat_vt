@@ -1,5 +1,6 @@
 # ruff: noqa:E402
 import os
+import platform
 
 import gi
 
@@ -12,15 +13,19 @@ from collections.abc import Callable
 from math import pi
 from threading import Lock
 
+import cv2
 import numpy as np
 import pyds
+import requests
 import yaml
+from cuda.bindings import runtime as cuda_runtime
 from gi.repository import GLib, Gst
 
 os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
 # os.environ['GST_DEBUG'] = "3"
 
 IS_DEV_CONTAINER = re.search("/home/ws", os.getcwd()) is not None
+IS_AARCH64 = platform.machine() == "aarch64"
 
 SHOULD_DISPLAY = True
 # NUM_IMAGES_TO_SAVE = 10000
@@ -44,6 +49,14 @@ if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":
 CAMERA = True
 if "CAMERA" in os.environ and os.environ["CAMERA"] == "false":
     CAMERA = False
+
+DEBUG_READ_SINK_SURFACE = False
+if "DEBUG_READ_SINK_SURFACE" in os.environ and os.environ["DEBUG_READ_SINK_SURFACE"] == "true":
+    DEBUG_READ_SINK_SURFACE = True
+
+DEBUG_PRINT_SINK_SURFACE_META = False
+if "DEBUG_PRINT_SINK_SURFACE_META" in os.environ and os.environ["DEBUG_PRINT_SINK_SURFACE_META"] == "true":
+    DEBUG_PRINT_SINK_SURFACE_META = True
 
 class DeepStreamEngine:
     """
@@ -89,6 +102,8 @@ class DeepStreamEngine:
             self.yolo_ver = int(os.environ["YOLO_VER"])
         self.last_time = time.time() # used to calculate fps
         self.file_lock = Lock()
+        self.frame_lock = Lock()
+        self.latest_frame: np.ndarray | None = None
         self.last_published_frame_number = -1
         with self.file_lock:
             file_results = self._read_file(YOLO_CONFIG[self.yolo_ver])
@@ -203,11 +218,26 @@ class DeepStreamEngine:
         display_valve.set_property('drop', not SHOULD_DISPLAY)
 
         tiler = Gst.ElementFactory.make('nvmultistreamtiler', 'nvtiler')
-        tiler.set_property('width', 1792)
-        tiler.set_property('height', 504)
-        # tiler.set_property('show-source', 0)
+        tiler.set_property('width', 640)
+        tiler.set_property('height', 360)
+        tiler.set_property('show-source', -1)
 
         osd = Gst.ElementFactory.make("nvdsosd", "nvosd")
+        # osd.set_property('display-bbox', False)
+        # osd.set_property('display-text', False)
+
+        videorate = Gst.ElementFactory.make('videorate', 'videorate')
+        videorate.set_property('skip-to-first', False)
+
+        caps_videorate = Gst.ElementFactory.make('capsfilter', 'videorate-caps')
+        caps_videorate.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), framerate=5/1'))
+
+        osd_conv = Gst.ElementFactory.make('nvvideoconvert', 'sink_converter')
+        osd_conv.set_property('nvbuf-memory-type', 0)
+        osd_conv.set_property('compute-hw', COMPUTE_HW)
+
+        osd_caps = Gst.ElementFactory.make('capsfilter', 'osd-caps')
+        osd_caps.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=RGBA'))
 
         sink = Gst.ElementFactory.make('nveglglessink', 'sink')
         sink.set_property('sync', False)
@@ -231,6 +261,10 @@ class DeepStreamEngine:
         self.pipeline.add(display_valve)
         self.pipeline.add(tiler)
         self.pipeline.add(osd)
+        self.pipeline.add(videorate)
+        self.pipeline.add(caps_videorate)
+        self.pipeline.add(osd_conv)
+        self.pipeline.add(osd_caps)
         self.pipeline.add(sink)
 
         source0.link(caps_source0)
@@ -267,7 +301,11 @@ class DeepStreamEngine:
         queue_display_valve.link(display_valve)
         display_valve.link(tiler)
         tiler.link(osd)
-        osd.link(sink)
+        osd.link(videorate)
+        videorate.link(caps_videorate)
+        caps_videorate.link(osd_conv)
+        osd_conv.link(osd_caps)
+        osd_caps.link(sink)
 
         self.loop = GLib.MainLoop()
         bus = self.pipeline.get_bus()
@@ -279,7 +317,10 @@ class DeepStreamEngine:
 
         osd_probe_pad = osd.get_static_pad('sink')
         osd_probe_pad.add_probe(Gst.PadProbeType.BUFFER, self._osd_probe, 0)
-    
+
+        sink_probe_pad = osd_conv.get_static_pad('src')
+        sink_probe_pad.add_probe(Gst.PadProbeType.BUFFER, self._sink_probe, 0)
+
     def _bus_call(self, bus: Gst.Bus, message: Gst.Message, loop: GLib.MainLoop) -> bool: # noqa: ARG002
         t = message.type
         if t == Gst.MessageType.EOS:
@@ -352,6 +393,8 @@ class DeepStreamEngine:
                 fps = 60 / (current_time - self.last_time)
                 self.last_time = current_time
                 self.info_callback(f"Frame: {frame_meta.frame_num}, avg FPS: {fps:.2f}")
+                # n_frame = pyds.get_nvds_buf_surface(hash(gst_buffer), frame_meta.batch_id)
+                # print(n_frame)
             l_obj = frame_meta.obj_meta_list
 
             # Iterate through each object in frame
@@ -376,6 +419,8 @@ class DeepStreamEngine:
                 obj_results["obj_label"] = obj_meta.obj_label
                 obj_results["angle_to_object"] = np.arctan((mid_x - self.cam_list[0]["width"] / 4)
                                                            / self.cam_list[0]["focal_px"]) * 180 / pi
+                if frame_meta.source_id not in {0, 1}:
+                    self.error_callback(f"Unexpected source ID: {frame_meta.source_id}")
                 msg["detection_results"][frame_meta.source_id].append(obj_results)
 
                 obj_meta.text_params.display_text = f"{obj_meta.obj_label} {obj_meta.object_id} {obj_meta.confidence:.2f}."
@@ -401,6 +446,32 @@ class DeepStreamEngine:
             return None
         
         batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
+        # self.info_callback(f"num frames: {batch_meta.num_frames_in_batch}")
+        # l_frame = batch_meta.frame_meta_list
+        # caps = pad.get_current_caps()
+        # if caps is not None:
+        #     self.info_callback(f"Osd probe caps: {caps.to_string()}")
+
+        # while l_frame is not None:
+        #     try:
+        #         # Note that l_frame.data needs a cast to pyds.NvDsFrameMeta
+        #         # The casting is done by pyds.NvDsFrameMeta.cast()
+        #         # The casting also keeps ownership of the underlying memory
+        #         # in the C code, so the Python garbage collector will leave
+        #         # it alone.
+        #         frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
+        #     except StopIteration:
+        #         break
+        #     # print(frame_meta.source_frame_width)
+        #     self.info_callback(
+        #         f"Frame {frame_meta.frame_num}: {frame_meta.source_frame_width}x"
+        #         f"{frame_meta.source_frame_height}"
+        #     )
+
+        #     try:
+        #         l_frame = l_frame.next
+        #     except StopIteration:
+        #         break
 
         display_meta = pyds.nvds_acquire_display_meta_from_pool(batch_meta)
         display_meta.num_labels = 1
@@ -423,6 +494,68 @@ class DeepStreamEngine:
         py_nvosd_text_params.set_bg_clr = 1
         # set(red, green, blue, alpha); set to Black
         py_nvosd_text_params.text_bg_clr.set(0.0, 0.0, 0.0, 0.25)
+
+        return Gst.PadProbeReturn.OK
+
+    def _sink_probe(self, pad: Gst.Pad, info: Gst.PadProbeInfo, user_data: int) -> Gst.PadProbeReturn: # noqa: ARG002
+        gst_buffer = info.get_buffer()
+        if not gst_buffer:
+            self.info_callback("Unable to get GstBuffer")
+            return Gst.PadProbeReturn.OK
+
+        # This probe is after nvmultistreamtiler, so the buffer contains one
+        # composed RGBA output surface rather than one surface per source.
+        # caps = pad.get_current_caps()
+        # if caps is not None:
+        #     self.info_callback(f"Sink probe caps: {caps.to_string()}")
+
+        batch_id = 0
+        dtype, shape, _strides, device_ptr, _size = pyds.get_nvds_buf_surface_gpu(hash(gst_buffer), batch_id)
+        device_ptr = pyds.get_ptr(device_ptr)
+        frame_rgba = np.empty(shape, dtype=np.dtype(dtype))
+        copy_result = cuda_runtime.cudaMemcpy(
+            frame_rgba,
+            device_ptr,
+            frame_rgba.nbytes,
+            cuda_runtime.cudaMemcpyKind.cudaMemcpyDeviceToHost,
+        )
+        if copy_result[0] != cuda_runtime.cudaError_t.cudaSuccess:
+            self.error_callback(f"cudaMemcpy failed with status {copy_result[0]}")
+            return Gst.PadProbeReturn.OK
+
+        # self.info_callback(
+        #     f"type={type(frame_rgba)}, shape={getattr(frame_rgba, 'shape', None)}, "
+        #     f"dtype={getattr(frame_rgba, 'dtype', None)}"
+        # )
+        # if DEBUG_PRINT_SINK_SURFACE_META:
+        #     self.info_callback(
+        #         f"Surface meta: ndim={getattr(frame_rgba, 'ndim', None)}, "
+        #         f"strides={getattr(frame_rgba, 'strides', None)}, "
+        #         f"flags={getattr(frame_rgba, 'flags', None)}, "
+        #         f"interface={getattr(frame_rgba, '__array_interface__', None)}"
+        #     )
+
+        with self.frame_lock:
+            self.latest_frame = frame_rgba
+            # print(f"Latest frame shape: {frame_rgba.shape}")
+            # print(f"Latest frame: {frame_rgba}")
+            # with open('latest_frame.txt', 'w') as f:
+            #     # f.write(f"Latest frame shape: {frame_rgba.shape}\n")
+            #     f.write(frame_rgba.tobytes().hex())
+            # cv2.imshow('Restored Image', frame_rgba)
+            frame_bgr = cv2.cvtColor(frame_rgba, cv2.COLOR_RGBA2BGR)
+            success, png_image = cv2.imencode('.png', frame_bgr)
+            if success:
+                image_bytes = png_image.tobytes()
+                files = {
+                    'image': ('image.png', image_bytes, 'image/png')
+                }
+                # r = requests.post("http://vt-autoboat-telemetry.uk/boat_status/set_image/1", files=files)
+                # self.info_callback(f"{r.status_code}")
+            cv2.imwrite('latest_frame.png', frame_bgr)
+
+        # with self.frame_lock:
+        #     self.latest_frame = frame_rgba
 
         return Gst.PadProbeReturn.OK
 
@@ -608,3 +741,8 @@ class DeepStreamEngine:
             self.info_callback("Reloaded config file in nvinfer")
         else:
             self.info_callback("Not reloading config file in nvinfer since INFERENCE is disabled")
+
+    def osd(self):
+        osd = self.pipeline.get_by_name('nvosd')
+        osd.set_property('display-bbox', not osd.get_property('display-bbox'))
+        osd.set_property('display-text', not osd.get_property('display-text'))

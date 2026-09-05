@@ -18,7 +18,7 @@ from jsonc_parser.parser import JsoncParser
 from rclpy.node import Node
 
 # from realsense2_camera_msgs.msg import RGBD
-from std_msgs.msg import String
+from std_msgs.msg import String, Int8
 
 from autoboat_msgs.msg import ObjectDetectionResult, ObjectDetectionFrameResults, ObjectDetectionResultsList
 
@@ -49,6 +49,8 @@ class BuoyDetectionNode(Node):
             warn_callback=self._warn_callback,
             error_callback=self._error_callback
         )
+
+        self.create_subscription(msg_type=Int8, topic="/osd", callback=self.osd, qos_profile=10)
 
         vs = threading.Thread(target=self.vision_engine.run, daemon=True)
         vs.start()
@@ -116,6 +118,9 @@ class BuoyDetectionNode(Node):
                 frame_results.detection_results.append(detection_msg)
             msg.detection_results.append(frame_results)
         self.object_detection_results_publisher.publish(msg)
+
+    def osd(self, msg):
+        self.vision_engine.osd()
 
 def main() -> None:
     rclpy.init()
