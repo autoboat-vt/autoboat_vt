@@ -1,7 +1,7 @@
 import gzip
 import json
 import os
-import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal, cast
 from urllib.parse import urljoin
@@ -704,7 +704,8 @@ class GroundStationWidget(QWidget):
     def start_data_logging(self) -> None:
         """Start logging telemetry data to a file."""
 
-        data_log_file = Path(constants.DATA_LOGS_DIR / f"data_log_{time.time_ns()}.csv")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        data_log_file = Path(constants.DATA_LOGS_DIR / f"{timestamp}.csv")
         data_log_file.touch(exist_ok=True)
 
         constants.SM.write("data_log_file_path", data_log_file.as_posix())
@@ -821,7 +822,8 @@ class GroundStationWidget(QWidget):
         """
 
         try:
-            file_path = Path(constants.BUOY_DATA_DIR / f"buoy_data_{time.time_ns()}.json")
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            file_path = Path(constants.BUOY_DATA_DIR / f"{timestamp}.json")
             with open(file_path, mode="w", encoding="utf-8") as f:
                 json.dump(self.buoys, f, indent=4)
             logger.info(f"Buoy data saved to {file_path}")
@@ -831,12 +833,7 @@ class GroundStationWidget(QWidget):
 
     @Slot()
     def load_buoy_data(self) -> None:
-        """
-        Load buoy data from the `buoy_data` directory, if none selected use `default.json`.
-
-        Files are stored in the `buoy_data` directory and are named `buoy_data_<timestamp>.json`
-        where `<timestamp>` is nanoseconds since unix epoch.
-        """
+        """Load buoy data from the `buoy_data` directory, if none selected use `default.json`."""
 
         try:
             buoy_files = os.listdir(constants.BUOY_DATA_DIR)

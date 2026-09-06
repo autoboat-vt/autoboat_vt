@@ -6,6 +6,7 @@
         "serve": "vite --clearScreen false --logLevel error"
     },
     "dependencies": {
+        "@maptiler/leaflet-maptilersdk": "^4.1.1",
         "leaflet": "latest",
         "leaflet-rotatedmarker": "latest"
     },
