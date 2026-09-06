@@ -1,3 +1,4 @@
+import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
 import {
     control,
     type Icon,
@@ -5,8 +6,7 @@ import {
     map as LeafletMap,
     type Map as LeafletMapType,
     type LeafletMouseEvent,
-    type MapOptions,
-    tileLayer
+    type MapOptions
 } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-rotatedmarker";
@@ -112,15 +112,9 @@ class MapInterface {
         this.keybind_handler.register("undo_waypoint", () => this.undo_last_waypoint());
 
         const mapTilerKey = "M9yBkV9J49pYUg5o8SGC";
-        tileLayer(`https://api.maptiler.com/maps/openstreetmap/{z}/{x}/{y}.jpg?key=${mapTilerKey}`, {
-            minZoom: MapInterface.MIN_ZOOM,
-            maxZoom: MapInterface.MAX_ZOOM,
-            tileSize: 512,
-            zoomOffset: -1,
-            noWrap: true,
-            attribution:
-                '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>',
-            crossOrigin: true
+        new MaptilerLayer({
+            apiKey: mapTilerKey,
+            style: "openstreetmap"
         }).addTo(this.map);
 
         control.scale().addTo(this.map);

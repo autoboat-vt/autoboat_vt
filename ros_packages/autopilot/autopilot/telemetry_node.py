@@ -10,15 +10,17 @@ from urllib.parse import urljoin
 import cv2
 import numpy as np
 import numpy.typing as npt
-import rclpy
 import requests
-from autoboat_msgs.msg import VESCTelemetryData, WaypointList
+
+import rclpy
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Twist, Vector3
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import Image, NavSatFix
-from std_msgs.msg import Bool, Float32, Int32, String
+from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import Bool, Float32, Int32, String, UInt8MultiArray
+
+from autoboat_msgs.msg import VESCTelemetryData, WaypointList
 
 from .autopilot_library.utils.constants import (
     QOS_AUTOPILOT_PARAMETER_CONFIG_PATH,
@@ -129,9 +131,12 @@ class TelemetryNode(Node):
 
         self.instance_id = self.create_telemetry_server_instance(self.autopilot_parameters, self.telemetry_node_mode)
 
+        self.instance_id_publisher = self.create_publisher(Int32, "/telemetry_node_instance_id", 10)
+
         self.create_timer(0.01, self.update_boat_status)
         self.create_timer(0.5, self.update_waypoints_from_telemetry)
         self.create_timer(0.5, self.update_autopilot_parameters_from_telemetry)
+        self.create_timer(0.5, self.publish_telemetry_node_instance_id)
 
         self.cv_bridge = CvBridge()
 
@@ -152,7 +157,9 @@ class TelemetryNode(Node):
         self.create_subscription(Float32, "/current_sail_angle", self.current_sail_angle_callback, qos_profile_sensor_data)
         self.create_subscription(Float32, "/current_rudder_angle", self.current_rudder_angle_callback, qos_profile_sensor_data)
 
-        self.create_subscription(Image, "/camera/camera/color/image_raw", self.camera_rgb_image_callback, qos_profile_sensor_data)
+        self.create_subscription(
+            UInt8MultiArray, "/object_detection_image", self.camera_rgb_image_callback, qos_profile_sensor_data
+        )
 
         self.create_subscription(NavSatFix, "/position", self.position_callback, qos_profile_sensor_data)
         self.create_subscription(Twist, "/velocity", self.velocity_callback, qos_profile_sensor_data)
@@ -244,15 +251,17 @@ class TelemetryNode(Node):
 
         return instance_id
 
-
-
-    def camera_rgb_image_callback(self, camera_rgb_image: Image) -> None:
+    def publish_telemetry_node_instance_id(self) -> None:
         """
-        Callback function for the camera RGB image topic. Updates the boat's current RGB image in base64 encoded format.
+        Publishes the telemetry node instance ID to the /telemetry_node_instance_id topic.
+        This is useful for other nodes that need to know the instance ID of the telemetry node.
+        """
 
-        Note
-        ----
-        Refer to this stack overflow post: https://stackoverflow.com/questions/40928205/python-opencv-image-to-byte-string-for-json-transfer
+        self.instance_id_publisher.publish(Int32(data=self.instance_id))
+
+    def camera_rgb_image_callback(self, camera_rgb_image: UInt8MultiArray) -> None:
+        """
+        Callback function for the camera RGB image topic.
 
         Parameters
         ----------
@@ -260,20 +269,12 @@ class TelemetryNode(Node):
             The current RGB image from the boat's camera.
         """
 
-        rgb_image_cv = self.cv_bridge.imgmsg_to_cv2(camera_rgb_image, desired_encoding="rgb8")
-        rgb_image_cv = rgb_image_cv[80:1200, 40:680]  # crop the image to 640,640
-        _, buffer = cv2.imencode(".jpg", rgb_image_cv)
-
-        # swap red and blue channels for correction
-        red = rgb_image_cv[:, :, 2].copy()
-        blue = rgb_image_cv[:, :, 0].copy()
-        rgb_image_cv[:, :, 0] = red
-        rgb_image_cv[:, :, 2] = blue
-
-        cv2.imwrite("test.jpg", rgb_image_cv)
-
-        self.base64_encoded_current_rgb_image = base64.b64encode(buffer).decode()
-
+        image = bytes(camera_rgb_image.data)
+        self.send_raw_data_to_telemetry_server(
+            f"boat_status/set_image/{self.instance_id}",
+            data=image,
+            session=self.boat_status_session,
+        )
 
     def position_callback(self, position: NavSatFix) -> None:
         """
@@ -573,7 +574,7 @@ class TelemetryNode(Node):
     def send_raw_data_to_telemetry_server(
         self,
         route: str,
-        data: float | str | list | dict | BoatStatusPayload,
+        data: float | str | list | dict | bytes | BoatStatusPayload,
         session: requests.Session,
     ) -> None:
         """
@@ -594,7 +595,10 @@ class TelemetryNode(Node):
         response = None
 
         try:
-            if isinstance(data, (float, int)):
+            if isinstance(data, bytes):
+                response = session.post(url=url, files={"image": data}, timeout=10)
+
+            elif isinstance(data, (float, int)):
                 url += f"/{data}"
                 response = session.post(url=url, timeout=10)
 

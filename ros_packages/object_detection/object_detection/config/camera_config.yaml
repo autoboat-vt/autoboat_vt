@@ -2,11 +2,13 @@
     # The v4l2 format can be found using the command: v4l2-ctl --list-formats-ext -d /dev/videoX, where X is the camera device number.
     v4l2_format: YUYV
     gst_format: YUY2
-    # The name is used to regex search the available camera devices.
-    name: RealSense
-    width: 1280
-    height: 800
+    name: ZED 2i # The name is used to regex search the available camera devices.
+    width: 2560 # The stream is 2 1920x1080 streams side-by-side
+    height: 720
     framerate: 30/1
-    baseline: 59 # The distance between the two cameras in millimeters.
-    hfov: 90 # The horizontal field of view of the camera in degrees.
-    focal_px: 648 # The focal length of the camera in pixels at 1280x800.
+    baseline: 120 # The distance between the two cameras in millimeters.
+    hfov: 110 # The horizontal field of view of the camera in degrees.
+    focal_px: 750 # The focal length of the camera in pixels at 1920x1080.
+    focal_mm: 2.1 # The focal length of the camera in millimeters.
+    # datasheet can be found at https://cdn.sanity.io/files/s18ewfw4/staging/f6eb2a45caad4faa16149f747b765864a337ae91.pdf/ZED-2i-Datasheet.pdf
+    # We have the 2.1 mm focal length and polarizing filter, sku ZED-221120

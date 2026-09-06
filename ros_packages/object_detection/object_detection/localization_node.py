@@ -3,14 +3,16 @@ import os
 import re
 
 import numpy as np
-import rclpy
 import yaml
-from autoboat_msgs.msg import ObjectDetectionResultsList, TriangulationResult, TriangulationResultsList
 from jsonc_parser.parser import JsoncParser
+
+import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Bool, Float32, String
+
+from autoboat_msgs.msg import ObjectDetectionResultsList, TriangulationResult, TriangulationResultsList
 
 from .cv_library.triangulation import ObjectDetection, ObjectTriangulator
 
@@ -50,7 +52,8 @@ class LocalizationNode(Node):
                                  qos_profile=qos_profile_sensor_data)
         self.create_subscription(msg_type=ObjectDetectionResultsList, topic="/object_detection_results_list",
                                  callback=self._object_detection_callback, qos_profile=10)
-        self.create_subscription(msg_type=String, topic="/cv_parameters", callback=self._cv_parameters_callback, qos_profile=10)
+        self.create_subscription(msg_type=String, topic="/localization_parameters",
+                                 callback=self._localization_parameters_callback, qos_profile=10)
 
         self.current_position = {
             "latitude": 0,
@@ -100,7 +103,7 @@ class LocalizationNode(Node):
             self.origin_position["longitude"] = msg.longitude
             self.valid_origin_position = True
     
-    def _cv_parameters_callback(self, msg: String) -> None:
+    def _localization_parameters_callback(self, msg: String) -> None:
         new_parameters_json = json.loads(msg.data)
         for key in new_parameters_json:
             match (key):
@@ -110,6 +113,8 @@ class LocalizationNode(Node):
                     self._update_iou_threshold(new_parameters_json[key])
                 case "update_rate":
                     self._update_publish_frequency(new_parameters_json[key])
+                case _:
+                    self.get_logger().warn(f"Parameter {key} not recognized, ignoring")
     
     def _object_detection_callback(self, msg: ObjectDetectionResultsList) -> None:
         if self.valid_origin_position:
