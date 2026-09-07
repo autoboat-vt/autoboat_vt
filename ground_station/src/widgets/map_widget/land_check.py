@@ -15,12 +15,6 @@ __all__ = ["LandChecker"]
 
 logger = get_logger(__name__)
 
-# meters per degree of latitude (nearly constant)
-_M_PER_DEG_LAT = 110_574.0
-
-# meters per degree of longitude at the equator
-_M_PER_DEG_LON_EQ = 111_320.0
-
 
 class LandChecker:
     """
