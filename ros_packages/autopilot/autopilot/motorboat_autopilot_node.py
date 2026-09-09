@@ -4,13 +4,15 @@ from typing import Any
 
 import numpy as np
 import numpy.typing as npt
+
 import rclpy
-from autoboat_msgs.msg import RCData, VESCControlData, WaypointList
 from geometry_msgs.msg import Twist
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Bool, Float32, Int32, String
+
+from autoboat_msgs.msg import RCData, VESCControlData, WaypointList
 
 from .autopilot_library.motorboat_autopilot import MotorboatAutopilot
 from .autopilot_library.utils.constants import (
@@ -307,7 +309,7 @@ class MotorboatAutopilotNode(Node):
         desired_vesc_control_struct = VESCControlData(control_type_for_vesc="rpm", control_value=0.0)
 
 
-        # Manually check whether any of the sensors have disconnecteds
+        # Manually check whether any of the sensors have disconnected
         # if we have not received data from the sensor for 3 seconds then stop the propeller for safety reasons
         time_since_last_rc_data = time.time() - self.last_rc_data_received_time
         has_rc_data_disconnected = time_since_last_rc_data >= self.autopilot_parameters["rc_data_failsafe_time"]

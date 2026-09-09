@@ -6,14 +6,15 @@
 from collections import deque
 
 import numpy as np
-import rclpy
 import serial
+from serial.tools import list_ports
+from ublox_gps import UbloxGps
+
+import rclpy
 from geometry_msgs.msg import Twist, Vector3
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import NavSatFix
-from serial.tools import list_ports
-from ublox_gps import UbloxGps
 
 # https://content.u-blox.com/sites/default/files/products/documents/u-blox8-M8_ReceiverDescrProtSpec_UBX-13003221.pdf
 # pg 443
@@ -59,20 +60,16 @@ def linear_moving_weighted_average(gps_data):
 
 class GPSPublisher(Node):
     """
-    Reads GPS data from the GPS over a serial USB connection and then publishes that data so that the autopilot can use it
+    Reads GPS data from the GPS over a serial USB connection and then publishes that data so that the autopilot can use it.
+    This node publishes the current position and velocity.
 
-    This node publishes the current position and velocity
     """
 
-
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("gps")
 
         self.position_publisher = self.create_publisher(NavSatFix, "/position", qos_profile_sensor_data)
         self.velocity_publisher = self.create_publisher(Twist, "/velocity", qos_profile_sensor_data)
-
-        # self.csv_writer = csv.DictWriter(open("gps_data.csv", "w+"), fieldnames=["time", "SOG", "velocity_east", "velocity_north"])
-        # self.csv_writer.writeheader()
 
         self.create_timer(1 / REFRESH_RATE, self.publish)
 
@@ -80,34 +77,28 @@ class GPSPublisher(Node):
         self.sensor_serial = serial.Serial(serial_port, baudrate=BAUD_RATE, timeout=1)
         self.gps = UbloxGps(self.sensor_serial)
 
-        self.rtcm_correction_data = bytearray()
-
         self.gps_velocity_data_queue = deque(maxlen=10)
 
-
-
-    def publish(self):
+    def publish(self) -> None:
+        """Publishes the current GPS position and velocity to the respective ROS topics."""
         geo = self.gps.geo_coords()
 
-        if not geo:
-            return
+        if not geo: return
 
         self.gps_velocity_data_queue.append((geo.velE, geo.velN))
 
-        velE, velN = linear_moving_weighted_average(self.gps_velocity_data_queue)
+        velocity_east, velocity_north = linear_moving_weighted_average(self.gps_velocity_data_queue)
 
         gps_msg = NavSatFix(longitude=geo.lon, latitude=geo.lat)
-        linear_velocity_msg = Vector3(x=float(velE / 1000), y=float(velN / 1000))
+        linear_velocity_msg = Vector3(x=float(velocity_east / 1000), y=float(velocity_north / 1000))
         velocity_msg = Twist(linear=linear_velocity_msg)
 
-        velE_mph = velE * 2.2369 / 1000  # mm/s to mph
-        velN_mph = velN * 2.2369 / 1000  # mm/s to mph
+        velocity_east_mph = velocity_east * 2.2369 / 1000  # mm/s to mph
+        velocity_north_mph = velocity_north * 2.2369 / 1000  # mm/s to mph
 
-        # self.csv_writer.writerow({"time": time.time(), "SOG": np.sqrt(velE_mph**2 + velN_mph**2), "velocity_east": velE_mph, "velocity_north": velN_mph})
-
-        print(f"velocity vector (mph): <{float(velE_mph)}, {float(velN_mph)}>")
-        print(f"SOG (mph): {np.sqrt(velE_mph**2 + velN_mph**2)}")
-        print(f"DIR: {np.rad2deg(np.arctan2(velN_mph, velE_mph))}")
+        print(f"velocity vector (mph): <{float(velocity_east_mph)}, {float(velocity_north_mph)}>")
+        print(f"SOG (mph): {np.sqrt(velocity_east_mph**2 + velocity_north_mph**2)}")
+        print(f"DIR: {np.rad2deg(np.arctan2(velocity_north_mph, velocity_east_mph))}")
         print(f"Acc: {geo.sAcc}")
         print(f"Sats: {geo.numSV}")
 
@@ -115,7 +106,7 @@ class GPSPublisher(Node):
         self.velocity_publisher.publish(velocity_msg)
 
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.sensor_serial.close()
         self.destroy_node()
         rclpy.shutdown()

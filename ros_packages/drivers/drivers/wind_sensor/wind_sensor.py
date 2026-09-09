@@ -1,15 +1,18 @@
 #!/usr/bin/python3
 
+# Heres the link to the wind sensor that we are using.
+# https://www.calypsoinstruments.com/shop/ultra-low-power-ultrasonic-wind-meter-pro-ulp-pro-197?category=2#attr=116,117,120
 
 from collections import deque
 
 import numpy as np
-import rclpy
 import serial
+from serial.tools import list_ports
+
+import rclpy
 from geometry_msgs.msg import Vector3
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from serial.tools import list_ports
 from std_msgs.msg import Bool
 
 WIND_SENSOR_VID = 0x0403
@@ -32,7 +35,7 @@ def getPort(vid: int, pid: int, serial_number: str) -> str:
 
 class WindSensorPublisher(Node):
     """
-    Reads wind data from the wind sensor over a serial USB connection and then publishes that data so that the autopilot can use it
+    Reads wind data from the wind sensor over a serial USB connection and then publishes that data so that the autopilot can use it.
 
     This node publishes the apparent wind velocity vector measured counter-clockwise from the centerline of the boat.
     Aka, the centerline of the boat is the x axis of the vector and the left of the boat is the y axis of the vector.
@@ -51,9 +54,7 @@ class WindSensorPublisher(Node):
     so none of this applies whenever we are talking about the "global true wind angle"
     """
 
-
-
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("wind_sensor_publisher")
 
         self.apparent_wind_vector_publisher = self.create_publisher(Vector3, "/apparent_wind_vector", qos_profile_sensor_data)
@@ -71,7 +72,7 @@ class WindSensorPublisher(Node):
 
 
 
-    def sum_integers(self, integer):
+    def sum_integers(self, integer) -> int:
         """Sums up all positive integers less than or equal to the number that was passed in"""
         # nothing but this formula: https://www.youtube.com/watch?app=desktop&v=bWZwF1H9YbU
         return (integer * (integer + 1)) / 2
