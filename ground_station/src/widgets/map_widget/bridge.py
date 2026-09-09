@@ -324,6 +324,12 @@ class MapBridge:
         self._call("set_bathymetry_visible", visible)
 
     @_map_api
+    def set_land_boundary_visible(self, visible: bool) -> None:
+        """Show or hide the faint ocean/land boundary outline."""
+
+        self._call("set_land_boundary_visible", visible)
+
+    @_map_api
     def remove_all_svgs(self) -> None:
         """Remove all diagnostic SVG overlays from the map."""
 

@@ -6,7 +6,7 @@ from pathlib import Path
 import shapefile
 import shapely
 from shapely import wkb
-from shapely.geometry import shape
+from shapely.geometry import mapping, shape
 from shapely.geometry.base import BaseGeometry
 
 from utils.console_logger import get_logger
@@ -14,6 +14,9 @@ from utils.console_logger import get_logger
 __all__ = ["LandChecker"]
 
 logger = get_logger(__name__)
+
+# used to fix weird box at (0, 0) not present in the Natural Earth ocean layer
+_LAND_EXCLUSIONS_POLYGON = shapely.box(xmin=-0.005, ymin=-0.005, xmax=0.005, ymax=0.005)
 
 
 class LandChecker:
@@ -48,6 +51,7 @@ class LandChecker:
     ) -> None:
         self._lock = threading.Lock()
         self._ocean: BaseGeometry | None = None
+        self._geojson: dict = {"type": "FeatureCollection", "features": []}
         self.ready = False
         self._load_error: str | None = None
 
@@ -65,12 +69,17 @@ class LandChecker:
 
             if geometry is None:
                 geometry = self._build_from_shapefile()
+                geometry = shapely.union(geometry, _LAND_EXCLUSIONS_POLYGON)
                 self._write_cache(geometry)
 
             shapely.prepare(geometry)
 
             with self._lock:
                 self._ocean = geometry
+                self._geojson = {
+                    "type": "FeatureCollection",
+                    "features": [{"type": "Feature", "geometry": mapping(geometry), "properties": {}}],
+                }
                 self.ready = True
 
             logger.info("Ocean geometry loaded; waypoints on land will be rejected.")
@@ -152,6 +161,20 @@ class LandChecker:
         merged = shapely.union_all(polygons) if len(polygons) > 1 else polygons[0]
         return shapely.make_valid(merged)
 
+    def geojson(self) -> dict:
+        """
+        Get the ocean geometry as a GeoJSON FeatureCollection for the boundary overlay.
+
+        Returns
+        -------
+        `dict`
+            A GeoJSON FeatureCollection containing the ocean polygon(s). Check
+            :attr:`ready` before serving; this may be empty until loading completes.
+        """
+
+        with self._lock:
+            return self._geojson
+
     def is_on_land(self, lat: float, lon: float) -> bool:
         """
         Check whether a coordinate is on land.
@@ -170,7 +193,7 @@ class LandChecker:
         Returns
         -------
         `bool`
-            True if the point is on land (or the check is unavailable).
+            `True` if the point is on land (or the check is unavailable).
         """
 
         with self._lock:

@@ -691,14 +691,24 @@ class GroundStationWidget(QWidget):
             Longitude of the clicked point.
         """
 
-        response = show_message_box(
+        cached = LAND_CLICK_PROMPT.get_cached_decision()
+        if cached is not None:
+            LAND_CLICK_PROMPT.answer(cached)
+            return
+
+        response, remember = show_message_box(
             title="Waypoint on Land",
             message=f"The point ({latitude:.5f}, {longitude:.5f}) appears to be on land. Add the waypoint anyway?",
             icon=constants.ICONS.warning,
             buttons=[QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No],
+            remember_choice_option=True,
         )
 
-        LAND_CLICK_PROMPT.answer(response == QMessageBox.StandardButton.Yes)
+        add_waypoint = response == QMessageBox.StandardButton.Yes
+        if remember:
+            LAND_CLICK_PROMPT.set_cached_decision(add_waypoint)
+
+        LAND_CLICK_PROMPT.answer(add_waypoint)
 
     @Slot()
     def start_data_logging(self) -> None:
@@ -883,6 +893,8 @@ class GroundStationWidget(QWidget):
             self.map_bridge.set_track_visible(enabled)
         elif feature == "bathymetry":
             self.map_bridge.set_bathymetry_visible(enabled)
+        elif feature == "land_boundary":
+            self.map_bridge.set_land_boundary_visible(enabled)
 
     @Slot(int, str)
     def zoom_to_marker(self, row: int, table: Literal["waypoints", "buoys"] = "waypoints") -> None:

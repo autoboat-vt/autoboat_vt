@@ -15,6 +15,7 @@ import { BathymetryManager } from "./bathymetry";
 import { BoatManager } from "./boat";
 import { BuoyManager } from "./buoys";
 import { KeybindHandler, type KeybindMap } from "./keybinds";
+import { LandBoundaryManager } from "./land_boundary";
 import { SVGManager } from "./svg";
 import { TrackManager } from "./track";
 import type { LatLngTuple } from "./types";
@@ -36,13 +37,20 @@ class MapInterface {
             [-90, -180],
             [90, 180]
         ],
-        maxBoundsViscosity: 1.0
+        maxBoundsViscosity: 1.0,
+        attributionControl: true
     };
+    static readonly mapTilerOptions = {
+        apiKey: "M9yBkV9J49pYUg5o8SGC",
+        style: "openstreetmap"
+    } as ConstructorParameters<typeof MaptilerLayer>[0];
+
     static readonly iconCache = new Map<string, Icon>();
     static readonly assetsUrl = `http://localhost:${import.meta.env.ASSET_SERVER_PORT ?? "8000"}`;
     static readonly waypointsUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/waypoints`;
     static readonly checkLandUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/check_land`;
     static readonly bathymetryUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/bathymetry`;
+    static readonly landBoundaryUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/land_boundary`;
 
     lastFocusedTimestamp = 0;
     private waypointHistory: { type: "add" | "remove"; waypoint: LatLngTuple; color?: string }[] = [];
@@ -56,6 +64,7 @@ class MapInterface {
     readonly keybind_handler: KeybindHandler;
     readonly track_manager: TrackManager;
     readonly bathymetry_manager: BathymetryManager;
+    readonly land_boundary_manager: LandBoundaryManager;
 
     static getMarkerIcon(color: string): Icon {
         const key = `marker-${color}`;
@@ -79,7 +88,7 @@ class MapInterface {
 
     static getBoatIcon(scale = 1): Icon {
         return icon({
-            iconUrl: new URL("boat-icon.png", MapInterface.assetsUrl).toString(),
+            iconUrl: new URL("boat-icon.svg", MapInterface.assetsUrl).toString(),
             iconSize: [50 * scale, 50 * scale],
             iconAnchor: [25 * scale, 25 * scale]
         });
@@ -87,6 +96,12 @@ class MapInterface {
 
     constructor() {
         this.map = LeafletMap("map", MapInterface.mapOptions);
+        new MaptilerLayer(MapInterface.mapTilerOptions).addTo(this.map);
+
+        // have to set max bounds after adding the maptiler layer, otherwise it will be overridden
+        // and the map will be able to pan outside of the bounds
+        this.map.setMaxBounds(MapInterface.mapOptions.maxBounds);
+
         this.waypoint_manager = new WaypointManager(
             this.map,
             MapInterface.getMarkerIcon.bind(MapInterface),
@@ -98,6 +113,10 @@ class MapInterface {
         this.keybind_handler = new KeybindHandler();
         this.track_manager = new TrackManager(this.map);
         this.bathymetry_manager = new BathymetryManager(this.map, MapInterface.bathymetryUrl);
+        this.land_boundary_manager = new LandBoundaryManager(this.map, MapInterface.landBoundaryUrl);
+
+        // add zoom control buttons to the map
+        control.scale().addTo(this.map);
 
         this.map.createPane("bathyPane");
         const bathyPane = this.map.getPane("bathyPane");
@@ -110,14 +129,6 @@ class MapInterface {
         this.keybind_handler.register("zoom_in", () => this.map.zoomIn());
         this.keybind_handler.register("zoom_out", () => this.map.zoomOut());
         this.keybind_handler.register("undo_waypoint", () => this.undo_last_waypoint());
-
-        const mapTilerKey = "M9yBkV9J49pYUg5o8SGC";
-        new MaptilerLayer({
-            apiKey: mapTilerKey,
-            style: "openstreetmap"
-        }).addTo(this.map);
-
-        control.scale().addTo(this.map);
 
         let moveTimeout: ReturnType<typeof setTimeout> | undefined;
         this.map.on("move", () => {
@@ -323,6 +334,10 @@ class MapInterface {
 
     set_bathymetry_visible(visible: boolean): void {
         void this.bathymetry_manager.setVisible(visible);
+    }
+
+    set_land_boundary_visible(visible: boolean): void {
+        void this.land_boundary_manager.setVisible(visible);
     }
 
     remove_all_svgs(): void {

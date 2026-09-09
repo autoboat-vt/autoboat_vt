@@ -100,6 +100,10 @@ class WaypointsHandler(BaseHTTPRequestHandler):
             self._handle_bathymetry()
             return
 
+        if self.path == "/land_boundary":
+            self._handle_land_boundary()
+            return
+
         if self.path.startswith("/check_land"):
             self._handle_check_land()
             return
@@ -128,6 +132,29 @@ class WaypointsHandler(BaseHTTPRequestHandler):
 
         self._set_headers(200)
         self.wfile.write(json.dumps(provider.geojson(), separators=(",", ":")).encode("utf-8"))
+
+    def _handle_land_boundary(self) -> None:
+        """
+        Handle ``GET /land_boundary`` requests.
+
+        Serves the ocean geometry used by the land checker as a GeoJSON
+        ``FeatureCollection`` for the faint boundary overlay. Responds 503 while
+        the geometry is still loading, and 404 if no land checker is configured,
+        so the frontend silently skips the layer in both cases.
+        """
+
+        land_checker = _LAND_CHECKER_HOLDER[0]
+        if land_checker is None:
+            self._not_found()
+            return
+
+        if not land_checker.ready:
+            self._set_headers(503)
+            self.wfile.write(b'{"message": "Land boundary not ready"}')
+            return
+
+        self._set_headers(200)
+        self.wfile.write(json.dumps(land_checker.geojson(), separators=(",", ":")).encode("utf-8"))
 
     def _handle_check_land(self) -> None:
         """

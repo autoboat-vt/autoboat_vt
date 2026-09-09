@@ -335,6 +335,12 @@ _map_features: dict[str, dict[str, str | bool]] = {
         "feedback_text": "Updated Ocean Depth Config.",
         "status": False,
     },
+    "land_boundary": {
+        "name": "Ocean Boundary",
+        "description": "Show a faint outline of the ocean polygon used for land checks.",
+        "feedback_text": "Updated Ocean Boundary Config.",
+        "status": False,
+    },
 }
 
 _data_logging_active: bool = False

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from threading import Condition
+from threading import Condition, Lock
 
 from qtpy.QtCore import QObject, Signal
 
@@ -33,6 +33,9 @@ class LandClickPrompt(QObject):
         self._condition = Condition()
         self._answer: bool | None = None
         self._pending = False
+
+        self._cache_lock = Lock()
+        self._cached_decision: bool | None = None
 
     def ask(self, latitude: float, longitude: float) -> bool:
         """
@@ -89,6 +92,33 @@ class LandClickPrompt(QObject):
 
             self._answer = add_waypoint
             self._condition.notify_all()
+
+    def get_cached_decision(self) -> bool | None:
+        """
+        Get the session-only remembered land decision, if one was set.
+
+        Returns
+        -------
+        `bool | None`
+            The remembered choice (``True`` = add, ``False`` = do not add), or
+            `None` if the user has not asked to remember a decision this session.
+        """
+
+        with self._cache_lock:
+            return self._cached_decision
+
+    def set_cached_decision(self, add_waypoint: bool) -> None:
+        """
+        Cache the user's land decision for the rest of this session (not persisted).
+
+        Parameters
+        ----------
+        add_waypoint
+            The choice to remember (``True`` = add, ``False`` = do not add).
+        """
+
+        with self._cache_lock:
+            self._cached_decision = add_waypoint
 
 
 # singleton used by both the HTTP handler and the GroundStationWidget
