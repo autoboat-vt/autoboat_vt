@@ -5,7 +5,7 @@
     "": {
       "name": "map_widget",
       "dependencies": {
-        "@maptiler/leaflet-maptilersdk": "^4.1.1",
+        "@maptiler/leaflet-maptilersdk": "latest",
         "leaflet": "latest",
         "leaflet-rotatedmarker": "latest",
       },
