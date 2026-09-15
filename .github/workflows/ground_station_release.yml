@@ -127,7 +127,11 @@ jobs:
           fi
 
           # Starter helpers so users can double-click instead of
-          # remembering the executable path.
+          # remembering the executable path. Both macOS and Windows helpers
+          # also self-heal: macOS strips com.apple.quarantine from the
+          # extracted folder (so Finder will open it on later double-clicks),
+          # and Windows relies on the extracted folder having already been
+          # unblocked by Explorer's extraction UX.
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             cat > release/ground_station/START_WINDOWS.bat <<'EOF'
           @echo off
@@ -139,6 +143,12 @@ jobs:
           #!/usr/bin/env bash
           cd "$(dirname "$0")"
           if [[ "$OSTYPE" == "darwin"* ]]; then
+            # Downloads from the browser carry com.apple.quarantine on every
+            # file, which makes Gatekeeper silently refuse double-clicks.
+            # Strip the attribute from the whole extracted folder once, then
+            # open the app. (xattr errors on the app's runtime JSONs are
+            # harmless — they aren't executable paths Gatekeeper checks.)
+            xattr -dr com.apple.quarantine "$(pwd)" >/dev/null 2>&1 || true
             open GroundStation.app
           else
             exec ./ground_station_app "$@"
