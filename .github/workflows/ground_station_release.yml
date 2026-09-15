@@ -210,12 +210,63 @@ jobs:
             exit 1
           fi
 
+          # Second launch: exercises the relink path in create_symlinks()
+          # against the symlinks the first run just created — the exact
+          # crash class from ground-station-linux-x64.tar.gz where a stale
+          # absolute symlink survived into the shipped archive and the
+          # pre-unlink chmod followed a dead link. SIGTERM skips the app's
+          # app_state.json cleanup, so remove it the way run.sh would after
+          # a clean exit, otherwise launch #2 fails on the stale-state
+          # guard instead of reaching the symlink code.
+          rm -f release/ground_station/app_data/git_ignore/app_state.json
+          LOG2=/tmp/gs_smoke_relink_$$.log
+          "$BIN" >"$LOG2" 2>&1 &
+          APP_PID=$!
+
+          died=0
+          for _ in 1 2 3 4 5 6; do
+            sleep 2
+            if ! kill -0 "$APP_PID" 2>/dev/null; then
+                died=1
+                break
+            fi
+          done
+
+          if (( died )); then
+            echo "Smoke test: app crashed on SECOND launch (relink path)." >&2
+            cat "$LOG2" >&2
+            exit 1
+          fi
+
+          kill -TERM "$APP_PID" 2>/dev/null || true
+          rc=0
+          wait "$APP_PID" 2>/dev/null || rc=$?
+          if [[ "$rc" != "0" && "$rc" != "143" ]]; then
+            echo "Smoke test: second launch exited with code $rc." >&2
+            cat "$LOG2" >&2
+            exit 1
+          fi
+
       - name: Create archive
         shell: bash
         working-directory: ground_station
         run: |
           set -e
           cd release
+
+          # The smoke test above runs the app in place, which populates
+          # ground_station/app_data/git_ignore/ with ABSOLUTE symlinks into
+          # the bundle (_internal/...) plus app_state.json, logs, and
+          # geometry caches. Shipping those makes every first launch on a
+          # user machine crash: the extracted symlinks point at the build
+          # machine's path, so the pre-unlink chmod in create_symlinks()
+          # follows a dead link and raises FileNotFoundError. Reset the
+          # runtime tree to the pristine state the app expects on first
+          # run — it recreates everything itself.
+          rm -rf ground_station/app_data/git_ignore
+          mkdir -p ground_station/app_data/git_ignore
+          touch ground_station/app_data/git_ignore/.gitkeep
+
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             7z a -tzip "../${{ matrix.artifact_name }}.zip" ground_station
           else

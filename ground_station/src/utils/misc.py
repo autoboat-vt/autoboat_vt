@@ -12,7 +12,9 @@ Functions:
 - resolve_enum_name: Resolve a telemetry enum value to its member name.
 """
 
+import contextlib
 import os
+import shutil
 from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
@@ -151,9 +153,6 @@ def get_route(route_name: str) -> str:
 
     endpoints = constants.SM.read_dict("telemetry_server_endpoints")
 
-    # The state file can transiently be empty (or missing) very early/late in
-    # a run; fall back to the module defaults for route lookups so a missing
-    # state entry never brings down a fetcher thread mid-poll.
     if not isinstance(endpoints, dict):
         endpoints = constants.STATE_FILE_CONTENTS.get("telemetry_server_endpoints", {})
 
@@ -333,10 +332,6 @@ def create_symlinks(source_dir: Path, target_dir: Path) -> None:
         If neither a symlink nor a copy could be created.
     """
 
-    import shutil
-
-    # A frozen first run has no app_data tree yet; create the target directory
-    # (and any missing parents) before linking/copying files into it.
     target_dir.mkdir(parents=True, exist_ok=True)
 
     for item in source_dir.iterdir():
@@ -344,16 +339,20 @@ def create_symlinks(source_dir: Path, target_dir: Path) -> None:
             target_path = target_dir / item.name
             try:
                 if target_path.exists() or target_path.is_symlink():
-                    target_path.chmod(0o644)
-                    target_path.unlink()
+                    try:
+                        target_path.chmod(0o644)
+                        target_path.unlink()
+
+                    except OSError:
+                        with contextlib.suppress(OSError):
+                            target_path.unlink()
 
                 try:
                     target_path.symlink_to(item.resolve())
+
                 except OSError:
-                    # Windows (and some filesystems) can't link; copy instead.
                     shutil.copyfile(item, target_path)
 
-                # make file in target_dir read-only to prevent accidental edits
                 target_path.chmod(0o444)
                 logger.info(f"Created symlink for '{item.name}' at '{target_path}'.")
 

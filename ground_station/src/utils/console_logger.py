@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import suppress
 from datetime import datetime, timezone
 from functools import cache
@@ -126,8 +127,6 @@ def _default_log_dir() -> Path:
     :class:`Path`
         The default log directory path.
     """
-
-    import os
 
     home = os.environ.get("GROUND_STATION_HOME")
     root = Path(home) if home else Path.cwd()
