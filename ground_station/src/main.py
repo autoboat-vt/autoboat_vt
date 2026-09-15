@@ -32,13 +32,24 @@ def _resource_root() -> Path:
     Returns
     -------
     :class:`Path`
-        In a PyInstaller bundle: the folder containing the executable
-        (``sys.executable``'s parent). In development: the parent directory
-        of this file (the ``ground_station`` folder).
+        Frozen onedir: the folder containing the executable
+        (``sys.executable.parent``). Frozen macOS BUNDLE: the folder
+        containing ``GroundStation.app`` (a sibling of the bundle, NOT a
+        folder inside it), so the release zip's shipped
+        ``ground_station/app_data/`` sits next to ``GroundStation.app``.
+        In development: the parent directory of this file (the
+        ``ground_station`` folder).
     """
 
     if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent
+        exe_dir = Path(sys.executable).resolve().parent
+        # BUNDLE layout: <dist>/GroundStation.app/Contents/MacOS/ground_station_app
+        # -> the app_data owner is the folder CONTAINING GroundStation.app
+        # (a sibling of the bundle), matching the release zip structure.
+        if exe_dir.parent.name == "Contents" and exe_dir.name == "MacOS":
+            return exe_dir.parents[2]
+        # Onedir layout: <dist>/ground_station/ground_station_app
+        return exe_dir
 
     return Path(__file__).resolve().parent.parent
 
@@ -57,7 +68,7 @@ os.environ.setdefault("QT_API", "pyside6")
 # cannot break the local map/asset servers.
 os.environ.setdefault("NO_PROXY", "localhost,127.0.0.1,::1")
 
-import qtpy  # noqa: E402
+import qtpy
 
 if qtpy.API_NAME != "PySide6":
     message = (

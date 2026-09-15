@@ -390,14 +390,11 @@ try:
             # PyInstaller frozen: the launch binary lives at
             #   onedir:  <dist>/ground_station/ground_station_app
             #   BUNDLE:  <dist>/GroundStation.app/Contents/MacOS/ground_station_app
-            # Both layouts should treat the **folder containing the bundle**
-            # (i.e. <dist>/) as the top level, so app_data lives at
-            # <dist>/app_data/ regardless of how the app was built.
-            # For BUNDLE, that's executable.parents[3]; for onedir it's
-            # executable.parent.
+            # Both layouts treat the folder containing the bundle (<dist>/) as
+            # the top level, so app_data sits next to the bundle: <dist>/app_data.
             exe_dir = Path(sys.executable).resolve().parent
             if exe_dir.parent.name == "Contents" and exe_dir.name == "MacOS":
-                return exe_dir.parents[2]  # .../dist/GroundStation.app
+                return exe_dir.parents[2]  # folder containing GroundStation.app
             return exe_dir  # .../dist/ground_station
 
         cwd = Path.cwd()
@@ -410,11 +407,6 @@ try:
         """Directory containing the ``src`` tree, in bundle or in dev."""
 
         if getattr(sys, "frozen", False):
-            # PyInstaller frozen: data files collected via datas= land in the
-            # "contents" dir. On onedir this is _internal next to the binary;
-            # in a macOS .app bundle it is Contents/Resources/. We also support
-            # Contents/Resources/_internal in case a spec overrides the contents
-            # directory name later.
             exe_dir = Path(sys.executable).resolve().parent
             if exe_dir.parent.name == "Contents" and exe_dir.name == "MacOS":
                 for candidate in (
@@ -423,9 +415,9 @@ try:
                 ):
                     if (candidate / "src" / "utils").is_dir():
                         return candidate
-                # Fall back to Resources/ground_station even if it looks wrong
-                # so the RuntimeError at least names the path we tried.
+
                 return exe_dir.parent / "Resources" / "ground_station"
+
             return exe_dir / "_internal" / "ground_station"
 
         return Path(__file__).resolve().parent.parent.parent
@@ -556,12 +548,6 @@ try:
     misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "keybinds", KEYBINDS_DIR)
 
     def _frontend_dir() -> Path | None:
-        """
-        Returns
-        -------
-            
-        """
-
         bundled = Path(WIDGETS_DIR / "map_widget" / "frontend_server.py").parent / "dist"
         if (bundled / "index.html").is_file():
             return bundled
