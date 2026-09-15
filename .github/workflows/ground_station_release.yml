@@ -233,12 +233,6 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout main (for re-tagging gs-latest)
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0 # need full history so tag -f works on existing tag
-
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -253,14 +247,13 @@ jobs:
           set -e
 
           # Delete the existing gs-latest release (binary assets) and its tag,
-          # then recreate the tag pointing at the current commit. This makes
-          # the release page show fresh binaries while keeping the URL stable.
+          # then let `gh release create --target` recreate the tag at the
+          # current commit. No checkout or local git identity needed.
           gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
-          git tag -fa "$TAG" -m "Ground Station rolling release (last built: $(date -u +%Y-%m-%dT%H:%M:%SZ))"
-          git push --force origin "refs/tags/$TAG"
 
           gh release create "$TAG" artifacts/* \
             --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
             --title "Ground Station ($TAG)" \
             --notes-file - <<'EOF'
           ## Ground Station
