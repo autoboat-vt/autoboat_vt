@@ -256,10 +256,29 @@ jobs:
         run: |
           set -e
 
-          # Delete the existing gs-latest release (binary assets) and its tag,
-          # then let `gh release create --target` recreate the tag at the
-          # current commit. No checkout or local git identity needed.
-          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          # Delete the existing gs-latest release (binary assets) and its
+          # tag, then let `gh release create --target` recreate the tag at
+          # the current commit. The release API teardown is eventually
+          # consistent: `gh release delete` returns success before GitHub's
+          # backend has actually released the tag, and a racing create
+          # then fails with "a release with the same tag name already
+          # exists". Poll until the release is really gone before
+          # creating.
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release delete "$TAG" --yes --cleanup-tag
+            for _ in 1 2 3 4 5 6 7 8 9 10; do
+              if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                break
+              fi
+              sleep 2
+            done
+            # Final guard: if the release is somehow still there, delete
+            # failed for a real reason;
+            # surface it.
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              gh release delete "$TAG" --yes --cleanup-tag
+            fi
+          fi
 
           gh release create "$TAG" artifacts/* \
             --repo "$GITHUB_REPOSITORY" \
