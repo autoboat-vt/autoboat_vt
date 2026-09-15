@@ -63,13 +63,13 @@ jobs:
             libegl1 libxcb-randr0 libxcb-image0 libxcb-render-util0 \
             libxcb-util1 libnss3 libxdamage1 libxshmfence1 libxrandr2 \
             libxss1 libxtst6 libxkbcommon0 libxcomposite1 libcups2 \
-            libdbus-1-3 libgbm1 libxfixes3 libasound2
+            libdbus-1-3 libgbm1 libxfixes3 libasound2 libpulse0
 
       # ground_station/packaging/build_app.sh handles:
       #   - .venv creation + Python pip deps
       #   - bun-based frontend rebuild (with staleness check)
       #   - PyInstaller (onedir + macOS BUNDLE)
-      #   - Post-build codesign + spctl verification (macOS)
+      #   - Post-build ad-hoc codesign + informational spctl check (macOS)
       - name: Build ground station (frontend + PyInstaller)
         shell: bash
         working-directory: ground_station
@@ -96,7 +96,12 @@ jobs:
         working-directory: ground_station
         run: |
           set -e
-          spctl -a -v --type execute dist/GroundStation.app
+          # codesign verifies the ad-hoc seal is intact and internally
+          # consistent. We deliberately do NOT run `spctl -a -v` here: CI
+          # runners apply the full Gatekeeper policy, which rejects ALL
+          # ad-hoc-signed bundles (exit 3) regardless of seal integrity —
+          # spctl is the right oracle on an end-user's Mac for a signed &
+          # notarized app, not in CI for ad-hoc builds.
           codesign -v --deep --strict dist/GroundStation.app
 
       # The app expects runtime state to live outside the binary at
