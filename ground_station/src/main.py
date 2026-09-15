@@ -165,7 +165,7 @@ class MainWindow(QMainWindow):
 
             graph_viewer = GraphViewer()
             groundstation_widget = GroundStationWidget(graph_viewer.boat_data_signal)
-            self.main_widget.addTab(groundstation_widget, "Ground Station")
+            self.main_widget.addTab(groundstation_widget, "Map Viewer")
             self.main_widget.addTab(graph_viewer, "Graph Viewer")
 
             autopilot_config_widget = AutopilotConfigWidget(groundstation_widget.refresh_autopilot_config_signal)
