@@ -35,15 +35,12 @@ _GS_HOME = _resource_root()
 os.environ.setdefault("GROUND_STATION_HOME", _GS_HOME.as_posix())
 os.chdir(_GS_HOME)
 
-# Select the Qt binding before any qtpy import. PySide6 ships prebuilt
-# wheels for Windows/macOS/Linux (unlike PySide2/PyQt5), so it is the only
-# binding that works everywhere out of the box.
 os.environ.setdefault("QT_API", "pyside6")
-
-# The ground station talks to its bundled servers over plain loopback HTTP;
-# bypass any configured proxy for those requests so corporate proxy settings
-# cannot break the local map/asset servers.
 os.environ.setdefault("NO_PROXY", "localhost,127.0.0.1,::1")
+
+if sys.platform.startswith("linux"):
+    os.environ.setdefault("QTWEBENGINE_CHROMIUM_FLAGS", "--disable-gpu --no-sandbox")
+    os.environ.setdefault("QTWEBENGINE_DISABLE_SANDBOX", "1")
 
 import qtpy
 
@@ -87,7 +84,7 @@ class MainWindow(QMainWindow):
     """Main window for the ground station application."""
 
     def start_asset_server(self) -> None:
-        """Start a quiet HTTP server for static assets (and the built frontend, when present)."""
+        """Start a quiet HTTP server for static assets used by the map widget and other components."""
 
         mimetypes.add_type("image/png", ".png")
         mimetypes.add_type("text/plain", ".txt")
@@ -229,7 +226,7 @@ if __name__ == "__main__":
             handler(msg_type, _context, message)
 
     # qInstallMessageHandler returns the previously installed handler (or None),
-    # which we store so _filter_qt_messages can forward non-spam messages to it.
+    # which we store so _filter_qt_messages can forward non-spam messages to it
     _default_handler[0] = qInstallMessageHandler(_filter_qt_messages)
 
     app = QApplication(sys.argv)

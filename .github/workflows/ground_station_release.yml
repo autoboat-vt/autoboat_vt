@@ -151,6 +151,12 @@ jobs:
             xattr -dr com.apple.quarantine "$(pwd)" >/dev/null 2>&1 || true
             open GroundStation.app
           else
+            # Keep the bundle's _internal/ dir OUT of LD_LIBRARY_PATH. The
+            # bundled libs are found via RPATH at runtime; exposing them via
+            # LD_LIBRARY_PATH would also make them visible when QtWebEngine
+            # dlopen()s system drivers (Mesa/VA-API), and an older bundled
+            # libstdc++/libgcc then breaks those drivers' symbol resolution.
+            unset LD_LIBRARY_PATH
             exec ./ground_station_app "$@"
           fi
           EOF

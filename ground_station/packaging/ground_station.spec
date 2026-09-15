@@ -29,6 +29,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from PyInstaller.building.datastruct import TOC
 from PyInstaller.utils.hooks import collect_data_files
 
 block_cipher = None
@@ -108,6 +109,27 @@ a = Analysis(
     cipher=block_cipher,
     noarchive=False,
 )
+
+# ---------------------------------------------------------------------------
+# Linux: strip bundled copies of core runtime libraries that MUST come from
+# the host system, not the bundle.
+#
+# PyInstaller bundles the build machine's libstdc++.so.6 into _internal/.
+# When the process loads a system-shared library that itself needs a NEWER
+# libstdc++ (e.g. Intel VA-API: iHD_drv_video.so -> libigdgmm.so.12 needs
+# GLIBCXX_3.4.32), the dynamic linker resolves those symbols against the
+# already-loaded, OLDER bundled libstdc++ and aborts. These libraries are
+# backward-compatible, so the system copy (>= bundled) always satisfies the
+# app; the reverse is not true. Drop them from the bundle.
+# ---------------------------------------------------------------------------
+if not _IS_MAC and not _IS_WIN:
+    _STRIP_LIBS = {
+        "libstdc++.so.6",  # see block comment above
+        "libgcc_s.so.1",   # pairs with libstdc++; same reasoning
+    }
+    a.binaries = TOC(
+        [entry for entry in a.binaries if Path(entry[0]).name not in _STRIP_LIBS]
+    )
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
