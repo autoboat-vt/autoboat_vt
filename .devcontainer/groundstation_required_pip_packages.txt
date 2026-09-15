@@ -1,0 +1,23 @@
+# Required Python packages for the Groundstation
+
+# Qt binding & desktop UI
+pyside6
+QtPy
+QtAwesome
+pyqtgraph
+pyinstaller
+
+# Geospatial data handling
+shapely
+pyshp
+
+# Telemetry / Internet
+requests
+urllib3
+
+# Utilities
+PyYAML
+pytz
+StrEnum
+svg.py
+numpy==1.26.4

@@ -1,0 +1,34 @@
+# Python dependencies for the ROS packages (autopilot, simulation, drivers).
+
+# Coordinate Conversions for the autopilot
+navpy
+pygeodesy
+geopy
+pyproj
+utm                    # probably don't need this anymore maybe?
+
+# Serial / Hardware communication
+pyserial
+sparkfun-ublox-gps
+crsf-parser
+
+# Simulation / RL
+gymnasium==0.28.1      # required only for the sailboat simulation (unless we do rl later on)
+moviepy                # required only for the sailboat simulation
+msgpack-python==0.5.6  # required only for the sailboat simulation
+pyzmq==25.0.2          # required only for the sailboat simulation
+pydantic               # required only for the sailboat simulation
+multiexit              # required only for the sailboat simulation
+imageio-ffmpeg         # required only for the sailboat simulation
+tqdm                   # required only for the sailboat simulation
+pandas                 # required only for the sailboat simulation
+matplotlib             # required only for the sailboat simulation
+click                  # required only for the sailboat simulation
+
+# Misc / Generally useful
+requests
+jsonc-parser
+docker
+ruff
+pynput
+# jetson-stats

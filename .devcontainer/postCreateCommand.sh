@@ -6,41 +6,39 @@
 
 AUTOBOAT_USER_HOME="/home/autoboat_user"
 
-# This is very unsafe lol but I need this to be able to access docker from inside of the dev container for the sim. 
+# This is very unsafe lol but I need this to be able to access docker from inside of the dev container for the sim.
 # Do not remove unless we are releasing this software as a product
-echo "sudo chmod 777 /var/run/docker.sock" >> $AUTOBOAT_USER_HOME/.bashrc
-echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/build/foil_dynamics/:/home/ws/build/sail_limits/:/home/ws/build/custom_lift_drag/:/home/ws/build/wind_arrow/ >> $AUTOBOAT_USER_HOME/.bashrc
-
+echo "sudo chmod 777 /var/run/docker.sock" >>$AUTOBOAT_USER_HOME/.bashrc
+echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/build/foil_dynamics/:/home/ws/build/sail_limits/:/home/ws/build/custom_lift_drag/:/home/ws/build/wind_arrow/ >>$AUTOBOAT_USER_HOME/.bashrc
 
 # Make sure that you can just type python and you don't have to type python3 because people will get confused
-echo 'alias python="python3"' >> $AUTOBOAT_USER_HOME/.bashrc
+echo 'alias python="python3"' >>$AUTOBOAT_USER_HOME/.bashrc
 
 # Make it easy to perform the proper build command
-echo 'alias build="cd /home/ws && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"' >> ~/.bashrc
-echo 'alias build_python="build --packages-ignore-regex .*cpp"' >> ~/.bashrc
+echo 'alias build="cd /home/ws && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"' >>~/.bashrc
+echo 'alias build_python="build --packages-ignore-regex .*cpp"' >>~/.bashrc
 
 # Install all of the pip packages that we may have edited
 # "pip install -e" installs the packages as "editable" which just means that we can make changes in the packages
 # And you don't have to reinstall them, the changes will automatically be visible if you run another script again
 # pip install -e /home/ws/ros_packages/drivers/motor_controller/pyvesc/
 pip install -e /home/ws/ros_packages/old_sailboat_simulation/sailboat_gym/
-pip install -r /home/ws/.devcontainer/required_pip_packages.txt
+pip install -r /home/ws/.devcontainer/groundstation_required_pip_packages.txt
+pip install -r /home/ws/.devcontainer/ros_packages_required_pip_packages.txt
 
 # Install Typescript packages
 bun install --cwd /home/ws/ground_station
 
 # Build the ros2 workspace for the first time
-# Building with symlink-install will allow us to edit python files without having to rebuild (which is super annoying!) 
+# Building with symlink-install will allow us to edit python files without having to rebuild (which is super annoying!)
 source /opt/ros/humble/setup.bash
 
-echo "source /opt/ros/humble/setup.bash" >> $AUTOBOAT_USER_HOME/.bashrc
+echo "source /opt/ros/humble/setup.bash" >>$AUTOBOAT_USER_HOME/.bashrc
 source $AUTOBOAT_USER_HOME/.bashrc
 
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON --packages-ignore-regex .*cpp
 
-echo "source /home/ws/install/setup.bash" >> $AUTOBOAT_USER_HOME/.bashrc
-
-
+echo "source /home/ws/install/setup.bash" >>$AUTOBOAT_USER_HOME/.bashrc
 
 # Miscellaneous things to finish setting up deepstream variant. Eventually, these should probably be added to the deepstream dockerfile.
 if [[ "$DEVCONTAINER_VARIANT" == "deepstream" || "$DEVCONTAINER_VARIANT" == "deepstream_and_yolo" ]]; then
@@ -51,6 +49,5 @@ if [[ "$DEVCONTAINER_VARIANT" == "deepstream" || "$DEVCONTAINER_VARIANT" == "dee
         cp /tmp/cv_library/deepstream_yolo_library/libnvdsinfer_custom_impl_Yolo.so /home/ws/ros_packages/object_detection/object_detection/cv_library/deepstream_yolo_library/
     fi
 fi
-
 
 source $AUTOBOAT_USER_HOME/.bashrc
