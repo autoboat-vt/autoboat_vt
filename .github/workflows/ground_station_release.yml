@@ -28,9 +28,6 @@ jobs:
           - os: macos-latest
             os_label: macOS (Apple Silicon)
             artifact_name: ground-station-macos-arm64
-          - os: macos-13
-            os_label: macOS (Intel)
-            artifact_name: ground-station-macos-x64
           - os: ubuntu-22.04
             os_label: Linux (x64)
             artifact_name: ground-station-linux-x64
@@ -104,19 +101,26 @@ jobs:
 
       # The app expects runtime state to live outside the binary at
       # dist/<bundle>/app_data/ so it can write without elevated
-      # permissions. PyInstaller doesn't create this — do it here.
+      # permissions. build_app.sh already creates dist/ground_station/app_data/
+      # on non-macOS builds, so DON'T pre-create app_data/ here — `mv` would
+      # fail with "Directory not empty" trying to merge them.
       - name: Assemble release folder
         shell: bash
         working-directory: ground_station
         run: |
           set -e
           rm -rf release
-          mkdir -p release/ground_station/app_data/git_ignore
+          mkdir -p release/ground_station
 
           if [[ "${{ runner.os }}" == "macOS" ]]; then
             mv dist/GroundStation.app release/ground_station/
+            # macOS ships only the .app; it has no sibling app_data/ from the
+            # build, so create the runtime-writable dir here.
+            mkdir -p release/ground_station/app_data/git_ignore
           else
             mv dist/ground_station/* release/ground_station/
+            # build_app.sh already made dist/ground_station/app_data/git_ignore,
+            # which the mv above carried over.
           fi
 
           # Starter helpers so users can double-click instead of
