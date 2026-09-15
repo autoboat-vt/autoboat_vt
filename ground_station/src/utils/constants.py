@@ -387,15 +387,11 @@ try:
             return Path(stamped).resolve()
 
         if getattr(sys, "frozen", False):
-            # PyInstaller frozen: the launch binary lives at
-            #   onedir:  <dist>/ground_station/ground_station_app
-            #   BUNDLE:  <dist>/GroundStation.app/Contents/MacOS/ground_station_app
-            # Both layouts treat the folder containing the bundle (<dist>/) as
-            # the top level, so app_data sits next to the bundle: <dist>/app_data.
             exe_dir = Path(sys.executable).resolve().parent
             if exe_dir.parent.name == "Contents" and exe_dir.name == "MacOS":
-                return exe_dir.parents[2]  # folder containing GroundStation.app
-            return exe_dir  # .../dist/ground_station
+                return exe_dir.parents[2]
+
+            return exe_dir
 
         cwd = Path.cwd()
         if (cwd / "src" / "main.py").is_file():
@@ -474,6 +470,7 @@ try:
 
     stack = inspect.stack()
     active_flag: bool = stack[0].filename == Path(UTILS_DIR / "constants.py").as_posix()
+    
     # will not break if moved outside of if block, but prevents redundant checks
     if active_flag:
         if "assets" not in os.listdir(GIT_KEEP_DIR):

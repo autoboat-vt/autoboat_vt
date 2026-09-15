@@ -1,23 +1,3 @@
-"""
-Freeze-aware entry point for the Ground Station application.
-
-This bootstrap must run BEFORE any ``qtpy``/``PySide6`` import so that the
-correct Qt binding is selected even on machines where PyQt5 is also
-installed (e.g. the ROS devcontainer). It also stamps the process-level
-resource root into the ``GROUND_STATION_HOME`` environment variable so that
-every later module import resolves paths relative to a fixed, writable
-directory:
-
-- Development: the ``ground_station`` source folder (whatever this file's
-  parent directory is, regardless of the current working directory).
-- Packaged (PyInstaller) app: the folder containing the executable, so all
-  data created and used by the app stays next to the executable.
-
-``GROUND_STATION_HOME`` is set at most once per process using
-``os.environ.setdefault`` so that a user who explicitly exported the
-variable before launch still wins.
-"""
-
 from __future__ import annotations
 
 import os
@@ -43,12 +23,9 @@ def _resource_root() -> Path:
 
     if getattr(sys, "frozen", False):
         exe_dir = Path(sys.executable).resolve().parent
-        # BUNDLE layout: <dist>/GroundStation.app/Contents/MacOS/ground_station_app
-        # -> the app_data owner is the folder CONTAINING GroundStation.app
-        # (a sibling of the bundle), matching the release zip structure.
         if exe_dir.parent.name == "Contents" and exe_dir.name == "MacOS":
             return exe_dir.parents[2]
-        # Onedir layout: <dist>/ground_station/ground_station_app
+
         return exe_dir
 
     return Path(__file__).resolve().parent.parent
