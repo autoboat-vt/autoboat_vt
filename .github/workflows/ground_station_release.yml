@@ -2,8 +2,6 @@ name: Ground Station — Build & Release
 
 on:
   push:
-    tags:
-      - "gs-v*" # e.g. gs-v1.2.0 publishes a release
     branches: [main]
   pull_request:
     branches: [main]
@@ -13,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write # needed to create GitHub Releases
+  contents: write # needed to create GitHub Releases and re-tag gs-latest
 
 jobs:
   build:
@@ -226,13 +224,21 @@ jobs:
 
   release:
     name: Publish Release
-    # Only on gs-v* tags — branch pushes just get artifacts.
-    if: startsWith(github.ref, 'refs/tags/gs-v')
+    # Rolling-release strategy: every green build on main force-updates the
+    # `gs-latest` tag and overwrites its GitHub Release assets. PRs are
+    # excluded so we don't publish from untrusted forks.
+    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - name: Checkout main (for re-tagging gs-latest)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0 # need full history so tag -f works on existing tag
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -242,12 +248,20 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
+          TAG: gs-latest
         run: |
           set -e
+
+          # Delete the existing gs-latest release (binary assets) and its tag,
+          # then recreate the tag pointing at the current commit. This makes
+          # the release page show fresh binaries while keeping the URL stable.
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          git tag -fa "$TAG" -m "Ground Station rolling release (last built: $(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push --force origin "refs/tags/$TAG"
+
           gh release create "$TAG" artifacts/* \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Ground Station $TAG" \
+            --title "Ground Station ($TAG)" \
             --notes-file - <<'EOF'
           ## Ground Station
 
