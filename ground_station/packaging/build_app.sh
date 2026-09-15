@@ -63,15 +63,15 @@ if [[ "$SKIP_FRONTEND" == false ]]; then
     FRONTEND_DIST="src/widgets/map_widget/dist"
     FRONTEND_SRC_DIR="src/widgets/map_widget/frontend"
 
-    # Rebuild if dist/ is missing OR any TS/HTML source is newer than dist/index.html.
-    # `find ... -newer ... -print -quit` prints nothing when nothing is newer, so
-    # an empty result means dist is up-to-date.
-    NEWER_THAN_DIST=$(
-        find "$FRONTEND_SRC_DIR" \
-            -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.html' -o -name '*.css' \) \
-            -newer "$FRONTEND_DIST/index.html" \
-            -print -quit 2>/dev/null
-    )
+    NEWER_THAN_DIST=""
+    if [[ -f "$FRONTEND_DIST/index.html" ]]; then
+        NEWER_THAN_DIST=$(
+            find "$FRONTEND_SRC_DIR" \
+                -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.html' -o -name '*.css' \) \
+                -newer "$FRONTEND_DIST/index.html" \
+                -print -quit 2>/dev/null || true
+        )
+    fi
 
     if [[ ! -f "$FRONTEND_DIST/index.html" || -n "$NEWER_THAN_DIST" ]]; then
         if command -v bun >/dev/null; then
