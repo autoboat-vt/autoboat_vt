@@ -35,7 +35,12 @@ ros_packages/object_detection/object_detection/config/yolo26_config.yaml
 
 # groundstation
 ground_station/app_data/git_ignore
-ground_station/src/widgets/map_widget/frontend/dist
+ground_station/src/widgets/map_widget/dist
+ground_station/.venv
+ground_station/packaging/icons/iconset.iconset
+ground_station/dist
+ground_station/packaging/build
+ground_station/packaging/dist
 node_modules
 
 # ros_packages/object_detection
