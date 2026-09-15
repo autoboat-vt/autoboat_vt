@@ -243,6 +243,14 @@ jobs:
     permissions:
       contents: write
     steps:
+      # gh release [*] shells out to `git` under the hood even when passing
+      # --repo / GH_TOKEN — without a checked-out repository it fails with
+      # "fatal: not a git repository". Bring back checkout (we removed it
+      # when dropping `git tag -fa` and `git push --force`, but gh CLI still
+      # needs .git).
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
