@@ -151,6 +151,12 @@ def get_route(route_name: str) -> str:
 
     endpoints = constants.SM.read_dict("telemetry_server_endpoints")
 
+    # The state file can transiently be empty (or missing) very early/late in
+    # a run; fall back to the module defaults for route lookups so a missing
+    # state entry never brings down a fetcher thread mid-poll.
+    if not isinstance(endpoints, dict):
+        endpoints = constants.STATE_FILE_CONTENTS.get("telemetry_server_endpoints", {})
+
     if isinstance(endpoints, dict) and endpoints.get(route_name) is not None:
         return endpoints[route_name]
 
@@ -309,6 +315,11 @@ def create_symlinks(source_dir: Path, target_dir: Path) -> None:
     """
     Create symbolic links for all files in the source directory to the target directory.
 
+    On platforms or volumes where symlinks are unavailable (notably Windows
+    without Developer Mode / elevated privileges), fall back to copying the
+    file. Either way the target ends up read-only and refreshable on the
+    next launch.
+
     Parameters
     ----------
     source_dir
@@ -319,17 +330,29 @@ def create_symlinks(source_dir: Path, target_dir: Path) -> None:
     Raises
     ------
     :class:`RuntimeError`
-        If a symbolic link cannot be created.
+        If neither a symlink nor a copy could be created.
     """
+
+    import shutil
+
+    # A frozen first run has no app_data tree yet; create the target directory
+    # (and any missing parents) before linking/copying files into it.
+    target_dir.mkdir(parents=True, exist_ok=True)
 
     for item in source_dir.iterdir():
         if item.is_file() and item.name != ".DS_Store":
             target_path = target_dir / item.name
             try:
                 if target_path.exists() or target_path.is_symlink():
+                    target_path.chmod(0o644)
                     target_path.unlink()
 
-                target_path.symlink_to(item.resolve())
+                try:
+                    target_path.symlink_to(item.resolve())
+                except OSError:
+                    # Windows (and some filesystems) can't link; copy instead.
+                    shutil.copyfile(item, target_path)
+
                 # make file in target_dir read-only to prevent accidental edits
                 target_path.chmod(0o444)
                 logger.info(f"Created symlink for '{item.name}' at '{target_path}'.")

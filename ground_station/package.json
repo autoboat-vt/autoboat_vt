@@ -3,7 +3,9 @@
     "type": "module",
     "private": true,
     "scripts": {
-        "serve": "vite --clearScreen false --logLevel error"
+        "serve": "vite --clearScreen false --logLevel error",
+        "build": "vite build",
+        "typecheck": "tsc --noEmit"
     },
     "dependencies": {
         "@maptiler/leaflet-maptilersdk": "latest",

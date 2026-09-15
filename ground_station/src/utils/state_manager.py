@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import fcntl
 import json
 import threading
 from collections.abc import Callable, Generator
@@ -10,6 +9,7 @@ from os import fsync
 from typing import Any, ClassVar, TextIO, TypeVar, cast
 
 from utils import constants
+from utils.file_lock import lock_exclusive, lock_shared, unlock
 
 __all__ = ["StateManager"]
 
@@ -17,7 +17,7 @@ T = TypeVar("T")
 
 
 @contextlib.contextmanager
-def _locked_file(path: constants.FileType, mode: str, lock_type: int) -> Generator[TextIO, None, None]:
+def _locked_file(path: constants.FileType, mode: str, exclusive: bool) -> Generator[TextIO, None, None]:
     """
     Open a file and hold an advisory lock for the duration of the context.
 
@@ -27,8 +27,9 @@ def _locked_file(path: constants.FileType, mode: str, lock_type: int) -> Generat
         File path to open.
     mode
         File open mode.
-    lock_type
-        fcntl lock type, e.g. ``fcntl.LOCK_SH`` or ``fcntl.LOCK_EX``.
+    exclusive
+        When `True`, take an exclusive (write) lock; otherwise a shared
+        (read) lock. See :mod:`utils.file_lock` for platform behavior.
 
     Yields
     ------
@@ -39,11 +40,11 @@ def _locked_file(path: constants.FileType, mode: str, lock_type: int) -> Generat
     with open(file=path, mode=mode, encoding="utf-8") as f:
         f = cast("TextIO", f)
 
-        fcntl.flock(f, lock_type)
+        lock_exclusive(f) if exclusive else lock_shared(f)
         try:
             yield f
         finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+            unlock(f)
 
 
 def _enforce_exact_return_type(expected_type: type[T]) -> Callable[[Callable[..., Any]], Callable[..., T | None]]:
@@ -147,7 +148,11 @@ class StateManager:
             The value to associate with the variable.
         """
 
-        with _locked_file(path=constants.APP_STATE_PATH, mode="r+", lock_type=fcntl.LOCK_EX) as f:
+        constants.APP_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        if not constants.APP_STATE_PATH.exists():
+            constants.APP_STATE_PATH.write_text(json.dumps(constants.STATE_FILE_CONTENTS, indent=4))
+
+        with _locked_file(path=constants.APP_STATE_PATH, mode="r+", exclusive=True) as f:
             data = _load_state(f)
             data[variable] = value
 
@@ -187,7 +192,13 @@ class StateManager:
             if variable in StateManager._cache:
                 return StateManager._cache[variable]
 
-        with _locked_file(path=constants.APP_STATE_PATH, mode="r", lock_type=fcntl.LOCK_SH) as f:
+        # The state file may legitimately not exist yet during very early
+        # startup (before constants.py's bootstrap finishes) or transiently
+        # while an exit-path cleanup removes it. Missing file == empty state.
+        if not constants.APP_STATE_PATH.is_file():
+            return None
+
+        with _locked_file(path=constants.APP_STATE_PATH, mode="r", exclusive=False) as f:
             data = _load_state(f)
             return data.get(variable)
 

@@ -42,7 +42,9 @@ class MapInterface {
     };
     static readonly mapTilerOptions = {
         apiKey: "M9yBkV9J49pYUg5o8SGC",
-        style: "openstreetmap"
+        style: "openstreetmap",
+        tileSize: 512,
+        zoomOffset: -1
     } as ConstructorParameters<typeof MaptilerLayer>[0];
 
     static readonly iconCache = new Map<string, Icon>();
@@ -368,15 +370,21 @@ class MapInterface {
      * Introspect the public API of MapInterface.
      *
      * Returns one entry per public method (those not starting with "_"),
-     * capturing the method name and the names of its parameters. Used by the
-     * Python MapBridge to detect drift between the two sides at runtime.
+     * capturing the method name and its *arity* (number of declared
+     * parameters). Used by the Python MapBridge to detect drift between the
+     * two sides at runtime.
+     *
+     * Parameter *names* are not reported because Vite/Terser minifies them to
+     * single letters in the production bundle (e.g. `lat` -> `e`). `fn.length`
+     * on the other hand is a property of the function object itself and
+     * survives minification.
      *
      * Returns
      * -------
-     * Array<{name: string, params: string[]}>
+     * Array<{name: string, arity: number}>
      */
-    getApi(): Array<{ name: string; params: string[] }> {
-        const api: Array<{ name: string; params: string[] }> = [];
+    getApi(): Array<{ name: string; arity: number }> {
+        const api: Array<{ name: string; arity: number }> = [];
 
         // Methods that are internal to the TS side (introspection, event
         // handlers, TS->Python callbacks) and are not part of the Python->JS
@@ -393,15 +401,10 @@ class MapInterface {
                 continue;
             }
             const fn = descriptor.value as (...args: unknown[]) => unknown;
-            // strip leading/trailing whitespace and parens from the param list
-            const raw = String(fn).slice(0, String(fn).indexOf(")"));
-            const paramStart = raw.indexOf("(");
-            const paramList = paramStart === -1 ? "" : raw.slice(paramStart + 1);
-            const params = paramList
-                .split(",")
-                .map((p) => p.trim())
-                .filter((p) => p.length > 0 && p !== "this");
-            api.push({ name, params });
+            // fn.length = number of declared parameters before the first
+            // one with a default value / rest arg. It is preserved across
+            // minification (the *names* are mangled but the count is not).
+            api.push({ name, arity: fn.length });
         }
         return api;
     }

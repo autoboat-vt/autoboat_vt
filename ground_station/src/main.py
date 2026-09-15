@@ -1,7 +1,75 @@
+"""
+Freeze-aware entry point for the Ground Station application.
+
+This bootstrap must run BEFORE any ``qtpy``/``PySide6`` import so that the
+correct Qt binding is selected even on machines where PyQt5 is also
+installed (e.g. the ROS devcontainer). It also stamps the process-level
+resource root into the ``GROUND_STATION_HOME`` environment variable so that
+every later module import resolves paths relative to a fixed, writable
+directory:
+
+- Development: the ``ground_station`` source folder (whatever this file's
+  parent directory is, regardless of the current working directory).
+- Packaged (PyInstaller) app: the folder containing the executable, so all
+  data created and used by the app stays next to the executable.
+
+``GROUND_STATION_HOME`` is set at most once per process using
+``os.environ.setdefault`` so that a user who explicitly exported the
+variable before launch still wins.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+
+def _resource_root() -> Path:
+    """
+    Return the directory that owns ``app_data`` for this process.
+
+    Returns
+    -------
+    :class:`Path`
+        In a PyInstaller bundle: the folder containing the executable
+        (``sys.executable``'s parent). In development: the parent directory
+        of this file (the ``ground_station`` folder).
+    """
+
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+
+    return Path(__file__).resolve().parent.parent
+
+
+_GS_HOME = _resource_root()
+os.environ.setdefault("GROUND_STATION_HOME", _GS_HOME.as_posix())
+os.chdir(_GS_HOME)
+
+# Select the Qt binding before any qtpy import. PySide6 ships prebuilt
+# wheels for Windows/macOS/Linux (unlike PySide2/PyQt5), so it is the only
+# binding that works everywhere out of the box.
+os.environ.setdefault("QT_API", "pyside6")
+
+# The ground station talks to its bundled servers over plain loopback HTTP;
+# bypass any configured proxy for those requests so corporate proxy settings
+# cannot break the local map/asset servers.
+os.environ.setdefault("NO_PROXY", "localhost,127.0.0.1,::1")
+
+import qtpy  # noqa: E402
+
+if qtpy.API_NAME != "PySide6":
+    message = (
+        f"qtpy selected {qtpy.API_NAME!r} but the Ground Station requires "
+        "PySide6. Uninstall the other Qt bindings (PyQt5/PyQt6/PySide2) or "
+        "pyqtgraph before launching."
+    )
+    raise ImportError(message)
+
 import http.server
 import mimetypes
 import socketserver
-import sys
 import threading
 from collections.abc import Callable
 from typing import Any, NoReturn
@@ -22,7 +90,7 @@ from widgets import (
     InstanceHandler,
     UserGuideWidget,
 )
-from widgets.map_widget import server as map_server
+from widgets.map_widget import frontend_server, server as map_server
 
 logger = get_logger(__name__)
 
@@ -31,22 +99,37 @@ class MainWindow(QMainWindow):
     """Main window for the ground station application."""
 
     def start_asset_server(self) -> None:
-        """Start a quiet HTTP server for static assets."""
+        """Start a quiet HTTP server for static assets (and the built frontend, when present)."""
 
         mimetypes.add_type("image/png", ".png")
         mimetypes.add_type("text/plain", ".txt")
+
+        asset_dir = constants.ASSETS_DIR
 
         class _QuietHandler(http.server.SimpleHTTPRequestHandler):
             def log_message(self, format_string: str, *args: object) -> None:
                 pass
 
         def handler(*args: tuple, **kwargs: dict) -> _QuietHandler:
-            return _QuietHandler(*args, directory=constants.ASSETS_DIR.as_posix(), **kwargs)
+            return _QuietHandler(*args, directory=asset_dir.as_posix(), **kwargs)
 
         socketserver.TCPServer.allow_reuse_address = True
         self.asset_server = socketserver.TCPServer(("", constants.ASSET_SERVER_PORT), handler)
-        logger.info(f"Serving HTTP assets on port {constants.ASSET_SERVER_PORT}...")
+        logger.info(f"Serving HTTP assets from {asset_dir} on port {constants.ASSET_SERVER_PORT}...")
         self.asset_server.serve_forever()
+
+    def start_frontend_server(self) -> None:
+        """Serve the built map frontend on the Vite port from an in-process server."""
+
+        frontend_dir = constants.FRONTEND_SERV_DIR
+        if frontend_dir is None:
+            logger.error("Built frontend not found; map widget will not load.")
+            return
+
+        try:
+            frontend_server.run(constants.VITE_PORT, frontend_dir)
+        except OSError as exc:
+            logger.error(f"Failed to serve frontend on port {constants.VITE_PORT}: {exc}")
 
     def start_map_server(self) -> None:
         """Start the local map widget server."""
@@ -128,6 +211,7 @@ class MainWindow(QMainWindow):
         logger.info("Shutting down asset server...")
         if hasattr(self, "asset_server"):
             self.asset_server.shutdown()
+            self.asset_server.server_close()
 
         logger.info("Releasing map page...")
         if hasattr(constants, "MAP_PAGE") and isinstance(constants.MAP_PAGE, QWebEnginePage):
@@ -176,6 +260,7 @@ if __name__ == "__main__":
         window.setWindowIcon(constants.ICONS.boat)
 
     threading.Thread(target=window.start_asset_server, daemon=True).start()
+    threading.Thread(target=window.start_frontend_server, daemon=True).start()
     threading.Thread(target=window.start_map_server, daemon=True).start()
 
     app.setStyleSheet(constants.STYLE_SHEET)

@@ -91,7 +91,9 @@ if [[ "$os_type" == "linux"* ]]; then
     export QT_QPA_PLATFORM=xcb
 fi
 
-if command -v python >/dev/null; then
+if [[ -x ".venv/bin/python" ]]; then
+    local_python=".venv/bin/python"
+elif command -v python >/dev/null; then
     local_python=$(command -v python)
 elif command -v python3 >/dev/null; then
     local_python=$(command -v python3)
@@ -99,33 +101,47 @@ else
     echo "Python is not installed."
     exit 1
 fi
-command -v bun >/dev/null || {
-    echo "Bun not installed."
-    exit 1
-}
 
-local_bun=$(command -v bun)
+# Set up dependencies into a local .venv on first run, so we don't depend on
+# whatever happens to be in the user/system Python (and can pick our own Qt
+# binding instead of inheriting a conflicting PyQt install).
+if [[ ! -f ".venv/bin/python" ]]; then
+    echo "Creating virtual environment in .venv ..."
+    "$local_python" -m venv .venv
+    local_python=".venv/bin/python"
 
-bun_packages_installed=false
-if [[ -d "node_modules" && -f "bun.lock" ]]; then
-    bun_packages_installed=true
+    echo "Installing Python dependencies ..."
+    "$local_python" -m pip install --upgrade pip >/dev/null
+    "$local_python" -m pip install -r "../.devcontainer/groundstation_required_pip_packages.txt"
 fi
 
-if [[ "$bun_packages_installed" == false ]]; then
-    "$local_bun" install
+FRONTEND_DIST="src/widgets/map_widget/dist"
+if [[ ! -f "$FRONTEND_DIST/index.html" ]]; then
+    echo "Built frontend not found at $FRONTEND_DIST."
+    if ! command -v bun >/dev/null; then
+        echo "Bun is not installed, so the frontend cannot be built."
+        echo "Install Bun (https://bun.sh) once to build the frontend, or use a packaged release."
+        exit 1
+    fi
+
+    if [[ ! -d "node_modules" || ! -f "bun.lock" ]]; then
+        echo "Installing frontend dependencies..."
+        bun install
+    fi
+
+    echo "Building map frontend..."
+    bun run build
 fi
 
-"$local_bun" run serve &
-VITE_PID=$!
-
+# The app now serves the built frontend itself on $VITE_PORT — no Vite
+# dev server needed at runtime. For frontend development with live reload,
+# run `bun run serve` in a separate terminal and set GROUND_STATION_HOME to
+# this directory first.
 "$local_python" "src/main.py" &
 PYTHON_PID=$!
 
 cleanup() {
-    [[ -n "${VITE_PID:-}" ]] && kill "$VITE_PID" 2>/dev/null || true
     [[ -n "${PYTHON_PID:-}" ]] && kill "$PYTHON_PID" 2>/dev/null || true
-
-    [[ -n "${VITE_PID:-}" ]] && wait "$VITE_PID" 2>/dev/null || true
     [[ -n "${PYTHON_PID:-}" ]] && wait "$PYTHON_PID" 2>/dev/null || true
 
     temp_file="app_data/git_ignore/app_state.json"
@@ -134,14 +150,6 @@ cleanup() {
 
 trap 'cleanup' EXIT TERM INT
 
-if wait -n 2>/dev/null; then
-    :
-else
-    while true; do
-        kill -0 "$VITE_PID" 2>/dev/null || break
-        kill -0 "$PYTHON_PID" 2>/dev/null || break
-        sleep 0.5
-    done
-fi
+wait "$PYTHON_PID" 2>/dev/null || true
 
 exit 0

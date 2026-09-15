@@ -3,6 +3,7 @@
 import inspect
 import json
 import os
+import sys
 import time
 from enum import Enum, auto
 from pathlib import Path
@@ -186,28 +187,27 @@ ZERO_MS_TIMER = misc.create_timer(0, single_shot=True)
 _start_time: float = time.time()
 
 # region server ports
-ASSET_SERVER_PORT = os.environ.get("ASSET_SERVER_PORT")
-if ASSET_SERVER_PORT is None:
-    raise RuntimeError("ASSET_SERVER_PORT environment variable not set.")
-else:
-    ASSET_SERVER_PORT = int(ASSET_SERVER_PORT)
+def _env_port(name: str, default: int) -> int:
+    """Read a port from the environment, falling back to ``default``."""
 
-MAP_SERVER_PORT = os.environ.get("MAP_SERVER_PORT")
-if MAP_SERVER_PORT is None:
-    raise RuntimeError("MAP_SERVER_PORT environment variable not set.")
-else:
-    MAP_SERVER_PORT = int(MAP_SERVER_PORT)
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
 
-VITE_PORT = os.environ.get("VITE_PORT")
-if VITE_PORT is None:
-    raise RuntimeError("VITE_PORT environment variable not set.")
-else:
-    VITE_PORT = int(VITE_PORT)
+    try:
+        return int(raw)
+    except ValueError as e:
+        raise RuntimeError(f"Environment variable {name}={raw!r} is not a valid port number.") from e
+
+
+ASSET_SERVER_PORT = _env_port("ASSET_SERVER_PORT", 8000)
+MAP_SERVER_PORT = _env_port("MAP_SERVER_PORT", 3002)
+VITE_PORT = _env_port("VITE_PORT", 5173)
 
 # endregion server ports
 
 # url for local vite server hosting the map
-MAP_URL = QUrl(f"http://127.0.0.1:{VITE_PORT}")
+MAP_URL = QUrl(f"http://127.0.0.1:{VITE_PORT}/index.html")
 
 # see `main.py` for where this is set
 MAP_PAGE: QWebEnginePage
@@ -363,10 +363,77 @@ STATE_FILE_CONTENTS: dict[str, Any] = {
 }
 
 try:
-    # should be the path to wherever `ground_station` is located
-    TOP_LEVEL_DIR = Path(os.getcwd())
+    def _top_level_dir() -> Path:
+        """
+        Resolve the directory that owns ``app_data``.
 
-    SRC_DIR = Path(TOP_LEVEL_DIR / "src")
+        Order of precedence:
+        1. The ``GROUND_STATION_HOME`` environment variable (stamped by the
+           ``main.py`` bootstrap, or exported by the user before launch).
+        2. The current working directory, if it looks like the ground
+           station folder (keeps the historical "run from the repo root"
+           behavior for ad-hoc scripts that bypass ``main.py``).
+        3. The parent of the parent of this file (the ``ground_station``
+           folder), so bare ``python -m``-style imports still resolve.
+
+        Returns
+        -------
+        :class:`Path`
+            Absolute path to the ground station root.
+        """
+
+        stamped = os.environ.get("GROUND_STATION_HOME")
+        if stamped:
+            return Path(stamped).resolve()
+
+        if getattr(sys, "frozen", False):
+            # PyInstaller frozen: the launch binary lives at
+            #   onedir:  <dist>/ground_station/ground_station_app
+            #   BUNDLE:  <dist>/GroundStation.app/Contents/MacOS/ground_station_app
+            # Both layouts should treat the **folder containing the bundle**
+            # (i.e. <dist>/) as the top level, so app_data lives at
+            # <dist>/app_data/ regardless of how the app was built.
+            # For BUNDLE, that's executable.parents[3]; for onedir it's
+            # executable.parent.
+            exe_dir = Path(sys.executable).resolve().parent
+            if exe_dir.parent.name == "Contents" and exe_dir.name == "MacOS":
+                return exe_dir.parents[2]  # .../dist/GroundStation.app
+            return exe_dir  # .../dist/ground_station
+
+        cwd = Path.cwd()
+        if (cwd / "src" / "main.py").is_file():
+            return cwd
+
+        return Path(__file__).resolve().parent.parent.parent
+
+    def _module_dir() -> Path:
+        """Directory containing the ``src`` tree, in bundle or in dev."""
+
+        if getattr(sys, "frozen", False):
+            # PyInstaller frozen: data files collected via datas= land in the
+            # "contents" dir. On onedir this is _internal next to the binary;
+            # in a macOS .app bundle it is Contents/Resources/. We also support
+            # Contents/Resources/_internal in case a spec overrides the contents
+            # directory name later.
+            exe_dir = Path(sys.executable).resolve().parent
+            if exe_dir.parent.name == "Contents" and exe_dir.name == "MacOS":
+                for candidate in (
+                    exe_dir.parent / "Resources" / "_internal" / "ground_station",
+                    exe_dir.parent / "Resources" / "ground_station",
+                ):
+                    if (candidate / "src" / "utils").is_dir():
+                        return candidate
+                # Fall back to Resources/ground_station even if it looks wrong
+                # so the RuntimeError at least names the path we tried.
+                return exe_dir.parent / "Resources" / "ground_station"
+            return exe_dir / "_internal" / "ground_station"
+
+        return Path(__file__).resolve().parent.parent.parent
+
+    TOP_LEVEL_DIR = _top_level_dir()
+    _MODULE_ROOT = _module_dir()
+
+    SRC_DIR = Path(_MODULE_ROOT / "src")
     UTILS_DIR = Path(SRC_DIR / "utils")
     WIDGETS_DIR = Path(SRC_DIR / "widgets")
 
@@ -375,8 +442,13 @@ try:
     GIT_IGNORE_DIR = Path(DATA_DIR / "git_ignore")
     os.makedirs(GIT_IGNORE_DIR, exist_ok=True)
 
-    DEFAULTS_EXAMPLES_DIR = Path(GIT_KEEP_DIR / "defaults_examples")
-    ASSETS_DIR = Path(GIT_KEEP_DIR / "assets")
+    DEFAULTS_EXAMPLES_DIR = Path(_MODULE_ROOT / "app_data" / "git_keep" / "defaults_examples")
+    _LOCAL_DEFAULTS = Path(DATA_DIR / "git_keep" / "defaults_examples")
+    if _LOCAL_DEFAULTS.is_dir():
+        DEFAULTS_EXAMPLES_DIR = _LOCAL_DEFAULTS
+
+    ASSETS_DIR = Path(_MODULE_ROOT / "app_data" / "git_keep" / "assets")
+
     APP_LOGO_PATH = Path(ASSETS_DIR / "logo.png")
     CONSOLE_LOGS_DIR = Path(GIT_IGNORE_DIR / "console_logs")
 
@@ -482,6 +554,25 @@ try:
 
     KEYBINDS_DIR = Path(GIT_IGNORE_DIR / "keybinds")
     misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "keybinds", KEYBINDS_DIR)
+
+    def _frontend_dir() -> Path | None:
+        """
+        Returns
+        -------
+            
+        """
+
+        bundled = Path(WIDGETS_DIR / "map_widget" / "frontend_server.py").parent / "dist"
+        if (bundled / "index.html").is_file():
+            return bundled
+
+        mounted = Path(DATA_DIR / "frontend")
+        if (mounted / "index.html").is_file():
+            return mounted
+
+        return None
+
+    FRONTEND_SERV_DIR: Path | None = _frontend_dir()
 
 except Exception as e:
     raise RuntimeError(f"Initialization error: {e}") from e

@@ -114,11 +114,12 @@ class _QtConsoleHandler(logging.Handler):
 
 def _default_log_dir() -> Path:
     """
-    Locate ``app_data/git_ignore/logs`` without importing ``constants``.
+    Locate ``app_data/git_ignore/console_logs`` without importing ``constants``.
 
-    Mirrors ``constants.LOGS_DIR`` (``cwd / "app_data" / "git_ignore" / "logs"``)
-    so the file handler at import time writes to the same place it would have
-    if attached later via :func:`attach_console_widget`.
+    Mirrors ``constants.CONSOLE_LOGS_DIR``: uses the ``GROUND_STATION_HOME``
+    directory stamped by the ``main.py`` bootstrap when available (so packaged
+    apps log next to the executable), falling back to the current working
+    directory for ad-hoc scripts that bypass ``main.py``.
 
     Returns
     -------
@@ -126,7 +127,11 @@ def _default_log_dir() -> Path:
         The default log directory path.
     """
 
-    return Path.cwd() / "app_data" / "git_ignore" / "console_logs"
+    import os
+
+    home = os.environ.get("GROUND_STATION_HOME")
+    root = Path(home) if home else Path.cwd()
+    return root / "app_data" / "git_ignore" / "console_logs"
 
 
 class _HandlerRegistry:

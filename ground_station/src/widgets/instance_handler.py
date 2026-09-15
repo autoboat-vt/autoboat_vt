@@ -745,6 +745,9 @@ class InstanceWidget(QFrame):
             except RequestException as e:
                 logger.error(f"Failed to connect to instance #{self.instance_id}: {e}")
 
+            except ValueError as e:
+                logger.error(f"Failed to connect to instance #{self.instance_id}: {e}")
+
     @Slot()
     def on_delete_clicked(self) -> None:
         """Handle the delete button click event."""

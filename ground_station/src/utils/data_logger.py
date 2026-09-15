@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import fcntl
 import threading
 from collections.abc import Generator, Iterable
 from csv import DictWriter
@@ -15,6 +14,7 @@ from qtpy.QtCore import QObject, QTimer, Slot
 
 from utils import constants
 from utils.console_logger import get_logger
+from utils.file_lock import lock_exclusive, unlock
 
 __all__ = ["DataLogger"]
 
@@ -61,7 +61,7 @@ _FIELDNAMES = list(DataLogEntry.__annotations__.keys())
 
 
 @contextlib.contextmanager
-def _locked_file(path: constants.FileType, mode: str, lock_type: int) -> Generator[TextIO, None, None]:
+def _locked_file(path: constants.FileType, mode: str, exclusive: bool) -> Generator[TextIO, None, None]:
     """
     Open a file and hold an advisory lock for the duration of the context.
 
@@ -71,8 +71,9 @@ def _locked_file(path: constants.FileType, mode: str, lock_type: int) -> Generat
         File path to open.
     mode
         File open mode.
-    lock_type
-        fcntl lock type, e.g. ``fcntl.LOCK_SH`` or ``fcntl.LOCK_EX``.
+    exclusive
+        When `True`, take an exclusive (write) lock; otherwise a shared
+        (read) lock. See :mod:`utils.file_lock` for platform behavior.
 
     Yields
     ------
@@ -83,11 +84,11 @@ def _locked_file(path: constants.FileType, mode: str, lock_type: int) -> Generat
     with open(path, mode=mode, encoding="utf-8", newline="") as f:
         f = cast("TextIO", f)
 
-        fcntl.flock(f, lock_type)
+        lock_exclusive(f)
         try:
             yield f
         finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+            unlock(f)
 
 
 def _load_log(header_written: bool = False) -> Path:
@@ -121,7 +122,7 @@ def _load_log(header_written: bool = False) -> Path:
         logger.info(f"Creating new data log file at {log}...")
 
     try:
-        with _locked_file(path=log, mode="a+", lock_type=fcntl.LOCK_EX) as f:
+        with _locked_file(path=log, mode="a+", exclusive=True) as f:
             f.seek(0, 2)
 
             if f.tell() == 0:
@@ -247,7 +248,7 @@ class DataLogger(QObject):
         log_file = _load_log(header_written=self._header_written)
         self._header_written = True
 
-        with _locked_file(path=log_file, mode="a", lock_type=fcntl.LOCK_EX) as f:
+        with _locked_file(path=log_file, mode="a", exclusive=True) as f:
             writer = DictWriter(f, fieldnames=_FIELDNAMES, lineterminator="\n")
             writer.writerows(rows)
             f.flush()

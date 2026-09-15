@@ -45,7 +45,20 @@ export default defineConfig(() => {
 
     return {
         root: resolve(import.meta.dirname, "src/widgets/map_widget/frontend"),
-        publicDir: resolve(import.meta.dirname, "app_data"),
+        // Only static public assets belong in the build output. Runtime state
+        // under app_data/git_ignore (logs, app_state.json, caches) must never
+        // be baked into the bundled app.
+        publicDir: resolve(import.meta.dirname, "app_data/git_keep"),
+        build: {
+            // Built once (CI or `bun run build`) and served by the in-process
+            // Python frontend server — no Vite/Node needed at runtime.
+            outDir: resolve(import.meta.dirname, "src/widgets/map_widget/dist"),
+            emptyOutDir: true,
+            // Keep asset paths relative so the bundled index.html works from
+            // any base path the Python server is mounted under.
+            base: "./",
+            copyPublicDir: false
+        },
         server: { host: "127.0.0.1", port: vitePort, strictPort: true, hmr: false },
         define: {
             "import.meta.env.MAP_SERVER_PORT": JSON.stringify(mapServerPort),
