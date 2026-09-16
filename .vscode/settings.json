@@ -171,6 +171,7 @@
         "build": true,
         "install": true
     },
+    "python.defaultInterpreterPath": "/usr/bin/python3",
     "python.analysis.extraPaths": [
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages",
