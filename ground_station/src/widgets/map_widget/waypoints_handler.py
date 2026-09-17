@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from http.server import BaseHTTPRequestHandler
 from threading import Lock

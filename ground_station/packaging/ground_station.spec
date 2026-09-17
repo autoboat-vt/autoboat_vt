@@ -32,6 +32,18 @@ from pathlib import Path
 from PyInstaller.building.datastruct import TOC
 from PyInstaller.utils.hooks import collect_data_files
 
+# The Ground Station is built with Python 3.10 (3.10.12, matching the
+# ros:humble devcontainer base and CI). Wheels/pyinstaller output are not
+# forward-compatible across Python minor versions, so refuse to build from
+# anything else (e.g. a stray 3.12/3.13 interpreter) instead of silently
+# producing a bundle that cannot run on 3.10.12.
+if sys.version_info[:2] != (3, 10):
+    raise SystemExit(
+        f"ground_station.spec must be run under Python 3.10 (3.10.12); "
+        f"got {sys.version.split()[0]}. "
+        "Set PYTHON_BIN to a Python 3.10 interpreter before invoking build_app.sh."
+    )
+
 block_cipher = None
 
 _PACKAGING_DIR = Path(SPECPATH).resolve()  # ground_station/packaging/

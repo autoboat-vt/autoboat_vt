@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 from collections import deque
 from typing import Any
@@ -35,7 +37,9 @@ class GraphViewer(QWidget):
     :class:`QWidget`
     """
 
-    boat_data_signal = Signal(tuple)
+    boat_data_signal = Signal(
+        tuple[dict[str, Any], constants.TelemetryStatus]
+    )
 
     def __init__(self) -> None:
         super().__init__()

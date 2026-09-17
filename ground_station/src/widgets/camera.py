@@ -102,25 +102,26 @@ class CameraWidget(QWidget):
         if not self.image_fetcher.isRunning():
             self.image_fetcher.start()
 
-    def update_camera_feed(self, image: bytes) -> None:
+    def update_camera_feed(self, request_result: tuple[bytes, constants.TelemetryStatus]) -> None:
         """
         Update the camera feed with a new image.
 
         Parameters
         ----------
-        image
-            The new image data.
+        request_result
+            A tuple containing the image data as bytes and the status of the telemetry request.
         """
 
+        if request_result[1] == constants.TelemetryStatus.FAILURE:
+            logger.warning("Failed to fetch image from telemetry server. Using default image.")
+
+        elif request_result[1] == constants.TelemetryStatus.WRONG_FORMAT:
+            logger.warning(
+                "Received image from telemetry server is either empty or in an unsupported format. Using default image."
+            )
+
         pixmap = QPixmap()
-
-        try:
-            pixmap.loadFromData(QByteArray(image))
-
-        except Exception as e:
-            logger.error(f"Failed to load image from data: {e}")
-            return
-
+        pixmap.loadFromData(QByteArray(request_result[0]))
         self.current_pixmap = pixmap
         self._update_pixmap()
 

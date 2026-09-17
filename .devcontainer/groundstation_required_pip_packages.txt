@@ -2,6 +2,7 @@
 
 # Qt binding & desktop UI
 pyside6
+types-PySide6
 QtPy
 QtAwesome
 pyqtgraph
@@ -20,11 +21,4 @@ PyYAML
 pytz
 StrEnum
 svg.py
-# NOTE: must NOT be pinned to 1.26.4 here. numpy 1.26.x ships no cp313
-# wheels, so on Python 3.13 pip builds from source — on Windows that yields
-# an experimental MinGW build that segfaults (exit 0xC0000005) inside
-# PyInstaller's isolated hook-discovery subprocess. numpy>=2.1 has proper
-# cp313 wheels on all platforms and is API-compatible with the ground
-# station's usage (np.ndarray, np typing, numpy.number). The ROS-side
-# 1.26.4 pin lives in the other requirements file (ultralytics compat).
 numpy>=2.1

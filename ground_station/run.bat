@@ -1,6 +1,6 @@
 @echo off
 rem Launch the Ground Station from source on Windows.
-rem Requires Python 3.10+ and Bun (first run only, to build the map frontend).
+rem Requires Python 3.10 (3.10.12) and Bun (first run only, to build the map frontend).
 setlocal
 
 cd /d "%~dp0"

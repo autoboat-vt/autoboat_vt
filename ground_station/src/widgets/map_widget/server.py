@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from http.server import ThreadingHTTPServer
 
 from utils import constants

@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import pathlib
-from typing import cast
+from typing import Any
 from urllib.parse import urljoin
 
 from requests import RequestException
@@ -7,7 +9,6 @@ from requests import RequestException
 from qtpy.QtCore import QThread, Signal
 
 from utils import constants, misc
-from utils.console_logger import get_logger
 
 __all__ = [
     "AutopilotThreadRouter",
@@ -16,9 +17,6 @@ __all__ = [
     "InstanceManagerThreadRouter",
     "WaypointThreadRouter",
 ]
-
-logger = get_logger(__name__)
-
 
 class AutopilotThreadRouter:
     """
@@ -46,7 +44,7 @@ class AutopilotThreadRouter:
         :class:`QThread`
         """
 
-        response = Signal(tuple)
+        response = Signal(str, constants.TelemetryStatus)
 
         def __init__(self) -> None:
             super().__init__()
@@ -95,7 +93,7 @@ class AutopilotThreadRouter:
         :class:`QThread`
         """
 
-        response = Signal(tuple)
+        response = Signal(list[dict[str, Any]], constants.TelemetryStatus)
 
         def __init__(self) -> None:
             super().__init__()
@@ -152,7 +150,7 @@ class BoatStatusThreadRouter:
         :class:`QThread`
         """
 
-        data_fetched = Signal(tuple)
+        data_fetched = Signal(dict[str, Any], constants.TelemetryStatus)
 
         def run(self) -> None:
             """Run the thread to fetch boat status from the telemetry server."""
@@ -205,7 +203,7 @@ class InstanceManagerThreadRouter:
         :class:`QThread`
         """
 
-        response = Signal(tuple)
+        response = Signal(list[dict[str, Any]], constants.TelemetryStatus)
 
         def __init__(self) -> None:
             super().__init__()
@@ -263,7 +261,7 @@ class WaypointThreadRouter:
                 - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
-        response = Signal(tuple)
+        response = Signal(list[list[int | float]], constants.TelemetryStatus)
 
         def __init__(self) -> None:
             super().__init__()
@@ -288,7 +286,7 @@ class WaypointThreadRouter:
                     raise TypeError
 
                 for waypoint in data:
-                    if not isinstance(waypoint, (tuple, list)):
+                    if not isinstance(waypoint, list):
                         raise TypeError
 
                     if not all(isinstance(coord, (int, float)) for coord in waypoint):
@@ -319,7 +317,7 @@ class WaypointThreadRouter:
         :class:`QThread`
         """
 
-        response = Signal(tuple)
+        response = Signal(list[list[int | float]], constants.TelemetryStatus)
 
         def __init__(self) -> None:
             super().__init__()
@@ -339,7 +337,7 @@ class WaypointThreadRouter:
                     raise TypeError
 
                 for waypoint in data:
-                    if not isinstance(waypoint, (tuple, list)):
+                    if not isinstance(waypoint, list):
                         raise TypeError
                     if not all(isinstance(coord, (int, float)) for coord in waypoint):
                         raise TypeError
@@ -377,7 +375,7 @@ class ImageThreadRouter:
         :class:`QThread`
         """
 
-        data_fetched = Signal(bytes)
+        data_fetched = Signal(bytes, constants.TelemetryStatus)
 
         def __init__(self) -> None:
             super().__init__()
@@ -410,15 +408,15 @@ class ImageThreadRouter:
 
                 image = response.content
                 if not image:
-                    raise ValueError("Image data is empty")
+                    raise ValueError
 
-            except RequestException as e:
-                logger.warning(f"Failed to fetch image from telemetry server: {e}")
+            except RequestException:
                 image = pathlib.Path(constants.ASSETS_DIR / "new_logo.png").read_bytes()
+                self.data_fetched.emit((image, constants.TelemetryStatus.FAILURE))
 
-            except ValueError as e:
-                logger.warning(f"{e}")
+            except ValueError:
                 image = pathlib.Path(constants.ASSETS_DIR / "new_logo.png").read_bytes()
+                self.data_fetched.emit((image, constants.TelemetryStatus.WRONG_FORMAT))
 
-            image = cast("bytes", image)
-            self.data_fetched.emit(image)
+            else:
+                self.data_fetched.emit((image, constants.TelemetryStatus.SUCCESS))

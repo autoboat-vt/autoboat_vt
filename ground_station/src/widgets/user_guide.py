@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from qtpy.QtGui import QCloseEvent
 from qtpy.QtWebEngineWidgets import QWebEnginePage, QWebEngineProfile, QWebEngineView
 from qtpy.QtWidgets import QVBoxLayout, QWidget

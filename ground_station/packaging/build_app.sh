@@ -19,31 +19,37 @@ for arg in "$@"; do
     esac
 done
 
+# The Ground Station is built with Python 3.10 (3.10.12, matching the
+# ros:humble devcontainer base and CI). Newer Pythons produce wheels/binaries
+# that cannot run on the 3.10.12 target, so we REQUIRE 3.10 here and never
+# fall through to python3.11/3.12/3.13.
+_py_is_310() {
+    "$1" -c 'import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 10) else 1)' 2>/dev/null
+}
+
 PYTHON_BIN="${PYTHON_BIN:-}"
 if [[ -z "$PYTHON_BIN" ]]; then
     if [[ -d ".venv" ]]; then
-        if .venv/bin/python -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' 2>/dev/null; then
+        if _py_is_310 .venv/bin/python; then
             PYTHON_BIN=".venv/bin/python"
             [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]] && PYTHON_BIN=".venv/Scripts/python.exe"
         else
-            echo "Existing .venv uses Python < 3.10; recreating it (venv is disposable) ..."
+            echo "Existing .venv uses a Python other than 3.10; recreating it (venv is disposable) ..."
             rm -rf .venv
         fi
     fi
     if [[ -z "$PYTHON_BIN" ]]; then
-        for candidate in python3.13 python3.12 python3.11 python3.10 python3 python; do
-            if command -v "$candidate" >/dev/null 2>&1; then
-                if "$candidate" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' 2>/dev/null; then
-                    PYTHON_BIN=$(command -v "$candidate")
-                    break
-                fi
+        for candidate in python3.10 python3 python; do
+            if command -v "$candidate" >/dev/null 2>&1 && _py_is_310 "$candidate"; then
+                PYTHON_BIN=$(command -v "$candidate")
+                break
             fi
         done
     fi
 fi
 if [[ -z "$PYTHON_BIN" ]]; then
-    echo "Python >= 3.10 is required to build the Ground Station." >&2
-    echo "Install it (https://www.python.org / brew / pyenv) or set PYTHON_BIN." >&2
+    echo "Python 3.10 is required to build the Ground Station (expected 3.10.12, matching CI and the devcontainer)." >&2
+    echo "Install it (https://www.python.org / brew / pyenv) or set PYTHON_BIN to a Python 3.10 interpreter." >&2
     exit 1
 fi
 echo "Using Python: $PYTHON_BIN ($($PYTHON_BIN --version 2>&1))"
