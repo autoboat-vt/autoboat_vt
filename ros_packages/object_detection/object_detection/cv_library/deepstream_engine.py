@@ -24,7 +24,7 @@ os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
 
 IS_DEV_CONTAINER = re.search("/home/ws", os.getcwd()) is not None
 
-SHOULD_DISPLAY = False
+SHOULD_DISPLAY = True
 # NUM_IMAGES_TO_SAVE = 10000
 
 # These are constants. Don't change these. Needed for a workaround with DeepStream 7.1 and JetPack 6.2
@@ -118,6 +118,7 @@ class DeepStreamEngine:
         else:
             source0 = Gst.ElementFactory.make("videotestsrc", "usb-cam-0")
             source0.set_property('pattern', 18)
+            source0.set_property('is-live', True)
             self.info_callback("Opening videotestsrc")
 
         """
@@ -180,7 +181,7 @@ class DeepStreamEngine:
         nvvidconv_right.set_property('nvbuf-memory-type', MEMORY_TYPE)
         nvvidconv_right.set_property('compute-hw', COMPUTE_HW)
         nvvidconv_right.set_property('src-crop', f"{self.cam_list[0]['width'] // 2}:0:"
-                                                 f"{self.cam_list[0]['width']}:{self.cam_list[0]['height']}")
+                                                 f"{self.cam_list[0]['width'] // 2}:{self.cam_list[0]['height']}")
         caps_nvvidconv_right = Gst.ElementFactory.make("capsfilter", "nvmm-caps-right")
         caps_nvvidconv_right.set_property(
             "caps",
