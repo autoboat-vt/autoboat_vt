@@ -35,8 +35,20 @@ pico_sdk_init()
 
 link_directories($ENV{PICO_MICROROS_SDK_PATH}/libmicroros)
 
+# FreeRTOS kernel (submodule at firmware/freertos); FreeRTOSConfig.h lives in src/
+# CMP0079 lets us link pico_stdlib into the kernel targets defined in that subdirectory.
+cmake_policy(SET CMP0079 NEW)
+set(FREERTOS_PORT GCC_RP2040 CACHE STRING "")
+set(FREERTOS_HEAP 4 CACHE STRING "")
+add_library(freertos_config INTERFACE)
+target_include_directories(freertos_config INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/freertos freertos)
+target_link_libraries(freertos_kernel PRIVATE pico_stdlib)
+target_link_libraries(freertos_kernel_port PRIVATE pico_stdlib)
+
 add_executable(pico_microros
     src/main.cpp
+    src/rtos_main.cpp
     src/microros.cpp 
     src/spi_device.cpp
     src/amt22_encoder.cpp
@@ -54,6 +66,8 @@ target_link_libraries(pico_microros
     hardware_spi
     hardware_i2c
     hardware_pwm
+    freertos_kernel
+    freertos_config
 )
 
 target_include_directories(pico_microros PUBLIC

@@ -83,6 +83,42 @@ private:
 // Unit Tests (LED Demo)
 // -----------------------------------------------------
 
+// These tests can't see inside the Pico's FreeRTOS scheduler directly, but
+// rtos_main.cpp only reaches Systems::application_loop_step() (which publishes
+// /heading) once both the microros_task and node_task FreeRTOS tasks are
+// created, scheduled, and running past sharedReady. So receiving that topic at
+// a steady cadence is indirect evidence the tasks are alive and not deadlocked.
+
+TEST_CASE("FreeRTOS application loop is publishing", "[freertos][pico]") {
+    PicoInterface pico;
+
+    INFO("Waiting for ROS 2 discovery...");
+    std::this_thread::sleep_for(2000ms);
+
+    INFO("Waiting for /heading from node_task's application_loop_step()");
+    REQUIRE(pico.wait_for_heading(5000ms));
+}
+
+TEST_CASE("FreeRTOS node_task loop is not stalled", "[freertos][pico]") {
+    PicoInterface pico;
+
+    INFO("Waiting for ROS 2 discovery...");
+    std::this_thread::sleep_for(2000ms);
+
+    // node_task runs application_loop_step() roughly every 10ms. A stalled or
+    // deadlocked scheduler would yield zero or very few messages here.
+    int received_count = 0;
+    auto window_start = std::chrono::steady_clock::now();
+    while (std::chrono::steady_clock::now() - window_start < 2000ms) {
+        if (pico.wait_for_heading(500ms)) {
+            received_count++;
+        }
+    }
+
+    INFO("Received " << received_count << " /heading messages in 2s window");
+    REQUIRE(received_count >= 2);
+}
+
 TEST_CASE("LED blink test", "[test][pico][led]") {
     PicoInterface pico;
 

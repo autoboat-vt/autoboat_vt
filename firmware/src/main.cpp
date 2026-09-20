@@ -4,14 +4,21 @@
 #include "common_libraries.h"
 //#include "microros.hpp"
 #include "systems.hpp"
+#include "rtos_main.h"
 
 
 // Change when adding new nodes
 #define NUMBER_OF_NODES 1
 
 
+int main()
+{
+    start_rtos_main();
+    for (;;) {}
+}
 
 
+/* Previous bare-metal entry point, superseded by the FreeRTOS runtime above.
 int main()
 {
     //instantiate boat system
@@ -58,3 +65,4 @@ int main()
         system.cleanup();
     }
 }
+*/
