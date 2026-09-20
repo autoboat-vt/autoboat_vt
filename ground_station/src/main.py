@@ -8,7 +8,7 @@ from typing import Any, NoReturn
 
 from qtpy.QtCore import QThread, QtMsgType, qInstallMessageHandler
 from qtpy.QtGui import QCloseEvent, QIcon
-from qtpy.QtWebEngineWidgets import QWebEnginePage
+from qtpy.QtWebEngineWidgets import QWebEnginePage, QWebEngineSettings
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 
 from utils import constants, misc
@@ -64,6 +64,7 @@ class MainWindow(QMainWindow):
         self.setUnifiedTitleAndToolBarOnMac(True)
 
         constants.MAP_PAGE = QWebEnginePage()
+        constants.MAP_PAGE.settings().setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
         constants.MAP_PAGE.load(constants.MAP_URL)
 
         self.main_widget = QTabWidget()

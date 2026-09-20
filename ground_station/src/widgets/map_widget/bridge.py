@@ -177,26 +177,23 @@ class MapBridge:
                 logger.warning("map.getApi() did not return a list; drift check skipped.")
                 return
 
-            ts_sigs: dict[str, list[str]] = {}
+            ts_sigs: dict[str, int] = {}
             for entry in ts_list:
                 if isinstance(entry, dict) and isinstance(entry.get("name"), str):
-                    ts_sigs[entry["name"]] = list(entry.get("params", []))
+                    arity = entry.get("arity")
+                    if isinstance(arity, int):
+                        ts_sigs[entry["name"]] = arity
 
-            py_sigs = self.get_api_signatures()
+            py_sigs: dict[str, int] = {name: len(params) for name, params in self.get_api_signatures().items()}
             ts_names = set(ts_sigs)
             py_names = set(py_sigs)
 
             missing_in_py = ts_names - py_names
             missing_in_ts = py_names - ts_names
 
-            def _norm(params: list[str]) -> list[str]:
-                """Normalize parameter names for comparison."""
-
-                return [p.replace("_", "").lower() for p in params]
-
-            param_mismatches: list[tuple[str, list[str], list[str]]] = []
+            param_mismatches: list[tuple[str, int, int]] = []
             for name in ts_names & py_names:
-                if _norm(ts_sigs[name]) != _norm(py_sigs[name]):
+                if ts_sigs[name] != py_sigs[name]:
                     param_mismatches.append((name, ts_sigs[name], py_sigs[name]))
 
             if not (missing_in_py or missing_in_ts or param_mismatches):
@@ -209,8 +206,8 @@ class MapBridge:
             if missing_in_ts:
                 logger.warning(f"MapBridge methods not in TS: {sorted(missing_in_ts)}")
 
-            for name, ts_p, py_p in param_mismatches:
-                logger.warning(f"Param mismatch for '{name}': TS={ts_p}, PY={py_p}")
+            for name, ts_arity, py_arity in param_mismatches:
+                logger.warning(f"Param-arity mismatch for '{name}': TS expects {ts_arity} arg(s), PY expects {py_arity} arg(s)")
 
         def _retry() -> None:
             self._browser.page().runJavaScript(js_probe, _on_result)
@@ -232,9 +229,7 @@ class MapBridge:
         self._call("update_boat_heading", heading)
 
     @_map_api
-    def update_boat_location_and_heading(
-        self, lat: float, lon: float, heading: float, record_track: bool = True
-    ) -> None:
+    def update_boat_location_and_heading(self, lat: float, lon: float, heading: float, record_track: bool = True) -> None:
         """Update the boat marker position and heading in one call."""
 
         self._call("update_boat_location_and_heading", lat, lon, heading, record_track)
@@ -254,7 +249,7 @@ class MapBridge:
     @_map_api
     def focus_map_on_buoy(self, lat: float, lon: float) -> None:
         """Center the map on a buoy marker and focus it."""
-        
+
         self._call("focus_map_on_buoy", lat, lon)
 
     @_map_api

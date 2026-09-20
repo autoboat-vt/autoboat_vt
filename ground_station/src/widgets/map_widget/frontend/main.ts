@@ -1,4 +1,3 @@
-import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
 import {
     control,
     type Icon,
@@ -6,7 +5,8 @@ import {
     map as LeafletMap,
     type Map as LeafletMapType,
     type LeafletMouseEvent,
-    type MapOptions
+    type MapOptions,
+    tileLayer
 } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-rotatedmarker";
@@ -40,18 +40,12 @@ class MapInterface {
         maxBoundsViscosity: 1.0,
         attributionControl: true
     };
-    static readonly mapTilerOptions = {
-        apiKey: "M9yBkV9J49pYUg5o8SGC",
-        style: "openstreetmap"
-    } as ConstructorParameters<typeof MaptilerLayer>[0];
-
     static readonly iconCache = new Map<string, Icon>();
     static readonly assetsUrl = `http://localhost:${import.meta.env.ASSET_SERVER_PORT ?? "8000"}`;
     static readonly waypointsUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/waypoints`;
     static readonly checkLandUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/check_land`;
     static readonly bathymetryUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/bathymetry`;
     static readonly landBoundaryUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/land_boundary`;
-
     lastFocusedTimestamp = 0;
     private waypointHistory: { type: "add" | "remove"; waypoint: LatLngTuple; color?: string }[] = [];
 
@@ -96,7 +90,17 @@ class MapInterface {
 
     constructor() {
         this.map = LeafletMap("map", MapInterface.mapOptions);
-        new MaptilerLayer(MapInterface.mapTilerOptions).addTo(this.map);
+        const mapTilerKey = "M9yBkV9J49pYUg5o8SGC";
+        tileLayer(`https://api.maptiler.com/maps/openstreetmap/{z}/{x}/{y}.jpg?key=${mapTilerKey}`, {
+            minZoom: MapInterface.MIN_ZOOM,
+            maxZoom: MapInterface.MAX_ZOOM,
+            tileSize: 512,
+            zoomOffset: -1,
+            noWrap: true,
+            attribution:
+                '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>',
+            crossOrigin: true
+        }).addTo(this.map);
 
         // have to set max bounds after adding the maptiler layer, otherwise it will be overridden
         // and the map will be able to pan outside of the bounds
@@ -368,15 +372,21 @@ class MapInterface {
      * Introspect the public API of MapInterface.
      *
      * Returns one entry per public method (those not starting with "_"),
-     * capturing the method name and the names of its parameters. Used by the
-     * Python MapBridge to detect drift between the two sides at runtime.
+     * capturing the method name and its *arity* (number of declared
+     * parameters). Used by the Python MapBridge to detect drift between the
+     * two sides at runtime.
+     *
+     * Parameter *names* are not reported because Vite/Terser minifies them to
+     * single letters in the production bundle (e.g. `lat` -> `e`). `fn.length`
+     * on the other hand is a property of the function object itself and
+     * survives minification.
      *
      * Returns
      * -------
-     * Array<{name: string, params: string[]}>
+     * Array<{name: string, arity: number}>
      */
-    getApi(): Array<{ name: string; params: string[] }> {
-        const api: Array<{ name: string; params: string[] }> = [];
+    getApi(): Array<{ name: string; arity: number }> {
+        const api: Array<{ name: string; arity: number }> = [];
 
         // Methods that are internal to the TS side (introspection, event
         // handlers, TS->Python callbacks) and are not part of the Python->JS
@@ -393,15 +403,10 @@ class MapInterface {
                 continue;
             }
             const fn = descriptor.value as (...args: unknown[]) => unknown;
-            // strip leading/trailing whitespace and parens from the param list
-            const raw = String(fn).slice(0, String(fn).indexOf(")"));
-            const paramStart = raw.indexOf("(");
-            const paramList = paramStart === -1 ? "" : raw.slice(paramStart + 1);
-            const params = paramList
-                .split(",")
-                .map((p) => p.trim())
-                .filter((p) => p.length > 0 && p !== "this");
-            api.push({ name, params });
+            // fn.length = number of declared parameters before the first
+            // one with a default value / rest arg. It is preserved across
+            // minification (the *names* are mangled but the count is not).
+            api.push({ name, arity: fn.length });
         }
         return api;
     }
