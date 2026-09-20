@@ -80,6 +80,51 @@ private:
 };
 
 // -----------------------------------------------------
+// Unit Tests (FreeRTOS sanity checks)
+// -----------------------------------------------------
+//
+// These tests can't see inside the Pico's FreeRTOS scheduler directly,
+// but rtos_main.cpp only reaches Systems::application_loop_step() (which
+// publishes /current_rudder_angle, /current_rudder_motor_angle, and
+// /heading) once both the microros_task and node_task FreeRTOS tasks are
+// created, scheduled, and running past sharedReady. So receiving these
+// topics at a steady cadence is indirect evidence the FreeRTOS tasks are
+// alive and not deadlocked/starved.
+
+TEST_CASE("FreeRTOS application loop is publishing", "[freertos][pico]") {
+    PicoInterface pico;
+
+    INFO("Waiting for ROS 2 discovery...");
+    std::this_thread::sleep_for(2000ms);
+
+    INFO("Waiting for /heading from node_task's application_loop_step()");
+    REQUIRE(pico.wait_for_heading(5000ms));
+}
+
+TEST_CASE("FreeRTOS node_task loop is not stalled", "[freertos][pico]") {
+    PicoInterface pico;
+
+    INFO("Waiting for ROS 2 discovery...");
+    std::this_thread::sleep_for(2000ms);
+
+    // node_task runs application_loop_step() roughly every 10ms
+    // (vTaskDelay(pdMS_TO_TICKS(10))). If the FreeRTOS scheduler were
+    // stalled/deadlocked (e.g. microros_task never setting sharedReady,
+    // or a task priority/stack issue), we would see zero or very few
+    // heading messages in a fixed window instead of a steady stream.
+    int received_count = 0;
+    auto window_start = std::chrono::steady_clock::now();
+    while (std::chrono::steady_clock::now() - window_start < 2000ms) {
+        if (pico.wait_for_heading(500ms)) {
+            received_count++;
+        }
+    }
+
+    INFO("Received " << received_count << " /heading messages in 2s window");
+    REQUIRE(received_count >= 2);
+}
+
+// -----------------------------------------------------
 // Unit Tests (LED Demo)
 // -----------------------------------------------------
 
