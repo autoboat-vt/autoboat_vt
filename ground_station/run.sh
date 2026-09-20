@@ -99,34 +99,33 @@ else
     echo "Python is not installed."
     exit 1
 fi
+command -v bun >/dev/null || {
+    echo "Bun not installed."
+    exit 1
+}
 
-FRONTEND_DIST="src/widgets/map_widget/dist"
-if [[ ! -f "$FRONTEND_DIST/index.html" ]]; then
-    echo "Built frontend not found at $FRONTEND_DIST."
-    if ! command -v bun >/dev/null; then
-        echo "Bun is not installed, so the frontend cannot be built."
-        echo "Install Bun (https://bun.sh) once to build the frontend, or use a packaged release."
-        exit 1
-    fi
+local_bun=$(command -v bun)
 
-    if [[ ! -d "node_modules" || ! -f "bun.lock" ]]; then
-        echo "Installing frontend dependencies..."
-        bun install
-    fi
-
-    echo "Building map frontend..."
-    bun run build
+bun_packages_installed=false
+if [[ -d "node_modules" && -f "bun.lock" ]]; then
+    bun_packages_installed=true
 fi
 
-# The app now serves the built frontend itself on $VITE_PORT — no Vite
-# dev server needed at runtime. For frontend development with live reload,
-# run `bun run serve` in a separate terminal and set GROUND_STATION_HOME to
-# this directory first.
+if [[ "$bun_packages_installed" == false ]]; then
+    "$local_bun" install
+fi
+
+"$local_bun" run serve &
+VITE_PID=$!
+
 "$local_python" "src/main.py" &
 PYTHON_PID=$!
 
 cleanup() {
+    [[ -n "${VITE_PID:-}" ]] && kill "$VITE_PID" 2>/dev/null || true
     [[ -n "${PYTHON_PID:-}" ]] && kill "$PYTHON_PID" 2>/dev/null || true
+
+    [[ -n "${VITE_PID:-}" ]] && wait "$VITE_PID" 2>/dev/null || true
     [[ -n "${PYTHON_PID:-}" ]] && wait "$PYTHON_PID" 2>/dev/null || true
 
     temp_file="app_data/git_ignore/app_state.json"
@@ -135,6 +134,14 @@ cleanup() {
 
 trap 'cleanup' EXIT TERM INT
 
-wait "$PYTHON_PID" 2>/dev/null || true
+if wait -n 2>/dev/null; then
+    :
+else
+    while true; do
+        kill -0 "$VITE_PID" 2>/dev/null || break
+        kill -0 "$PYTHON_PID" 2>/dev/null || break
+        sleep 0.5
+    done
+fi
 
 exit 0
