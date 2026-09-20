@@ -21,4 +21,4 @@ PyYAML
 pytz
 StrEnum
 svg.py
-numpy>=2.1
+numpy==1.26.4

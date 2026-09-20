@@ -26,6 +26,7 @@ matplotlib             # required only for the sailboat simulation
 click                  # required only for the sailboat simulation
 
 # Misc / Generally useful
+numpy==1.26.4
 requests
 jsonc-parser
 docker
