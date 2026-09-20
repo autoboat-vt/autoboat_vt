@@ -42,6 +42,9 @@ RUN groupadd --gid $USER_GID $USERNAME \
    python3-opencv \
    ros-humble-vision-opencv \
    software-properties-common \
+   pipewire-audio-client-libraries \
+   libxkbfile-dev \
+   libpipewire-0.3-dev \
    libx11-xcb1 \
    libxcb1 \
    libxcb-util1 \
