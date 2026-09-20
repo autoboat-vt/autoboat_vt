@@ -91,28 +91,13 @@ if [[ "$os_type" == "linux"* ]]; then
     export QT_QPA_PLATFORM=xcb
 fi
 
-if [[ -x ".venv/bin/python" ]]; then
-    local_python=".venv/bin/python"
-elif command -v python >/dev/null; then
+if command -v python >/dev/null; then
     local_python=$(command -v python)
 elif command -v python3 >/dev/null; then
     local_python=$(command -v python3)
 else
     echo "Python is not installed."
     exit 1
-fi
-
-# Set up dependencies into a local .venv on first run, so we don't depend on
-# whatever happens to be in the user/system Python (and can pick our own Qt
-# binding instead of inheriting a conflicting PyQt install).
-if [[ ! -f ".venv/bin/python" ]]; then
-    echo "Creating virtual environment in .venv ..."
-    "$local_python" -m venv .venv
-    local_python=".venv/bin/python"
-
-    echo "Installing Python dependencies ..."
-    "$local_python" -m pip install --upgrade pip >/dev/null
-    "$local_python" -m pip install -r "../.devcontainer/groundstation_required_pip_packages.txt"
 fi
 
 FRONTEND_DIST="src/widgets/map_widget/dist"
