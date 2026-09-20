@@ -20,7 +20,7 @@ This file triangulates the positions of objects. It is called by the localizatio
 
 ## Model Generation
 
-The following files are used in generation a model .engine file:
+The following files are used in generating a model .engine file:
 
 - export_yolo11_dev_container.py
 - export_yolo11.py
