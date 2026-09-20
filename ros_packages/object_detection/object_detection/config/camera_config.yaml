@@ -3,8 +3,8 @@
     v4l2_format: YUYV
     gst_format: YUY2
     name: ZED 2i # The name is used to regex search the available camera devices.
-    width: 2560 # The stream is 2 1920x1080 streams side-by-side
-    height: 720
+    width: 3840 # The stream is 2 1920x1080 streams side-by-side
+    height: 1080
     framerate: 30/1
     baseline: 120 # The distance between the two cameras in millimeters.
     hfov: 110 # The horizontal field of view of the camera in degrees.
