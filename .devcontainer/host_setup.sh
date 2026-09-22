@@ -91,13 +91,23 @@ write_host_environment_variables() {
 
 write_devcontainer_environment_variables() {
 	local display_value="$1"
+	local force_software="${2:-false}"
+
+	# Strip any accidental leading DISPLAY=
+	display_value="${display_value#DISPLAY=}"
 
 	log_info "Updating $ENV_FILE"
 	{
 		echo "devcontainer_environment_variables"
 		echo
 		echo "DISPLAY=$display_value"
-		echo "USER=${USER:-unknown}"
+		echo "USER=${USER:-autoboat_user}"
+		echo "LIBGL_ALWAYS_INDIRECT=0"
+		echo "QT_X11_NO_MITSHM=1"
+		echo "ENABLE_WEBGL=false"
+		if [[ "$force_software" == "true" ]]; then
+			echo "LIBGL_ALWAYS_SOFTWARE=1"
+		fi
 	} >"$ENV_FILE"
 }
 
@@ -275,15 +285,20 @@ setup_linux() {
 
 	elif command -v nvidia-smi &>/dev/null; then
 		log_warn "NVIDIA GPU Detected, but you are not running a linux distribution that supports devcontainer GPU forwarding. Running CPU-only mode."
-		write_devcontainer_environment_variables "$DISPLAY"
+		write_devcontainer_environment_variables "$DISPLAY" "false"
 		write_host_environment_variables
 		ensure_host_environment_variables_are_sourced
-	
+
+	elif [ -d "/dev/dri" ]; then
+		log_info "Intel/AMD GPU detected (/dev/dri found)."
+		write_host_environment_variables 'export DOCKER_GPU_RUN_ARGS="--device=/dev/dri:/dev/dri"' 'export DOCKER_RUNTIME_RUN_ARGS="IGNORE_THIS=hi"'
+		write_devcontainer_environment_variables "$DISPLAY" "false"
+		ensure_host_environment_variables_are_sourced
 
 	else
-		log_info "No NVIDIA GPU found. Running CPU-only mode."
+		log_info "No supported GPU found. Running CPU-only mode with Mesa llvmpipe which forces software rendering."
 		write_host_environment_variables
-		write_devcontainer_environment_variables "$DISPLAY"
+		write_devcontainer_environment_variables "$DISPLAY" "true"
 		ensure_host_environment_variables_are_sourced
 	fi
 }
@@ -309,10 +324,14 @@ setup_macos() {
 		fi
 	fi
 
-	write_host_environment_variables "TEST=hi"
-	write_devcontainer_environment_variables "DISPLAY=docker.for.mac.host.internal:0"
+	# Configure XQuartz to accept network connections from Docker VM
+	defaults write org.xquartz.X11 nolisten_tcp -bool false
+	defaults write org.xquartz.X11 enable_iglx -bool true
+
+	write_host_environment_variables
+	write_devcontainer_environment_variables "host.docker.internal:0" "true"
 	ensure_host_environment_variables_are_sourced
-	log_warn "GPU passthrough not supported on Docker Desktop for macOS."
+	log_warn "GPU passthrough not supported on Docker Desktop for macOS. Mesa software rendering enabled."
 }
 
 # -----------------------------------------------------------------------------
@@ -321,9 +340,9 @@ setup_macos() {
 setup_unknown() {
 	log_warn "Unsupported OS detected: $OS"
 	write_host_environment_variables
-	write_devcontainer_environment_variables "$DISPLAY"
+	write_devcontainer_environment_variables "${DISPLAY:-:0}" "true"
 	ensure_host_environment_variables_are_sourced
-	log_warn "Running CPU-only. Display may not work properly."
+	log_warn "Running CPU-only mode with Mesa software rendering."
 }
 
 

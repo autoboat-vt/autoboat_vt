@@ -18,13 +18,22 @@ ARG TARGETARCH
 
 ENV SHELL=/bin/bash
 ENV DEBIAN_FRONTEND=noninteractive
+ENV LIBGL_ALWAYS_INDIRECT=0
+ENV QT_X11_NO_MITSHM=1
+ENV QTWEBENGINE_CHROMIUM_FLAGS="--ignore-gpu-blocklist --enable-webgl --enable-gpu-rasterization --no-sandbox"
 
 
 
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && groupadd -f render \
+    && usermod -aG video,render $USERNAME \
     && apt-get update && apt-get install -y --no-install-recommends \
     sudo \
+    mesa-utils \
+    libgl1-mesa-dri \
+    libglx-mesa0 \
+    libegl-mesa0 \
     python3-pip \
     cron \
     usbutils \

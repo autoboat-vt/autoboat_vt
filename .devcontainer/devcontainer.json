@@ -50,10 +50,16 @@
         "ROS_AUTOMATIC_DISCOVERY_RANGE": "LOCALHOST",
         "ROS_DOMAIN_ID": "42",
         "CONTAINER_OWNER_USER_NAME": "${localEnv:USER}",
-        "TZ": "${localEnv:TZ:America/New_York}"
+        "TZ": "${localEnv:TZ:America/New_York}",
+        "LIBGL_ALWAYS_INDIRECT": "0",
+        "QT_X11_NO_MITSHM": "1",
+        "QTWEBENGINE_CHROMIUM_FLAGS": "--ignore-gpu-blocklist --enable-webgl --enable-gpu-rasterization --no-sandbox",
+        "NVIDIA_VISIBLE_DEVICES": "all",
+        "NVIDIA_DRIVER_CAPABILITIES": "all"
     },
     "runArgs": [
         "--net=host",
+        "--ipc=host",
         "--platform=linux/amd64",
         "-v",
         "/dev:/dev",
@@ -62,8 +68,7 @@
         "/var/run/docker.sock:/var/run/docker.sock",
         "${localEnv:DOCKER_GPU_RUN_ARGS:--env}",
         "${localEnv:DOCKER_RUNTIME_RUN_ARGS:IGNORE_THIS=hi}",
-        "--name=autoboat_dev_container",
-        "--privileged"
+        "--name=autoboat_dev_container"
         // "--device=/dev/ttyACM0",
         // "--device-cgroup-rule=c 166:* rmw"
     ],

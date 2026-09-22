@@ -6,10 +6,20 @@
 
 AUTOBOAT_USER_HOME="/home/autoboat_user"
 
+# Ensure user belongs to video/render groups and has access to AMD/Intel GPU devices if present
+sudo groupadd -f render 2>/dev/null || true
+sudo usermod -aG video,render autoboat_user 2>/dev/null || true
+if [ -d "/dev/dri" ]; then
+    sudo chmod -R 666 /dev/dri 2>/dev/null || true
+fi
+
 # This is very unsafe lol but I need this to be able to access docker from inside of the dev container for the sim. 
 # Do not remove unless we are releasing this software as a product
 echo "sudo chmod 777 /var/run/docker.sock" >> $AUTOBOAT_USER_HOME/.bashrc
 echo export GZ_SIM_SYSTEM_PLUGIN_PATH=/home/ws/build/foil_dynamics/:/home/ws/build/sail_limits/:/home/ws/build/custom_lift_drag/:/home/ws/build/wind_arrow/ >> $AUTOBOAT_USER_HOME/.bashrc
+echo 'export LIBGL_ALWAYS_INDIRECT=0' >> $AUTOBOAT_USER_HOME/.bashrc
+echo 'export QT_X11_NO_MITSHM=1' >> $AUTOBOAT_USER_HOME/.bashrc
+echo 'export QTWEBENGINE_CHROMIUM_FLAGS="--ignore-gpu-blocklist --enable-webgl --enable-gpu-rasterization --no-sandbox"' >> $AUTOBOAT_USER_HOME/.bashrc
 
 
 # Make sure that you can just type python and you don't have to type python3 because people will get confused

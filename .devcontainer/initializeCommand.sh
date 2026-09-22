@@ -1,11 +1,31 @@
 #!/usr/bin/env bash
 
 # ---------------------------------------------------------------------------------------------------------
-# These commands are run right on the host computer before the docker container starts up
+# These commands are run on the host computer right before the docker container starts up
 # ---------------------------------------------------------------------------------------------------------
 
-# ensure that this finishes even if the command fails (the user doesn't have xhost)
-xhost +local: || true  
+
+if [ -d "/opt/X11/bin" ]; then
+    export PATH="/opt/X11/bin:$PATH"
+fi
+
+
+HOST_OS="$(uname -s 2>/dev/null || echo Unknown)"
+case "$HOST_OS" in
+    Linux)
+        xhost +local:root 2>/dev/null || true
+        xhost +local:"${USER:-}" 2>/dev/null || true
+        xhost +local: 2>/dev/null || true
+        ;;
+    Darwin)
+        xhost + 127.0.0.1 2>/dev/null || true
+        xhost + localhost 2>/dev/null || true
+        ;;
+    *)
+        xhost +local: 2>/dev/null || true
+        # Some unsupported OS.
+        ;;
+esac
 
 
 # we would like to only pull the development image if we are rebuilding the devcontainer (which is equivalent to creating a new container).

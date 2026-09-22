@@ -1,5 +1,6 @@
 import http.server
 import mimetypes
+import os
 import socketserver
 import sys
 import threading
@@ -8,7 +9,7 @@ from typing import Any, NoReturn
 
 from qtpy.QtCore import QThread, QtMsgType, qInstallMessageHandler
 from qtpy.QtGui import QCloseEvent, QIcon
-from qtpy.QtWebEngineWidgets import QWebEnginePage
+from qtpy.QtWebEngineWidgets import QWebEnginePage, QWebEngineSettings
 from qtpy.QtWidgets import QApplication, QMainWindow, QTabWidget
 
 from utils import constants, misc
@@ -160,7 +161,23 @@ if __name__ == "__main__":
     # which we store so _filter_qt_messages can forward non-spam messages to it.
     _default_handler[0] = qInstallMessageHandler(_filter_qt_messages)
 
+    if os.environ.get("ENABLE_WEBGL") == "true":
+        logger.info("Enabling WebGL support for QWebEngine...")
+        os.environ.setdefault("LIBGL_ALWAYS_INDIRECT", "0")
+        os.environ.setdefault("QT_X11_NO_MITSHM", "1")
+        os.environ.setdefault(
+            "QTWEBENGINE_CHROMIUM_FLAGS",
+            "--ignore-gpu-blocklist --enable-webgl --enable-gpu-rasterization --no-sandbox",
+        )
+
     app = QApplication(sys.argv)
+    
+    if os.environ.get("ENABLE_WEBGL") == "true":
+        QWebEngineSettings.globalSettings().setAttribute(QWebEngineSettings.WebGLEnabled, True)
+        QWebEngineSettings.globalSettings().setAttribute(QWebEngineSettings.Accelerated2dCanvasEnabled, True)
+    
+    
+    
     constants.ICONS = misc.get_icons()
 
     window = MainWindow()
