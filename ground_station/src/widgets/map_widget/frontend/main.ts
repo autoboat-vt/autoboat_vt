@@ -1,3 +1,4 @@
+import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
 import {
     control,
     type Icon,
@@ -5,8 +6,7 @@ import {
     map as LeafletMap,
     type Map as LeafletMapType,
     type LeafletMouseEvent,
-    type MapOptions,
-    tileLayer
+    type MapOptions
 } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-rotatedmarker";
@@ -40,12 +40,20 @@ class MapInterface {
         maxBoundsViscosity: 1.0,
         attributionControl: true
     };
+    static readonly mapTilerOptions = {
+        apiKey: "M9yBkV9J49pYUg5o8SGC",
+        style: "openstreetmap",
+        tileSize: 512,
+        zoomOffset: -1
+    } as ConstructorParameters<typeof MaptilerLayer>[0];
+
     static readonly iconCache = new Map<string, Icon>();
     static readonly assetsUrl = `http://localhost:${import.meta.env.ASSET_SERVER_PORT ?? "8000"}`;
     static readonly waypointsUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/waypoints`;
     static readonly checkLandUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/check_land`;
     static readonly bathymetryUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/bathymetry`;
     static readonly landBoundaryUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/land_boundary`;
+
     lastFocusedTimestamp = 0;
     private waypointHistory: { type: "add" | "remove"; waypoint: LatLngTuple; color?: string }[] = [];
 
@@ -90,17 +98,7 @@ class MapInterface {
 
     constructor() {
         this.map = LeafletMap("map", MapInterface.mapOptions);
-        const mapTilerKey = "M9yBkV9J49pYUg5o8SGC";
-        tileLayer(`https://api.maptiler.com/maps/openstreetmap/{z}/{x}/{y}.jpg?key=${mapTilerKey}`, {
-            minZoom: MapInterface.MIN_ZOOM,
-            maxZoom: MapInterface.MAX_ZOOM,
-            tileSize: 512,
-            zoomOffset: -1,
-            noWrap: true,
-            attribution:
-                '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>',
-            crossOrigin: true
-        }).addTo(this.map);
+        new MaptilerLayer(MapInterface.mapTilerOptions).addTo(this.map);
 
         // have to set max bounds after adding the maptiler layer, otherwise it will be overridden
         // and the map will be able to pan outside of the bounds
