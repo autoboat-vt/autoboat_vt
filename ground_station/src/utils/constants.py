@@ -192,31 +192,31 @@ if ASSET_SERVER_PORT is None:
 else:
     ASSET_SERVER_PORT = int(ASSET_SERVER_PORT)
 
-MAP_SERVER_PORT = os.environ.get("MAP_SERVER_PORT")
-if MAP_SERVER_PORT is None:
-    raise RuntimeError("MAP_SERVER_PORT environment variable not set.")
+MAP_CALLBACK_PORT = os.environ.get("MAP_CALLBACK_PORT")
+if MAP_CALLBACK_PORT is None:
+    raise RuntimeError("MAP_CALLBACK_PORT environment variable not set.")
 else:
-    MAP_SERVER_PORT = int(MAP_SERVER_PORT)
+    MAP_CALLBACK_PORT = int(MAP_CALLBACK_PORT)
 
-VITE_PORT = os.environ.get("VITE_PORT")
-if VITE_PORT is None:
-    raise RuntimeError("VITE_PORT environment variable not set.")
+MAP_VIEWER_PORT = os.environ.get("MAP_VIEWER_PORT")
+if MAP_VIEWER_PORT is None:
+    raise RuntimeError("MAP_VIEWER_PORT environment variable not set.")
 else:
-    VITE_PORT = int(VITE_PORT)
+    MAP_VIEWER_PORT = int(MAP_VIEWER_PORT)
 
 # endregion server ports
 
 # url for local vite server hosting the map
-MAP_URL = QUrl(f"http://127.0.0.1:{VITE_PORT}")
+MAP_URL = QUrl(f"http://127.0.0.1:{MAP_VIEWER_PORT}")
 
 # see `main.py` for where this is set
 MAP_PAGE: QWebEnginePage
 
 # url for local waypoints server
-_waypoints_server_url: str = f"http://127.0.0.1:{MAP_SERVER_PORT}/waypoints"
+_waypoints_server_url: str = urljoin(f"http://127.0.0.1:{MAP_CALLBACK_PORT}", "waypoints")
 
 # url for documentation
-DOCUMENTATION_URL = QUrl("https://autoboat-vt.github.io/documentation")
+DOCUMENTATION_URL = QUrl(urljoin("https://autoboat-vt.github.io", "documentation"))
 
 TELEMETRY_TIMEOUT_SECONDS = 10
 TELEMETRY_RETRY_ATTEMPTS = 3
@@ -364,7 +364,7 @@ STATE_FILE_CONTENTS: dict[str, Any] = {
 
 try:
     # should be the path to wherever `ground_station` is located
-    TOP_LEVEL_DIR = Path(os.getcwd())
+    TOP_LEVEL_DIR = Path(os.getcwd()).resolve()
 
     SRC_DIR = Path(TOP_LEVEL_DIR / "src")
     UTILS_DIR = Path(SRC_DIR / "utils")

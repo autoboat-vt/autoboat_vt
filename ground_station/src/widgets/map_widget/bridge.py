@@ -102,8 +102,10 @@ class MapBridge:
         """
         Run a pre-built JS expression through the load guard.
 
-        Use this for batch calls (multiple :meth:`map.X()` statements joined by
-        newlines) where calling individual methods would be impractical.
+        Parameters
+        ----------
+        js
+            The raw JS code to run.
         """
 
         self._browser.page().runJavaScript(_js_load_guard(js))

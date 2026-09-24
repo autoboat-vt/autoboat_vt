@@ -39,7 +39,6 @@
     "biome.lsp.watcher.kind": "recommended",
     "biome.requireConfiguration": true,
     "biome.suggestInstallingGlobally": false,
-    "cmake.cmakePath": "/usr/bin/cmake",
     "cmake.ignoreCMakeListsMissing": true,
     "evenBetterToml.schema.links": true,
     "evenBetterToml.semanticTokens": true,
