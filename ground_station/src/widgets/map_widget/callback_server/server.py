@@ -17,8 +17,8 @@ def assemble_map_callback_server() -> ThreadingHTTPServer:
 
     The server listens on ``constants.MAP_CALLBACK_PORT`` and handles requests for
     waypoints, land checks, and bathymetry data. It uses a :class:`WaypointsHandler`
-    to process incoming requests, which in turn relies on a :class:`LandChecker`
-    and a :class:`BathymetryProvider` to provide the necessary data. The server is
+    to process incoming requests, which in turn relies on :class:`LandChecker`
+    and :class:`BathymetryProvider` to provide the necessary data. The server is
     intended to run in a separate thread, independent of the main PyQt event loop.
 
     Since :class:`http.server.BaseServer` instantiates the request handler with
