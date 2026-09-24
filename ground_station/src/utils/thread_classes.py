@@ -1,5 +1,4 @@
 import pathlib
-from typing import cast
 from urllib.parse import urljoin
 
 from requests import RequestException
@@ -7,7 +6,6 @@ from requests import RequestException
 from qtpy.QtCore import QThread, Signal
 
 from utils import constants, misc
-from utils.console_logger import get_logger
 
 __all__ = [
     "AutopilotThreadRouter",
@@ -16,8 +14,6 @@ __all__ = [
     "InstanceManagerThreadRouter",
     "WaypointThreadRouter",
 ]
-
-logger = get_logger(__name__)
 
 
 class AutopilotThreadRouter:
@@ -410,16 +406,11 @@ class ImageThreadRouter:
                     raise RequestException(f"HTTP {response.status_code}: {response.text.strip()}")
 
                 image = response.content
-                if not image:
-                    raise ValueError("Image data is empty")
 
-            except RequestException as e:
-                logger.warning(f"Failed to fetch image from telemetry server: {e}")
-                image = pathlib.Path(constants.ASSETS_DIR / "new_logo.png").read_bytes()
+            except RequestException:
+                image = b""
 
-            except ValueError as e:
-                logger.warning(f"{e}")
-                image = pathlib.Path(constants.ASSETS_DIR / "new_logo.png").read_bytes()
+            except Exception:
+                image = b""
 
-            image = cast("bytes", image)
             self.data_fetched.emit(image)
