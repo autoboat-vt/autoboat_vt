@@ -1,4 +1,3 @@
-import pathlib
 from urllib.parse import urljoin
 
 from requests import RequestException
