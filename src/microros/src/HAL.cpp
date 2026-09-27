@@ -40,13 +40,17 @@ void HAL::init_i2c(){
     gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
     gpio_pull_up(SDA_PIN);
     gpio_pull_up(SCL_PIN);
-
-
-
 }
 
+void init_rudderEncoder(amt22* rudderEncoder) {
+    rudderEncoder = new amt22(RUDDER_ENCODER_CS_PIN, SPI_PORT);
+}
 
-void HAL::init_rudder_stepper(drv8711*& rudderStepperMotorDriver) {
+void init_winchEncoder(amt22* winchEncoder) {
+    winchEncoder = new amt22(WINCH_ENCODER_CS_PIN, SPI_PORT);
+}
+
+void HAL::init_rudder_stepper(drv8711* rudderStepperMotorDriver) {
     rudderStepperMotorDriver = new drv8711(SPI_PORT, RUDDER_MOTOR_CS_PIN, RUDDER_MOTOR_SLEEP_PIN, AutoMixed, RUDDER_MICROSTEP, MAX_RUDDER_CURRENT);
 }
 

@@ -6,6 +6,7 @@
 // TODO: include all driver libraries here
 #include "spi_device.hpp"
 #include "common_libraries.h"
+#include "amt22_encoder_library.hpp"
 #include "drv8711_stepper_motor_driver_library.hpp"
 #include "i2c_device.hpp"
 #ifdef __cplusplus
@@ -43,7 +44,9 @@ void init_i2c();
 void init_uart();
 
 // device specifics
-void init_rudder_stepper(drv8711*& rudderStepperMotorDriver);
+void init_rudderEncoder(amt22* rudderEncoder);
+void init_winchEncoder(amt22* winchEncoder);
+void init_rudder_stepper(drv8711* rudderStepperMotorDriver);
 void init_contactor();
 void init_hydraulics();
 void init_magnetometer();

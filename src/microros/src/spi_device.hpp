@@ -18,11 +18,11 @@ class spi_device {
         spi_device(spi_inst_t* spi_port, uint csPin);
 
 
-        // Transfer a single byte
-        uint8_t transfer(uint8_t data);
+        // // Transfer a single byte
+        // uint8_t transfer(uint8_t data);
 
-        // Transfer multiple bytes
-        void transfer(const uint8_t* tx, uint8_t* rx, size_t len);
+        // // Transfer multiple bytes
+        // void transfer(const uint8_t* tx, uint8_t* rx, size_t len);
 
         void cs_low();
     

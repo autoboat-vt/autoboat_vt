@@ -1,8 +1,5 @@
 #include "systems.hpp"
 
-static drv8711* rudderStepperMotorDriver = nullptr;
-static drv8711* winchStepperMotorDriver = nullptr;
-
 Systems::Systems(boat_type bt)
 {
   current_boat = bt;
@@ -41,6 +38,8 @@ void Systems::initialize_hal()
   gpio_init(RUDDER_MOTOR_CS_PIN);
   gpio_set_dir(RUDDER_MOTOR_CS_PIN, GPIO_OUT);
   gpio_pull_down(RUDDER_MOTOR_CS_PIN);
+  HAL::init_rudderEncoder(zero_rudder::encoder);
+  HAL::init_winchEncoder(zero_winch::encoder);
   HAL::init_rudder_stepper(rudderStepperMotorDriver);
 }
 
@@ -64,7 +63,7 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
   // -----------------------------------------------------
   // RUDDER CLOSED LOOP CONTROL
   // -----------------------------------------------------
-  float current_rudder_motor_angle = rudderEncoder.get_motor_angle() + RUDDER_ANGLE_OFFSET;
+  float current_rudder_motor_angle = zero_rudder::encoder->get_motor_angle() + RUDDER_ANGLE_OFFSET;
   if (current_rudder_motor_angle >= 180.0f)
     current_rudder_motor_angle -= 360.0f;
 
