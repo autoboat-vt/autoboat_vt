@@ -1,7 +1,7 @@
 #include "systems.hpp"
 
-static drv8711 rudderStepperMotorDriver;
-static drv8711 winchStepperMotorDriver;
+static drv8711* rudderStepperMotorDriver = nullptr;
+static drv8711* winchStepperMotorDriver = nullptr;
 
 Systems::Systems(boat_type bt)
 {
@@ -41,7 +41,7 @@ void Systems::initialize_hal()
   gpio_init(RUDDER_MOTOR_CS_PIN);
   gpio_set_dir(RUDDER_MOTOR_CS_PIN, GPIO_OUT);
   gpio_pull_down(RUDDER_MOTOR_CS_PIN);
-  HAL::init_rudder_stepper(&rudderStepperMotorDriver);
+  HAL::init_rudder_stepper(rudderStepperMotorDriver);
 }
 
 void Systems::cleanup()
@@ -80,9 +80,9 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
 
     // Set direction
     if (rudder_error > 0)
-      drv8711_setDirection(&rudderStepperMotorDriver, CLOCKWISE);
+      rudderStepperMotorDriver->drv8711_setDirection(CLOCKWISE);
     else
-      drv8711_setDirection(&rudderStepperMotorDriver, COUNTER_CLOCKWISE);
+      rudderStepperMotorDriver->drv8711_setDirection(COUNTER_CLOCKWISE);
 
     number_of_steps_rudder = (int)(fabsf(rudder_error) * RUDDER_GAIN / MAX_RUDDER_ERROR);
     if (number_of_steps_rudder > RUDDER_NUMBER_OF_STEPS_TO_CLIP_AT)
@@ -95,7 +95,7 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
   for (int i = 0; i < number_of_steps_rudder; i++)
   {
     if (rudder_step_enabled)
-      drv8711_step(&rudderStepperMotorDriver);
+      rudderStepperMotorDriver->drv8711_step();
     sleep_us(1000);
   }
 

@@ -28,6 +28,10 @@ class spi_device {
     
         void cs_high();
 
+        void cs_motor_low();
+
+        void cs_motor_high();
+
     protected:
         spi_inst_t* spi_port;
         uint csPin;

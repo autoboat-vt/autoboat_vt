@@ -40,6 +40,7 @@ add_executable(pico_microros
     src/microros.cpp 
     src/spi_device.cpp
     src/amt22_encoder.cpp
+    src/drv8711_stepper_motor_driver_library.cpp
     src/i2c_device.cpp
     src/cmps14_compass.cpp
     src/systems.cpp

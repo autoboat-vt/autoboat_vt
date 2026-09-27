@@ -30,8 +30,6 @@
             gpio_put(SPI_MUX_S0, (csPin & 0x01)); 
             gpio_put(SPI_MUX_S1, ((csPin >> 1) & 0x01));  
             gpio_put(SPI_MUX_S2, ((csPin >> 2) & 0x01)); 
-    
-
             asm volatile("nop \n nop \n nop");
             asm volatile("nop \n nop \n nop");
         }
@@ -43,6 +41,24 @@
             gpio_put(SPI_MUX_S0, 1);  // Active Low
             gpio_put(SPI_MUX_S1, 1);  // Active Low
             gpio_put(SPI_MUX_S2, 1);  // Active Low
+            asm volatile("nop \n nop \n nop");
+            asm volatile("nop \n nop \n nop");
+        }
+
+        //this some bullshit for testing
+        void spi_device::cs_motor_low() {
+            asm volatile("nop \n nop \n nop");
+            asm volatile("nop \n nop \n nop");
+            gpio_put(RUDDER_MOTOR_CS_PIN, 0); 
+            asm volatile("nop \n nop \n nop");
+            asm volatile("nop \n nop \n nop");
+        }
+
+        //this some bullshit for testing
+        void spi_device::cs_motor_high() {
+            asm volatile("nop \n nop \n nop");
+            asm volatile("nop \n nop \n nop");
+            gpio_put(RUDDER_MOTOR_CS_PIN, 1); 
             asm volatile("nop \n nop \n nop");
             asm volatile("nop \n nop \n nop");
         }

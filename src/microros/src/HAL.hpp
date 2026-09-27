@@ -43,7 +43,7 @@ void init_i2c();
 void init_uart();
 
 // device specifics
-void init_rudder_stepper(drv8711* rudderStepperMotorDriver);
+void init_rudder_stepper(drv8711*& rudderStepperMotorDriver);
 void init_contactor();
 void init_hydraulics();
 void init_magnetometer();
