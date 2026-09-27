@@ -12,59 +12,60 @@ from .autopilot_library.utils.astar import Astar, Inside
 
 
 class PathfindingNode(Node):
-
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("sailboat_pathfinding")
         self.get_logger().info("working")
 
         # subscribing to position and waypoints
-        self.gps_subscriber=self.create_subscription(NavSatFix, "/position", self.gps_call, qos_profile_sensor_data)
-        self.waypoint_subscriber=self.create_subscription(WaypointList, "/waypoints_list", self.waypoint_call, qos_profile_sensor_data)
-        self.obstacle_subscriber=self.create_subscription(WaypointList, "/obstacles_list", self.obstacle_call, qos_profile_sensor_data)
-        self.create_timer(1.0,self.runpath)
-        
+        self.gps_subscriber = self.create_subscription(NavSatFix, "/position", self.gps_call, qos_profile_sensor_data)
+        self.waypoint_subscriber = self.create_subscription(
+            WaypointList, "/waypoints_list", self.waypoint_call, qos_profile_sensor_data
+        )
+        self.obstacle_subscriber = self.create_subscription(
+            WaypointList, "/obstacles_list", self.obstacle_call, qos_profile_sensor_data
+        )
+        self.create_timer(1.0, self.runpath)
 
         # creating intermediate waypoint publisher
-        self.waypath_publisher=self.create_publisher(WaypointList, "/waypoint_path", qos_profile_sensor_data)
+        self.waypath_publisher = self.create_publisher(WaypointList, "/waypoint_path", qos_profile_sensor_data)
 
         # initializing variables needed across functions
         self.boat = []
-        self.boatGPS=[]
-        self.destinations=[]
-        self.wayindex=0
-        self.reference=[0,0]
-        self.obstacles=[]
+        self.boatGPS = []
+        self.destinations = []
+        self.wayindex = 0
+        self.reference = [0, 0]
+        self.obstacles = []
 
-    def gps_call(self,msg: NavSatFix): # argument in function is a shorthand for calling msg as object of NavSatFix
+    def gps_call(self, msg: NavSatFix) -> None: # argument in function is a shorthand for calling msg as object of NavSatFix
         # boat GPS coordinates (updates over time so I made it a self variable)
-        self.boatGPS=[msg.longitude,msg.latitude]
-        
-    def waypoint_call(self,msg: WaypointList): # function calling for waypoints once sent
+        self.boatGPS = [msg.longitude, msg.latitude]
+
+    def waypoint_call(self, msg: WaypointList) -> None:  # function calling for waypoints once sent
         self.get_logger().info("waypoint call")
-        self.wayindex=0     # resetting the index counter when new waypoints are sent
-        self.destinations=[]
+        self.wayindex = 0  # resetting the index counter when new waypoints are sent
+        self.destinations = []
 
         # creating list of position objects
-        posList=[]
+        posList = []
         for i in range(len(msg.waypoints)):
-                # adding to position object list
-                posList.append(Position(msg.waypoints[i].longitude,msg.waypoints[i].latitude))
+            # adding to position object list
+            posList.append(Position(msg.waypoints[i].longitude, msg.waypoints[i].latitude))
 
         # reference 1st waypoint
-        self.destinations.append([0,0])                             # reference is set to to origin in local
-        self.reference=[posList[0].longitude,posList[0].latitude]   # setting reference variable
+        self.destinations.append([0, 0])  # reference is set to to origin in local
+        self.reference = [posList[0].longitude, posList[0].latitude]  # setting reference variable
 
         # local for rest of the waypoints
-        for i in range(1,len(msg.waypoints)):
-            [lon,lat]=posList[i].get_local_coordinates(self.reference)
-            self.destinations.append([lon,lat])
-    
-    def obstacle_call(self,msg: WaypointList):
+        for i in range(1, len(msg.waypoints)):
+            [lon, lat] = posList[i].get_local_coordinates(self.reference)
+            self.destinations.append([lon, lat])
+
+    def obstacle_call(self, msg: WaypointList) -> None:
         self.obstacles.append([msg.waypoints])
         self.get_logger().info(self.obstacles)
 
-    
-    def make_path(self, src, des):
+    def make_path(self, src: list[float], des: list[float]) -> list[list[float]]:
 
         # outputting the boat and destination waypoint
         self.get_logger().info("------------ source and destination LOCAL coordinates -----------------------------------")
@@ -72,98 +73,111 @@ class PathfindingNode(Node):
         self.get_logger().info(str(des))
 
         # the euclidean distance between boat and waypoint
-        lims=int(math.ceil(math.sqrt((des[0]-src[0])**2+(des[1]-src[1])**2)))+1
+        lims = int(math.ceil(math.sqrt((des[0] - src[0]) ** 2 + (des[1] - src[1]) ** 2))) + 1
 
         # making distance from boat to waypoint
         # the boat is at the center of the matrix
-        xdist=int(math.floor(des[0]-src[0]))+lims-1
-        ydist=int(math.floor(des[1]-src[1]))+lims-1
-
+        xdist = int(math.floor(des[0] - src[0])) + lims - 1
+        ydist = int(math.floor(des[1] - src[1])) + lims - 1
 
         # ** in progress: working on manipulation of each object **
-        local_obs=[]
+        local_obs = []
         if self.obstacles:
-            GPS_vertices=[]
-            loc_vertices=[]
+            GPS_vertices = []
+            loc_vertices = []
             for obstacle in self.obstacles:
                 for i in range(len(obstacle)):
-                    GPS_vertices.append(Position(obstacle[i].longitude,obstacle[i].latitude))
+                    GPS_vertices.append(Position(obstacle[i].longitude, obstacle[i].latitude))
 
                 for i in range(len(obstacle)):
-                    [lon,lat]=GPS_vertices[i].get_local_coordinates(self.reference)
-                    loc_vertices.append([int(math.floor(lon-src[0]))+lims-1,int(math.floor(lat-src[1]))+lims-1])
-                
+                    [lon, lat] = GPS_vertices[i].get_local_coordinates(self.reference)
+                    loc_vertices.append([int(math.floor(lon - src[0])) + lims - 1, int(math.floor(lat - src[1])) + lims - 1])
+
                 local_obs.append(loc_vertices)
 
             # turning local to matrix indices
             for polygon in local.obs:
-                for m in range(lims*2):
-                    for n in range(lims*2):
-                        pt = Inside(m,n)
-                        matrix[m][n]=0 if pt.check(polygon) else 1
-        
+                for m in range(lims * 2):
+                    for n in range(lims * 2):
+                        pt = Inside(m, n)
+                        matrix[m][n] = 0 if pt.check(polygon) else 1
 
         # creating matrix
-        matrix=[[1 for _ in range(lims*2)] for _ in range(lims*2)]
+        matrix = [[1 for _ in range(lims * 2)] for _ in range(lims * 2)]
         self.get_logger().info("------------ source and destination MATRIX coordinates -----------------------------------")
-        self.get_logger().info(str(lims-1))
+        self.get_logger().info(str(lims - 1))
         self.get_logger().info(str(xdist) + " " + str(ydist))
 
-        
         # matrix[lims-1][lims-1]=2             this is the boat position
         # matrix[xdist][ydist]=3               this is the next waypoint position
-        
+
         # self.get_logger().info(str(matrix))
 
         # solving the matrix using Astar algo
-        sol=Astar(matrix)
-        matrixDir = sol.astar([lims-1,lims-1],[xdist,ydist])
+        sol = Astar(matrix)
+        matrixDir = sol.astar([lims - 1, lims - 1], [xdist, ydist])
 
         # --------------------- conversion of the astar indices back to local coordinates --------------------------------------
-        indexList=sol.astar([lims-1,lims-1],[xdist,ydist])
+        indexList = sol.astar([lims - 1, lims - 1], [xdist, ydist])
         self.get_logger().info("---------------------------------- path MATRIX coordinates -----------------------------------")
         self.get_logger().info(str(matrixDir))
 
         # turning matrix coordinates back into local
         local = []
         for coord in matrixDir:
-            local.append([coord[0]+src[0]+1-lims,coord[1]+src[1]+1-lims])
+            local.append([coord[0] + src[0] + 1 - lims, coord[1] + src[1] + 1 - lims])
 
-        self.get_logger().info("--------------------------------------- path LOCAL coordinates -----------------------------------")
+        self.get_logger().info(
+            "--------------------------------------- path LOCAL coordinates -----------------------------------"
+        )
         self.get_logger().info(str(local))
 
         return local
-    
-    def send_path(self,path):
+
+    def send_path(self, path: list[list[float]]) -> None:
         # turning path local coordinates into GPS coordinates
-        GPScoords=[]
-        
+        GPScoords = []
+
         for p in path:
-            #self.get_logger().info(" the point LOCAL coordinate is " + str(p))
-            #conversion=ref.get_longitude_latitude(p)
-            point=Position
-            point.set_local_coordinates(point,p[0],p[1],self.reference[0],self.reference[1])
-            GPScoords.append(NavSatFix(longitude=point.longitude,latitude=point.latitude))
-        
+            # self.get_logger().info(" the point LOCAL coordinate is " + str(p))
+            # conversion=ref.get_longitude_latitude(p)
+            point = Position
+            point.set_local_coordinates(point, p[0], p[1], self.reference[0], self.reference[1])
+            GPScoords.append(NavSatFix(longitude=point.longitude, latitude=point.latitude))
+
         self.waypath_publisher.publish(WaypointList(waypoints=GPScoords))
 
-    def runpath(self):
+    def runpath(self) -> None:
 
         # creating boat position object for local coordinate change
-        boat = Position(self.boatGPS[0],self.boatGPS[1])
+        boat = Position(self.boatGPS[0], self.boatGPS[1])
         self.boat = boat.get_local_coordinates(self.reference)
-        path =[]
+        path = []
 
         # when destinations list is not empty, run the path
         if self.destinations:
-            if self.wayindex==0:
-                path=self.make_path(self.boat, self.destinations[0])
+            if self.wayindex == 0:
+                path = self.make_path(self.boat, self.destinations[0])
                 self.wayindex += 1
 
-            dist=math.sqrt((self.destinations[self.wayindex-1][0]-self.boat[0])**2+(self.destinations[self.wayindex-1][1]-self.boat[1])**2)
-            self.get_logger().info("\non waypoint " + str(self.wayindex) + "\n boat position: " + str(self.boat) +"\nlongitude: " + str(self.destinations[self.wayindex-1][0]) + "\nlatitude: " + str(self.destinations[self.wayindex-1][1]) + "\ndistance: " + str(dist))
+            dist = math.sqrt(
+                (self.destinations[self.wayindex - 1][0] - self.boat[0]) ** 2
+                + (self.destinations[self.wayindex - 1][1] - self.boat[1]) ** 2
+            )
+            self.get_logger().info(
+                "\non waypoint "
+                + str(self.wayindex)
+                + "\n boat position: "
+                + str(self.boat)
+                + "\nlongitude: "
+                + str(self.destinations[self.wayindex - 1][0])
+                + "\nlatitude: "
+                + str(self.destinations[self.wayindex - 1][1])
+                + "\ndistance: "
+                + str(dist)
+            )
             if dist < 10 and self.wayindex < len(self.destinations):
-                path=self.make_path(self.boat, self.destinations[self.wayindex])
+                path = self.make_path(self.boat, self.destinations[self.wayindex])
                 self.wayindex += 1
 
         if path:
@@ -176,8 +190,8 @@ class PathfindingNode(Node):
     # add obstacles into the matrix (when the obstacles ROS topic is done) ** in progress **
     # run obstacle data to test pathfinding node
 
-                
-def main():
+
+def main() -> None:
     rclpy.init()
     node = PathfindingNode()
     rclpy.spin(node)

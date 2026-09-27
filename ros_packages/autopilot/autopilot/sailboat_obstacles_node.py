@@ -9,27 +9,29 @@ from autoboat_msgs.msg import WaypointList
 
 
 class ObstaclesNode(Node):
-
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("sailboat_obstacles")
         self.get_logger().info("working")
 
-        self.obstacles_list_subscriber = self.create_subscription(NavSatFix, "/new_obstacle", self.update_obstacle_list, qos_profile_sensor_data)
+        self.obstacles_list_subscriber = self.create_subscription(
+            NavSatFix, "/new_obstacle", self.update_obstacle_list, qos_profile_sensor_data
+        )
         self.obstacles_list_publisher = self.create_publisher(WaypointList, "/obstacles_list", qos_profile_sensor_data)
         self.current_obstacles: list[tuple[float, float]] = []
 
-        self.publisher_ = self.create_publisher(NavSatFix, 'new_obstacle', 10)
+        self.publisher_ = self.create_publisher(NavSatFix, "new_obstacle", 10)
 
-    def update_obstacle_list(self, msg: NavSatFix):
+    def update_obstacle_list(self, msg: NavSatFix) -> None:
         self.current_obstacles.append((msg.latitude, msg.longitude))
 
         obstacles_nav_sat_fix_list = [
             NavSatFix(latitude=waypoint[0], longitude=waypoint[1]) for waypoint in self.current_obstacles
         ]
-        self.obstacles_list_publisher.publish(WaypointList(waypoints = obstacles_nav_sat_fix_list))
-        self.get_logger().info(f'Current waypoints: {self.current_obstacles}')
+        self.obstacles_list_publisher.publish(WaypointList(waypoints=obstacles_nav_sat_fix_list))
+        self.get_logger().info(f"Current waypoints: {self.current_obstacles}")
 
-def main():
+
+def main() -> None:
     rclpy.init()
     node = ObstaclesNode()
     rclpy.spin(node)
