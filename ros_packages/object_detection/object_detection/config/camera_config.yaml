@@ -5,7 +5,8 @@
     name: ZED 2i # The name is used to regex search the available camera devices.
     width: 3840 # The stream is 2 1920x1080 streams side-by-side
     height: 1080
-    framerate: 30/1
+    framerate_n: 30
+    framerate_d: 1
     baseline: 120 # The distance between the two cameras in millimeters.
     hfov: 110 # The horizontal field of view of the camera in degrees.
     focal_px: 750 # The focal length of the camera in pixels at 1920x1080.

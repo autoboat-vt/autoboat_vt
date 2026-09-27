@@ -136,7 +136,8 @@ class DeepStreamEngine:
                                                                f'width={self.cam_list[0]["width"]},'
                                                                f'height={self.cam_list[0]["height"]},'
                                                                f'format={self.cam_list[0]["gst_format"]},'
-                                                               f'framerate={self.cam_list[0]["framerate"]}'
+                                                               f'framerate={self.cam_list[0]["framerate_n"]}/'
+                                                               f'{self.cam_list[0]["framerate_d"]}'
                                                                ))
 
         # This is a workaround.

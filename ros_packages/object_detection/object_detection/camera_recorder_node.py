@@ -13,12 +13,14 @@ from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Float32
 
+IS_DEV_CONTAINER = re.search("/home/ws", os.getcwd()) is not None
+PATH_TO_PKG_DIR = "/home/ws/ros_packages" if IS_DEV_CONTAINER else f"{os.path.expanduser('~')}/autoboat_vt/ros_packages"
+CAMERA_CONFIG = f"{PATH_TO_PKG_DIR}/object_detection/object_detection/config/camera_config.yaml"
 
 class CamCorderNode(Node):
     def __init__(self) -> None:
         super().__init__('cam_corder')
         self.storage_cap = 0.6 # Do not go above this disk utilization
-        self.save_interval = 5 # write to the log file every 5 frames
         
         if self.get_storage_util() > self.storage_cap:
             raise OSError(f"Current disk usage is above {self.storage_cap * 100:.0f}%. Exitting")
@@ -27,23 +29,17 @@ class CamCorderNode(Node):
         count = 0
         while os.path.exists(f"./frame_logs/run{count}"):
             count += 1
-        self.log_file = f"./frame_logs/run{count}/frame_logs.json"
+        self.log_file = f"./frame_logs/run{count}/frame_logs.jsonl"
         self.run_dir = f"./frame_logs/run{count}/frames/"
         os.makedirs(self.run_dir, exist_ok=True)
 
-        self.CAM_LIST = {
-            0: {
-                "name": self._find_camera("YUYV"),
-                "framerate": 15,
-                "format": "YUY2",
-                "input_width": 1280,
-                "input_height": 800
-            }
-        }
+        self.cam_list = self._read_camera_config()
+        self.cam_list[0]["device"] = self._find_camera()
         
         
         """
-        formatting for self.frame_logs
+        formatting for self.log_file
+        Each line is a JSON object representing a frame
         <frame_num>: {
             head: <current_heading>,
             lat: <current_lat>,
@@ -51,8 +47,6 @@ class CamCorderNode(Node):
             time: <current_time>
         }
         """
-        self.frame_logs = {}
-
 
         self.position = {
             "lon": 0,
@@ -71,10 +65,10 @@ class CamCorderNode(Node):
         self.record()
 
     def record(self) -> None:
-        device = self.CAM_LIST[0]["name"]
-        width = self.CAM_LIST[0]["input_width"]
-        height = self.CAM_LIST[0]["input_height"]
-        fps = self.CAM_LIST[0]["framerate"]
+        device = self.CAM_LIST[0]["device"]
+        width = self.CAM_LIST[0]["width"]
+        height = self.CAM_LIST[0]["height"]
+        fps = self.CAM_LIST[0]["framerate_n"] / self.CAM_LIST[0]["framerate_d"]
         cap = cv2.VideoCapture(device, cv2.CAP_V4L2)
         if not cap.isOpened():
             self.get_logger().warn(f"Could not open video device {device}")
@@ -98,7 +92,7 @@ class CamCorderNode(Node):
                 if not ret:
                     self.get_logger().warn("Failed to capture frame")
                     break
-                self.frame_logs[count] = {
+                curr_log = {
                     "lat": self.position["lat"],
                     "lon": self.position["lon"],
                     "head": self.position["head"],
@@ -106,13 +100,12 @@ class CamCorderNode(Node):
                 }
                 if count % 120 == 0:
                     self.get_logger().info(f"Current frame count: {count}")
-                cv2.imwrite(f'{self.run_dir}frame{count:04d}.png', frame)
-                if count % self.save_interval == 1:
-                    with open(self.log_file, 'w') as file:
-                        file.write(json.dumps(self.frame_logs))
-                    if self.get_storage_util() > self.storage_cap:
-                        self.get_logger().info(f"Passed {(self.storage_cap * 100):.0f}% disk usage. Exitting")
-                        break
+                cv2.imwrite(f'{self.run_dir}frame{count:06d}.png', frame)
+                with open(self.log_file, 'a') as file:
+                    file.write(json.dumps(curr_log) + '\n')
+                if self.get_storage_util() > self.storage_cap:
+                    self.get_logger().info(f"Passed {(self.storage_cap * 100):.0f}% disk usage. Exiting")
+                    break
                 count += 1
         except KeyboardInterrupt:
             pass
@@ -120,13 +113,48 @@ class CamCorderNode(Node):
             cap.release()
             cv2.destroyAllWindows()
 
-    def _find_camera(self, format: str) -> str:
-        camera_devices_output = subprocess.run(['ls', '/sys/class/video4linux/'], capture_output=True, text=True, check=True).stdout
+    def _read_camera_config(self) -> dict:
+        with open(CAMERA_CONFIG, 'r') as file:
+            return yaml.safe_load(file)
+
+    def _find_camera(self, cam_id: int = 0) -> str:
+        """
+        This is just a way to figure out which /dev/video* is the camera<br>
+        The camera outputs on 3 devices<br>
+        Each device is a different format, but the order can change or extra cameras can cause the number to increase<br>
+        While this finds the device with the specified format,
+        it does not guarantee that the correct resolution and framerate are available.
+        
+        Returns
+        -------
+            str: The /dev/video* device path.
+        """
+
+        cam_format = self.cam_list[cam_id]["v4l2_format"]
+        cam_name = self.cam_list[cam_id]["name"]
+        ls = shutil.which("ls")
+        cat = shutil.which("cat")
+        v4l2_ctl = shutil.which("v4l2-ctl")
+        if ls is None or cat is None or v4l2_ctl is None:
+            self.error_callback("ls, cat, or v4l2-ctl command not found. Cannot find camera device.")
+            raise OSError("Required command not found")
+        try:
+            camera_devices_output = subprocess.run([ls, '/sys/class/video4linux/'], # noqa: S603
+                                                   capture_output=True, text=True, check=True).stdout
+        except subprocess.CalledProcessError as err:
+            self.error_callback("Failed to list camera devices in /sys/class/video4linux/.")
+            raise OSError("Failed to list camera devices in /sys/class/video4linux/.") from err
         for device in camera_devices_output.splitlines():
-            if (re.search("RealSense", subprocess.run(['cat', f'/sys/class/video4linux/{device}/name'], capture_output=True, text=True, check=True).stdout) is not None):
-                if (re.search(format, subprocess.run(['v4l2-ctl', '--device', f'/dev/{device}', '--list-formats'], capture_output=True, text=True, check=True).stdout) is not None):
-                    return f"/dev/{device}"
-        self.get_logger().warn(f"Could not find RealSense camera device with {format} format")
+            try:
+                if ((re.search(cam_name, subprocess.run([cat, f'/sys/class/video4linux/{device}/name'], # noqa: S603
+                                                        capture_output=True, text=True, check=True).stdout) is not None) and
+                (re.search(cam_format, subprocess.run([v4l2_ctl, '--device', f'/dev/{device}', '--list-formats'], # noqa: S603
+                                                            capture_output=True, text=True, check=True).stdout) is not None)):
+                        return f"/dev/{device}"
+            except subprocess.CalledProcessError as err:
+                self.error_callback(f"Command v4l2-ctl failed for device {device}.")
+                raise OSError(f"Command v4l2-ctl failed for device {device}.") from err
+        self.error_callback(f"Could not find {cam_name} device with {cam_format} format")
         raise OSError("Camera device not found")
     
     def position_callback(self, msg: NavSatFix):
