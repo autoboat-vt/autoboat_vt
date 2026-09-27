@@ -4,6 +4,11 @@
 # These commands are run right on the host computer before the docker container starts up
 # ---------------------------------------------------------------------------------------------------------
 
+# If running inside Flatpak sandbox, re-execute this script on the host
+if [ -f /.flatpak-info ]; then
+    exec flatpak-spawn --host --directory="$PWD" bash "$0" "$@"
+fi
+
 # ensure that this finishes even if the command fails (the user doesn't have xhost)
 xhost +local: || true  
 

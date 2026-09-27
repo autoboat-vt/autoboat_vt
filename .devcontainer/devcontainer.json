@@ -7,6 +7,7 @@
     "remoteUser": "autoboat_user",
     "containerUser": "autoboat_user",
     "workspaceFolder": "/home/ws",
+    "updateRemoteUserUID": false,
     "workspaceMount": "source=${localWorkspaceFolder},target=/home/ws/,type=bind",
     "customizations": {
         "vscode": {
@@ -57,6 +58,7 @@
         "--platform=linux/amd64",
         "-v",
         "/dev:/dev",
+        "--mount=type=devpts,destination=/dev/pts",
         "--env-file=.devcontainer/devcontainer_environment_variables",
         "-v",
         "/var/run/docker.sock:/var/run/docker.sock",
