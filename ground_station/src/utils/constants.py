@@ -1,4 +1,4 @@
-"""Module containing constants for the ground station application."""
+"""Module containing constants for the Groundstation application."""
 
 import inspect
 import json
@@ -12,62 +12,104 @@ from urllib.parse import urljoin
 
 import requests
 import requests.adapters
-from qtpy.QtCore import QPoint, QRect, QSize, Qt
-from qtpy.QtGui import QColor, QPalette
+from numpy import number as np_number
 from strenum import StrEnum
 
+from qtpy.QtCore import QPoint, QRect, QSize, Qt, QUrl
+from qtpy.QtGui import QColor, QPalette
+from qtpy.QtWebEngineWidgets import QWebEnginePage
+
 from utils import misc
+from utils.console_logger import get_logger
+from utils.data_logger import DataLogger
 from utils.state_manager import StateManager
 
+logger = get_logger(__name__)
 
-class SailboatAutopilotMode(Enum):
-    """An enum containing the different modes that the sailboat autopilot can be in."""
 
-    DISABLED = 0
-    FULL_RC = 1
-    HOLD_BEST_SAIL = 2
-    HOLD_HEADING = 3
-    HOLD_HEADING_AND_BEST_SAIL = 4
-    WAYPOINT_MISSION = 5
-
-class MotorboatAutopilotMode(Enum):
-    """An enum containing the different modes that the motorboat autopilot can be in."""
-
-    DISABLED = 0
-    FULL_RC = 1
-    HOLD_HEADING = 2
-    WAYPOINT_MISSION = 3
-
-class SailboatStates(Enum):
-    """An enum containing the different states that the sailboat autopilot can be in."""
-
-    NA = -1
-    NORMAL = 0
-    CW_TACKING = 1
-    CCW_TACKING = 2
-    STALL = 3
-    # JIBE = 4
-
-class TelemetryStatus(StrEnum):
+class StrictMatchEnums:
     """
-    Enum representing the status of telemetry data fetching.
+    Group enums that must match the autopilot repository exactly.
+
+    These enums must match those in
+    ``ros_packages/autopilot/autopilot/autopilot_library/utils/constants.py``.
+    Update both modules when changing a shared enum.
 
     Attributes
     ----------
-    - ``SUCCESS``: Indicates that telemetry data was fetched successfully.
-    - ``FAILURE``: Indicates that telemetry data fetching failed.
-    - ``WRONG_FORMAT``: Indicates that the fetched telemetry data was in an incorrect format.
+    SailboatControlModes
+        Sailboat control modes.
+    SailboatAutopilotStates
+        Sailboat autopilot states.
+    MotorboatControlModes
+        Motorboat control modes.
+    """
 
-    Inherits
-    --------
-    ``StrEnum``
+    class SailboatControlModes(Enum):
+        """Represent the different control modes the sailboat can be in."""
+
+        DISABLED = 0
+        FULL_RC = 1
+        HOLD_BEST_SAIL = 2
+        HOLD_HEADING = 3
+        HOLD_HEADING_AND_BEST_SAIL = 4
+        WAYPOINT_MISSION = 5
+        EMERGENCY_STOP = 6
+
+    class SailboatAutopilotStates(Enum):
+        """
+        Represent the different states the sailboat autopilot can be in.
+
+        Notes
+        -----
+        For an explanation of sailing terminology such as port vs starboard
+        tacks, see https://rpayc.com.au/wp-content/uploads/2020/11/Basic_Terminology.pdf
+
+        For a description of tacking and jibing, see
+        https://captainsword.com/tacking-and-jibing
+        """
+
+        NA = 0
+        DOWNWIND_SAILING = 1
+        PORT_TACK = 2
+        STARBOARD_TACK = 3
+        CW_TACKING = 4
+        CCW_TACKING = 5
+        STALL_WIGGLE_TO_PORT_TACK = 6
+        STALL_WIGGLE_TO_STARBOARD_TACK = 7
+
+    class MotorboatControlModes(Enum):
+        """Represent the different control modes the motorboat can be in."""
+
+        DISABLED = 0
+        FULL_RC = 1
+        HOLD_HEADING = 2
+        WAYPOINT_MISSION = 3
+
+
+class TelemetryStatus(StrEnum):
+    """
+    Represent the result of a telemetry data fetch.
+
+    Inherits :class:`StrEnum`.
+
+    Attributes
+    ----------
+    SUCCESS
+        Telemetry data was fetched successfully.
+    FAILURE
+        Telemetry data fetching failed.
+    WRONG_FORMAT
+        The fetched telemetry data was in an incorrect format.
     """
 
     SUCCESS = auto()
     FAILURE = auto()
     WRONG_FORMAT = auto()
 
-NumberType: TypeAlias = int | float
+
+NumberType: TypeAlias = int | float | complex | np_number
+FileType: TypeAlias = str | os.PathLike[str]
 
 SM = StateManager()
 
@@ -121,39 +163,60 @@ STYLE_SHEET = """
     }
 """
 
+# application window title and stuff
+WINDOW_TITLE = "Groundstation"
+APPLICATION_NAME = "Groundstation"
+ORGANIZATION_NAME = "Autoboat @ VT"
+
 # window size and box
-WINDOW_SIZE = QSize(800, 600)
+MAX_WINDOW_SIZE = QSize(1800, 1080)
+WINDOW_SIZE = QSize(1200, 800)
 WINDOW_BOX = QRect(QPoint(100, 100), WINDOW_SIZE)
 
 # timers
 THIRTY_SECOND_TIMER = misc.create_timer(30_000)
-
 TEN_SECOND_TIMER = misc.create_timer(10_000)
-
 FIVE_SECOND_TIMER = misc.create_timer(5_000)
-
 ONE_SECOND_TIMER = misc.create_timer(1_000)
-
 HALF_SECOND_TIMER = misc.create_timer(500)
-
 TEN_MS_TIMER = misc.create_timer(10)
-
 ONE_MS_TIMER = misc.create_timer(1)
+ZERO_MS_TIMER = misc.create_timer(0, single_shot=True)
 
 _start_time: float = time.time()
 
-JS_LIBRARIES: tuple[str, ...] = (
-    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
-    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
-    "https://cdn.jsdelivr.net/gh/bbecquet/Leaflet.RotatedMarker@master/leaflet.rotatedMarker.js",
-)
+# region server ports
+ASSET_SERVER_PORT = os.environ.get("ASSET_SERVER_PORT")
+if ASSET_SERVER_PORT is None:
+    raise RuntimeError("ASSET_SERVER_PORT environment variable not set.")
+else:
+    ASSET_SERVER_PORT = int(ASSET_SERVER_PORT)
 
-# server ports
-ASSET_SERVER_PORT = 8000
-GO_SERVER_PORT = 3002
+MAP_SERVER_PORT = os.environ.get("MAP_SERVER_PORT")
+if MAP_SERVER_PORT is None:
+    raise RuntimeError("MAP_SERVER_PORT environment variable not set.")
+else:
+    MAP_SERVER_PORT = int(MAP_SERVER_PORT)
+
+VITE_PORT = os.environ.get("VITE_PORT")
+if VITE_PORT is None:
+    raise RuntimeError("VITE_PORT environment variable not set.")
+else:
+    VITE_PORT = int(VITE_PORT)
+
+# endregion server ports
+
+# url for local vite server hosting the map
+MAP_URL = QUrl(f"http://127.0.0.1:{VITE_PORT}")
+
+# see `main.py` for where this is set
+MAP_PAGE: QWebEnginePage
 
 # url for local waypoints server
-_waypoints_server_url: str = f"http://localhost:{GO_SERVER_PORT}/waypoints"
+_waypoints_server_url: str = f"http://127.0.0.1:{MAP_SERVER_PORT}/waypoints"
+
+# url for documentation
+DOCUMENTATION_URL = QUrl("https://autoboat-vt.github.io/documentation")
 
 TELEMETRY_TIMEOUT_SECONDS = 10
 TELEMETRY_RETRY_ATTEMPTS = 3
@@ -163,9 +226,6 @@ ADAPTER = requests.adapters.HTTPAdapter(max_retries=TELEMETRY_RETRY_ATTEMPTS)
 REQ_SESSION.mount("http://", ADAPTER)
 REQ_SESSION.mount("https://", ADAPTER)
 
-# base url for telemetry server (the CIA is inside of my brain...)
-_telemetry_server_url: str = "https://vt-autoboat-telemetry.uk"
-
 _local_autopilot_param_hash: str = ""
 _remote_autopilot_param_hash: str = ""
 _current_autopilot_parameters: dict[str, Any] = {}
@@ -173,6 +233,9 @@ _current_autopilot_parameters: dict[str, Any] = {}
 TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE: int = -1  # -1 means no instance selected
 _telemetry_server_instance_id: int = TELEMETRY_SERVER_INSTANCE_ID_INITIAL_VALUE
 _has_telemetry_server_instance_changed: bool = False
+
+# base url for telemetry server (the CIA is inside of my brain...)
+_telemetry_server_url: str = "https://vt-autoboat-telemetry.uk"
 
 # endpoints for telemetry server, format is `_telemetry_server_url` + `endpoint` + `/`
 _instance_manager_endpoints: dict[str, str] = {
@@ -193,6 +256,8 @@ _instance_manager_endpoints: dict[str, str] = {
 _boat_status_endpoints: dict[str, str] = {
     "get_boat_status": urljoin(_telemetry_server_url, "boat_status/get/"),
     "get_new_boat_status": urljoin(_telemetry_server_url, "boat_status/get_new/"),
+    "get_current_image": urljoin(_telemetry_server_url, "boat_status/get_image/"),
+    "set_current_image": urljoin(_telemetry_server_url, "boat_status/set_image/"),
     "test_boat_status": urljoin(_telemetry_server_url, "boat_status/test/"),
 }
 
@@ -206,6 +271,7 @@ _autopilot_parameters_endpoints: dict[str, str] = {
     "get_all_hashes": urljoin(_telemetry_server_url, "autopilot_parameters/get_all_hashes"),
     "get_hash_exists": urljoin(_telemetry_server_url, "autopilot_parameters/get_hash_exists/"),
     "set_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/set/"),
+    "update_autopilot_parameter": urljoin(_telemetry_server_url, "autopilot_parameters/update_existing_parameter/"),
     "set_default_autopilot_parameters": urljoin(_telemetry_server_url, "autopilot_parameters/set_default/"),
     "set_default_from_hash": urljoin(_telemetry_server_url, "autopilot_parameters/set_default_from_hash/"),
     "set_hash_description": urljoin(_telemetry_server_url, "autopilot_parameters/set_hash_description/"),
@@ -221,8 +287,14 @@ _waypoints_endpoints: dict[str, str] = {
     "test_waypoints": urljoin(_telemetry_server_url, "waypoints/test/"),
 }
 
-_camera_endpoints: dict[str, str] = {
-    "get_current_camera_image": urljoin(_telemetry_server_url, "camera/get_current_image/"),
+_image_manager_endpoints: dict[str, str] = {
+    "test_image_manager": urljoin(_telemetry_server_url, "image_manager/test/"),
+    "get_image": urljoin(_telemetry_server_url, "image_manager/get/"),
+    "get_image_info": urljoin(_telemetry_server_url, "image_manager/get_info/"),
+    "get_all_images": urljoin(_telemetry_server_url, "image_manager/get_all/"),
+    "upload_image": urljoin(_telemetry_server_url, "image_manager/upload/"),
+    "delete_image": urljoin(_telemetry_server_url, "image_manager/delete/"),
+    "delete_all_images": urljoin(_telemetry_server_url, "image_manager/delete_all"),
 }
 
 _telemetry_server_endpoints: dict[str, str] = dict(
@@ -230,8 +302,49 @@ _telemetry_server_endpoints: dict[str, str] = dict(
     **_boat_status_endpoints,
     **_autopilot_parameters_endpoints,
     **_waypoints_endpoints,
-    **_camera_endpoints,
+    **_image_manager_endpoints,
 )
+
+_map_features: dict[str, dict[str, str | bool]] = {
+    "waypoints_popup": {
+        "name": "Waypoints Popup",
+        "description": "Show a popup when the waypoints on the telemetry server change.",
+        "feedback_text": "Updated Waypoints Popup Config.",
+        "status": False,
+    },
+    "sailboat_debug_symbols": {
+        "name": "Sailboat Debugging Symbols",
+        "description": "Show sailboat debugging symbols on the map.",
+        "feedback_text": (
+            "Updated Debugging Symbols Config.\norange, wind\nblack, velocity\nred, no-go zone\npink, decision zone 2"
+        ),
+        "status": False,
+    },
+    "boat_track": {
+        "name": "Boat Track",
+        "description": "Show a history of recent boat positions as points on the map.",
+        "feedback_text": "Updated Boat Track Config.",
+        "status": False,
+    },
+    "bathymetry": {
+        "name": "Ocean Depth",
+        "description": (
+            "Show ocean floor depth bands on the map. Note that this layer can make base map labels harder to read.\n"
+            "The depth bands are derived from the Natural Earth 10m bathymetry layer."
+        ),
+        "feedback_text": "Updated Ocean Depth Config.",
+        "status": False,
+    },
+    "land_boundary": {
+        "name": "Ocean Boundary",
+        "description": "Show a faint outline of the ocean polygon used for land checks.",
+        "feedback_text": "Updated Ocean Boundary Config.",
+        "status": False,
+    },
+}
+
+_data_logging_active: bool = False
+_initial_log_file_path: str = ""
 
 STATE_FILE_CONTENTS: dict[str, Any] = {
     "start_time": _start_time,
@@ -244,6 +357,9 @@ STATE_FILE_CONTENTS: dict[str, Any] = {
     "telemetry_server_instance_user": "",
     "has_telemetry_server_instance_changed": _has_telemetry_server_instance_changed,
     "telemetry_server_endpoints": _telemetry_server_endpoints,
+    "map_features": _map_features,
+    "data_logging_active": _data_logging_active,
+    "data_log_file_path": _initial_log_file_path,
 }
 
 try:
@@ -256,68 +372,116 @@ try:
 
     DATA_DIR = Path(TOP_LEVEL_DIR / "app_data")
     GIT_KEEP_DIR = Path(DATA_DIR / "git_keep")
-    DEFAULTS_EXAMPLES_DIR = Path(GIT_KEEP_DIR / "defaults_examples")
-
     GIT_IGNORE_DIR = Path(DATA_DIR / "git_ignore")
     os.makedirs(GIT_IGNORE_DIR, exist_ok=True)
 
-    MAP_WIDGET_DIR = Path(WIDGETS_DIR / "map_widget")
-    HTML_MAP_PATH = Path(MAP_WIDGET_DIR / "map.html")
+    DEFAULTS_EXAMPLES_DIR = Path(GIT_KEEP_DIR / "defaults_examples")
+    ASSETS_DIR = Path(GIT_KEEP_DIR / "assets")
+    APP_LOGO_PATH = Path(ASSETS_DIR / "logo.png")
+    CONSOLE_LOGS_DIR = Path(GIT_IGNORE_DIR / "console_logs")
 
-    CAMERA_WIDGET_DIR = Path(WIDGETS_DIR / "camera_widget")
-    HTML_CAMERA_PATH = Path(CAMERA_WIDGET_DIR / "camera.html")
-    
+    OCEAN_BOUNDARY_LAYER_DIR = Path(ASSETS_DIR / "ocean_boundary_layer")
+    OCEAN_DEPTH_LAYER_DIR = Path(ASSETS_DIR / "ocean_depth_layer")
+    OCEAN_SHAPEFILE_PATH = Path(OCEAN_BOUNDARY_LAYER_DIR / "ne_10m_ocean.shp")
+    OCEAN_GEOMETRY_CACHE_PATH = Path(GIT_IGNORE_DIR / "ocean_geometry.wkb")
+    BATHYMETRY_GEOJSON_CACHE_PATH = Path(GIT_IGNORE_DIR / "bathymetry_geojson.json")
+
+    EASTER_EGG_AUDIO_DIR = Path(ASSETS_DIR / "easter_egg_audio")
+
+    TETRIS_ASSETS_DIR = Path(EASTER_EGG_AUDIO_DIR / "tetris")
+    TETRIS_MUSIC_DIR = Path(TETRIS_ASSETS_DIR / "music")
+    TETRIS_SFX_DIR = Path(TETRIS_ASSETS_DIR / "sfx")
+
+    SNAKE_ASSETS_DIR = Path(EASTER_EGG_AUDIO_DIR / "snake")
+    SNAKE_MUSIC_DIR = Path(SNAKE_ASSETS_DIR / "music")
+    SNAKE_SFX_DIR = Path(SNAKE_ASSETS_DIR / "sfx")
+
+    PONG_ASSETS_DIR = Path(EASTER_EGG_AUDIO_DIR / "pong")
+    PONG_MUSIC_DIR = Path(PONG_ASSETS_DIR / "music")
+    PONG_SFX_DIR = Path(PONG_ASSETS_DIR / "sfx")
+
+    EASTER_EGG_ASSETS_DIRS = [
+        TETRIS_ASSETS_DIR,
+        SNAKE_ASSETS_DIR,
+        PONG_ASSETS_DIR,
+    ]
+
     APP_STATE_PATH = Path(GIT_IGNORE_DIR / "app_state.json")
 
     stack = inspect.stack()
     active_flag: bool = stack[0].filename == Path(UTILS_DIR / "constants.py").as_posix()
-
     # will not break if moved outside of if block, but prevents redundant checks
     if active_flag:
         if "assets" not in os.listdir(GIT_KEEP_DIR):
             raise Exception("Assets directory not found, please redownload the directory from GitHub.")
-        
+
         if "defaults_examples" not in os.listdir(GIT_KEEP_DIR):
             raise Exception("Defaults/examples directory not found, please redownload the directory from GitHub.")
-        
+
+        if "ocean_boundary_layer" not in os.listdir(ASSETS_DIR):
+            raise Exception(
+                "Ocean boundary layer directory not found, please redownload the assets directory from GitHub."
+            )
+
+        if "ocean_depth_layer" not in os.listdir(ASSETS_DIR):
+            raise Exception(
+                "Ocean depth layer directory not found, please redownload the assets directory from GitHub."
+            )
+
+        for easter_egg_assets_dir in EASTER_EGG_ASSETS_DIRS:
+            if easter_egg_assets_dir.name not in os.listdir(EASTER_EGG_AUDIO_DIR):
+                raise Exception(
+                    f"Easter egg assets directory {easter_egg_assets_dir.name} not found, "
+                    "please redownload the assets directory from GitHub."
+                )
+
+        if "autopilot_params" not in os.listdir(GIT_IGNORE_DIR):
+            logger.info("Creating autopilot parameters directory...")
+            os.makedirs(GIT_IGNORE_DIR / "autopilot_params")
+
+        if "buoy_data" not in os.listdir(GIT_IGNORE_DIR):
+            logger.info("Creating buoy data directory...")
+            os.makedirs(GIT_IGNORE_DIR / "buoy_data")
+
+        if "keybinds" not in os.listdir(GIT_IGNORE_DIR):
+            logger.info("Creating keybinds directory...")
+            os.makedirs(GIT_IGNORE_DIR / "keybinds")
+
+        if "data_logs" not in os.listdir(GIT_IGNORE_DIR):
+            logger.info("Creating data logs directory...")
+            os.makedirs(GIT_IGNORE_DIR / "data_logs")
+
+        if "console_logs" not in os.listdir(GIT_IGNORE_DIR):
+            logger.info("Creating console logs directory...")
+            os.makedirs(GIT_IGNORE_DIR / "console_logs")
+
         if not APP_STATE_PATH.exists():
-            print("[Info] Creating app state file...")
+            logger.info("Creating app state file...")
             APP_STATE_PATH.touch()
             with open(APP_STATE_PATH, "w") as f:
                 json.dump({}, f, indent=4)
 
         if json.load(open(file=APP_STATE_PATH, mode="r", encoding="utf-8")) == {}:
-            print("[Info] Initializing app state file...")
+            logger.info("Initializing app state file...")
             with open(APP_STATE_PATH, "w", encoding="utf-8") as f:
                 json.dump(STATE_FILE_CONTENTS, f, indent=4)
-        
-        if "autopilot_params" not in os.listdir(GIT_IGNORE_DIR):
-            print("[Info] Creating autopilot parameters directory...")
-            os.makedirs(GIT_IGNORE_DIR / "autopilot_params")
 
-        if "boat_data" not in os.listdir(GIT_IGNORE_DIR):
-            print("[Info] Creating boat data directory...")
-            os.makedirs(GIT_IGNORE_DIR / "boat_data")
+        else:
+            raise RuntimeError(
+                f"Stale app state file found at {APP_STATE_PATH}, please delete this file and restart the application."
+            )
 
-        if "boat_data_bounds" not in os.listdir(GIT_IGNORE_DIR):
-            print("[Info] Creating boat data bounds directory...")
-            os.makedirs(GIT_IGNORE_DIR / "boat_data_bounds")
+    DATA_LOGS_DIR = Path(GIT_IGNORE_DIR / "data_logs")
+    DL = DataLogger()
 
-        if "buoy_data" not in os.listdir(GIT_IGNORE_DIR):
-            print("[Info] Creating buoy data directory...")
-            os.makedirs(GIT_IGNORE_DIR / "buoy_data")
-
-    ASSETS_DIR = Path(GIT_KEEP_DIR / "assets")
     AUTOPILOT_PARAMS_DIR = Path(GIT_IGNORE_DIR / "autopilot_params")
     misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "autopilot_params", AUTOPILOT_PARAMS_DIR)
 
-    BOAT_DATA_DIR = Path(GIT_IGNORE_DIR / "boat_data")
-
-    BOAT_DATA_LIMITS_DIR = Path(GIT_IGNORE_DIR / "boat_data_bounds")
-    misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "boat_data_bounds", BOAT_DATA_LIMITS_DIR)
-
     BUOY_DATA_DIR = Path(GIT_IGNORE_DIR / "buoy_data")
     misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "buoy_data", BUOY_DATA_DIR)
+
+    KEYBINDS_DIR = Path(GIT_IGNORE_DIR / "keybinds")
+    misc.create_symlinks(DEFAULTS_EXAMPLES_DIR / "keybinds", KEYBINDS_DIR)
 
 except Exception as e:
     raise RuntimeError(f"Initialization error: {e}") from e

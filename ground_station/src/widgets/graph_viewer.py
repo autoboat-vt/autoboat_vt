@@ -5,12 +5,19 @@ from urllib.parse import urljoin
 
 import numpy as np
 import numpy.typing as npt
-import pyqtgraph as pg
-from qtpy.QtCore import Qt, Signal
-from qtpy.QtWidgets import QCheckBox, QDialog, QGridLayout, QWidget
 from requests.exceptions import RequestException
+
+import pyqtgraph as pg
+from pyqtgraph.graphicsItems.PlotItem.PlotItem import PlotItem
+from qtpy.QtCore import Qt, Signal, Slot
+from qtpy.QtGui import QCloseEvent
+from qtpy.QtWidgets import QCheckBox, QDialog, QGridLayout, QWidget
+
 from utils import constants, misc
+from utils.console_logger import get_logger
 from utils.thread_classes import BoatStatusThreadRouter
+
+logger = get_logger(__name__)
 
 
 class GraphViewer(QWidget):
@@ -21,23 +28,18 @@ class GraphViewer(QWidget):
     ----------
     boat_data_signal
         A signal that emits the latest boat data as a tuple containing a dictionary
-        of boat status and a ``TelemetryStatus`` enum value.
+        of boat status and a :class:`TelemetryStatus` enum value.
 
     Inherits
-    -------
-    ``QWidget``
+    --------
+    :class:`QWidget`
     """
 
     boat_data_signal = Signal(tuple)
 
     def __init__(self) -> None:
         super().__init__()
-
-        self.timer = misc.copy_qtimer(constants.ONE_SECOND_TIMER)
-        self.plots: list[pg.PlotItem] = []
-
-        self.time_stopped: float | None = None
-        self.time_started: float | None = None
+        self.plots: list[PlotItem] = []
 
         self.important_keys: list[str] = ["speed", "distance_to_next_waypoint", "desired_heading", "heading", "true_wind_speed"]
         self.available_keys: list[str] = []
@@ -51,17 +53,18 @@ class GraphViewer(QWidget):
         self.graph_layout_widget = pg.GraphicsLayoutWidget()
         self.main_layout.addWidget(self.graph_layout_widget, 0, 0, 1, 2)
 
-        self.open_graphs_dialog_button = misc.pushbutton_maker("Select Graphs", constants.ICONS.cog, self.select_graphs)
-        self.clear_graphs_button = misc.pushbutton_maker("Clear Graphs", constants.ICONS.refresh, self.clear_graphs)
+        self.open_graphs_dialog_button = misc.pushbutton_maker("Select Graphs", self.select_graphs, constants.ICONS.cog)
+        self.clear_graphs_button = misc.pushbutton_maker("Clear Graphs", self.clear_graphs, constants.ICONS.refresh)
 
         self.main_layout.addWidget(self.clear_graphs_button, 1, 0)
         self.main_layout.addWidget(self.open_graphs_dialog_button, 1, 1)
         self.setLayout(self.main_layout)
 
         self.telemetry_handler = BoatStatusThreadRouter.BoatStatusFetcherThread()
-        self.telemetry_handler.response.connect(self.update_graph)
+        self.telemetry_handler.data_fetched.connect(self.update_graph)
         self.telemetry_handler.start()
 
+    @Slot(tuple)
     def update_graph(self, request_result: tuple[dict[str, Any], constants.TelemetryStatus]) -> None:
         """Update the graphs with new telemetry data.
 
@@ -70,10 +73,10 @@ class GraphViewer(QWidget):
         request_result
             A tuple containing:
                 - a dictionary of boat status,
-                - a ``TelemetryStatus`` enum value indicating the status of the request.
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
-        if constants.SM.read("has_telemetry_server_instance_changed"):
+        if constants.SM.read_bool("has_telemetry_server_instance_changed"):
             self.x_axis.clear()
             self.data.clear()
             self.plots.clear()
@@ -83,20 +86,16 @@ class GraphViewer(QWidget):
         boat_data, telemetry_status = request_result
 
         if telemetry_status is not constants.TelemetryStatus.SUCCESS:
-            print("[Warning] Failed to fetch telemetry data for graphs, skipping update.")
+            logger.warning("Failed to fetch telemetry data for graphs, skipping update.")
             return
 
         try:
             self.available_keys = {
-                key for key in boat_data if
-                (
-                    isinstance(boat_data[key], constants.NumberType)
-                    and key != "current_waypoint_index"
-                )
+                key for key in boat_data if (isinstance(boat_data[key], constants.NumberType) and key != "current_waypoint_index")
             }
             filtered_values = {key: float(boat_data.get(key, np.nan)) for key in self.important_keys}
 
-            current_time = time.time() - constants.SM.read("start_time")
+            current_time = time.time() - constants.SM.read_float("start_time")
             self.x_axis.append(current_time)
 
             for key, val in filtered_values.items():
@@ -119,12 +118,10 @@ class GraphViewer(QWidget):
                         col_span = 1
 
                     plot_title = key.replace("_", " ").title()
-                    
-                    plot_item = self.graph_layout_widget.addPlot(
-                        row=plot_row, col=plot_col, colspan=col_span, title=plot_title
-                    )
+
+                    plot_item = self.graph_layout_widget.addPlot(row=plot_row, col=plot_col, colspan=col_span, title=plot_title)
                     if not isinstance(plot_item, pg.PlotItem):
-                        print(f"[Error] Failed to create plot for key '{key}', continuing with next key.")
+                        logger.error(f"Failed to create plot for key '{key}', continuing with next key.")
                         continue
 
                     if col_span == 1:
@@ -149,19 +146,17 @@ class GraphViewer(QWidget):
                     curve.setData(x, y)
 
         except Exception as e:
-            print(f"[Error] Failed to update graphs: {e}")
+            logger.error(f"Failed to update graphs: {e}")
 
+    @Slot()
     def select_graphs(self) -> None:
         """Open a dialog to select which graphs to display."""
 
         if not self.available_keys:
-            print("[Info] Pulling available boat data fields from telemetry server for graph selection...")
+            logger.info("Pulling available boat data fields from telemetry server for graph selection...")
             try:
                 response = constants.REQ_SESSION.get(
-                    urljoin(
-                        misc.get_route("get_boat_status"),
-                        str(constants.SM.read("telemetry_server_instance_id"))
-                    )
+                    urljoin(misc.get_route("get_boat_status"), str(constants.SM.read_int("telemetry_server_instance_id")))
                 ).json()
 
                 if not isinstance(response, dict):
@@ -170,14 +165,14 @@ class GraphViewer(QWidget):
                 self.available_keys = {
                     k: v for k, v in response.items() if isinstance(v, (int, float)) and k != "current_waypoint_index"
                 }
-                print("[Info] Successfully fetched available boat data fields for graph selection.")
+                logger.info("Successfully fetched available boat data fields for graph selection.")
 
             except RequestException:
-                print("[Error] Failed to connect to telemetry server to fetch available boat data fields for graph selection.")
+                logger.error("Failed to connect to telemetry server to fetch available boat data fields for graph selection.")
                 return
 
             except TypeError:
-                print(f"[Error] Unexpected response format from telemetry server: {response}")
+                logger.error(f"Unexpected response format from telemetry server: {response}")
                 return
 
         self.graph_dialog = GraphSelectionDialog(available_keys=self.available_keys, selected_keys=self.important_keys)
@@ -186,6 +181,7 @@ class GraphViewer(QWidget):
 
         self.graph_dialog.apply_button.clicked.connect(lambda: self.apply_graph_selection(self.graph_dialog.selected_keys))
 
+    @Slot(list)
     def apply_graph_selection(self, selected_keys: list[str]) -> None:
         """
         Apply the selected graphs to display.
@@ -201,7 +197,7 @@ class GraphViewer(QWidget):
         self.data.clear()
         self.plots.clear()
         self.graph_layout_widget.clear()
-        print(f"[Info] Selected graphs updated: {', '.join(selected_keys)}")
+        logger.info(f"Selected graphs updated: {', '.join(selected_keys)}")
 
     def clear_graphs(self) -> None:
         """Clear all graphs and data."""
@@ -210,22 +206,43 @@ class GraphViewer(QWidget):
         self.data.clear()
         self.plots.clear()
         self.graph_layout_widget.clear()
-        print("[Info] Cleared all graphs and data.")
+        logger.info("Cleared all graphs and data.")
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """
+        Stop the telemetry fetcher thread and poll timer before closing.
+
+        Without this, the :class:`BoatStatusFetcherThread` is destroyed while still
+        running, producing "QThread: Destroyed while thread is still running"
+        and a non-zero exit code. :meth:`requestInterruption` makes the fetcher's
+        ``msleep`` wake early, and :meth:`wait` blocks until the thread has fully
+        exited before the widget is destroyed.
+
+        Parameters
+        ----------
+        event
+            The close event that triggered this method.
+        """
+
+        self.telemetry_handler.requestInterruption()
+        self.telemetry_handler.wait()
+        super().closeEvent(event)
+
 
 class GraphSelectionDialog(QDialog):
     """
-    A dialog for selecting which graphs to display in the ``GraphViewer``.
+    A dialog for selecting which graphs to display in the :class:`GraphViewer`.
 
     Inherits
     -------
-    ``QDialog``
+    :class:`QDialog`
     """
 
     __slots__ = ("_available_keys", "_selected_keys")
 
     def __init__(self, available_keys: list[str], selected_keys: list[str]) -> None:
         super().__init__()
-        
+
         self.setWindowTitle("Select Graphs")
         self._available_keys = available_keys
         self._selected_keys = selected_keys
@@ -239,7 +256,7 @@ class GraphSelectionDialog(QDialog):
             self.checkboxes[key] = checkbox
             self.layout.addWidget(checkbox, i // 2, i % 2)
 
-        self.apply_button = misc.pushbutton_maker("Apply", constants.ICONS.save, self.on_apply_clicked)
+        self.apply_button = misc.pushbutton_maker("Apply", self.on_apply_clicked, constants.ICONS.save)
         self.layout.addWidget(self.apply_button, (len(self.available_keys) + 1) // 2, 0, 1, 2)
 
         self.setLayout(self.layout)
@@ -249,13 +266,13 @@ class GraphSelectionDialog(QDialog):
         """Get the currently selected keys from the checkboxes."""
 
         return self._selected_keys
-    
+
     @selected_keys.setter
     def selected_keys(self, keys: list[str]) -> None:
         """
         Set the selected keys and ensure they are a subset of the available keys.
         Also updates the state of the checkboxes to reflect the new selection.
-        
+
         Parameters
         ----------
         keys
@@ -263,27 +280,31 @@ class GraphSelectionDialog(QDialog):
 
         Raises
         ------
-        ValueError
+        :class:`ValueError`
             If any of the selected keys are not in the available keys.
         """
-        
+
         if not set(keys).issubset(set(self.available_keys)):
             raise ValueError("Selected keys must be a subset of available keys.")
-        
+
         self._selected_keys = keys
         self.update_checkboxes()
-    
+
     @property
     def available_keys(self) -> list[str]:
         """Get the available keys for graph selection."""
 
         return self._available_keys
-    
+
     @available_keys.setter
     def available_keys(self, keys: list[str]) -> None:
         """Set the available keys for graph selection and update the checkboxes."""
 
+        if self._available_keys == keys:
+            return
+
         self._available_keys = keys
+
         for key in keys:
             if key not in self.checkboxes:
                 checkbox = QCheckBox(key.replace("_", " ").title())
@@ -293,12 +314,14 @@ class GraphSelectionDialog(QDialog):
                 col = len(self.checkboxes) % 2
                 self.layout.addWidget(checkbox, row, col)
 
+    @Slot()
     def update_checkboxes(self) -> None:
         """Update the state of the checkboxes based on the selected keys."""
 
         for key, checkbox in self.checkboxes.items():
             checkbox.setChecked(key in self.selected_keys)
 
+    @Slot()
     def on_apply_clicked(self) -> None:
         """Apply the selected graphs and close the dialog."""
 

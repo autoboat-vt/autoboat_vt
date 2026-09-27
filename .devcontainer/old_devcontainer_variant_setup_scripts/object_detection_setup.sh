@@ -2,13 +2,13 @@ sudo apt install git-lfs
 sudo apt install unzip
 
 
-# git-lfs clone https://huggingface.co/datasets/Aanimated/autoboat_vt_object_detection src/object_detection
+# git-lfs clone https://huggingface.co/datasets/Aanimated/autoboat_vt_object_detection ros_packages/object_detection
 
-mkdir src/object_detection/object_detection/weights
-mkdir src/object_detection/object_detection/runs
-mkdir src/object_detection/object_detection/hard_images
-mkdir src/object_detection/object_detection/test_results
-mkdir src/object_detection/object_detection/dataset
+mkdir ros_packages/object_detection/object_detection/weights
+mkdir ros_packages/object_detection/object_detection/runs
+mkdir ros_packages/object_detection/object_detection/hard_images
+mkdir ros_packages/object_detection/object_detection/test_results
+mkdir ros_packages/object_detection/object_detection/dataset
 
 
 
@@ -26,17 +26,17 @@ pip uninstall opencv-python -y
 
 
 # Download pre trained model weights from our huggingface repository
-git-lfs clone https://huggingface.co/datasets/Aanimated/autoboat_vt_models src/object_detection/object_detection/weights
-rm -rf src/object_detection/object_detection/weights/.git
-rm src/object_detection/object_detection/weights/.gitattributes
+git-lfs clone https://huggingface.co/datasets/Aanimated/autoboat_vt_models ros_packages/object_detection/object_detection/weights
+rm -rf ros_packages/object_detection/object_detection/weights/.git
+rm ros_packages/object_detection/object_detection/weights/.gitattributes
 
 # Download the hard test images. This is just a bunch of really difficult images to validate our model
-git-lfs clone https://huggingface.co/datasets/Aanimated/autoboat_vt_hard_images src/object_detection/object_detection/hard_images
-rm -rf src/object_detection/object_detection/hard_images/.git
-rm src/object_detection/object_detection/hard_images/.gitattributes
+git-lfs clone https://huggingface.co/datasets/Aanimated/autoboat_vt_hard_images ros_packages/object_detection/object_detection/hard_images
+rm -rf ros_packages/object_detection/object_detection/hard_images/.git
+rm ros_packages/object_detection/object_detection/hard_images/.gitattributes
 
 # Download the training/ validation/ testing dataset for buoys and boats
-cd src/object_detection/object_detection/dataset
+cd ros_packages/object_detection/object_detection/dataset
 curl -L "https://app.roboflow.com/ds/Fab44SEJ3L?key=1cCBk2tOqN" > dataset.zip
 unzip dataset.zip 
 rm dataset.zip

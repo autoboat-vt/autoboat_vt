@@ -1,0 +1,1 @@
+docker build -t vtautoboat/development_image_base:temp_tag -f .devcontainer/Dockerfile .

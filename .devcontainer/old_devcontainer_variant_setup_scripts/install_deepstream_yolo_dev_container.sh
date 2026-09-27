@@ -114,7 +114,7 @@ sudo apt-get install -y v4l-utils
 
 # Compile the deepstream_yolo library
 echo -e "\n\nCompiling deepstream_yolo library\n\n"
-cd /home/ws/src/object_detection/object_detection/deepstream_yolo/
+cd /home/ws/ros_packages/object_detection/object_detection/deepstream_yolo/
 export CUDA_VER=12.6
 make -C nvdsinfer_custom_impl_Yolo clean && make -C nvdsinfer_custom_impl_Yolo
 

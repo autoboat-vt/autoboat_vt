@@ -1,0 +1,144 @@
+/* 
+This file is used to configure formatters and linters for html, css, javascript, typescript, etc.
+
+Please see the following for a guide on Biome: https://biomejs.dev/guides/configure-biome
+For those who are curious: .jsonc -> json with comments
+*/
+
+{
+    "$schema": "ground_station/node_modules/@biomejs/biome/configuration_schema.json",
+    "root": true,
+    "vcs": {
+        "enabled": true,
+        "clientKind": "git",
+        "useIgnoreFile": true
+    },
+    "files": {
+        "ignoreUnknown": true,
+        "includes": [
+            "**",
+            "!**/__pycache__",
+            "!**/node_modules",
+            "!**/.git",
+            "!**/.cache",
+            "!**/.next",
+            "!**/.nuxt",
+            "!**/.svelte-kit",
+            "!**/.vite",
+            "!**/dist",
+            "!**/build",
+            "!**/coverage"
+        ]
+    },
+    "formatter": {
+        "enabled": true,
+        "formatWithErrors": false,
+        "indentStyle": "space",
+        "indentWidth": 4,
+        "lineWidth": 130,
+        "lineEnding": "lf",
+        "bracketSpacing": true,
+        "attributePosition": "auto"
+    },
+    "linter": {
+        "enabled": true,
+        "rules": {
+            "preset": "recommended",
+            "style": {
+                "useConst": "error",
+                "useTemplate": "warn"
+            },
+            "suspicious": {
+                "noConsole": "off",
+                "noDebugger": "error"
+            },
+            "correctness": {
+                "noUnusedImports": "error",
+                "noUnusedVariables": "warn"
+            }
+        }
+    },
+    "assist": {
+        "enabled": true,
+        "actions": {
+            "recommended": true,
+            "source": {
+                "organizeImports": "on"
+            }
+        }
+    },
+    "javascript": {
+        "formatter": {
+            "quoteStyle": "double",
+            "jsxQuoteStyle": "double",
+            "quoteProperties": "asNeeded",
+            "trailingCommas": "none",
+            "semicolons": "always",
+            "arrowParentheses": "always",
+            "bracketSameLine": false,
+            "bracketSpacing": true,
+            "operatorLinebreak": "after"
+        }
+    },
+    "json": {
+        "parser": {
+            "allowComments": true,
+            "allowTrailingCommas": true
+        },
+        "formatter": {
+            "trailingCommas": "none",
+            "bracketSpacing": true
+        }
+    },
+    "css": {
+        "formatter": {
+            "quoteStyle": "double"
+        }
+    },
+    "html": {
+        "experimentalFullSupportEnabled": true,
+        "formatter": {
+            "enabled": true,
+            "indentStyle": "space",
+            "indentWidth": 4,
+            "lineWidth": 100,
+            "attributePosition": "auto",
+            "bracketSameLine": false,
+            "whitespaceSensitivity": "css",
+            "indentScriptAndStyle": true,
+            "selfCloseVoidElements": "never"
+        },
+        "linter": {
+            "enabled": true
+        }
+    },
+    "overrides": [
+        {
+            "includes": ["*.min.js", "*.min.css", "**/vendor/**"],
+            "formatter": {
+                "enabled": false
+            },
+            "linter": {
+                "enabled": false
+            }
+        },
+        {
+            "includes": ["*.json"],
+            "json": {
+                "parser": {
+                    "allowComments": false,
+                    "allowTrailingCommas": false
+                }
+            }
+        },
+        {
+            "includes": ["*.jsonc", "biome.json", "biome.jsonc"],
+            "json": {
+                "parser": {
+                    "allowComments": true,
+                    "allowTrailingCommas": true
+                }
+            }
+        }
+    ]
+}

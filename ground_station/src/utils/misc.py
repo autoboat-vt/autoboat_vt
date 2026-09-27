@@ -1,62 +1,96 @@
 """
-Module containing miscellaneous utility functions for the ground station application.
+Module containing miscellaneous utility functions for the Groundstation application.
 
 Functions:
 - get_icons: Load and return a set of icons for the application.
 - get_route: Get the full URL for a given route name.
 - pushbutton_maker: Create a QPushButton with specified features.
-- show_message_box: Show a message box with specified title, message, icon, and buttons
-- show_input_dialog: Show an input dialog to get user input.
 - create_timer: Create a QTimer with specified interval and single-shot status.
 - copy_qtimer: Create a copy of a QTimer with the same interval and single-shot status.
 - cache_cdn_file: Download and cache a file to serve in a local CDN server.
+- create_symlinks: Create symbolic links for all files in the source directory to the target directory.
+- resolve_enum_name: Resolve a telemetry enum value to its member name.
 """
+
+import os
+from collections.abc import Callable
+from enum import Enum
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, Protocol, TypeVar, cast
+
+import qtawesome as qta
+from requests import RequestException
+
+from qtpy.QtCore import QTimer
+from qtpy.QtGui import QIcon
+from qtpy.QtWidgets import QPushButton
+
+from utils import constants
+from utils.console_logger import get_logger
 
 __all__ = [
     "cache_cdn_file",
     "copy_qtimer",
+    "create_symlinks",
     "create_timer",
     "get_icons",
     "get_route",
     "pushbutton_maker",
-    "show_input_dialog",
-    "show_message_box",
+    "resolve_enum_name",
 ]
 
-import os
-from collections.abc import Callable
-from pathlib import Path
-from types import SimpleNamespace
-from typing import TypeVar
-
-import qtawesome as qta
-from qtpy.QtCore import QTimer
-from qtpy.QtGui import QIcon
-from qtpy.QtWidgets import QCheckBox, QInputDialog, QMessageBox, QPushButton
-from requests import RequestException
-
-from utils import constants
+logger = get_logger(__name__)
 
 T = TypeVar("T")
 
-def get_icons() -> SimpleNamespace:
+
+class IconProtocol(Protocol):
+    upload: QIcon
+    download: QIcon
+    connect: QIcon
+    disconnect: QIcon
+    delete: QIcon
+    add: QIcon
+    home: QIcon
+    save: QIcon
+    pause: QIcon
+    play: QIcon
+    play_circle: QIcon
+    play_circle_outline: QIcon
+    green_play_circle_outline: QIcon
+    stop: QIcon
+    stop_circle: QIcon
+    stop_circle_outline: QIcon
+    red_stop_circle_outline: QIcon
+    cog: QIcon
+    pencil: QIcon
+    refresh: QIcon
+    hard_drive: QIcon
+    boat: QIcon
+    image_upload: QIcon
+    notification: QIcon
+    warning: QIcon
+    question: QIcon
+
+
+def get_icons() -> IconProtocol:
     """
     Load and return a set of icons for the application.
 
     Returns
     -------
-    SimpleNamespace
-        A namespace object containing the loaded icons.
-        Each icon can be accessed as an attribute of the namespace.
-    
-    Example
-    -------
-    >>> icons.upload == icons["upload"]
-        True
+    :class:`IconProtocol`
+        An object containing the loaded icons as attributes.
+
+    Examples
+    --------
+    >>> icons = get_icons()
+    >>> icons.upload
 
     Notes
     -----
-    The icons cannot be loaded until a ``QApplication`` instance is created.
+    The icons cannot be loaded until a :class:`QApplication` instance is created.
     """
 
     icons: dict[str, QIcon] = {
@@ -66,9 +100,17 @@ def get_icons() -> SimpleNamespace:
         "disconnect": qta.icon("fa6s.plug-circle-xmark", color="white"),
         "delete": qta.icon("mdi.trash-can", color="white"),
         "add": qta.icon("mdi.plus", color="white"),
+        "home": qta.icon("mdi.home", color="white"),
         "save": qta.icon("mdi.content-save", color="white"),
         "pause": qta.icon("mdi.pause-circle", color="white"),
         "play": qta.icon("mdi.play-circle", color="white"),
+        "play_circle": qta.icon("mdi.play-circle", color="white"),
+        "play_circle_outline": qta.icon("mdi.play-circle-outline", color="white"),
+        "green_play_circle_outline": qta.icon("mdi.play-circle-outline", color="green"),
+        "stop": qta.icon("mdi.stop-circle", color="white"),
+        "stop_circle": qta.icon("mdi.stop-circle", color="white"),
+        "stop_circle_outline": qta.icon("mdi.stop-circle-outline", color="white"),
+        "red_stop_circle_outline": qta.icon("mdi.stop-circle-outline", color="red"),
         "cog": qta.icon("mdi.cog", color="white"),
         "pencil": qta.icon("ei.pencil", color="white"),
         "refresh": qta.icon("mdi.refresh", color="white"),
@@ -81,11 +123,11 @@ def get_icons() -> SimpleNamespace:
     }
 
     for icon_name, icon in icons.items():
-        assert isinstance(icon, QIcon), (
-            f"Icon '{icon_name}' is not a valid QIcon. Please check the icon name or ensure the icon is available."
-        )
+        if not isinstance(icon, QIcon):
+            raise TypeError(f"Icon '{icon_name}' is not a valid QIcon. Check the icon name or make sure the icon is available.")
 
-    return SimpleNamespace(**icons)
+    return cast("IconProtocol", SimpleNamespace(**icons))
+
 
 def get_route(route_name: str) -> str:
     """
@@ -98,43 +140,44 @@ def get_route(route_name: str) -> str:
 
     Returns
     -------
-    str
+    `str`
         The full URL for the given route name.
 
     Raises
     ------
-    ValueError
+    :class:`ValueError`
         If the route name is not found in the telemetry server endpoints.
     """
 
-    endpoints = constants.SM.read("telemetry_server_endpoints")
+    endpoints = constants.SM.read_dict("telemetry_server_endpoints")
 
-    if isinstance(endpoints, dict) and endpoints.get(route_name):
+    if isinstance(endpoints, dict) and endpoints.get(route_name) is not None:
         return endpoints[route_name]
-    
+
     raise ValueError(f"Route name '{route_name}' not found in telemetry server endpoints.")
 
 
 def pushbutton_maker(
     button_text: str,
-    icon: QIcon,
     function: Callable[[], None],
+    icon: QIcon | None,
     style_sheet: str | None = None,
     max_width: int | None = None,
     min_height: int | None = None,
     is_clickable: bool = True,
+    tooltip: str | None = None,
 ) -> QPushButton:
     """
-    Create a ``QPushButton`` with the specified features.
+    Create a :class:`QPushButton` with the specified features.
 
     Parameters
     ----------
     button_text
         The text to display on the button.
-    icon
-        The icon to display on the button.
     function
         The function to connect to the button's clicked signal.
+    icon
+        The icon to display on the button.
     style_sheet
         An optional style sheet to apply to the button. If not specified, the default style is used.
     max_width
@@ -142,26 +185,33 @@ def pushbutton_maker(
     min_height
         The minimum height of the button. If not specified, not used.
     is_clickable
-        Whether the button should be clickable. Defaults to ``True``.
+        Whether the button should be clickable. Defaults to `True`.
+    tooltip
+        An optional tooltip to show when hovering over the button.
 
     Returns
     -------
-    QPushButton
+    :class:`QPushButton`
         The created button.
 
     Raises
     ------
-    RuntimeError
+    :class:`RuntimeError`
         If the button could not be created.
     """
 
     try:
         button = QPushButton(button_text)
-        button.setIcon(icon)
         button.clicked.connect(function)
+
+        if icon is not None:
+            button.setIcon(icon)
 
         if style_sheet is not None:
             button.setStyleSheet(style_sheet)
+
+        if tooltip is not None:
+            button.setToolTip(tooltip)
 
         if max_width is not None:
             button.setMaximumWidth(max_width)
@@ -177,145 +227,20 @@ def pushbutton_maker(
     return button
 
 
-def show_message_box(
-    title: str,
-    message: str,
-    icon: QIcon | None = None,
-    buttons: list[QMessageBox.StandardButton] | None = None,
-    remember_choice_option: bool | None = False,
-) -> QMessageBox.StandardButton | tuple[QMessageBox.StandardButton, bool]:
-    """
-    Show a message box with the specified title, message, and optional icon and buttons.
-    
-    If the user closes the message box without clicking a button, it returns ``QMessageBox.StandardButton.NoButton``.
-
-    Parameters
-    ----------
-    title
-        The title of the message box.
-    message
-        The message to display in the message box.
-    icon
-        An optional icon to display in the message box.
-    buttons
-        A list of standard buttons to show. Defaults to ``[QMessageBox.Ok]``. <br>
-        Example: ``[QMessageBox.Yes, QMessageBox.No]``
-    remember_choice_option
-        If ``True``, adds a "Remember my choice" checkbox to the message box.
-
-    Returns
-    -------
-    QMessageBox.StandardButton
-        The button that was clicked by the user.
-    bool
-        If ``remember_choice_option`` is ``True``, returns whether the user checked the "Remember my choice" checkbox.
-    """
-
-    if buttons is None:
-        buttons = [QMessageBox.Ok]
-
-    msg_box = QMessageBox()
-    msg_box.setWindowTitle(title)
-    msg_box.setText(message)
-
-    if icon:
-        msg_box.setIconPixmap(icon.pixmap(64, 64))
-
-    std_buttons = QMessageBox.NoButton
-    for b in buttons:
-        std_buttons |= b
-    msg_box.setStandardButtons(std_buttons)
-
-    if remember_choice_option:
-        remember_checkbox = QCheckBox("Remember my decision?")
-        msg_box.setCheckBox(remember_checkbox)
-        clicked = msg_box.exec()
-        clicked_button = QMessageBox.StandardButton(clicked)
-
-        if clicked_button == QMessageBox.NoButton:
-            clicked_button = buttons[-1]
-            print(f"[Warning] User closed the dialog without selecting a button. Using {clicked_button}.")
-
-        return clicked_button, remember_checkbox.isChecked()
-
-    else:
-        clicked = msg_box.exec()
-        clicked_button = QMessageBox.StandardButton(clicked)
-        
-        if clicked_button == QMessageBox.NoButton:
-            clicked_button = buttons[-1]
-            print(f"[Warning] User closed the dialog without selecting a button. Using {clicked_button}.")
-        
-        return clicked_button
-
-
-def show_input_dialog(
-    title: str,
-    label: str,
-    default_value: str | None = None,
-    input_type: Callable[[str], T] = str,
-) -> T | None:
-    """
-    Show an input dialog to get user input.
-
-    Parameters
-    ----------
-    title
-        The title of the input dialog.
-    label
-        The label for the input field.
-    default_value
-        The default value to show in the input field.
-    input_type
-        The type to convert the input to. Defaults to ``str``. <br>
-        Example: ``int``, ``float``, etc.
-
-    Returns
-    -------
-    T | None
-        The user input converted to the specified type, or ``None`` if the dialog was cancelled.
-    """
-
-    if input_type is int:
-        value = int(default_value) if default_value is not None else 0
-        result, ok = QInputDialog.getInt(None, title, label, value=value)
-
-    elif input_type is float:
-        value = float(default_value) if default_value is not None else 0.0
-        result, ok = QInputDialog.getDouble(None, title, label, value=value)
-
-    else:
-        text = default_value if default_value is not None else ""
-        text, ok = QInputDialog.getText(None, title, label, text=text)
-        result = None
-        if ok:
-            try:
-                result = input_type(text)
-            except ValueError:
-                print(f"[Error] Failed to convert '{text}' to {input_type.__name__}.")
-                return None
-
-    if ok:
-        return result if result is not None else text
-    else:
-        return None
-
-
 def create_timer(interval_ms: int, single_shot: bool = False) -> QTimer:
     """
-    Create a QTimer with the specified interval and single-shot status.
+    Create a :class:`QTimer` with the specified interval and single-shot status.
 
     Parameters
     ----------
     interval_ms
         The interval in milliseconds for the timer.
     single_shot
-        Whether the timer should be single-shot. Defaults to ``False``.
+        Whether the timer should be single-shot. Defaults to `False`.
 
     Returns
     -------
-    QTimer
-        A new QTimer instance with the specified interval and single-shot status.
+    :class:`QTimer`
     """
 
     timer = QTimer()
@@ -326,7 +251,7 @@ def create_timer(interval_ms: int, single_shot: bool = False) -> QTimer:
 
 def copy_qtimer(original: QTimer) -> QTimer:
     """
-    Create a copy of a QTimer with the same interval and single-shot status but without copying connections.
+    Create a copy of a :class:`QTimer` with the same interval and single-shot status but without copying connections.
 
     Parameters
     ----------
@@ -335,8 +260,7 @@ def copy_qtimer(original: QTimer) -> QTimer:
 
     Returns
     -------
-    QTimer
-        A new QTimer instance with the same interval and single-shot status as the original.
+    :class:`QTimer`
     """
 
     new_timer = QTimer()
@@ -358,7 +282,7 @@ def cache_cdn_file(url: str, save_dir: str) -> None:
 
     Raises
     ------
-    RuntimeError
+    :class:`RuntimeError`
         If the file could not be downloaded and is not already cached.
     """
 
@@ -370,15 +294,16 @@ def cache_cdn_file(url: str, save_dir: str) -> None:
         response.raise_for_status()
 
         Path(save_path).write_bytes(response.content)
-        
-        print(f"[Info] Cached CDN file '{file_name}' to '{save_path}'.")
-    
+
+        logger.info(f"Cached CDN file '{file_name}' to '{save_path}'.")
+
     except RequestException as e:
         if file_name in os.listdir(save_dir):
-            print(f"[Warning] Failed to download '{file_name}' from CDN, using cached version. Error: {e}")
+            logger.warning(f"Failed to download '{file_name}' from CDN, using cached version. Error: {e}")
 
         else:
             raise RuntimeError(f"Failed to download and cache CDN file '{file_name}': {e}") from e
+
 
 def create_symlinks(source_dir: Path, target_dir: Path) -> None:
     """
@@ -393,7 +318,7 @@ def create_symlinks(source_dir: Path, target_dir: Path) -> None:
 
     Raises
     ------
-    RuntimeError
+    :class:`RuntimeError`
         If a symbolic link cannot be created.
     """
 
@@ -403,12 +328,44 @@ def create_symlinks(source_dir: Path, target_dir: Path) -> None:
             try:
                 if target_path.exists() or target_path.is_symlink():
                     target_path.unlink()
-                
-                target_path.symlink_to(item.resolve())
 
-                # make file in git_ignore unwritable to prevent accidental edits
+                target_path.symlink_to(item.resolve())
+                # make file in target_dir read-only to prevent accidental edits
                 target_path.chmod(0o444)
-                print(f"[Info] Created symlink for '{item.name}' at '{target_path}'.")
-            
+                logger.info(f"Created symlink for '{item.name}' at '{target_path}'.")
+
             except Exception as e:
                 raise RuntimeError(f"Failed to create symlink for '{item.name}': {e}") from e
+
+
+def resolve_enum_name(enum_class: type[Enum], value: Any) -> str:
+    """
+    Resolve a telemetry enum value to its member name.
+
+    The telemetry server may send either the enum's integer value (e.g., `4`) or its
+    member name as a string (e.g., `"CW_TACKING"`). This helper handles both formats
+    and falls back to a string representation of the raw value if it cannot be resolved,
+    so that a single unexpected value does not crash the telemetry display.
+
+    Parameters
+    ----------
+    enum_class
+        The enum class to resolve against (e.g., :class:`SailboatAutopilotStates`).
+    value
+        The raw value received from the telemetry server.
+
+    Returns
+    -------
+    `str`
+        The resolved enum member name, or a stringified fallback.
+    """
+
+    if isinstance(value, str) and value in enum_class.__members__:
+        return value
+
+    try:
+        return enum_class(int(value)).name
+    except (ValueError, KeyError, TypeError):
+        pass
+
+    return str(value) if value is not None else "N/A"

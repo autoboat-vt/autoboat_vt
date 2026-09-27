@@ -1,4 +1,4 @@
-# Ground Station
+# Groundstation
 
 This tool offers an intuitive interface that allows users to monitor telemetry data and set route waypoints while the boat is in operation.
 
@@ -8,8 +8,8 @@ This tool offers an intuitive interface that allows users to monitor telemetry d
 
 Ensure that you have the following software installed on your system:
 
-- [Go](https://go.dev/doc/install) (>= 1.18.1)
-- [Python](https://www.python.org/downloads/) (3.10.12 to try and mimic the docker environment)
+- [Python](https://www.python.org/downloads) (3.10.12 to try and mimic the docker environment)
+- [Bun](https://bun.sh) (whatever the latest version is at the time you're reading this)
 
 ### Installation
 

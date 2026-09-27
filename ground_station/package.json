@@ -1,0 +1,21 @@
+{
+    "name": "map_widget",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "serve": "vite --clearScreen false --logLevel error"
+    },
+    "dependencies": {
+        "leaflet": "latest",
+        "leaflet-rotatedmarker": "latest"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "latest",
+        "@types/bun": "latest",
+        "@types/geojson": "latest",
+        "@types/leaflet": "latest",
+        "@types/leaflet-rotatedmarker": "latest",
+        "typescript": "latest",
+        "vite": "latest"
+    }
+}

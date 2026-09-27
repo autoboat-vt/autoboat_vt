@@ -1,0 +1,62 @@
+{
+    "focus_boat": {
+        "name": "Focus Map on Boat",
+        "description": "Center and zoom the map on the boat's current position.",
+        "scope": "map",
+        "key": "f"
+    },
+    "clear_waypoints": {
+        "name": "Clear Waypoints",
+        "description": "Remove every waypoint currently placed on the map.",
+        "scope": "map",
+        "key": "c"
+    },
+    "undo_waypoint": {
+        "name": "Undo Last Waypoint",
+        "description": "Remove the most recently placed waypoint from the map.",
+        "scope": "map",
+        "key": "Ctrl+Z"
+    },
+    "pull_waypoints": {
+        "name": "Pull Waypoints from Server",
+        "description": "Fetch waypoints from the telemetry server and add them to the map.",
+        "scope": "app",
+        "key": "Ctrl+Shift+P"
+    },
+    "send_waypoints": {
+        "name": "Send Waypoints to Server",
+        "description": "Push the current waypoints to the telemetry server.",
+        "scope": "app",
+        "key": "Ctrl+Shift+S"
+    },
+    "toggle_data_logging": {
+        "name": "Toggle Data Logging",
+        "description": "Start or stop logging telemetry data to a file.",
+        "scope": "app",
+        "key": "Ctrl+L"
+    },
+    "open_keybind_config": {
+        "name": "Open Keybind Configuration",
+        "description": "Open the keybind configuration dialog.",
+        "scope": "app",
+        "key": "Ctrl+K"
+    },
+    "open_tetris": {
+        "name": "Open Tetris",
+        "description": "Can you play tetris on the phallic ice cream?",
+        "scope": "app",
+        "key": ""
+    },
+    "open_snake": {
+        "name": "Open Snake",
+        "description": "Eat the apples, don't bite your tail.",
+        "scope": "app",
+        "key": ""
+    },
+    "open_pong": {
+        "name": "Open Pong",
+        "description": "The classic arcade duel \u2014 1- or 2-player.",
+        "scope": "app",
+        "key": ""
+    }
+}

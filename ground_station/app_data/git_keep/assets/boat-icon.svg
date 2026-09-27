@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Bird's-eye (top-down) sailboat in Virginia Tech colors: Chicago maroon
+     (#861F41) hull with a pointed bow, white waterline stripe near the stern,
+     burnt orange (#E5751F) stern stripe, and a center cockpit. Bow points up
+     (north) at 0 degrees heading; Leaflet rotates it with (90 - heading). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+    <!-- hull (Chicago maroon): pointed bow at the top -->
+    <path d="M50 6 C62 24 72 46 72 66 C72 84 62 93 50 93 C38 93 28 84 28 66 C28 46 38 24 50 6 Z" fill="#861F41"
+        stroke="#4d1226" stroke-width="2" stroke-linejoin="round" />
+    <!-- burnt orange stripe across the stern -->
+    <path d="M34 84 C44 89 56 89 66 84 L63 89 C55 93 45 93 37 89 Z" fill="#E5751F" />
+    <!-- white waterline stripe just ahead of the stern -->
+    <path d="M32 74 C43 79 57 79 68 74 L66 80 C56 85 44 85 34 80 Z" fill="#f5f8ff" />
+    <!-- cockpit (light, center of the deck) -->
+    <ellipse cx="50" cy="52" rx="9" ry="16" fill="#e6ecf2" stroke="#7c8896" stroke-width="1.5" />
+    <ellipse cx="50" cy="52" rx="4.5" ry="9" fill="#39424d" />
+</svg>

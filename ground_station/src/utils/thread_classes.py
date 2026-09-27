@@ -1,58 +1,49 @@
-"""
-Module containing classes for handling background tasks in the ground station application.
+import pathlib
+from typing import cast
+from urllib.parse import urljoin
 
-Contains:
-- AutopilotThreadRouter: Class containing ``QThread`` classes dealing with the ``autopilot_parameters`` endpoint.
-- BoatStatusThreadRouter: Class containing ``QThread`` classes dealing with the ``boat_status`` endpoint.
-- InstanceManagerThreadRouter: Class containing ``QThread`` classes dealing with the ``instance_manager`` endpoint.
+from requests import RequestException
 
-- WaypointThreadRouter: Class containing ``QThread`` classes dealing with waypoints,
-both from the ``waypoints`` endpoint and the local server.
+from qtpy.QtCore import QThread, Signal
 
-- ImageFetcher: ``QThread`` class for fetching images from the telemetry server.
-"""
+from utils import constants, misc
+from utils.console_logger import get_logger
 
 __all__ = [
     "AutopilotThreadRouter",
     "BoatStatusThreadRouter",
-    "ImageFetcher",
+    "ImageThreadRouter",
     "InstanceManagerThreadRouter",
     "WaypointThreadRouter",
 ]
 
-import pathlib
-from urllib.parse import urljoin
-
-from qtpy.QtCore import QThread, Signal
-from requests import RequestException
-
-from utils import constants, misc
+logger = get_logger(__name__)
 
 
 class AutopilotThreadRouter:
     """
-    Class containing ``QThread`` classes dealing with the ``autopilot_parameters`` endpoint.
+    Class containing :class:`QThread` classes dealing with the ``autopilot_parameters`` endpoint.
 
-    Subclasses
+    Attributes
     ----------
-    - ``ActiveHashFetcherThread`` -> Fetches the currently active autopilot parameter configuration hash.
-    - ``AvailableHashesFetcherThread`` -> Fetches available autopilot parameter configuration hashes.
+    - :class:`ActiveHashFetcherThread` -> Fetches the currently active autopilot parameter configuration hash.
+    - :class:`AvailableHashesFetcherThread` -> Fetches available autopilot parameter configuration hashes.
     """
 
     class ActiveHashFetcherThread(QThread):
         """
-        Thread to fetch the currently active autopilot parameter configuration hash from the telemetry server.
-
-        Inherits
-        -------
-        ``QThread``
+        Fetch the currently active autopilot parameter configuration hash from the telemetry server.
 
         Attributes
         ----------
         response
             Signal to send the active hash to the main thread. Emits a tuple containing:
-                - a string representing the active hash,
-                - a ``TelemetryStatus`` enum value indicating the status of the request.
+                - a dictionary containing the active hash information,
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
+
+        Inherits
+        --------
+        :class:`QThread`
         """
 
         response = Signal(tuple)
@@ -72,7 +63,7 @@ class AutopilotThreadRouter:
                 data = constants.REQ_SESSION.get(
                     urljoin(
                         misc.get_route("get_current_hash"),
-                        str(constants.SM.read("telemetry_server_instance_id")),
+                        str(constants.SM.read_int("telemetry_server_instance_id")),
                     )
                 ).text
 
@@ -92,16 +83,16 @@ class AutopilotThreadRouter:
         """
         Thread to fetch available autopilot parameter configuration hashes from the telemetry server.
 
-        Inherits
-        -------
-        ``QThread``
-
         Attributes
         ----------
         response
             Signal to send available hashes to the main thread. Emits a tuple containing:
-                - a list of available hashes,
-                - a ``TelemetryStatus`` enum value indicating the status of the request.
+                - a list of dictionaries, where each dictionary contains information about an available hash,
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
+
+        Inherits
+        --------
+        :class:`QThread`
         """
 
         response = Signal(tuple)
@@ -118,9 +109,7 @@ class AutopilotThreadRouter:
             """Fetch available default autopilot parameter hashes and emit them."""
 
             try:
-                data = constants.REQ_SESSION.get(
-                    misc.get_route("get_all_hashes")
-                ).json()
+                data = constants.REQ_SESSION.get(misc.get_route("get_all_hashes")).json()
 
                 if not isinstance(data, list):
                     raise TypeError
@@ -140,84 +129,82 @@ class AutopilotThreadRouter:
 
 class BoatStatusThreadRouter:
     """
-    Class containing ``QThread`` classes dealing with the ``boat_status`` endpoint.
+    Class containing :class:`QThread` classes dealing with the ``boat_status`` endpoint.
 
-    Subclasses
+    Attributes
     ----------
-    - ``BoatStatusFetcherThread`` -> Fetches boat status.
+    - :class:`BoatStatusFetcherThread` -> Fetches boat status via HTTP polling.
     """
 
     class BoatStatusFetcherThread(QThread):
         """
-        Thread to fetch boat status from the telemetry server via HTTP polling.
-
-        Inherits
-        -------
-        ``QThread``
+        Fetch boat status from the telemetry server via HTTP polling.
 
         Attributes
         ----------
-        response
-            Signal to send boat status to the main thread. Emits a tuple containing:
-                - a dictionary of boat status,
-                - a ``TelemetryStatus`` enum value indicating the status of the request.
+        data_fetched
+            Signal emitted when a new boat status fetch completes. Emits a tuple containing:
+                - a dictionary containing the boat status data,
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
+
+        Inherits
+        --------
+        :class:`QThread`
         """
 
-        response = Signal(tuple)
-
-        def __init__(self) -> None:
-            super().__init__()
+        data_fetched = Signal(tuple)
 
         def run(self) -> None:
             """Run the thread to fetch boat status from the telemetry server."""
 
-            self.get_boat_status()
-
-        def get_boat_status(self) -> None:
-            """Fetch boat status from the telemetry server and emit it continuously."""
-
-            while True:
+            while not self.isInterruptionRequested():
+                instance_id = constants.SM.read_int("telemetry_server_instance_id")
                 try:
                     data = constants.REQ_SESSION.get(
-                        urljoin(misc.get_route("get_boat_status"), str(constants.SM.read("telemetry_server_instance_id")))
+                        urljoin(misc.get_route("get_boat_status"), str(instance_id))
                     ).json()
 
                     if not isinstance(data, dict):
                         raise TypeError
 
                 except RequestException:
-                    self.response.emit(({}, constants.TelemetryStatus.FAILURE))
+                    result = ({}, constants.TelemetryStatus.FAILURE)
 
                 except TypeError:
-                    self.response.emit(({}, constants.TelemetryStatus.WRONG_FORMAT))
+                    result = ({}, constants.TelemetryStatus.WRONG_FORMAT)
 
                 else:
-                    self.response.emit((data, constants.TelemetryStatus.SUCCESS))
+                    result = (data, constants.TelemetryStatus.SUCCESS)
+
+                if instance_id != constants.SM.read_int("telemetry_server_instance_id"):
+                    continue
+
+                self.data_fetched.emit(result)
 
 
 class InstanceManagerThreadRouter:
     """
-    Class containing ``QThread`` classes dealing with the ``instance_manager`` endpoint.
+    Class containing :class:`QThread` classes dealing with the ``instance_manager`` endpoint.
 
-    Subclasses
+    Attributes
     ----------
-    - ``InstanceFetcherThread`` -> Fetches instances.
+    - :class:`InstanceFetcherThread` -> Fetches available instances.
     """
 
     class InstanceFetcherThread(QThread):
         """
-        Thread to fetch instances from the telemetry server.
-
-        Inherits
-        -------
-        ``QThread``
+        Fetch instances from the telemetry server.
 
         Attributes
         ----------
         response
             Signal to send instances to the main thread. Emits a tuple containing:
-                - a list of dictionaries representing instances,
-                - a ``TelemetryStatus`` enum value indicating the status of the request.
+                - a list of dictionaries, where each dictionary contains information about an instance,
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
+
+        Inherits
+        --------
+        :class:`QThread`
         """
 
         response = Signal(tuple)
@@ -254,12 +241,12 @@ class InstanceManagerThreadRouter:
 
 class WaypointThreadRouter:
     """
-    Class containing ``QThread`` classes dealing with waypoints.
+    Class containing :class:`QThread` classes dealing with waypoints.
 
-    Subclasses
+    Attributes
     ----------
-    - ``RemoteFetcherThread`` -> Fetches waypoints from the telemetry server.
-    - ``LocalFetcherThread`` -> Fetches waypoints from the local server.
+    - :class:`RemoteFetcherThread` -> Fetches waypoints from the telemetry server.
+    - :class:`LocalFetcherThread` -> Fetches waypoints from the local server.
     """
 
     class RemoteFetcherThread(QThread):
@@ -268,14 +255,14 @@ class WaypointThreadRouter:
 
         Inherits
         -------
-        ``QThread``
+        :class:`QThread`
 
         Attributes
         ----------
         response
             Signal to send waypoints to the main thread. Emits a tuple containing:
-                - a list of waypoints, where each waypoint is a list of ``[latitude, longitude]``,
-                - a ``TelemetryStatus`` enum value indicating the status of the request.
+                - a list of waypoints, where each waypoint is a list of `[latitude, longitude]`,
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
         """
 
         response = Signal(tuple)
@@ -295,7 +282,7 @@ class WaypointThreadRouter:
                 data = constants.REQ_SESSION.get(
                     urljoin(
                         misc.get_route("get_waypoints"),
-                        str(constants.SM.read("telemetry_server_instance_id")),
+                        str(constants.SM.read_int("telemetry_server_instance_id")),
                     )
                 ).json()
 
@@ -306,7 +293,7 @@ class WaypointThreadRouter:
                     if not isinstance(waypoint, (tuple, list)):
                         raise TypeError
 
-                    if not all(isinstance(cord, (int, float)) for cord in waypoint):
+                    if not all(isinstance(coord, (int, float)) for coord in waypoint):
                         raise TypeError
 
             except RequestException:
@@ -322,16 +309,16 @@ class WaypointThreadRouter:
         """
         Thread to fetch waypoints from the local server.
 
-        Inherits
-        -------
-        ``QThread``
-
         Attributes
         ----------
         response
             Signal to send waypoints to the main thread. Emits a tuple containing:
-                - a list of waypoints, where each waypoint is a list of ``[latitude, longitude]``,
-                - a ``TelemetryStatus`` enum value indicating the status of the request.
+                - a list of waypoints, where each waypoint is a list of `[latitude, longitude]`,
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
+
+        Inherits
+        --------
+        :class:`QThread`
         """
 
         response = Signal(tuple)
@@ -348,7 +335,7 @@ class WaypointThreadRouter:
             """Fetch waypoints from the local server and emit them."""
 
             try:
-                data = constants.REQ_SESSION.get(constants.SM.read("waypoints_server_url")).json()
+                data = constants.REQ_SESSION.get(constants.SM.read_str("waypoints_server_url")).json()
 
                 if not isinstance(data, list):
                     raise TypeError
@@ -356,7 +343,7 @@ class WaypointThreadRouter:
                 for waypoint in data:
                     if not isinstance(waypoint, (tuple, list)):
                         raise TypeError
-                    if not all(isinstance(cord, (int, float)) for cord in waypoint):
+                    if not all(isinstance(coord, (int, float)) for coord in waypoint):
                         raise TypeError
 
             except RequestException:
@@ -368,59 +355,71 @@ class WaypointThreadRouter:
             else:
                 self.response.emit((data, constants.TelemetryStatus.SUCCESS))
 
-
-class ImageFetcher(QThread):
+class ImageThreadRouter:
     """
-    Thread to fetch images from the telemetry server.
-
-    Inherits
-    -------
-    ``QThread``
+    Class containing :class:`QThread` classes dealing with image fetching.
 
     Attributes
     ----------
-    data_fetched
-        Signal to send image to the main thread. Emits a base64 encoded string of the image.
+    - :class:`ImageFetcher` -> Fetches images from the telemetry server.
     """
 
-    data_fetched = Signal(str)
-
-    def __init__(self) -> None:
-        super().__init__()
-
-    def run(self) -> None:
-        """Run the thread to fetch images from the telemetry server."""
-
-        self.get_image()
-
-    def get_image(self) -> None:
+    class ImageFetcher(QThread):
         """
-        Fetch an image from the telemetry server and emit it as a base64 encoded string.
-        
-        Raises
-        ------
-        ValueError
-            If the image data is ``None``.
+        Thread to fetch images from the telemetry server.
+
+        Attributes
+        ----------
+        data_fetched
+            Signal to send image to the main thread.
+
+        Inherits
+        --------
+        :class:`QThread`
         """
 
-        try:
-            image_data = constants.REQ_SESSION.get(
-                urljoin(
-                    misc.get_route("get_current_camera_image"),
-                    str(constants.SM.read("telemetry_server_instance_id")),
+        data_fetched = Signal(bytes)
+
+        def __init__(self) -> None:
+            super().__init__()
+
+        def run(self) -> None:
+            """Run the thread to fetch images from the telemetry server."""
+
+            self.get_image()
+
+        def get_image(self) -> None:
+            """
+            Fetch an image from the telemetry server and emit it.
+
+            Raises
+            ------
+            :class:`ValueError`
+                If the image data is empty.
+            """
+
+            try:
+                response = constants.REQ_SESSION.get(
+                    urljoin(
+                        misc.get_route("get_current_image"),
+                        str(constants.SM.read_int("telemetry_server_instance_id")),
+                    )
                 )
-            ).json()
 
-            base64_encoded_image = image_data.get("current_camera_image")
-            if base64_encoded_image is None:
-                raise ValueError("Image data is None")
+                if response.status_code != 200:
+                    raise RequestException(f"HTTP {response.status_code}: {response.text.strip()}")
 
-        except RequestException:
-            print("[Warning] Failed to fetch image. Using cool guy image.")
-            base64_encoded_image = pathlib.Path(constants.ASSETS_DIR / "cool-guy-base64.txt").read_text(encoding="utf-8")
+                image = response.content
+                if not image:
+                    raise ValueError("Image data is empty")
 
-        except ValueError as e:
-            print(f"[Warning] {e}")
-            base64_encoded_image = pathlib.Path(constants.ASSETS_DIR / "cool-guy-base64.txt").read_text(encoding="utf-8")
+            except RequestException as e:
+                logger.warning(f"Failed to fetch image from telemetry server: {e}")
+                image = pathlib.Path(constants.ASSETS_DIR / "new_logo.png").read_bytes()
 
-        self.data_fetched.emit(base64_encoded_image)
+            except ValueError as e:
+                logger.warning(f"{e}")
+                image = pathlib.Path(constants.ASSETS_DIR / "new_logo.png").read_bytes()
+
+            image = cast("bytes", image)
+            self.data_fetched.emit(image)

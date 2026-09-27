@@ -1,36 +1,31 @@
 """
-Package for widgets in the ground station application.
+Provide all top-level widgets for the ground station application.
 
-Contains:
-- GroundStationWidget: Main widget for the ground station interface.
-- ConsoleOutputWidget: Widget for displaying console output.
-- GraphViewer: Widget for viewing telemetry data.
-- InstanceHandler: Manages instances of the application, displaying their information and allowing interaction.
-- CameraWidget: Widget for displaying a camera feed.
-- AutopilotConfigEditor: Widget for editing autopilot parameters.
-- AutopilotConfigManager: Widget for managing autopilot configuration files.
-- AutopilotConfigWidget: Tabbed widget combining the config editor and manager.
-- TextEditWindow: Popup window for editing text.
+This package includes the main :class:`GroundStationWidget`, console output,
+map, camera, autopilot configuration, keybind, instance handler, and user guide
+widgets, along with several easter egg games.
 """
 
 __all__ = [
-    "AutopilotConfigEditor",
-    "AutopilotConfigManager",
     "AutopilotConfigWidget",
     "CameraWidget",
     "ConsoleOutputWidget",
     "GraphViewer",
     "GroundStationWidget",
     "InstanceHandler",
-    "TextEditWindow",
+    "KeybindConfigDialog",
+    "MapOptionsHandler",
+    "UserGuideWidget",
+    "get_keybind_manager",
+    "run",
 ]
 
-from .autopilot_config_widget.config_editor import AutopilotConfigEditor
-from .autopilot_config_widget.config_manager import AutopilotConfigManager
-from .autopilot_config_widget.config_widget import AutopilotConfigWidget
-from .camera_widget.camera import CameraWidget
+from .autopilot_config_widget import AutopilotConfigWidget
+from .camera import CameraWidget
 from .console_output import ConsoleOutputWidget
 from .graph_viewer import GraphViewer
 from .groundstation import GroundStationWidget
 from .instance_handler import InstanceHandler
-from .popup_edit import TextEditWindow
+from .keybind_widget import KeybindConfigDialog, get_keybind_manager
+from .map_widget import MapOptionsHandler, run
+from .user_guide import UserGuideWidget

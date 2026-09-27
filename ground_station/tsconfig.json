@@ -1,0 +1,24 @@
+{
+    "compilerOptions": {
+        "target": "ES2023",
+        "module": "ESNext",
+        "lib": ["ES2023", "DOM"],
+        "moduleResolution": "bundler",
+        "strict": true,
+        "skipLibCheck": true,
+        "noEmit": true,
+        "types": ["bun"],
+        "allowJs": true,
+        "moduleDetection": "force",
+        "noUncheckedIndexedAccess": true,
+        "noImplicitOverride": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true
+    },
+    "include": [
+        "src/widgets/map_widget/frontend/*.ts",
+        "src/widgets/map_widget/frontend/*.js",
+        "src/widgets/map_widget/frontend/*.d.ts"
+    ]
+}

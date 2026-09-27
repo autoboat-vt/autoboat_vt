@@ -1,0 +1,62 @@
+{
+    "autopilot_refresh_rate": {
+        "default": 50.0,
+        "description": "Refresh rate for the autopilot in seconds."
+    },
+    "waypoint_accuracy": {
+        "default": 5.0,
+        "description": "The accuracy required to consider a waypoint reached, in meters."
+    },
+    "min_rudder_angle": {
+        "default": -25.0,
+        "description": "Minimum angle for the rudder, in degrees."
+    },
+    "max_rudder_angle": {
+        "default": 25.0,
+        "description": "Maximum angle for the rudder, in degrees."
+    },
+    "rudder_hard_over": {
+        "default": 25.0,
+        "description": "This is the angle to turn to whenever we need to execute a 'hardover' maneuever. IE we need to turn as quickly as possible."
+    },
+    "heading_p_gain": {
+        "default": 0.3,
+        "description": "Proportional gain for heading control."
+    },
+    "heading_i_gain": {
+        "default": 0.0,
+        "description": "Integral gain for heading control."
+    },
+    "heading_d_gain": {
+        "default": 0.2,
+        "description": "Derivative gain for heading control."
+    },
+    "heading_n_gain": {
+        "default": 0.0,
+        "description": "N gain for heading control."
+    },
+    "max_rpm": {
+        "default": 300,
+        "description": "The maximum RPM that the autopilot will allow the motorboat to achieve"
+    },
+    "min_rpm": {
+        "default": 100.0,
+        "description": "The minimum RPM that the autopilot will allow the motorboat to achieve while it is actively trying to get to a waypoint."
+    },
+    "rpm_decay_rate": {
+        "default": 0.1,
+        "description": "The rate at which the RPM should decay as the rudder angle increases (via negative exponential). Higher values will result in a faster decay."
+    },
+    "gps_position_failsafe_time": {
+        "default": 3.0,
+        "description": "If the autopilot isn't receiving GPS data for this amount of seconds, then it will set the propeller rpm to 0 for safety"
+    },
+    "rc_data_failsafe_time": {
+        "default": 100000000000.0,
+        "description": "If the autopilot isn't receiving remote controller data for this amount of seconds, then it will set the propeller rpm to 0 for safety"
+    },
+    "heading_data_failsafe_time": {
+        "default": 3,
+        "description": "If the autopilot isn't receiving heading data for this amount of seconds, then it will set the propeller rpm to 0 for safety"
+    }
+}

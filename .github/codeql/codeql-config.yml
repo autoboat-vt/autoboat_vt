@@ -1,0 +1,31 @@
+# CodeQL configuration for autoboat_vt
+#
+# Excludes build artifacts, vendored code, and generated files from analysis
+# so security queries run only on first-party source.
+
+name: "CodeQL config for autoboat_vt"
+
+paths-ignore:
+  # Build outputs
+  - build/**
+  - install/**
+  - log/**
+  - node_modules/**
+
+  # Vendored / third-party code
+  - ground_station/src/widgets/map_widget/frontend/node_modules/**
+  - ros_packages/object_detection/object_detection/cv_library/deepstream_yolo_library/**
+
+  # Firmware is excluded via workflow languages; no C++ runner is configured
+  # because the Teensy/micro-ROS toolchain is not available in CI.
+
+  # Auto-generated Qt / build system files
+  - "**/*.designer.py"
+  - "**/ui_*.py"
+  - "**/moc_*.cpp"
+  - "**/qrc_*.cpp"
+
+# Optional: if you add CodeQL query packs or custom queries later, reference
+# them here.
+# packs:
+#   - codeql/python-queries:Security/CWE-078

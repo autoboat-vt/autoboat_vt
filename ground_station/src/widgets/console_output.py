@@ -2,24 +2,31 @@ import sys
 from datetime import datetime
 
 import pytz
-from qtpy.QtCore import QThread, Signal
+
+from qtpy.QtCore import QObject, Signal, Slot
 from qtpy.QtGui import QCloseEvent, QTextCursor
 from qtpy.QtWidgets import QTextEdit, QVBoxLayout, QWidget
-from syntax_highlighters import ConsoleHighlighter
+
+from utils import syntax_highlighters
+from utils.console_logger import attach_console_widget
 
 
-class EmittingStream(QThread):
+class EmittingStream(QObject):
     """
     A custom stream that emits text written to it as a signal.
 
-    Inherits
-    --------
-    ``QThread``
+    This stream is intended to replace ``sys.stdout`` / ``sys.stderr`` so that
+    output from :func:`print()` calls throughout the codebase is captured into the
+    console widget.
 
     Attributes
     ----------
-    text_written: ``Signal``
+    text_written
         Signal emitted when text is written to the stream.
+
+    Inherits
+    --------
+    :class:`QObject`
     """
 
     text_written = Signal(str)
@@ -57,7 +64,7 @@ class ConsoleOutputWidget(QWidget):
 
     Inherits
     --------
-    ``QWidget``
+    :class:`QWidget`
     """
 
     def __init__(self) -> None:
@@ -73,7 +80,7 @@ class ConsoleOutputWidget(QWidget):
         self.console_output.setReadOnly(True)
         self.main_layout.addWidget(self.console_output)
 
-        self.highlighter = ConsoleHighlighter(self.console_output.document())
+        self.highlighter = syntax_highlighters.ConsoleHighlighter(self.console_output.document())
 
         self.stdout_stream = EmittingStream()
         self.stderr_stream = EmittingStream()
@@ -84,6 +91,9 @@ class ConsoleOutputWidget(QWidget):
         self.stdout_stream.text_written.connect(self.append_text)
         self.stderr_stream.text_written.connect(self.append_text)
 
+        attach_console_widget(self.append_text)
+
+    @Slot(str)
     def append_text(self, text: str) -> None:
         """
         Append text to the console output widget only.

@@ -1,6 +1,6 @@
 {
-    "name": "VT AutoBoat Development Container v1.3.0",
-    "image": "${localEnv:DEVCONTAINER_VARIANT:vtautoboat/development_image}",
+    "name": "VT AutoBoat Development Container v1.4.0",
+    "image": "${localEnv:DEVCONTAINER_VARIANT:vtautoboat/development_image_base}",
     "initializeCommand": "bash .devcontainer/initializeCommand.sh",
     "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
     "privileged": true,
@@ -16,16 +16,18 @@
                 "ms-vscode.cpptools",
                 "ms-python.python",
                 "ms-python.vscode-pylance",
-                "golang.go",
                 "donjayamanne.python-environment-manager",
                 "ms-python.debugpy",
                 "charliermarsh.ruff",
+                "oven.bun-vscode",
+                "biomejs.biome",
                 "jannchie.ruff-ignore-explainer",
                 "dbaeumer.vscode-eslint",
                 "rodolphebarbanneau.python-docstring-highlighter",
                 "twxs.cmake",
                 "ms-vscode.cmake-tools",
                 "ms-vscode.makefile-tools",
+                "theqtcompany.qt",
                 "twixes.pypi-assistant",
                 "IBM.output-colorizer",
                 "bierner.docs-view",
@@ -38,7 +40,9 @@
                 "tamasfe.even-better-toml",
                 "redhat.vscode-xml",
                 "redhat.vscode-yaml",
-                "mkxml.vscode-filesize"
+                "mkxml.vscode-filesize",
+                "github.vscode-github-actions",
+                "nvidia.nsight-vscode-edition"
             ]
         }
     },
@@ -48,7 +52,6 @@
         "CONTAINER_OWNER_USER_NAME": "${localEnv:USER}",
         "TZ": "${localEnv:TZ:America/New_York}"
     },
-
     "runArgs": [
         "--net=host",
         "--platform=linux/amd64",
@@ -64,7 +67,5 @@
         // "--device=/dev/ttyACM0",
         // "--device-cgroup-rule=c 166:* rmw"
     ],
-    "mounts": [
-        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
-    ]
+    "mounts": ["source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"]
 }
