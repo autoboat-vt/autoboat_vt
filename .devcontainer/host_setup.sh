@@ -47,8 +47,19 @@ for arg in "$@"; do
 done
 
 
-# Make the script ask the user for their linux/ shell password
-sudo -v
+# Autodetect privilege escalation tool (doas vs sudo)
+if [ "$(id -u)" -eq 0 ]; then
+    SUDO=""
+elif command -v doas &> /dev/null; then
+    SUDO="doas"
+    doas true
+elif command -v sudo &> /dev/null; then
+    SUDO="sudo"
+    sudo -v
+else
+    echo "[ERROR] Neither doas nor sudo found." >&2
+    exit 1
+fi
 
 # -----------------------------------------------------------------------------
 # Setup
@@ -113,21 +124,47 @@ ensure_host_environment_variables_are_sourced() {
 	local source_line="[ -f \"$HOST_ENV_FILE\" ] && . \"$HOST_ENV_FILE\""
 
 	for file in "${shell_files[@]}"; do
+		local line="$source_line"
+		# Use 'test ... && source ...' for rc files so both bash/zsh and fish can source them
+		if [[ "$file" == *".bashrc" || "$file" == *".zshrc" ]]; then
+			line="test -f \"$HOST_ENV_FILE\" && source \"$HOST_ENV_FILE\""
+		fi
+
 		if [[ -f "$file" ]]; then
 			if ! grep -qF "$HOST_ENV_FILE" "$file"; then
-				echo -e "\n# Added by autoboatvt setup\n$source_line" >>"$file"
+				echo -e "\n# Added by autoboatvt setup\n$line" >>"$file"
 				log_info "Added sourcing to $file"
 			else
 				log_info "Sourcing already exists in $file"
 			fi
 		else
-			# Create if it's a profile/rc we might want
-			if [[ "$file" == *".profile" || "$file" == *".bash_profile" ]]; then
-				echo -e "# Added by autoboatvt setup\n$source_line" > "$file"
+			# Create if it's a profile/rc we might want (including .bashrc if missing)
+			if [[ "$file" == *".profile" || "$file" == *".bash_profile" || "$file" == *".bashrc" ]]; then
+				echo -e "# Added by autoboatvt setup\n$line" > "$file"
 				log_info "Created and added sourcing to $file"
 			fi
 		fi
 	done
+
+	# Fish shell support (~/.config/fish/config.fish)
+	local fish_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/fish"
+	local fish_config="$fish_config_dir/config.fish"
+	local fish_source_line="test -f \"$HOST_ENV_FILE\" && source \"$HOST_ENV_FILE\""
+
+	if command -v fish &>/dev/null || [[ -d "$fish_config_dir" ]]; then
+		mkdir -p "$fish_config_dir"
+		if [[ -f "$fish_config" ]]; then
+			if ! grep -qF "$HOST_ENV_FILE" "$fish_config"; then
+				echo -e "\n# Added by autoboatvt setup\n$fish_source_line" >>"$fish_config"
+				log_info "Added sourcing to $fish_config"
+			else
+				log_info "Sourcing already exists in $fish_config"
+			fi
+		else
+			echo -e "# Added by autoboatvt setup\n$fish_source_line" >"$fish_config"
+			log_info "Created and added sourcing to $fish_config"
+		fi
+	fi
 
 	source $HOST_ENV_FILE
 }
@@ -141,37 +178,37 @@ setup_linux() {
 	log_info "Detected Linux environment."
 	
 	# Make sure that the user has proper permissions on the entire repository
-	sudo chmod -R 777 ..
+	$SUDO chmod -R 777 ..
 
 	# install X11 tools
 	log_info "Installing X11 utilities..."
 	# Installs all relevant x11 packages depending on the installed package manager and updates package cache
     if command -v apt &> /dev/null; then
         log_info "Detected Debian/Ubuntu (apt). Installing packages: x11-utils, x11-xserver-utils"
-        sudo apt-get update -qq || true 
-        sudo apt-get install -y -qq x11-utils x11-xserver-utils
+        $SUDO apt-get update -qq || true 
+        $SUDO apt-get install -y -qq x11-utils x11-xserver-utils
         
     elif command -v dnf &> /dev/null; then
-        log_info "Detected Fedora/RHEL 8+ (dnf). Installing packages: xorg-x11-utils, xorg-x11-server-utils"
-        sudo dnf makecache -q
-        sudo dnf install -y xorg-x11-utils xorg-x11-server-utils
+        log_info "Detected Fedora/RHEL (dnf). Installing X11 utilities..."
+        $SUDO dnf makecache -q
+        $SUDO dnf install -y xhost xorg-x11-xauth xdpyinfo xprop xrandr xrdb || \
+            $SUDO dnf install -y xorg-x11-utils xorg-x11-server-utils
         
     elif command -v yum &> /dev/null; then
         log_info "Detected RHEL/CentOS (yum). Installing packages: xorg-x11-utils, xorg-x11-server-utils"
-        sudo yum makecache -q
-        sudo yum install -y xorg-x11-utils xorg-x11-server-utils
+        $SUDO yum makecache -q
+        $SUDO yum install -y xorg-x11-utils xorg-x11-server-utils
         
     elif command -v pacman &> /dev/null; then
         log_info "Detected Arch Linux (pacman). Installing xorg-apps group."
-        sudo pacman -S --noconfirm xorg-apps
+        $SUDO pacman -S --noconfirm xorg-apps
         
     elif command -v apk &> /dev/null; then
         log_info "Detected Alpine Linux (apk). Installing individual X11 utilities."
-        # Alpine requires specifying the exact tools normally found in the Ubuntu metapackages
-        sudo apk add --update \
-            xdpyinfo xev xfontsel xkill xlsatoms xlsclients xlsfonts xmessage \
-			xprop xvinfo xwininfo appres editres viewres iceauth rgb sessreg xgamma \
-			xhost xmodmap xrandr xrdb xrefresh xset xsetroot xvidtune
+        $SUDO apk add --update \
+            xdpyinfo xev xfontsel xkill xmessage xprop xvinfo xwininfo \
+            iceauth rgb sessreg xgamma xhost xmodmap xrandr xrdb \
+            xrefresh xset xsetroot xvidtune
         
     else
         log_info "Error: No supported package manager found. Cannot install packages automatically."
@@ -184,21 +221,21 @@ setup_linux() {
 	# For example the raspberry pi pico udev rule would just make it so that the file descriptor for the raspberry pi pico device
 	# Would always be at the file: /dev/pico
 	# You can read more about udev rules here: https://opensource.com/article/18/11/udev
-	sudo chmod -R 777 /etc/udev/
+	$SUDO chmod -R 777 /etc/udev/
 
 	if [ -f "/etc/udev/rules.d/99-autoboat-udev.rules" ]; then
-	    sudo rm -f /etc/udev/rules.d/99-autoboat-udev.rules
-	    sudo rm -f /etc/udev/rules.d/99-autoboat-udev.rules
+	    $SUDO rm -f /etc/udev/rules.d/99-autoboat-udev.rules
+	    $SUDO rm -f /etc/udev/rules.d/99-autoboat-udev.rules
 	fi
 
-	sudo echo 'ACTION=="add", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000a", SYMLINK+="pico", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
-	sudo echo 'ACTION=="add", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", SYMLINK+="gps", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
-	# sudo echo 'ACTION=="add", ATTRS{idVendor}=="8086", ATTRS{idProduct}=="0b5c", SYMLINK+="camera", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
-	sudo echo 'ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="A9001WL3", SYMLINK+="rc", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
-	sudo echo 'ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="ABSCDYAB", SYMLINK+="wind_sensor", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
+	$SUDO echo 'ACTION=="add", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000a", SYMLINK+="pico", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
+	$SUDO echo 'ACTION=="add", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", SYMLINK+="gps", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
+	# $SUDO echo 'ACTION=="add", ATTRS{idVendor}=="8086", ATTRS{idProduct}=="0b5c", SYMLINK+="camera", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
+	$SUDO echo 'ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="A9001WL3", SYMLINK+="rc", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
+	$SUDO echo 'ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="ABSCDYAB", SYMLINK+="wind_sensor", MODE="0666"' >> /etc/udev/rules.d/99-autoboat-udev.rules
 
-	sudo udevadm control --reload-rules || true
-	sudo udevadm trigger || true
+	$SUDO udevadm control --reload-rules || true
+	$SUDO udevadm trigger || true
 
 
 
@@ -213,7 +250,7 @@ setup_linux() {
 			log_info "Installing NVIDIA Container Toolkit..."
 
 			curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey |
-				sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit.gpg
+				$SUDO gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit.gpg
 
 			if [[ ! -f /etc/os-release ]]; then
 				log_error "/etc/os-release not found. Cannot determine distribution."
@@ -246,7 +283,7 @@ setup_linux() {
 			if curl -fsSL "$repo_url" -o "$repo_tmp"; then
 				if grep -q "^deb " "$repo_tmp"; then
 					sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit.gpg] https://#g' \
-						"$repo_tmp" | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list >/dev/null
+						"$repo_tmp" | $SUDO tee /etc/apt/sources.list.d/nvidia-container-toolkit.list >/dev/null
 					log_info "NVIDIA repo list installed successfully."
 				else
 					log_error "Unexpected repo content; aborting."
@@ -261,11 +298,11 @@ setup_linux() {
 			fi
 			rm -f "$repo_tmp"
 
-			sudo apt update -qq || true
-			sudo apt install -y nvidia-container-toolkit
+			$SUDO apt update -qq || true
+			$SUDO apt install -y nvidia-container-toolkit
 			log_info "Configuring Docker runtime for NVIDIA..."
-			sudo nvidia-ctk runtime configure --runtime=docker
-			sudo systemctl restart docker
+			$SUDO nvidia-ctk runtime configure --runtime=docker
+			$SUDO systemctl restart docker
 
 
 
