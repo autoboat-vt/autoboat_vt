@@ -3,6 +3,7 @@ import mimetypes
 import socketserver
 import sys
 import threading
+import time
 from collections.abc import Callable
 from typing import Any, NoReturn
 
@@ -22,7 +23,7 @@ from widgets import (
     InstanceHandler,
     UserGuideWidget,
 )
-from widgets.map_widget import server as map_server
+from widgets.map_widget.callback_server.server import assemble_map_callback_server
 
 logger = get_logger(__name__)
 
@@ -44,17 +45,59 @@ class MainWindow(QMainWindow):
             return _QuietHandler(*args, directory=constants.ASSETS_DIR.as_posix(), **kwargs)
 
         socketserver.TCPServer.allow_reuse_address = True
-        self.asset_server = socketserver.TCPServer(("", constants.ASSET_SERVER_PORT), handler)
+        while not misc.check_port_available(constants.ASSET_SERVER_PORT):
+            logger.warning(
+                f"Port {constants.ASSET_SERVER_PORT} is already in use. Retrying in 1 second..."
+            )
+            time.sleep(1)
+
+        self.asset_server = socketserver.TCPServer(("127.0.0.1", constants.ASSET_SERVER_PORT), handler)
         logger.info(f"Serving HTTP assets on port {constants.ASSET_SERVER_PORT}...")
         self.asset_server.serve_forever()
 
-    def start_map_server(self) -> None:
-        """Start the local map widget server."""
+    def start_map_control_server(self) -> None:
+        """Start the map control server for handling waypoints, land checks, and bathymetry requests."""
+
+        self.map_callback_server = assemble_map_callback_server()
+        try:
+            logger.info(f"Hosting map callback server on port {constants.MAP_CALLBACK_PORT}...")
+            self.map_callback_server.serve_forever()
+
+        except OSError as exc:
+            logger.error(f"Failed to start map callback server on port {constants.MAP_CALLBACK_PORT}: {exc}")
+
+    def start_map_viewer_server(self) -> None:
+        """Start the map viewer server for rendering the map widget."""
 
         try:
-            map_server.run()
-        except OSError as exc:
-            logger.error(f"Failed to start map server on port {constants.MAP_SERVER_PORT}: {exc}")
+            waiting_for_assets = True
+            while misc.check_port_available(constants.ASSET_SERVER_PORT):
+                if waiting_for_assets:
+                    waiting_for_assets = False
+                time.sleep(0.1)
+
+            logger.info(f"Starting map viewer server on port {constants.MAP_VIEWER_PORT}...")
+            self.map_viewer_server.start()
+            self.map_viewer_server.wait_until_ready()
+
+        except Exception as exc:
+            logger.error(f"Failed to start map viewer server: {exc}")
+
+    def load_map_page(self) -> None:
+        """
+        Navigate the map page to the map viewer URL.
+
+        Called only once the map viewer server is accepting connections. Making
+        the web view navigate before Vite is listening makes the first load fail
+        with ``ERR_CONNECTION_REFUSED`` even though a manual reload then works.
+        """
+
+        if self.map_page_loaded:
+            return
+
+        self.map_page_loaded = True
+        constants.MAP_PAGE.load(constants.MAP_URL)
+        logger.info(f"Loading map from {constants.MAP_URL.toString()}...")
 
     def __init__(self) -> None:
         super().__init__()
@@ -63,8 +106,11 @@ class MainWindow(QMainWindow):
         self.setMaximumSize(constants.MAX_WINDOW_SIZE)
         self.setUnifiedTitleAndToolBarOnMac(True)
 
+        # The page object is created eagerly so widgets can call setPage() on it,
+        # but navigation is deferred until the viewer server is up (load_map_page).
+        self.map_viewer_server = misc.MapViewerServer()
+        self.map_page_loaded = False
         constants.MAP_PAGE = QWebEnginePage()
-        constants.MAP_PAGE.load(constants.MAP_URL)
 
         self.main_widget = QTabWidget()
         self.setCentralWidget(self.main_widget)
@@ -133,6 +179,14 @@ class MainWindow(QMainWindow):
         if hasattr(constants, "MAP_PAGE") and isinstance(constants.MAP_PAGE, QWebEnginePage):
             constants.MAP_PAGE.deleteLater()
 
+        logger.info("Shutting down map viewer server...")
+        if hasattr(self, "map_viewer_server"):
+            self.map_viewer_server.stop()
+
+        logger.info("Shutting down map callback server...")
+        if hasattr(self, "map_callback_server"):
+            self.map_callback_server.shutdown()
+
         logger.info("Closing the application...")
         event.accept()
 
@@ -143,27 +197,39 @@ if __name__ == "__main__":
     def _filter_qt_messages(msg_type: QtMsgType, _context: Any, message: str) -> None:
         spam_prefixes = (
             "FFmpeg log:",
+            "QXcbIntegration:",
             "mp3float",
             "audio device has unrecognized channel",
         )
+        is_spam_message = any(message.startswith(prefix) or prefix in message for prefix in spam_prefixes)
 
-        if msg_type in (QtMsgType.QtDebugMsg, QtMsgType.QtWarningMsg) and any(
-            message.startswith(p) or p in message for p in spam_prefixes
-        ):
+        if msg_type in (QtMsgType.QtDebugMsg, QtMsgType.QtWarningMsg) and is_spam_message:
             return
 
         handler = _default_handler[0]
         if handler is not None:
             handler(msg_type, _context, message)
 
-    # qInstallMessageHandler returns the previously installed handler (or None),
-    # which we store so _filter_qt_messages can forward non-spam messages to it.
     _default_handler[0] = qInstallMessageHandler(_filter_qt_messages)
 
     app = QApplication(sys.argv)
     constants.ICONS = misc.get_icons()
 
     window = MainWindow()
+
+    threading.Thread(target=window.start_asset_server, daemon=True).start()
+    threading.Thread(target=window.start_map_control_server, daemon=True).start()
+    threading.Thread(target=window.start_map_viewer_server, daemon=True).start()
+
+    map_load_timer = misc.create_timer(100)
+    def load_map_when_ready() -> None:
+        if window.map_viewer_server.is_ready:
+            map_load_timer.stop()
+            window.load_map_page()
+
+    map_load_timer.timeout.connect(load_map_when_ready)
+    map_load_timer.start()
+
     if constants.APP_LOGO_PATH.is_file():
         logger.info(f"Setting application icon from {constants.APP_LOGO_PATH}...")
         logo_icon = QIcon(constants.APP_LOGO_PATH.as_posix())
@@ -174,9 +240,6 @@ if __name__ == "__main__":
         logger.warning(f"Application logo not found at {constants.APP_LOGO_PATH}. Using default icon.")
         app.setWindowIcon(constants.ICONS.boat)
         window.setWindowIcon(constants.ICONS.boat)
-
-    threading.Thread(target=window.start_asset_server, daemon=True).start()
-    threading.Thread(target=window.start_map_server, daemon=True).start()
 
     app.setStyleSheet(constants.STYLE_SHEET)
     app.setPalette(constants.PALLETTE)

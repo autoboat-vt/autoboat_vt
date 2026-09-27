@@ -10,9 +10,17 @@ Functions:
 - cache_cdn_file: Download and cache a file to serve in a local CDN server.
 - create_symlinks: Create symbolic links for all files in the source directory to the target directory.
 - resolve_enum_name: Resolve a telemetry enum value to its member name.
+
+Classes:
+- MapViewerServer: Class to manage the map viewer server process.
+- IconProtocol: Protocol defining the expected attributes for icon objects.
 """
 
 import os
+import shutil
+import socket
+import subprocess
+import time
 from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
@@ -30,6 +38,7 @@ from utils import constants
 from utils.console_logger import get_logger
 
 __all__ = [
+    "MapViewerServer",
     "cache_cdn_file",
     "copy_qtimer",
     "create_symlinks",
@@ -43,6 +52,158 @@ __all__ = [
 logger = get_logger(__name__)
 
 T = TypeVar("T")
+
+
+class MapViewerServer:
+    """
+    Class to manage the map viewer server process.
+
+    Attributes
+    ----------
+    process
+        The :class:`subprocess.Popen` object representing the map viewer server process, or `None` if not running.
+    """
+
+    def __init__(self) -> None:
+        self._process: subprocess.Popen | None = None
+        self._ready = False
+
+    @property
+    def process(self) -> subprocess.Popen | None:
+        """The :class:`subprocess.Popen` object representing the map viewer server process, or `None` if not running."""
+
+        return self._process
+
+    @process.setter
+    def process(self, value: subprocess.Popen | None) -> None:
+        """Set the map viewer server process, or `None` when it is not running."""
+
+        self._process = value
+
+    @property
+    def is_ready(self) -> bool:
+        """Whether the map viewer server is accepting TCP connections on the viewer port."""
+
+        return self._ready
+
+    def wait_until_ready(self, timeout: float = 60.0, poll_interval: float = 0.2) -> bool:
+        """
+        Block until the map viewer server is accepting TCP connections.
+
+        Parameters
+        ----------
+        timeout
+            Maximum number of seconds to wait before giving up.
+        poll_interval
+            Seconds to sleep between connection attempts.
+
+        Returns
+        -------
+        bool
+            `True` once the server accepts connections, `False` if it exited or
+            the timeout elapsed first.
+        """
+
+        deadline = time.monotonic() + timeout
+
+        while time.monotonic() < deadline:
+            if self.process is not None and self.process.poll() is not None:
+                logger.error(f"Map viewer server exited with code {self.process.returncode} before becoming ready.")
+                return False
+
+            try:
+                # attempt to connect to the server to check if it's ready
+                with socket.create_connection(("127.0.0.1", constants.MAP_VIEWER_PORT), timeout=1.0):
+                    self._ready = True
+                    logger.info(f"Map viewer server is accepting connections on port {constants.MAP_VIEWER_PORT}.")
+                    return True
+
+            except OSError:
+                time.sleep(poll_interval)
+
+        logger.error(f"Map viewer server did not become ready within {timeout:.0f} seconds.")
+        return False
+
+    def start(self) -> None:
+        """Start the map viewer server process."""
+
+        if self.process is not None and self.process.poll() is None:
+            logger.warning("Map viewer server is already running.")
+            return
+
+        self._ready = False
+
+        bun_path = shutil.which("bun")
+        if bun_path is None:
+            logger.error("Bun is not installed or not found in PATH. Please install Bun to run the map viewer server.")
+            return
+
+        bun_path = Path(bun_path).resolve()
+        if not bun_path.is_file():
+            logger.error(f"Bun executable not found at {bun_path}. Please install Bun to run the map viewer server.")
+            return
+
+        try:
+            output = subprocess.run(
+                [bun_path.as_posix(), "--version"],
+                check=True,
+                capture_output=True,
+                shell=False,
+                timeout=10,
+            )
+            logger.info(f"Using Bun version {output.stdout.decode().strip()}")
+
+        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired, OSError):
+            logger.error("Bun is not installed or not found in PATH. Please install Bun to run the map viewer server.")
+            return
+
+        logger.info("Making sure all dependencies are installed for the map viewer server...")
+        try:
+            start_time = time.time()
+            subprocess.run(
+                [bun_path.as_posix(), "install"],
+                check=True,
+                cwd=constants.TOP_LEVEL_DIR.as_posix(),
+                shell=False,
+            )
+            elapsed_time = time.time() - start_time
+            if elapsed_time < 1.0:
+                logger.info("Dependencies were already installed, skipping installation.")
+            else:
+                logger.info(f"Dependencies installed successfully in {elapsed_time:.2f} seconds.")
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to install dependencies for the map viewer server: {e}")
+            return
+
+        try:
+            self.process = subprocess.Popen(
+                [bun_path, "run", "serve"],
+                cwd=constants.TOP_LEVEL_DIR.as_posix(),
+                shell=False,
+            )
+            logger.info(f"Map viewer server started on port {constants.MAP_VIEWER_PORT}.")
+
+        except Exception as e:
+            logger.error(f"Failed to start map viewer server: {e}")
+            self.process = None
+
+    def stop(self) -> None:
+        """Stop the map viewer server process."""
+
+        self._ready = False
+
+        if self.process is not None and self.process.poll() is None:
+            self.process.terminate()
+            exit_code = self.process.wait()
+
+            if exit_code != 0:
+                logger.warning(f"Map viewer server terminated with exit code {exit_code}.")
+            else:
+                logger.info("Map viewer server stopped successfully.")
+
+        else:
+            logger.warning("Map viewer server is not running.")
 
 
 class IconProtocol(Protocol):
@@ -127,6 +288,26 @@ def get_icons() -> IconProtocol:
             raise TypeError(f"Icon '{icon_name}' is not a valid QIcon. Check the icon name or make sure the icon is available.")
 
     return cast("IconProtocol", SimpleNamespace(**icons))
+
+
+def check_port_available(port: int) -> bool:
+    """
+    Check if a TCP port is available for binding.
+
+    Parameters
+    ----------
+    port
+        The TCP port number to check.
+
+    Returns
+    -------
+    bool
+        `True` if the port is available, `False` if it is already in use.
+    """
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(1.0)
+        return sock.connect_ex(("127.0.0.1", port)) != 0
 
 
 def get_route(route_name: str) -> str:

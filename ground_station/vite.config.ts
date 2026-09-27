@@ -39,16 +39,17 @@ function parseEnvFile(filePath: string): Record<string, string> {
 
 export default defineConfig(() => {
     const env = parseEnvFile(resolve(import.meta.dirname, "server_ports.env"));
-    const mapServerPort = env.MAP_SERVER_PORT ?? "3002";
+    const mapCallbackPort = env.MAP_CALLBACK_PORT ?? "8001";
     const assetServerPort = env.ASSET_SERVER_PORT ?? "8000";
-    const vitePort = Number.parseInt(env.VITE_PORT ?? "5173", 10);
+    const viewerPort = Number.parseInt(env.MAP_VIEWER_PORT ?? "5173", 10);
 
     return {
         root: resolve(import.meta.dirname, "src/widgets/map_widget/frontend"),
         publicDir: resolve(import.meta.dirname, "app_data"),
-        server: { host: "127.0.0.1", port: vitePort, strictPort: true, hmr: false },
+        server: { host: "127.0.0.1", port: viewerPort, strictPort: true, hmr: false },
         define: {
-            "import.meta.env.MAP_SERVER_PORT": JSON.stringify(mapServerPort),
+            "import.meta.env.MAP_CALLBACK_PORT": JSON.stringify(mapCallbackPort),
+            "import.meta.env.MAP_VIEWER_PORT": JSON.stringify(String(viewerPort)),
             "import.meta.env.ASSET_SERVER_PORT": JSON.stringify(assetServerPort)
         }
     };

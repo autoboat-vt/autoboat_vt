@@ -7,6 +7,7 @@ widgets, along with several easter egg games.
 """
 
 __all__ = [
+    "LAND_CLICK_PROMPT",
     "AutopilotConfigWidget",
     "CameraWidget",
     "ConsoleOutputWidget",
@@ -14,10 +15,10 @@ __all__ = [
     "GroundStationWidget",
     "InstanceHandler",
     "KeybindConfigDialog",
+    "LandClickPrompt",
     "MapOptionsHandler",
     "UserGuideWidget",
-    "get_keybind_manager",
-    "run",
+    "get_keybind_manager"
 ]
 
 from .autopilot_config_widget import AutopilotConfigWidget
@@ -27,5 +28,5 @@ from .graph_viewer import GraphViewer
 from .groundstation import GroundStationWidget
 from .instance_handler import InstanceHandler
 from .keybind_widget import KeybindConfigDialog, get_keybind_manager
-from .map_widget import MapOptionsHandler, run
+from .map_widget import LAND_CLICK_PROMPT, LandClickPrompt, MapOptionsHandler
 from .user_guide import UserGuideWidget

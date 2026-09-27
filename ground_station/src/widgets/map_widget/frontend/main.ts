@@ -42,10 +42,10 @@ class MapInterface {
     };
     static readonly iconCache = new Map<string, Icon>();
     static readonly assetsUrl = `http://localhost:${import.meta.env.ASSET_SERVER_PORT ?? "8000"}`;
-    static readonly waypointsUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/waypoints`;
-    static readonly checkLandUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/check_land`;
-    static readonly bathymetryUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/bathymetry`;
-    static readonly landBoundaryUrl = `http://localhost:${import.meta.env.MAP_SERVER_PORT ?? "3002"}/land_boundary`;
+    static readonly waypointsUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/waypoints`;
+    static readonly checkLandUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/check_land`;
+    static readonly bathymetryUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/bathymetry`;
+    static readonly landBoundaryUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/land_boundary`;
     lastFocusedTimestamp = 0;
     private waypointHistory: { type: "add" | "remove"; waypoint: LatLngTuple; color?: string }[] = [];
 
