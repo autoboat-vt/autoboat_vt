@@ -8,6 +8,7 @@
 
 //change these with rewritten libraries
 #include "amt22_encoder_library.hpp"
+#include "drv8711_stepper_motor_driver_library.hpp"
 #include "contactor_driver_library.h"
 #include "cmps14_compass.hpp"
 
@@ -47,8 +48,8 @@ using namespace std;
 #if BOAT_MODE == Theseus
 #define RUDDER_GAIN (float)2
 #define RUDDER_GAIN_Q (float)0.5
-#define RUDDER_MICROSTEP MicroStep1
 #define RUDDER_NUMBER_OF_STEPS_TO_CLIP_AT 50
+#define RUDDER_MICROSTEP MicroStep32
 #else
 #define RUDDER_GAIN (float)400
 #define RUDDER_GAIN_Q (float)150
@@ -62,8 +63,8 @@ using namespace std;
 
 #define WINCH_ZERO_POINT 100
 
-#define MAX_RUDDER_ANGLE 25
-#define MIN_RUDDER_ANGLE -25
+#define MAX_RUDDER_ANGLE 35
+#define MIN_RUDDER_ANGLE -35
 
 #define MAX_WINCH_ANGLE 580
 #define MIN_WINCH_ANGLE -600
@@ -74,13 +75,10 @@ using namespace std;
 #define ACCEPTABLE_RUDDER_ERROR 0.1
 #define ACCEPTABLE_WINCH_ERROR 0.5
 
-#define RUDDER_ANGLE_OFFSET -127
+#define RUDDER_ANGLE_OFFSET -85
 #define WINCH_ANGLE_OFFSET 0
 // #define COMPASS_OFFSET -13.7 // Magnetic Declination at WPI
-// #define MAGNETIC_DECLINATION -13.7 // Magnetic Declination at WPI
-#define MAGNETIC_DECLINATION -8.5 //Magnetic Declination at VT
-// #define MAGNETIC_DECLINATION -10.0 //Magnetic Declination at Portsmouth
-#define HEADING_OFFSET -26
+#define COMPASS_OFFSET 180
 
 const float MID_RUDDER_ANGLE = (MAX_RUDDER_ANGLE + MIN_RUDDER_ANGLE) / 2;
 const float MID_WINCH_MOTOR_ANGLE = (MAX_WINCH_ANGLE + MIN_WINCH_ANGLE) / 2;
@@ -90,8 +88,12 @@ const int MAX_WINCH_ERROR = (float)(MAX_WINCH_ANGLE - MIN_RUDDER_ANGLE);
 const int MAX_SAIL_ERROR = (float)(MAX_SAIL_ANGLE - MIN_SAIL_ANGLE);
 
 
-static amt22 rudderEncoder(RUDDER_ENCODER_CS_PIN, SPI_PORT);
-static amt22 winchEncoder(WINCH_ENCODER_CS_PIN, SPI_PORT);
+
+static amt22* winchEncoder = nullptr;
+
+static drv8711* rudderStepperMotorDriver = nullptr;
+static drv8711* winchStepperMotorDriver = nullptr;
+
 static cmps14 compass(I2C_PORT,MAGNETOMETER_ADDRESS);
 
 static float desired_rudder_angle = 0;
@@ -141,24 +143,26 @@ inline float get_winch_angle_from_sail_angle(float sail_angle) {
 // 1. Composite datatypes with some values predefined
 // 2. groups of variables that are supposed to be used toegther
 
+//Theseus rudder encoder periheral
 struct zero_rudder
 {
     inline static rcl_subscription_t zero_rudder_encoder_subscriber;
     inline static string topic = "/zero_rudder_encoder";
     inline static std_msgs__msg__Bool zero_rudder_encoder_msg;
-    inline static amt22 *encoder = &rudderEncoder; // pointer to rudderEncoder
+    inline static amt22* encoder = nullptr; // initalized in HAL through systems
 
     static void zero_rudder_encoder_callback(const void *msg_in);
     static void zero_rudder_create_subscription(rcl_node_t *microros_node);
     static void zero_rudder_add_subscription_to_executor(rclc_executor_t *executor);
 };
 
+//Lumpy winch encoder periheral
 struct zero_winch
 {
     inline static rcl_subscription_t zero_winch_encoder_subscriber;
     inline static std_msgs__msg__Bool zero_winch_encoder_msg;
     inline static string topic = "/zero_winch_encoder";
-    inline static amt22 *encoder = &winchEncoder; // pointer to winchEncoder
+    inline static amt22* encoder = nullptr; // initalized in HAL through systems
 
     static void zero_winch_encoder_callback(const void *msg_in);
     static void zero_winch_create_subscription(rcl_node_t *microros_node);
@@ -205,7 +209,7 @@ struct current_rudder
 
 struct rudder_debug
 {
-     inline static rcl_publisher_t rudder_debug_publisher;
+    inline static rcl_publisher_t rudder_debug_publisher;
     inline static string debug_publisher_topic = "/motor_controller_register";
     static void create_rudder_debug_publisher(rcl_node_t *microros_node);
     inline static std_msgs__msg__Int32 current_register_value_msg;
