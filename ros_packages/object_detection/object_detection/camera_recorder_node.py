@@ -7,6 +7,8 @@ import sys
 import time
 
 import cv2
+import yaml
+
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
@@ -21,8 +23,9 @@ class CamCorderNode(Node):
     def __init__(self) -> None:
         super().__init__('cam_corder')
         self.storage_cap = 0.6 # Do not go above this disk utilization
+        self.last_time = time.time()
         
-        if self.get_storage_util() > self.storage_cap:
+        if self._get_storage_util() > self.storage_cap:
             raise OSError(f"Current disk usage is above {self.storage_cap * 100:.0f}%. Exitting")
 
         os.makedirs("./frame_logs/", exist_ok=True)
@@ -56,19 +59,19 @@ class CamCorderNode(Node):
         
         
         self.position_listener = self.create_subscription(
-            msg_type=NavSatFix, topic="/position", callback=self.position_callback, qos_profile=qos_profile_sensor_data
+            msg_type=NavSatFix, topic="/position", callback=self._position_callback, qos_profile=qos_profile_sensor_data
         )
         self.heading_listener = self.create_subscription( # heading is counterclockwise of true east
-            msg_type=Float32, topic="/heading", callback=self.heading_callback, qos_profile=qos_profile_sensor_data
+            msg_type=Float32, topic="/heading", callback=self._heading_callback, qos_profile=qos_profile_sensor_data
         )
 
-        self.record()
+        self._record()
 
-    def record(self) -> None:
-        device = self.CAM_LIST[0]["device"]
-        width = self.CAM_LIST[0]["width"]
-        height = self.CAM_LIST[0]["height"]
-        fps = self.CAM_LIST[0]["framerate_n"] / self.CAM_LIST[0]["framerate_d"]
+    def _record(self) -> None:
+        device = self.cam_list[0]["device"]
+        width = self.cam_list[0]["width"]
+        height = self.cam_list[0]["height"]
+        fps = self.cam_list[0]["framerate_n"] / self.cam_list[0]["framerate_d"]
         cap = cv2.VideoCapture(device, cv2.CAP_V4L2)
         if not cap.isOpened():
             self.get_logger().warn(f"Could not open video device {device}")
@@ -99,11 +102,14 @@ class CamCorderNode(Node):
                     "time": time.time()
                 }
                 if count % 120 == 0:
-                    self.get_logger().info(f"Current frame count: {count}")
+                    current_time = time.time()
+                    fps = 120 / (current_time - self.last_time)
+                    self.last_time = current_time
+                    self.get_logger().info(f"Current frame count: {count}, FPS: {fps:.2f}")
                 cv2.imwrite(f'{self.run_dir}frame{count:06d}.png', frame)
                 with open(self.log_file, 'a') as file:
                     file.write(json.dumps(curr_log) + '\n')
-                if self.get_storage_util() > self.storage_cap:
+                if self._get_storage_util() > self.storage_cap:
                     self.get_logger().info(f"Passed {(self.storage_cap * 100):.0f}% disk usage. Exiting")
                     break
                 count += 1
@@ -157,20 +163,20 @@ class CamCorderNode(Node):
         self.error_callback(f"Could not find {cam_name} device with {cam_format} format")
         raise OSError("Camera device not found")
     
-    def position_callback(self, msg: NavSatFix):
+    def _position_callback(self, msg: NavSatFix) -> None:
         self.position["lat"] = msg.latitude
         self.position["lon"] = msg.longitude
     
-    def heading_callback(self, msg: Float32):
+    def _heading_callback(self, msg: Float32) -> None:
         self.position["head"] = msg.data
 
-    def get_storage_util(self):
+    def _get_storage_util(self) -> float:
         usage = shutil.disk_usage('/')
         total = usage.total
         used = usage.used
         return used / total
 
-def main():
+def main() -> None:
     rclpy.init()
     cam_corder_node = CamCorderNode()
     try:
