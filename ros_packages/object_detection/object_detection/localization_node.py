@@ -118,6 +118,9 @@ class LocalizationNode(Node):
     
     def _object_detection_callback(self, msg: ObjectDetectionResultsList) -> None:
         if self.valid_origin_position:
+            
+            # TODO This is not a good world frame ideally this should be in meters or whatever
+            # TODO This also needs to account for the offset of the camera from the GPS antenna
             pose_matrix = self._get_current_pose(self.current_position["latitude"], self.current_position["longitude"],
                                                  self.current_heading)
             obj_list = msg.detection_results
