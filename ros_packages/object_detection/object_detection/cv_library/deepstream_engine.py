@@ -476,9 +476,10 @@ class DeepStreamEngine:
 
         self.latest_frame = frame_rgba
         frame_bgr = cv2.cvtColor(frame_rgba, cv2.COLOR_RGBA2BGR)
-        success, png_image = cv2.imencode('.png', frame_bgr)
+        success, jpg_image = cv2.imencode('.jpg', frame_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
         if success:
-            image_bytes = png_image.tobytes()
+            image_bytes = jpg_image.tobytes()
+            print(f"Image bytes: {len(image_bytes)}")
             self.image_callback(image_bytes)
 
         return Gst.PadProbeReturn.OK
