@@ -26,5 +26,11 @@
         "type": "string",
         "default": "",
         "description": "Name of the model to use for object detection. This should match the name used in the config file and the engine file. This default gets overwritten by the value in the config file."
+    },
+    "jpg_compression_ratio": {
+        "type": "int",
+        "default": 50,
+        "description": "Compression ratio for JPEG images. This default gets overwritten by the value in the config file."
+
     }
 }

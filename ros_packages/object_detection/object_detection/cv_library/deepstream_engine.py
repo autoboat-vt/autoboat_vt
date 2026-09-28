@@ -67,7 +67,8 @@ class DeepStreamEngine:
     ) -> None:
         self.parameters = {
             "model_name": "", # model name without .onnx. Ex. yolo11m.onnx -> yolo11m
-            "threshold": "" # detection threshold
+            "threshold": "", # detection threshold
+            "jpg_compression_ratio": 50
         }
         self.detection_callback = detection_callback
         self.image_callback = image_callback
@@ -476,7 +477,8 @@ class DeepStreamEngine:
 
         self.latest_frame = frame_rgba
         frame_bgr = cv2.cvtColor(frame_rgba, cv2.COLOR_RGBA2BGR)
-        success, jpg_image = cv2.imencode('.jpg', frame_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+        success, jpg_image = cv2.imencode('.jpg', frame_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), self.parameters["jpg_compression_ratio"]])
+        
         if success:
             image_bytes = jpg_image.tobytes()
             print(f"Image bytes: {len(image_bytes)}")
@@ -549,17 +551,30 @@ class DeepStreamEngine:
         threshold = float(attributes_lines[1].split(': ')[-1])
         return (config_file_split, model, threshold)
 
-    def update_model_or_threshold(self, new_model: str | None = None, new_threshold: float | None = None) -> bool:
+    def update_cv_parameters(self, parameters: dict[str, str | float | int]) -> bool:
         """Updates the model and/or detection threshold in the config file and reloads it in the pipeline."""
         with self.file_lock: # Don't want multiple threads writing to the file at once
-            updated = False
-            if new_model is not None:
-                updated = self._update_model(new_model) or updated
-            if new_threshold is not None:
-                updated = self._update_threshold(new_threshold) or updated
-            if updated:
+            for key in parameters:
+                if key not in self.parameters:
+                    self.warn_callback(f"Unknown parameter {key}, ignoring")
+                    
+            if parameters.get("model_name") is None:
+                self._update_model(parameters.get("model_name"))
+
+            if parameters.get("threshold") is None:
+                self._update_threshold(parameters.get("threshold"))
+                
+            if parameters.get("jpg_compression_ratio") is None:
+                self._update_jpg_compression_ratio(parameters.get("jpg_compression_ratio"))
+            
+            should_update_config_file = "model_name" in parameters or "threshold" in parameters
+            
+            
+            if should_update_config_file:
                 self._update_config_file(YOLO_CONFIG[self.yolo_ver])
-        return updated
+                
+        return should_update_config_file
+
 
     def _update_threshold(self, new_threshold: float) -> bool:
         """Updates the detection threshold in the config file."""
@@ -615,6 +630,21 @@ class DeepStreamEngine:
         else:
             self.info_callback(f"Model is already {new_model}, not updating")
         return updated_value
+    
+    def _update_jpg_compression_ratio(self, new_ratio: int) -> bool:
+        """Updates the JPEG compression ratio for the image callback."""
+        updated_value = False
+        if new_ratio != self.parameters["jpg_compression_ratio"]:
+            if new_ratio >= 0 and new_ratio <= 100:
+                self.parameters["jpg_compression_ratio"] = new_ratio
+                self.info_callback(f"Updated JPEG compression ratio to {new_ratio}")
+                updated_value = True
+            else:
+                self.info_callback(f"JPEG compression ratio {new_ratio} is out of range [0, 100], not updating")
+        else:
+            self.info_callback(f"JPEG compression ratio is already {new_ratio}, not updating")
+        return updated_value
+    
     
     def _modify_config_lines(self, lines_split: list, new_model: str) -> tuple[list, list, list, bool]:
         onnx_lines = lines_split[1].split('\n')
