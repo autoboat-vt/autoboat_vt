@@ -79,6 +79,12 @@ def parse_args() -> tuple[dict, dict]:
         help="IoU threshold to publish",
         required=False
     )
+    parser.add_argument(
+        "-c",
+        "--compression",
+        help="JPG compression ratio to publish",
+        required=False
+    )
     if (len(sys.argv) == 1):
         parser.print_help(sys.stderr)
         sys.exit(1)
@@ -95,6 +101,8 @@ def parse_args() -> tuple[dict, dict]:
         localization_params["update_rate"] = float(args.update_rate)
     if args.iou:
         localization_params["iou_threshold"] = float(args.iou)
+    if args.compression:
+        cv_params["jpg_compression_ratio"] = int(args.compression)
     return cv_params, localization_params
 
 if __name__ == '__main__':

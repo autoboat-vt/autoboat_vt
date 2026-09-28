@@ -16,21 +16,21 @@
         "description": "Rate at which to update the triangulation in seconds."
     },
 
-    // Inference default parameters. These values get overwritten by whatever values are in the config file.
+    // Inference default parameters.
     "threshold": {
         "type": "float",
-        "default": 0.0,
-        "description": "Confidence threshold for object detection. This default gets overwritten by the value in the config file."
+        "default": 0.25,
+        "description": "Confidence threshold for object detection."
     },
     "model_name": {
         "type": "string",
-        "default": "",
-        "description": "Name of the model to use for object detection. This should match the name used in the config file and the engine file. This default gets overwritten by the value in the config file."
+        "default": "yolo26s",
+        "description": "Name of the model to use for object detection. This should match the name used in the config file and the engine file."
     },
     "jpg_compression_ratio": {
         "type": "int",
         "default": 50,
-        "description": "Compression ratio for JPEG images. This default gets overwritten by the value in the config file."
+        "description": "Compression ratio for JPEG images."
 
     }
 }

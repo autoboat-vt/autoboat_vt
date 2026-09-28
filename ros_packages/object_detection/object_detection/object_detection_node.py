@@ -34,7 +34,7 @@ PATH_TO_PARAMETERS_FILE = f"{PATH_TO_PKG_DIR}/object_detection/object_detection/
 class BuoyDetectionNode(Node):
     def __init__(self) -> None:
         super().__init__('buoy_detection_node')
-        self.parameters = {}
+        self.default_parameters = {}
         self._read_default_parameters()
 
         # ROS2 Initialization
@@ -53,7 +53,7 @@ class BuoyDetectionNode(Node):
             error_callback=self._error_callback
         )
         
-        self.vision_engine.update_cv_parameters(self.parameters)
+        self.vision_engine.update_cv_parameters(self.default_parameters)
 
         vs = threading.Thread(target=self.vision_engine.run, daemon=True)
         vs.start()
@@ -78,7 +78,7 @@ class BuoyDetectionNode(Node):
             parameters = JsoncParser.parse_file(PATH_TO_PARAMETERS_FILE)
             for key in parameters:
                 if key in parameters:
-                    self.parameters[key] = parameters[key]["default"]
+                    self.default_parameters[key] = parameters[key]["default"]
         except Exception as e:
             self.get_logger().error(f"Error reading parameters file: {e}")
     
