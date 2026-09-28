@@ -24,7 +24,7 @@ os.environ["USE_NEW_NVSTREAMMUX"] = "yes"
 
 IS_DEV_CONTAINER = re.search("/home/ws", os.getcwd()) is not None
 
-SHOULD_DISPLAY = False
+SHOULD_DISPLAY = True
 # NUM_IMAGES_TO_SAVE = 10000
 
 # These are constants. Don't change these. Needed for a workaround with DeepStream 7.1 and JetPack 6.2
@@ -67,7 +67,8 @@ class DeepStreamEngine:
     ) -> None:
         self.parameters = {
             "model_name": "", # model name without .onnx. Ex. yolo11m.onnx -> yolo11m
-            "threshold": "" # detection threshold
+            "threshold": "", # detection threshold
+            "jpg_compression_ratio": 50
         }
         self.detection_callback = detection_callback
         self.image_callback = image_callback
@@ -95,11 +96,12 @@ class DeepStreamEngine:
         self.file_lock = Lock()
         self.latest_frame: np.ndarray | None = None
         self.last_published_frame_number = -1
-        with self.file_lock:
-            file_results = self._read_file(YOLO_CONFIG[self.yolo_ver])
-            self.config_file_split = file_results[0]
-            self.parameters["model_name"] = file_results[1]
-            self.parameters["threshold"] = file_results[2]
+        if INFERENCE:
+            with self.file_lock:
+                file_results = self._read_file(YOLO_CONFIG[self.yolo_ver])
+                self.config_file_split = file_results[0]
+                self.parameters["model_name"] = file_results[1]
+                self.parameters["threshold"] = file_results[2]
 
         self._init_pipeline()
     
@@ -214,7 +216,7 @@ class DeepStreamEngine:
         videorate.set_property('skip-to-first', False)
 
         caps_videorate = Gst.ElementFactory.make('capsfilter', 'videorate-caps')
-        caps_videorate.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), framerate=5/1'))
+        caps_videorate.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), framerate=30/1'))
 
         osd_conv = Gst.ElementFactory.make('nvvideoconvert', 'sink_converter')
         osd_conv.set_property('nvbuf-memory-type', 0)
@@ -343,13 +345,15 @@ class DeepStreamEngine:
             return None
 
         msg = {}
-        msg["detection_results"] = []
-        if (self.parameters["model_name"] is not None):
+        msg["detection_results"] = [[], []]
+        if INFERENCE:
             msg["model_name"] = self.parameters["model_name"]
+            msg["threshold"] = self.parameters["threshold"]
+            msg["yolo_version"] = self.yolo_ver
         else:
             msg["model_name"] = "DISABLED"
-        msg["yolo_version"] = self.yolo_ver
-        msg["threshold"] = self.parameters["threshold"]
+            msg["threshold"] = -1.0
+            msg["yolo_version"] = -1
 
         # Retrieve batch metadata from the gst_buffer
         # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
@@ -369,7 +373,6 @@ class DeepStreamEngine:
                 break
 
             msg["ntp_timestamp"] = frame_meta.ntp_timestamp
-            msg["detection_results"].append([])
 
             if (frame_meta.source_id == 0 and frame_meta.frame_num % 60 == 0):
                 current_time = time.time()
@@ -435,7 +438,8 @@ class DeepStreamEngine:
         py_nvosd_text_params = display_meta.text_params[0]
         py_nvosd_text_params.display_text = (f"Yolo Version: {self.yolo_ver}\n"
                                              f"Current Model: {self.parameters['model_name'] if INFERENCE else 'DISABLED'}\n"
-                                             f"Threshold: {self.parameters['threshold']}")
+                                             f"Threshold: {self.parameters['threshold']}\n"
+                                             f"Compression Ratio: {self.parameters['jpg_compression_ratio']}")
    
         # Set the offsets where the string should appear
         py_nvosd_text_params.x_offset = 10
@@ -476,9 +480,12 @@ class DeepStreamEngine:
 
         self.latest_frame = frame_rgba
         frame_bgr = cv2.cvtColor(frame_rgba, cv2.COLOR_RGBA2BGR)
-        success, png_image = cv2.imencode('.png', frame_bgr)
+        success, jpg_image = cv2.imencode('.jpg', frame_bgr,
+                                          [int(cv2.IMWRITE_JPEG_QUALITY),self.parameters["jpg_compression_ratio"]])
+        
         if success:
-            image_bytes = png_image.tobytes()
+            image_bytes = jpg_image.tobytes()
+            # print(f"Image bytes: {len(image_bytes)}")
             self.image_callback(image_bytes)
 
         return Gst.PadProbeReturn.OK
@@ -509,16 +516,16 @@ class DeepStreamEngine:
             self.error_callback("ls, cat, or v4l2-ctl command not found. Cannot find camera device.")
             raise OSError("Required command not found")
         try:
-            camera_devices_output = subprocess.run([ls, '/sys/class/video4linux/'], # noqa: S603
+            camera_devices_output = subprocess.run([ls, '/sys/class/video4linux/'],
                                                    capture_output=True, text=True, check=True).stdout
         except subprocess.CalledProcessError as err:
             self.error_callback("Failed to list camera devices in /sys/class/video4linux/.")
             raise OSError("Failed to list camera devices in /sys/class/video4linux/.") from err
         for device in camera_devices_output.splitlines():
             try:
-                if ((re.search(cam_name, subprocess.run([cat, f'/sys/class/video4linux/{device}/name'], # noqa: S603
+                if ((re.search(cam_name, subprocess.run([cat, f'/sys/class/video4linux/{device}/name'],
                                                         capture_output=True, text=True, check=True).stdout) is not None) and
-                (re.search(cam_format, subprocess.run([v4l2_ctl, '--device', f'/dev/{device}', '--list-formats'], # noqa: S603
+                (re.search(cam_format, subprocess.run([v4l2_ctl, '--device', f'/dev/{device}', '--list-formats'],
                                                             capture_output=True, text=True, check=True).stdout) is not None)):
                         return f"/dev/{device}"
             except subprocess.CalledProcessError as err:
@@ -548,23 +555,32 @@ class DeepStreamEngine:
         threshold = float(attributes_lines[1].split(': ')[-1])
         return (config_file_split, model, threshold)
 
-    def update_model_or_threshold(self, new_model: str | None = None, new_threshold: float | None = None) -> bool:
+    def update_cv_parameters(self, parameters: dict[str, str | float | int]) -> bool:
         """Updates the model and/or detection threshold in the config file and reloads it in the pipeline."""
         with self.file_lock: # Don't want multiple threads writing to the file at once
-            updated = False
-            if new_model is not None:
-                updated = self._update_model(new_model) or updated
-            if new_threshold is not None:
-                updated = self._update_threshold(new_threshold) or updated
-            if updated:
-                self._update_config_file(YOLO_CONFIG[self.yolo_ver])
-        return updated
+            if parameters.get("jpg_compression_ratio") is not None:
+                self._update_jpg_compression_ratio(parameters.get("jpg_compression_ratio"))
+
+            if INFERENCE:
+                should_update_config_file = False
+                if parameters.get("model_name") is not None:
+                    should_update_config_file = True
+                    self._update_model(parameters.get("model_name"))
+
+                if parameters.get("threshold") is not None:
+                    should_update_config_file = True
+                    self._update_threshold(parameters.get("threshold"))
+
+                if should_update_config_file:
+                    self._update_config_file(YOLO_CONFIG[self.yolo_ver])
+            else:
+                self.info_callback("Inference disabled. Not updating model and threshold parameters")
 
     def _update_threshold(self, new_threshold: float) -> bool:
         """Updates the detection threshold in the config file."""
         updated_value = False
         if new_threshold != self.parameters["threshold"]:
-            if new_threshold >= 0.0 and new_threshold <= 1.0:
+            if new_threshold > 0.0 and new_threshold <= 1.0:
                 attributes_lines = self.config_file_split[5].split('\n')
                 attributes_lines[1] = f"    pre-cluster-threshold: {new_threshold}"
                 self.config_file_split[5] = "\n".join(attributes_lines)
@@ -598,8 +614,7 @@ class DeepStreamEngine:
                     self.config_file_split = split_lines
                     self.info_callback(f"Model entry found in alternate config, switching to Yolo{self.yolo_ver}")
                 else:
-                    self.info_callback(f"Model {new_model}.onnx not found, not updating model")
-                    self.file_lock.release()
+                    self.warn_callback(f"Model '{new_model}.onnx' not found, not updating model")
             
             if found_model_entry:
                 onnx_content = "\n".join(onnx_lines)
@@ -615,6 +630,20 @@ class DeepStreamEngine:
             self.info_callback(f"Model is already {new_model}, not updating")
         return updated_value
     
+    def _update_jpg_compression_ratio(self, new_ratio: int) -> bool:
+        """Updates the JPEG compression ratio for the image callback."""
+        updated_value = False
+        if new_ratio != self.parameters["jpg_compression_ratio"]:
+            if new_ratio >= 0 and new_ratio <= 100:
+                self.parameters["jpg_compression_ratio"] = new_ratio
+                self.info_callback(f"Updated JPEG compression ratio to {new_ratio}")
+                updated_value = True
+            else:
+                self.info_callback(f"JPEG compression ratio {new_ratio} is out of range [0, 100], not updating")
+        else:
+            self.info_callback(f"JPEG compression ratio is already {new_ratio}, not updating")
+        return updated_value
+      
     def _modify_config_lines(self, lines_split: list, new_model: str) -> tuple[list, list, list, bool]:
         onnx_lines = lines_split[1].split('\n')
         engine_lines = lines_split[2].split('\n')
