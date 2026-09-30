@@ -16,3 +16,5 @@ int8 yolo_version
 
 # Threshold used for filtering detections, between 0 and 1. Detections with confidence scores below this threshold are discarded.
 float32 threshold
+
+int32 frame_num

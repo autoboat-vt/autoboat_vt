@@ -43,10 +43,6 @@ INFERENCE = True
 if "INFERENCE" in os.environ and os.environ["INFERENCE"] == "false":
     INFERENCE = False
 
-CAMERA = True
-if "CAMERA" in os.environ and os.environ["CAMERA"] == "false":
-    CAMERA = False
-
 class DeepStreamEngine:
     """
     Handles the Object Detection using DeepStream and YOLO models.
@@ -79,8 +75,6 @@ class DeepStreamEngine:
         self.close_callback = close_callback
 
         self.cam_list = self._read_camera_config()
-        if CAMERA:
-            self.cam_list[0]["device"] = self._find_camera()
 
         self.camera_focal_px = self.cam_list[0]["focal_px"]
 
@@ -112,46 +106,13 @@ class DeepStreamEngine:
 
         streammux = Gst.ElementFactory.make("nvstreammux", "muxer")
         streammux.set_property('batch-size', 2)
-        streammux.set_property("sync-inputs", True)
-        streammux.set_property("batched-push-timeout", 33_333_333)
-        
-        # v4l2-ctl --list-devices
-        # v4l2-ctl --device /dev/video0 --list-formats-ext
-        if CAMERA:
-            source0 = Gst.ElementFactory.make("v4l2src", "usb-cam-0")
-            source0.set_property('device', self.cam_list[0]["device"])
-            self.info_callback(f"Opening camera device {self.cam_list[0]['name']} on {self.cam_list[0]['device']}")
-        else:
-            source0 = Gst.ElementFactory.make("videotestsrc", "usb-cam-0")
-            source0.set_property('pattern', 18)
-            source0.set_property('is-live', True)
-            self.info_callback("Opening videotestsrc")
 
-        """
-        v4l2 camera settings
-        brightness: [-64, 64]
-        hue: [-180, 180]
-        contrast: [0, 100]
-        saturation: [0, 100]
-        """
+        source0 = Gst.ElementFactory.make("multifilesrc", "usb-cam-0")
+        source0.set_property('location', '/home/ws/frame_logs/run10/frames/frame%06d.png')
+        source0.set_property('caps', Gst.Caps.from_string('image/png, framerate=30/1'))
+        self.info_callback("Opening multifilesrc")
 
-        caps_source0 = Gst.ElementFactory.make('capsfilter', 'source0-caps')
-        caps_source0.set_property('caps', Gst.Caps.from_string(f'video/x-raw,'
-                                                               f'width={self.cam_list[0]["width"]},'
-                                                               f'height={self.cam_list[0]["height"]},'
-                                                               f'format={self.cam_list[0]["gst_format"]},'
-                                                               f'framerate={self.cam_list[0]["framerate_n"]}/'
-                                                               f'{self.cam_list[0]["framerate_d"]}'
-                                                               ))
-
-        # This is a workaround.
-        # Issue with deepstream7.1 and jetpack6.2 requires compute-hw to be 1 instead of 0.
-        # When compute-hw is 1, nvvidconv fails to convert from YUY2 to NV12 directly.
-        # So we convert from YUY2 to RGB first, then from RGB to NV12
-        videoconvert0 = Gst.ElementFactory.make('videoconvert', 'convertor-0')
-
-        caps_videoconvert0 = Gst.ElementFactory.make('capsfilter', 'convertor-caps-0')
-        caps_videoconvert0.set_property('caps', Gst.Caps.from_string('video/x-raw, format=RGB'))
+        pngdec = Gst.ElementFactory.make('pngdec', 'png-dec')
 
         nvvidconvsrc0 = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-src-0')
         nvvidconvsrc0.set_property('nvbuf-memory-type', MEMORY_TYPE)
@@ -169,8 +130,6 @@ class DeepStreamEngine:
 
         src_tee = Gst.ElementFactory.make("tee", "src-tee")
 
-        queue_left = Gst.ElementFactory.make('queue', 'queue-left')
-
         nvvidconv_left = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-left')
         nvvidconv_left.set_property('nvbuf-memory-type', MEMORY_TYPE)
         nvvidconv_left.set_property('compute-hw', COMPUTE_HW)
@@ -185,8 +144,6 @@ class DeepStreamEngine:
                 f"height={self.cam_list[0]['height']}"
             )
         )
-
-        queue_right = Gst.ElementFactory.make('queue', 'queue-right')
 
         nvvidconv_right = Gst.ElementFactory.make('nvvideoconvert', 'nvconverter-right')
         nvvidconv_right.set_property('nvbuf-memory-type', MEMORY_TYPE)
@@ -222,12 +179,6 @@ class DeepStreamEngine:
 
         osd = Gst.ElementFactory.make("nvdsosd", "nvosd")
 
-        videorate = Gst.ElementFactory.make('videorate', 'videorate')
-        videorate.set_property('skip-to-first', False)
-
-        caps_videorate = Gst.ElementFactory.make('capsfilter', 'videorate-caps')
-        caps_videorate.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), framerate=30/1'))
-
         osd_conv = Gst.ElementFactory.make('nvvideoconvert', 'sink_converter')
         osd_conv.set_property('nvbuf-memory-type', 0)
         osd_conv.set_property('compute-hw', COMPUTE_HW)
@@ -237,22 +188,18 @@ class DeepStreamEngine:
 
         if SHOULD_DISPLAY:
             sink = Gst.ElementFactory.make('nveglglessink', 'sink')
-            sink.set_property('sync', False)
+            sink.set_property('sync', True)
         else:
             sink = Gst.ElementFactory.make('fakesink', 'sink')
 
         self.pipeline.add(source0)
-        self.pipeline.add(caps_source0)
-        self.pipeline.add(videoconvert0)
-        self.pipeline.add(caps_videoconvert0)
+        self.pipeline.add(pngdec)
         self.pipeline.add(nvvidconvsrc0)
         self.pipeline.add(caps_nvvidconvsrc0)
         self.pipeline.add(src_tee)
         self.pipeline.add(nvvidconv_left)
-        self.pipeline.add(queue_left)
         self.pipeline.add(caps_nvvidconv_left)
         self.pipeline.add(nvvidconv_right)
-        self.pipeline.add(queue_right)
         self.pipeline.add(caps_nvvidconv_right)
         self.pipeline.add(streammux)
         if INFERENCE:
@@ -260,29 +207,23 @@ class DeepStreamEngine:
             self.pipeline.add(tracker)
         self.pipeline.add(tiler)
         self.pipeline.add(osd)
-        self.pipeline.add(videorate)
-        self.pipeline.add(caps_videorate)
         self.pipeline.add(osd_conv)
         self.pipeline.add(osd_caps)
         self.pipeline.add(sink)
 
-        source0.link(caps_source0)
-        caps_source0.link(videoconvert0)
-        videoconvert0.link(caps_videoconvert0)
-        caps_videoconvert0.link(nvvidconvsrc0)
+        source0.link(pngdec)
+        pngdec.link(nvvidconvsrc0)
         nvvidconvsrc0.link(caps_nvvidconvsrc0)
         caps_nvvidconvsrc0.link(src_tee)
 
         srcpad_left = src_tee.request_pad_simple('src_0')
-        sinkpad_left = queue_left.get_static_pad('sink')
+        sinkpad_left = nvvidconv_left.get_static_pad('sink')
         srcpad_left.link(sinkpad_left)
-        queue_left.link(nvvidconv_left)
         nvvidconv_left.link(caps_nvvidconv_left)
 
         srcpad_right = src_tee.request_pad_simple('src_1')
-        sinkpad_right = queue_right.get_static_pad('sink')
+        sinkpad_right = nvvidconv_right.get_static_pad('sink')
         srcpad_right.link(sinkpad_right)
-        queue_right.link(nvvidconv_right)
         nvvidconv_right.link(caps_nvvidconv_right)
 
         sinkpad0 = streammux.request_pad_simple('sink_0')
@@ -300,9 +241,7 @@ class DeepStreamEngine:
         else:
             streammux.link(tiler)
         tiler.link(osd)
-        osd.link(videorate)
-        videorate.link(caps_videorate)
-        caps_videorate.link(osd_conv)
+        osd.link(osd_conv)
         osd_conv.link(osd_caps)
         osd_caps.link(sink)
 
@@ -395,7 +334,8 @@ class DeepStreamEngine:
                 fps = 60 / (current_time - self.last_time)
                 self.last_time = current_time
                 self.info_callback(f"Frame: {frame_meta.frame_num}, avg FPS: {fps:.2f}")
-
+                # n_frame = pyds.get_nvds_buf_surface(hash(gst_buffer), frame_meta.batch_id)
+                # print(n_frame)
             l_obj = frame_meta.obj_meta_list
 
             # Iterate through each object in frame

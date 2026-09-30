@@ -25,6 +25,7 @@ from sensor_msgs.msg import Image
 from autoboat_msgs.msg import ObjectDetectionResult, ObjectDetectionFrameResults, ObjectDetectionResultsList
 
 from .cv_library.deepstream_engine import DeepStreamEngine
+# from .cv_library.deepstream_engine_file_src import DeepStreamEngine
 
 IS_DEV_CONTAINER = re.search("/home/ws", os.getcwd()) is not None
 PATH_TO_PKG_DIR = "/home/ws/ros_packages" if IS_DEV_CONTAINER else f"{os.path.expanduser('~')}/autoboat_vt/ros_packages"
@@ -50,7 +51,8 @@ class BuoyDetectionNode(Node):
             image_callback=self._publish_image,
             info_callback=self._info_callback,
             warn_callback=self._warn_callback,
-            error_callback=self._error_callback
+            error_callback=self._error_callback,
+            close_callback=self.close_pipeline
         )
         
         self.vision_engine.update_cv_parameters(self.default_parameters)
@@ -86,7 +88,6 @@ class BuoyDetectionNode(Node):
         new_parameters_json = json.loads(msg.data)
 
         self.vision_engine.update_cv_parameters(new_parameters_json)
-
 
     def _publish_detection_results(self, detection_results: dict) -> None:
         msg = ObjectDetectionResultsList()
