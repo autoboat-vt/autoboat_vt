@@ -34,10 +34,7 @@ PATH_TO_PARAMETERS_FILE = f"{PATH_TO_PKG_DIR}/object_detection/object_detection/
 class BuoyDetectionNode(Node):
     def __init__(self) -> None:
         super().__init__('buoy_detection_node')
-        self.parameters = {
-            "model_name": None, # model name without .onnx. Ex. yolo11m.onnx -> yolo11m
-            "threshold": None # detection threshold
-        }
+        self.default_parameters = {}
         self._read_default_parameters()
 
         # ROS2 Initialization
@@ -55,6 +52,8 @@ class BuoyDetectionNode(Node):
             warn_callback=self._warn_callback,
             error_callback=self._error_callback
         )
+        
+        self.vision_engine.update_cv_parameters(self.default_parameters)
 
         vs = threading.Thread(target=self.vision_engine.run, daemon=True)
         vs.start()
@@ -78,24 +77,16 @@ class BuoyDetectionNode(Node):
         try:
             parameters = JsoncParser.parse_file(PATH_TO_PARAMETERS_FILE)
             for key in parameters:
-                if key in self.parameters:
-                    self.parameters[key] = parameters[key]["default"]
+                if key in parameters:
+                    self.default_parameters[key] = parameters[key]["default"]
         except Exception as e:
             self.get_logger().error(f"Error reading parameters file: {e}")
     
     def _cv_parameters_callback(self, msg: String) -> None:
         new_parameters_json = json.loads(msg.data)
-        model_to_update = None
-        threshold_to_update = None
-        for key in new_parameters_json:
-            match (key):
-                case "model_name":
-                    model_to_update = new_parameters_json[key]
-                case "threshold":
-                    threshold_to_update = new_parameters_json[key]
-                case _:
-                    self.get_logger().warn(f"Parameter {key} not recognized, ignoring")
-        self.vision_engine.update_model_or_threshold(model_to_update, threshold_to_update)
+
+        self.vision_engine.update_cv_parameters(new_parameters_json)
+
 
     def _publish_detection_results(self, detection_results: dict) -> None:
         msg = ObjectDetectionResultsList()
