@@ -60,7 +60,7 @@ class DeepStreamEngine:
     
     def __init__(
       self, detection_callback:Callable[[dict], None],
-      image_callback:Callable[[bytes], None],
+      image_callback:Callable[[bytes, float, float], None],
       info_callback:Callable[[str], None],
       warn_callback:Callable[[str], None],
       error_callback:Callable[[str], None]
@@ -92,10 +92,9 @@ class DeepStreamEngine:
         self.yolo_ver = 26
         if "YOLO_VER" in os.environ and os.environ["YOLO_VER"] in ["11", "26"]:
             self.yolo_ver = int(os.environ["YOLO_VER"])
-        self.last_time = time.time() # used to calculate fps
+        self.last_time = time.time() # used to calculate fps for periodic status outputs
+        self.frame_times = [0, 0, 0, 0, 0] # used to calculate fps for image publishing
         self.file_lock = Lock()
-        self.latest_frame: np.ndarray | None = None
-        self.last_published_frame_number = -1
         if INFERENCE:
             with self.file_lock:
                 file_results = self._read_file(YOLO_CONFIG[self.yolo_ver])
@@ -212,18 +211,12 @@ class DeepStreamEngine:
 
         osd = Gst.ElementFactory.make("nvdsosd", "nvosd")
 
-        videorate = Gst.ElementFactory.make('videorate', 'videorate')
-        videorate.set_property('skip-to-first', False)
+        sink_conv = Gst.ElementFactory.make('nvvideoconvert', 'sink_converter')
+        sink_conv.set_property('nvbuf-memory-type', 0)
+        sink_conv.set_property('compute-hw', COMPUTE_HW)
 
-        caps_videorate = Gst.ElementFactory.make('capsfilter', 'videorate-caps')
-        caps_videorate.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), framerate=30/1'))
-
-        osd_conv = Gst.ElementFactory.make('nvvideoconvert', 'sink_converter')
-        osd_conv.set_property('nvbuf-memory-type', 0)
-        osd_conv.set_property('compute-hw', COMPUTE_HW)
-
-        osd_caps = Gst.ElementFactory.make('capsfilter', 'osd-caps')
-        osd_caps.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=RGBA'))
+        sink_conv_caps = Gst.ElementFactory.make('capsfilter', 'osd-caps')
+        sink_conv_caps.set_property('caps', Gst.Caps.from_string('video/x-raw(memory:NVMM), format=RGBA'))
 
         if SHOULD_DISPLAY:
             sink = Gst.ElementFactory.make('nveglglessink', 'sink')
@@ -248,10 +241,8 @@ class DeepStreamEngine:
             self.pipeline.add(tracker)
         self.pipeline.add(tiler)
         self.pipeline.add(osd)
-        self.pipeline.add(videorate)
-        self.pipeline.add(caps_videorate)
-        self.pipeline.add(osd_conv)
-        self.pipeline.add(osd_caps)
+        self.pipeline.add(sink_conv)
+        self.pipeline.add(sink_conv_caps)
         self.pipeline.add(sink)
 
         source0.link(caps_source0)
@@ -286,11 +277,9 @@ class DeepStreamEngine:
         else:
             streammux.link(tiler)
         tiler.link(osd)
-        osd.link(videorate)
-        videorate.link(caps_videorate)
-        caps_videorate.link(osd_conv)
-        osd_conv.link(osd_caps)
-        osd_caps.link(sink)
+        osd.link(sink_conv)
+        sink_conv.link(sink_conv_caps)
+        sink_conv_caps.link(sink)
 
         self.loop = GLib.MainLoop()
         bus = self.pipeline.get_bus()
@@ -303,7 +292,7 @@ class DeepStreamEngine:
         osd_probe_pad = osd.get_static_pad('sink')
         osd_probe_pad.add_probe(Gst.PadProbeType.BUFFER, self._osd_probe, 0)
 
-        sink_probe_pad = osd_conv.get_static_pad('src')
+        sink_probe_pad = sink_conv.get_static_pad('src')
         sink_probe_pad.add_probe(Gst.PadProbeType.BUFFER, self._sink_probe, 0)
 
     def _bus_call(self, bus: Gst.Bus, message: Gst.Message, loop: GLib.MainLoop) -> bool: # noqa: ARG002
@@ -483,10 +472,18 @@ class DeepStreamEngine:
         success, jpg_image = cv2.imencode('.jpg', frame_bgr,
                                           [int(cv2.IMWRITE_JPEG_QUALITY),self.parameters["jpg_compression_ratio"]])
         
+        current_time = time.time()
+        fps_last = 1 / self.frame_times[0] if self.frame_time[0] != 0 else 0
+        fps_avg = 5 / self.frame_times[5] if self.frame_times[5] != 0 else 0
+
+        for i in range(len(self.frame_times), 0, -1):
+            self.frame_times[i] = self.frame_times[i-1]
+        self.frame_times[0] = current_time
+        
         if success:
             image_bytes = jpg_image.tobytes()
             # print(f"Image bytes: {len(image_bytes)}")
-            self.image_callback(image_bytes)
+            self.image_callback(image_bytes, fps_last, fps_avg)
 
         return Gst.PadProbeReturn.OK
 

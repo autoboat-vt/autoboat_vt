@@ -20,9 +20,9 @@ from jsonc_parser.parser import JsoncParser
 from rclpy.node import Node
 
 # from realsense2_camera_msgs.msg import RGBD
-from std_msgs.msg import String, Bool, Int32, UInt8MultiArray
+from std_msgs.msg import String, Bool, Int32
 from sensor_msgs.msg import Image
-from autoboat_msgs.msg import ObjectDetectionResult, ObjectDetectionFrameResults, ObjectDetectionResultsList
+from autoboat_msgs.msg import ObjectDetectionResult, ObjectDetectionFrameResults, ObjectDetectionResultsList, ImageData
 
 from .cv_library.deepstream_engine import DeepStreamEngine
 
@@ -117,9 +117,11 @@ class BuoyDetectionNode(Node):
     def _osd_callback(self, msg: Bool) -> None:
         self.vision_engine.toggle_osd(msg.data)
 
-    def _publish_image(self, image: bytes) -> None:
-        msg = UInt8MultiArray()
-        msg.data = list(image)
+    def _publish_image(self, image: bytes, fps_last: float, fps_avg: float) -> None:
+        msg = ImageData()
+        msg.image = list(image)
+        msg.fps_last = fps_last
+        msg.fps_avg = fps_avg
         self.image_publisher.publish(msg)
 
 def main() -> None:
