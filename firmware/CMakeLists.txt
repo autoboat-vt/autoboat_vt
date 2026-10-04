@@ -44,6 +44,7 @@ add_executable(pico_microros
     src/cmps14_compass.cpp
     src/systems.cpp
     src/HAL.cpp
+    src/drv8711_stepper_motor_driver_library.cpp
     $ENV{PICO_MICROROS_SDK_PATH}/pico_uart_transport.c
 )
 

@@ -42,11 +42,11 @@ void HAL::init_i2c(){
     gpio_pull_up(SCL_PIN);
 }
 
-void init_rudderEncoder(amt22* rudderEncoder) {
+void HAL::init_rudderEncoder(amt22* rudderEncoder) {
     rudderEncoder = new amt22(RUDDER_ENCODER_CS_PIN, SPI_PORT);
 }
 
-void init_winchEncoder(amt22* winchEncoder) {
+void HAL::init_winchEncoder(amt22* winchEncoder) {
     winchEncoder = new amt22(WINCH_ENCODER_CS_PIN, SPI_PORT);
 }
 
