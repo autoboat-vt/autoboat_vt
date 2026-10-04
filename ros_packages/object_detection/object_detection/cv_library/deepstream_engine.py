@@ -561,12 +561,10 @@ class DeepStreamEngine:
             if INFERENCE:
                 should_update_config_file = False
                 if parameters.get("model_name") is not None:
-                    should_update_config_file = True
-                    self._update_model(parameters.get("model_name"))
+                    should_update_config_file |= self._update_model(parameters.get("model_name"))
 
                 if parameters.get("threshold") is not None:
-                    should_update_config_file = True
-                    self._update_threshold(parameters.get("threshold"))
+                    should_update_config_file |= self._update_threshold(parameters.get("threshold"))
 
                 if should_update_config_file:
                     self._update_config_file(YOLO_CONFIG[self.yolo_ver])
