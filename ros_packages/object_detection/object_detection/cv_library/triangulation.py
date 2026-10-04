@@ -37,7 +37,7 @@ class ObjectDetection:
 
 
 class ObjectTrack:
-    def __init__(self, object_id:int=-1, class_id:int=-1, obj_label:str="") -> None:
+    def __init__(self, object_id:int, class_id:int, obj_label:str="") -> None:
         self.detection_results = []
         self.last_updated_frame_number = -1
         self.object_id = object_id

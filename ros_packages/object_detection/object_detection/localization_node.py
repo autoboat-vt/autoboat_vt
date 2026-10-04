@@ -222,9 +222,9 @@ class LocalizationNode(Node):
             msg.triangulation_results.append(triangulation_result_msg)
         self.triangulation_results_publisher.publish(msg)
     
-    def _publish_emergency_stop(self, stop: bool) -> None:
+    def _publish_emergency_stop(self) -> None:
         msg = Bool()
-        msg.data = stop
+        msg.data = True
         self.emergency_stop_publisher.publish(msg)
 
 def main() -> None:
