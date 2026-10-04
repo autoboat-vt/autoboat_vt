@@ -19,3 +19,6 @@ else
     echo "Container autoboat_dev_container does not exist."
     docker pull --platform=linux/amd64 ${DEVCONTAINER_VARIANT:=vtautoboat/development_image_base}
 fi
+
+# fetch the FreeRTOS kernel submodule used by the firmware build (no-op if already present)
+git submodule update --init firmware/freertos || true
