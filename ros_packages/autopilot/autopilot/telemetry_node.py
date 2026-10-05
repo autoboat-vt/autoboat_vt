@@ -20,7 +20,7 @@ from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Bool, Float32, Int32, String, UInt8MultiArray
 
-from autoboat_msgs.msg import VESCTelemetryData, WaypointList
+from autoboat_msgs.msg import ObstacleList, VESCTelemetryData, WaypointList
 
 from .autopilot_library.utils.constants import (
     QOS_AUTOPILOT_PARAMETER_CONFIG_PATH,
@@ -36,6 +36,7 @@ from .autopilot_library.utils.telemetry_payloads import BoatStatusPayload, Motor
 from .autopilot_library.utils.utils_function_library import (
     cartesian_vector_to_polar,
     get_distance_between_positions,
+    parse_polygons,
 )
 
 
@@ -55,6 +56,11 @@ class TelemetryNode(Node):
 
         self.current_waypoints: list[tuple[float, float]] = []
         self.current_waypoint_index: int = 0
+
+        # the obstacle-avoiding path planned by the autopilot, and the raw obstacle
+        # GeoJSON the telemetry server last gave us (serialized, used to detect changes)
+        self.planned_path: list[NavSatFix] = []
+        self.obstacles_geojson: str = ""
 
         # see https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/NavSatFix.html
         self.position = NavSatFix(latitude=0.0, longitude=0.0)
@@ -97,6 +103,8 @@ class TelemetryNode(Node):
         self.boat_status_session = requests.Session()
         self.autopilot_parameters_session = requests.Session()
         self.waypoints_session = requests.Session()
+        self.obstacles_session = requests.Session()
+        self.path_session = requests.Session()
 
 
         self.telemetry_node_mode: TelemetryNodeModes = None
@@ -136,6 +144,7 @@ class TelemetryNode(Node):
         self.create_timer(0.01, self.update_boat_status)
         self.create_timer(0.5, self.update_waypoints_from_telemetry)
         self.create_timer(0.5, self.update_autopilot_parameters_from_telemetry)
+        self.create_timer(0.5, self.update_obstacles_from_telemetry)
         self.create_timer(0.5, self.publish_telemetry_node_instance_id)
 
         self.cv_bridge = CvBridge()
@@ -143,8 +152,10 @@ class TelemetryNode(Node):
         self.autopilot_parameters_publisher = self.create_publisher(String, "/autopilot_parameters", 10)
         self.sensors_parameters_publisher = self.create_publisher(String, "/sensors_parameters", 10)
         self.waypoints_list_publisher = self.create_publisher(WaypointList, "/waypoints_list", 10)
+        self.obstacles_list_publisher = self.create_publisher(ObstacleList, "/obstacles_list", qos_profile_sensor_data)
 
         self.create_subscription(Float32, "/desired_heading", self.desired_heading_callback, 10)
+        self.create_subscription(WaypointList, "/waypoint_path", self.planned_path_callback, qos_profile_sensor_data)
 
         self.create_subscription(Int32, "/current_waypoint_index", self.current_waypoint_index_callback, 10)
         self.create_subscription(String, "/boat_autopilot_state", self.boat_autopilot_state_callback, qos_profile_sensor_data)
@@ -539,6 +550,59 @@ class TelemetryNode(Node):
                 break
 
 
+    def update_obstacles_from_telemetry(self) -> None:
+        """
+        Updates the boat's obstacles from the telemetry server and publishes them over ROS.
+
+        The server hands back a GeoJSON document. Only when it differs from the last one we
+        saw (compared by its JSON representation) do we parse it and publish it on
+        ``/obstacles_list``, so a mission is not re-planned for an unchanged obstacle set.
+        """
+
+        route = f"obstacles/get_new/{self.instance_id}"
+        for new_obstacles, status in self._get_raw_response_without_retry(route, self.obstacles_session):
+            if status != TelemetryStatus.SUCCESS or new_obstacles is None:
+                break
+
+            new_obstacles_json = json.dumps(new_obstacles, sort_keys=True, separators=(",", ":"))
+            if new_obstacles_json == self.obstacles_geojson:
+                break
+
+            self.obstacles_geojson = new_obstacles_json
+
+            try:
+                polygons = parse_polygons(new_obstacles)
+            except Exception as error:
+                self.logger.error(f"Failed to parse obstacle GeoJSON: {error}")
+                break
+
+            obstacle_polygons: list[WaypointList] = []
+            for polygon in polygons:
+                coordinates = list(polygon.exterior.coords)
+                vertices = [
+                    NavSatFix(latitude=latitude, longitude=longitude) for longitude, latitude in coordinates
+                ]
+                obstacle_polygons.append(WaypointList(waypoints=vertices))
+
+            self.obstacles_list_publisher.publish(ObstacleList(polygons=obstacle_polygons))
+            self.logger.info(f"published {len(obstacle_polygons)} obstacles")
+            break
+
+
+    def planned_path_callback(self, planned_path: WaypointList) -> None:
+        """
+        Callback function for the ``/waypoint_path`` topic, published by the autopilot after it
+        plans an obstacle-avoiding path. The path is remembered so that telemetry reports the
+        distance to the next waypoint along the path the boat is actually following, and it is
+        forwarded to the telemetry server so the groundstation can display it.
+        """
+
+        self.planned_path = list(planned_path.waypoints)
+
+        path_coordinates = [[waypoint.latitude, waypoint.longitude] for waypoint in self.planned_path]
+        self._send_raw_data_without_retry(f"path/set/{self.instance_id}", path_coordinates, self.path_session)
+
+
     def get_raw_response_from_telemetry_server(
         self, route: str, session: requests.Session
     ) -> Generator[tuple[Any, TelemetryStatus], None, None]:
@@ -570,6 +634,73 @@ class TelemetryNode(Node):
         except Exception as e:
             self.logger.error(f"Error: {e} \n Could not recieve data with telemetry server route {route}, retrying...")
             yield from self.get_raw_response_from_telemetry_server(route, session)
+
+    def _get_raw_response_without_retry(
+        self, route: str, session: requests.Session
+    ) -> Generator[tuple[Any, TelemetryStatus], None, None]:
+        """
+        Sends a single GET request to a telemetry server route and yields the result once.
+
+        Unlike :meth:`get_raw_response_from_telemetry_server`, this does not retry. It is used
+        for the newer, optional routes (obstacles, planned path) whose server side may not
+        exist yet: a missing route should be skipped, not retried forever, since a timer calls
+        this method.
+
+        Parameters
+        ----------
+        route
+            The specific route on the telemetry server to send the GET request to.
+        session
+            The requests session to use for the GET request.
+
+        Yields
+        ------
+        tuple[Any, TelemetryStatus]
+            The raw response from the telemetry server and the status of the request.
+        """
+
+        url = urljoin(TELEMETRY_SERVER_URL, route)
+
+        try:
+            response = session.get(url=url, timeout=10)
+            response.raise_for_status()
+
+            yield response.json(), TelemetryStatus.SUCCESS
+
+        except Exception as e:
+            self.logger.error(f"Error: {e} \n Could not recieve data with telemetry server route {route}.")
+            yield None, TelemetryStatus.FAILURE
+
+    def _send_raw_data_without_retry(
+        self,
+        route: str,
+        data: list,
+        session: requests.Session,
+    ) -> None:
+        """
+        Sends a single POST request to a telemetry server route without retrying.
+
+        Mirrors :meth:`send_raw_data_to_telemetry_server` for list payloads, but does not
+        retry, so an unimplemented route cannot stall the caller.
+
+        Parameters
+        ----------
+        route
+            The specific route on the telemetry server to send the POST request to.
+        data
+            The list payload to send.
+        session
+            The requests session to use for the POST request.
+        """
+
+        url = urljoin(TELEMETRY_SERVER_URL, route)
+
+        try:
+            response = session.post(url=url, json=data, timeout=10)
+            response.raise_for_status()
+
+        except Exception as e:
+            self.logger.error(f"Error: {e} \n Could not send data with telemetry server route {route}.")
 
     def send_raw_data_to_telemetry_server(
         self,
@@ -656,7 +787,21 @@ class TelemetryNode(Node):
         self.true_wind_vector = self.apparent_wind_vector + local_velocity_vector
         self.true_wind_speed, self.true_wind_angle = cartesian_vector_to_polar(self.true_wind_vector[0], self.true_wind_vector[1])
 
-        if self.current_waypoints != [] and self.current_waypoint_index < len(self.current_waypoints):
+        if self.planned_path and self.current_waypoint_index < len(self.planned_path):
+            current_position = Position(
+                longitude=self.position.longitude,
+                latitude=self.position.latitude
+            )
+
+            next_waypoint = self.planned_path[self.current_waypoint_index]
+            next_waypoint_position = Position(
+                longitude=next_waypoint.longitude,
+                latitude=next_waypoint.latitude
+            )
+
+            self.distance_to_next_waypoint = get_distance_between_positions(current_position, next_waypoint_position)
+
+        elif self.current_waypoints != [] and self.current_waypoint_index < len(self.current_waypoints):
             current_position = Position(
                 longitude=self.position.longitude,
                 latitude=self.position.latitude

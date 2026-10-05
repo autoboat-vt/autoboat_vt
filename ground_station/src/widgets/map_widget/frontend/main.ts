@@ -10,12 +10,16 @@ import {
 } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-rotatedmarker";
+import "leaflet-draw";
+import "leaflet-draw/dist/leaflet.draw.css";
 
 import { BathymetryManager } from "./bathymetry";
 import { BoatManager } from "./boat";
 import { BuoyManager } from "./buoys";
 import { KeybindHandler, type KeybindMap } from "./keybinds";
 import { LandBoundaryManager } from "./land_boundary";
+import { ObstacleManager } from "./obstacles";
+import { PlannedPathManager } from "./planned_path";
 import { SVGManager } from "./svg";
 import { TrackManager } from "./track";
 import type { LatLngTuple } from "./types";
@@ -46,6 +50,7 @@ class MapInterface {
     static readonly checkLandUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/check_land`;
     static readonly bathymetryUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/bathymetry`;
     static readonly landBoundaryUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/land_boundary`;
+    static readonly obstaclesUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/obstacles`;
     lastFocusedTimestamp = 0;
     private waypointHistory: { type: "add" | "remove"; waypoint: LatLngTuple; color?: string }[] = [];
 
@@ -59,6 +64,8 @@ class MapInterface {
     readonly track_manager: TrackManager;
     readonly bathymetry_manager: BathymetryManager;
     readonly land_boundary_manager: LandBoundaryManager;
+    readonly obstacle_manager: ObstacleManager;
+    readonly planned_path_manager: PlannedPathManager;
 
     static getMarkerIcon(color: string): Icon {
         const key = `marker-${color}`;
@@ -118,6 +125,8 @@ class MapInterface {
         this.track_manager = new TrackManager(this.map);
         this.bathymetry_manager = new BathymetryManager(this.map, MapInterface.bathymetryUrl);
         this.land_boundary_manager = new LandBoundaryManager(this.map, MapInterface.landBoundaryUrl);
+        this.obstacle_manager = new ObstacleManager(this.map, this.syncObstacles.bind(this));
+        this.planned_path_manager = new PlannedPathManager(this.map);
 
         // add zoom control buttons to the map
         control.scale().addTo(this.map);
@@ -174,6 +183,12 @@ class MapInterface {
      * user chose to add the waypoint anyway.
      */
     async handleMapClick(lat: number, lon: number): Promise<void> {
+        // while the obstacle draw control is active, clicks belong to it and must
+        // never drop a waypoint
+        if (this.obstacle_manager.isDrawEnabled()) {
+            return;
+        }
+
         if (!(await this.shouldAddWaypoint(lat, lon))) {
             return;
         }
@@ -224,6 +239,28 @@ class MapInterface {
             }
         } catch (error) {
             console.error("Error syncing waypoints:", error);
+        }
+    }
+
+    /**
+     * Syncs the drawn obstacle polygons with the backend callback server.
+     *
+     * The obstacles are sent as a GeoJSON ``FeatureCollection`` string, the same shape the
+     * Python side forwards to the telemetry server.
+     */
+    async syncObstacles(featureCollection: object): Promise<void> {
+        try {
+            const response = await fetch(MapInterface.obstaclesUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(featureCollection)
+            });
+
+            if (!response.ok) {
+                console.error("Failed to sync obstacles");
+            }
+        } catch (error) {
+            console.error("Error syncing obstacles:", error);
         }
     }
 
@@ -344,6 +381,34 @@ class MapInterface {
         void this.land_boundary_manager.setVisible(visible);
     }
 
+    set_obstacles_visible(visible: boolean): void {
+        this.obstacle_manager.setVisible(visible);
+    }
+
+    set_obstacle_draw_enabled(enabled: boolean): void {
+        this.obstacle_manager.setDrawEnabled(enabled);
+    }
+
+    load_obstacles_geojson(geojsonString: string): void {
+        this.obstacle_manager.loadGeoJSONString(geojsonString);
+    }
+
+    clear_obstacles(): void {
+        this.obstacle_manager.clear();
+    }
+
+    set_planned_path(points: LatLngTuple[]): void {
+        this.planned_path_manager.setPath(points);
+    }
+
+    clear_planned_path(): void {
+        this.planned_path_manager.clear();
+    }
+
+    set_planned_path_visible(visible: boolean): void {
+        this.planned_path_manager.setVisible(visible);
+    }
+
     remove_all_svgs(): void {
         this.svg_manager.removeAllSvgs();
     }
@@ -391,7 +456,14 @@ class MapInterface {
         // Methods that are internal to the TS side (introspection, event
         // handlers, TS->Python callbacks) and are not part of the Python->JS
         // API surface. Excluding them here keeps MapBridge.verify_api quiet.
-        const exclude = new Set(["getApi", "handleMapClick", "handleMapMove", "shouldAddWaypoint", "syncWaypoints"]);
+        const exclude = new Set([
+            "getApi",
+            "handleMapClick",
+            "handleMapMove",
+            "shouldAddWaypoint",
+            "syncWaypoints",
+            "syncObstacles"
+        ]);
 
         const proto = Object.getPrototypeOf(this) as object;
         for (const name of Object.getOwnPropertyNames(proto)) {

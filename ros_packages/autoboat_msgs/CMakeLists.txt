@@ -15,6 +15,7 @@ set(msg_files
   "msg/VESCControlData.msg"
   "msg/RCData.msg"
   "msg/WaypointList.msg"
+  "msg/ObstacleList.msg"
   "msg/ObjectDetectionResult.msg"
   "msg/ObjectDetectionFrameResults.msg"
   "msg/ObjectDetectionResultsList.msg"

@@ -1,7 +1,13 @@
+from __future__ import annotations
+
+import json
+from typing import Any
+
 import geopy.distance
 import numpy as np
 import numpy.typing as npt
 import pyproj
+from shapely.geometry import MultiPolygon, Polygon, shape
 
 from .position import Position
 
@@ -378,6 +384,47 @@ def does_line_segment_intersect_circle(
 
     return (0 <= t1 <= 1) or (0 <= t2 <= 1)
 
+def parse_polygons(geojson: str | dict[str, Any]) -> list[Polygon]:
+    """
+    Extracts the polygon obstacles described by a GeoJSON document.
+
+    Parameters
+    ----------
+    geojson
+        The GeoJSON document, given either as a JSON string or as an
+        already-parsed ``dict``.
+
+    Returns
+    -------
+    `list[Polygon]`
+        The polygons described by the document. ``Polygon`` features are
+        returned directly, ``MultiPolygon`` features are flattened into their
+        individual polygons, and any other geometry type is ignored.
+    """
+
+    document = geojson if isinstance(geojson, dict) else json.loads(geojson)
+
+    # a FeatureCollection holds many features, a bare Feature holds just one
+    if document.get("type") == "FeatureCollection":
+        features = document.get("features", [])
+    elif document.get("type") == "Feature":
+        features = [document]
+    else:
+        features = []
+
+    polygons: list[Polygon] = []
+    for feature in features:
+        geometry = feature.get("geometry")
+        if geometry is None:
+            continue
+
+        parsed = shape(geometry)
+        if isinstance(parsed, Polygon):
+            polygons.append(parsed)
+        elif isinstance(parsed, MultiPolygon):
+            polygons.extend(parsed.geoms)
+
+    return polygons
 
 
 # def main():

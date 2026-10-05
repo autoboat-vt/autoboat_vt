@@ -2,6 +2,7 @@
 from typing import Any
 
 import numpy as np
+
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from .utils.constants import PropellerMotorControlMode
@@ -221,7 +222,6 @@ class MotorboatAutopilot:
 
         if not self.waypoints:
             return 0.0, None
-            raise Exception("Expected route to be loaded into the autopilot. Field self.waypoints was not filled")
 
         desired_position = self.waypoints[self.current_waypoint_index]
         distance_to_desired_position = get_distance_between_positions(current_position, desired_position)

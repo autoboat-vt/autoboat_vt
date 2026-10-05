@@ -71,6 +71,7 @@ pyshp                 # reads the Natural Earth shapefile used by the ocean laye
 
 
 # Misc / Generally useful
+typing-extensions
 numpy==1.26.4
 docker
 ruff

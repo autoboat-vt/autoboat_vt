@@ -3,6 +3,7 @@ from typing import Any
 
 import numpy as np
 import numpy.typing as npt
+
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from .utils.constants import SailboatAutopilotStates

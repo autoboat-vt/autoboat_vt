@@ -14,6 +14,10 @@ logger = get_logger(__name__)
 _WAYPOINTS_LOCK = Lock()
 _WAYPOINTS: list[tuple[float, float]] = []
 
+_OBSTACLES_LOCK = Lock()
+# the obstacle polygons drawn on the map, stored as a GeoJSON document
+_OBSTACLES: dict[str, object] = {"type": "FeatureCollection", "features": []}
+
 
 class WaypointsHandler(BaseHTTPRequestHandler):
     """
@@ -86,6 +90,14 @@ class WaypointsHandler(BaseHTTPRequestHandler):
         if self.path == "/waypoints":
             with _WAYPOINTS_LOCK:
                 payload = json.dumps(_WAYPOINTS).encode("utf-8")
+
+            self._set_headers(200)
+            self.wfile.write(payload)
+            return
+
+        if self.path == "/obstacles":
+            with _OBSTACLES_LOCK:
+                payload = json.dumps(_OBSTACLES, separators=(",", ":")).encode("utf-8")
 
             self._set_headers(200)
             self.wfile.write(payload)
@@ -173,11 +185,20 @@ class WaypointsHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps({"on_land": on_land, "add_waypoint": add_waypoint}).encode("utf-8"))
 
     def do_POST(self) -> None:
-        """Handle POST requests to update waypoints."""
+        """Handle POST requests to update waypoints or the drawn obstacle polygons."""
 
-        if self.path != "/waypoints":
-            self._not_found()
+        if self.path == "/waypoints":
+            self._handle_post_waypoints()
             return
+
+        if self.path == "/obstacles":
+            self._handle_post_obstacles()
+            return
+
+        self._not_found()
+
+    def _handle_post_waypoints(self) -> None:
+        """Handle ``POST /waypoints`` requests, replacing the stored waypoint list."""
 
         content_length = int(self.headers.get("Content-Length", "0"))
         raw_body = self.rfile.read(content_length)
@@ -210,6 +231,36 @@ class WaypointsHandler(BaseHTTPRequestHandler):
         with _WAYPOINTS_LOCK:
             _WAYPOINTS.clear()
             _WAYPOINTS.extend(normalized_waypoints)
+
+        self._set_headers(200)
+
+    def _handle_post_obstacles(self) -> None:
+        """
+        Handle ``POST /obstacles`` requests, replacing the stored obstacle GeoJSON.
+
+        The body must be a GeoJSON ``FeatureCollection`` (or a bare ``Feature``)
+        describing the polygon obstacles the user has drawn on the map.
+        """
+
+        content_length = int(self.headers.get("Content-Length", "0"))
+        raw_body = self.rfile.read(content_length)
+
+        try:
+            body = json.loads(raw_body.decode("utf-8"))
+            if not isinstance(body, dict):
+                raise TypeError("request body must be a JSON object")
+
+            if body.get("type") not in {"FeatureCollection", "Feature"}:
+                raise TypeError("body must be a GeoJSON FeatureCollection or Feature")
+
+        except (TypeError, UnicodeDecodeError, json.JSONDecodeError):
+            self._set_headers(400)
+            self.wfile.write(b'{"message": "Invalid request body"}')
+            return
+
+        with _OBSTACLES_LOCK:
+            _OBSTACLES.clear()
+            _OBSTACLES.update(body)
 
         self._set_headers(200)
 

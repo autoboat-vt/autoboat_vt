@@ -81,6 +81,18 @@ class GroundStationWidget(QWidget):
         self.waypoints: list[list[float]] = []
         self.num_waypoints: int = 0
 
+        # the obstacle polygons drawn on the map, as a GeoJSON FeatureCollection, plus the
+        # planned path fetched from the telemetry server
+        self.obstacles_geojson: dict[str, Any] = {"type": "FeatureCollection", "features": []}
+        self.num_obstacles: int = 0
+        # signature of the last rendered obstacle rings, so an edit (which does not change the
+        # polygon count) still refreshes the table
+        self.obstacle_rings_signature: str = ""
+        self.planned_path: list[list[float]] = []
+
+        # is the obstacle polygon draw/edit control currently enabled?
+        self.obstacle_draw_enabled: bool = False
+
         # buoy_name => {"lat": float, "lon": float}
         self.buoys: dict[str, dict[str, float]] = {}
 
@@ -123,8 +135,10 @@ class GroundStationWidget(QWidget):
         self.right_layout.setObjectName("right_layout")
         self.right_tab1_layout = QGridLayout()
         self.right_tab2_layout = QGridLayout()
+        self.right_tab3_layout = QGridLayout()
         self.right_tab1 = QWidget()
         self.right_tab2 = QWidget()
+        self.right_tab3 = QWidget()
 
         self.setMaximumWidth(self.left_width + self.middle_width_max + self.right_width)
         # endregion define layouts
@@ -319,8 +333,61 @@ class GroundStationWidget(QWidget):
         self.right_tab2.setLayout(self.right_tab2_layout)
         # endregion tab2: buoy data
 
+        # region tab3: obstacle data
+        self.right_tab3_label = QLabel("Obstacles")
+        self.right_tab3_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.right_tab3_table = QTableWidget()
+        self.right_tab3_table.setMinimumWidth(self.right_width - 20)
+        self.right_tab3_table.cellClicked.connect(lambda row, _column: self.zoom_to_obstacle(row))
+
+        self.can_send_obstacles = True
+        self.send_obstacles_button = misc.pushbutton_maker(
+            "Send Obstacles",
+            self.send_obstacles,
+            constants.ICONS.upload,
+            max_width=self.right_width // 2,
+            min_height=50,
+            is_clickable=self.can_send_obstacles,
+        )
+
+        self.can_pull_obstacles = True
+        self.pull_obstacles_button = misc.pushbutton_maker(
+            "Pull Obstacles",
+            self.pull_obstacles,
+            constants.ICONS.download,
+            max_width=self.right_width // 2,
+            min_height=50,
+            is_clickable=self.can_pull_obstacles,
+        )
+
+        self.clear_obstacles_button = misc.pushbutton_maker(
+            "Clear Obstacles",
+            self.clear_obstacles,
+            constants.ICONS.delete,
+            max_width=self.right_width // 2,
+            min_height=50,
+        )
+
+        self.toggle_obstacle_draw_button = misc.pushbutton_maker(
+            "Toggle Draw Mode",
+            self.toggle_obstacle_draw_mode,
+            constants.ICONS.pencil,
+            max_width=self.right_width // 2,
+            min_height=50,
+        )
+
+        self.right_tab3_layout.addWidget(self.right_tab3_label, 0, 0, 1, 2)
+        self.right_tab3_layout.addWidget(self.right_tab3_table, 1, 0, 1, 2)
+        self.right_tab3_layout.addWidget(self.toggle_obstacle_draw_button, 2, 0)
+        self.right_tab3_layout.addWidget(self.clear_obstacles_button, 2, 1)
+        self.right_tab3_layout.addWidget(self.send_obstacles_button, 3, 0)
+        self.right_tab3_layout.addWidget(self.pull_obstacles_button, 3, 1)
+        self.right_tab3.setLayout(self.right_tab3_layout)
+        # endregion tab3: obstacle data
+
         self.right_layout.addTab(self.right_tab1, "Waypoints")
         self.right_layout.addTab(self.right_tab2, "Buoy Data")
+        self.right_layout.addTab(self.right_tab3, "Obstacles")
         self.right_layout.setFixedWidth(self.right_width)
         self.main_layout.addWidget(self.right_layout, 0, 2)
         # endregion right section
@@ -335,6 +402,14 @@ class GroundStationWidget(QWidget):
         self.remote_waypoint_handler = thread_classes.WaypointThreadRouter.RemoteFetcherThread()
         self.remote_waypoint_handler.response.connect(self.check_telemetry_waypoints)
         self.thirty_second_timer.timeout.connect(self.remote_waypoint_handler_starter)
+
+        self.local_obstacle_handler = thread_classes.ObstacleThreadRouter.LocalFetcherThread()
+        self.local_obstacle_handler.response.connect(self.update_obstacles_display)
+        self.one_ms_timer.timeout.connect(self.local_obstacle_handler_starter)
+
+        self.remote_planned_path_handler = thread_classes.PlannedPathThreadRouter.RemoteFetcherThread()
+        self.remote_planned_path_handler.response.connect(self.update_planned_path_display)
+        self.thirty_second_timer.timeout.connect(self.remote_planned_path_handler_starter)
 
         for timer in self.timers:
             timer.start()
@@ -646,6 +721,67 @@ class GroundStationWidget(QWidget):
         self.map_bridge.clear_waypoints()
 
     @Slot()
+    def send_obstacles(self) -> None:
+        """
+        Send the drawn obstacle polygons to the telemetry server.
+
+        The obstacles are sent as a JSON-encoded GeoJSON string, matching the telemetry
+        server's convention for ``dict`` payloads.
+        """
+
+        try:
+            instance_id = constants.SM.read_int("telemetry_server_instance_id")
+            constants.REQ_SESSION.post(
+                urljoin(misc.get_route("set_obstacles"), str(instance_id)),
+                json=json.dumps(self.obstacles_geojson, separators=(",", ":"), indent=None),
+            )
+
+            logger.info(f"Obstacles sent successfully. Polygons: {self.num_obstacles}")
+
+        except RequestException as e:
+            logger.error(f"Failed to send obstacles: {e}")
+
+    @Slot()
+    def pull_obstacles(self) -> None:
+        """Pull the obstacle polygons from the telemetry server and load them onto the map."""
+
+        try:
+            instance_id = constants.SM.read_int("telemetry_server_instance_id")
+            remote_obstacles = constants.REQ_SESSION.get(
+                urljoin(misc.get_route("get_obstacles"), str(instance_id)),
+            ).json()
+
+            if isinstance(remote_obstacles, dict) and remote_obstacles.get("type") in {"FeatureCollection", "Feature"}:
+                self.obstacles_geojson = remote_obstacles
+                self.map_bridge.load_obstacles_geojson(json.dumps(remote_obstacles, separators=(",", ":")))
+                logger.info("Pulled obstacles from the telemetry server.")
+
+            else:
+                logger.warning("No obstacles found on the server, or they were malformed.")
+
+        except RequestException as e:
+            logger.error(f"Failed to pull obstacles. Exception: {e}")
+
+    @Slot()
+    def clear_obstacles(self) -> None:
+        """Clear every drawn obstacle polygon from the map."""
+
+        self.map_bridge.clear_obstacles()
+
+    @Slot()
+    def toggle_obstacle_draw_mode(self) -> None:
+        """
+        Toggle the obstacle polygon draw/edit control.
+
+        While enabled, left-clicks on the map draw obstacle vertices instead of placing
+        waypoints.
+        """
+
+        self.obstacle_draw_enabled = not self.obstacle_draw_enabled
+        self.map_bridge.set_obstacle_draw_enabled(self.obstacle_draw_enabled)
+        logger.info(f"Obstacle draw mode {'enabled' if self.obstacle_draw_enabled else 'disabled'}.")
+
+    @Slot()
     def add_500_test_waypoints(self) -> None:
         """Add 500 test waypoints to the map."""
 
@@ -895,6 +1031,10 @@ class GroundStationWidget(QWidget):
             self.map_bridge.set_bathymetry_visible(enabled)
         elif feature == "land_boundary":
             self.map_bridge.set_land_boundary_visible(enabled)
+        elif feature == "obstacles":
+            self.map_bridge.set_obstacles_visible(enabled)
+        elif feature == "planned_path":
+            self.map_bridge.set_planned_path_visible(enabled)
 
     @Slot(int, str)
     def zoom_to_marker(self, row: int, table: Literal["waypoints", "buoys"] = "waypoints") -> None:
@@ -1045,6 +1185,167 @@ class GroundStationWidget(QWidget):
 
             self.right_tab1_table.resizeColumnsToContents()
             self.right_tab1_table.resizeRowsToContents()
+
+    @Slot()
+    def local_obstacle_handler_starter(self) -> None:
+        """Starts the local obstacle handler thread."""
+
+        if not self.local_obstacle_handler.isRunning():
+            self.local_obstacle_handler.start()
+
+    @Slot()
+    def remote_planned_path_handler_starter(self) -> None:
+        """Starts the remote planned path handler thread."""
+
+        if not self.remote_planned_path_handler.isRunning():
+            self.remote_planned_path_handler.start()
+
+    @staticmethod
+    def _open_ring(ring: list[list[float]]) -> list[list[float]]:
+        """
+        Removes the duplicated closing vertex from a GeoJSON polygon ring.
+
+        GeoJSON polygon rings repeat the first vertex as the last one in order to
+        close the ring, so a ring with ``N`` distinct vertices has length ``N + 1``.
+        Dropping the repeat gives the true vertex count and stops the duplicate from
+        biasing derived values such as the polygon center.
+        """
+
+        if len(ring) >= 2 and ring[0] == ring[-1]:
+            return ring[:-1]
+
+        return ring
+
+    def _obstacle_polygon_rings(self) -> list[list[list[float]]]:
+        """
+        Extracts the exterior ring of every polygon from the stored obstacle GeoJSON.
+
+        Returns
+        -------
+        `list[list[list[float]]]`
+            One exterior ring per polygon, each a list of ``[longitude, latitude]``
+            vertices with the duplicated GeoJSON closing vertex removed.
+        """
+
+        features: list[dict[str, Any]] = []
+        if self.obstacles_geojson.get("type") == "FeatureCollection":
+            features = self.obstacles_geojson.get("features") or []
+        elif self.obstacles_geojson.get("type") == "Feature":
+            features = [self.obstacles_geojson]
+
+        rings: list[list[list[float]]] = []
+        for feature in features:
+            if not isinstance(feature, dict):
+                continue
+
+            geometry = feature.get("geometry") or {}
+            geometry_type = geometry.get("type")
+            coordinates = geometry.get("coordinates") or []
+
+            if geometry_type == "Polygon" and coordinates:
+                rings.append(self._open_ring(coordinates[0]))
+            elif geometry_type == "MultiPolygon":
+                for polygon in coordinates:
+                    if polygon:
+                        rings.append(self._open_ring(polygon[0]))
+
+        return rings
+
+    @Slot(tuple)
+    def update_obstacles_display(self, request_result: tuple[dict[str, Any], constants.TelemetryStatus]) -> None:
+        """
+        Update the obstacle table with polygons fetched from the local server.
+
+        The map remains the source of truth for the drawn polygons (it syncs them to the
+        local server), so this only refreshes the table and the button states.
+
+        Parameters
+        ----------
+        request_result
+            A tuple containing the obstacle GeoJSON (a ``dict``) and a
+            :class:`TelemetryStatus` enum value indicating the status of the request.
+        """
+
+        obstacles, _ = request_result
+        if not isinstance(obstacles, dict) or not obstacles:
+            return
+
+        self.obstacles_geojson = obstacles
+        rings = self._obstacle_polygon_rings()
+
+        self.num_obstacles = len(rings)
+        self.send_obstacles_button.setDisabled(len(rings) == 0)
+
+        # rebuild the table whenever the actual geometry changes, not just the polygon count,
+        # so editing an existing shape refreshes its vertex count and center
+        rings_signature = repr(rings)
+        if rings_signature == self.obstacle_rings_signature:
+            return
+
+        self.obstacle_rings_signature = rings_signature
+
+        self.right_tab3_table.clear()
+        self.right_tab3_table.setRowCount(0)
+        self.right_tab3_table.setColumnCount(3)
+        self.right_tab3_table.setHorizontalHeaderLabels(["Vertices", "Center Latitude", "Center Longitude"])
+
+        for ring in rings:
+            if not ring:
+                continue
+
+            latitudes = [vertex[1] for vertex in ring]
+            longitudes = [vertex[0] for vertex in ring]
+            values = [f"{len(ring)}", f"{sum(latitudes) / len(latitudes):.13f}", f"{sum(longitudes) / len(longitudes):.13f}"]
+
+            self.right_tab3_table.insertRow(self.right_tab3_table.rowCount())
+            for column, value in enumerate(values):
+                item = QTableWidgetItem(value)
+                item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+                self.right_tab3_table.setItem(self.right_tab3_table.rowCount() - 1, column, item)
+
+        self.right_tab3_table.resizeColumnsToContents()
+        self.right_tab3_table.resizeRowsToContents()
+
+    @Slot(int)
+    def zoom_to_obstacle(self, row: int) -> None:
+        """
+        Center the view on the polygon in the given table row.
+
+        Parameters
+        ----------
+        row
+            The row index of the obstacle polygon in the table.
+        """
+
+        rings = self._obstacle_polygon_rings()
+        if row < 0 or row >= len(rings) or not rings[row]:
+            return
+
+        ring = rings[row]
+        center_latitude = sum(vertex[1] for vertex in ring) / len(ring)
+        center_longitude = sum(vertex[0] for vertex in ring) / len(ring)
+        self.map_bridge.focus_map_on_marker(center_latitude, center_longitude)
+
+    @Slot(tuple)
+    def update_planned_path_display(self, request_result: tuple[list[list[float]], constants.TelemetryStatus]) -> None:
+        """
+        Update the planned path overlay with the path fetched from the telemetry server.
+
+        Parameters
+        ----------
+        request_result
+            A tuple containing a list of ``[latitude, longitude]`` points and a
+            :class:`TelemetryStatus` enum value indicating the status of the request.
+        """
+
+        planned_path, _ = request_result
+        self.planned_path = planned_path
+
+        if not planned_path:
+            self.map_bridge.clear_planned_path()
+            return
+
+        self.map_bridge.set_planned_path(planned_path)
 
     @Slot(tuple)
     def check_telemetry_waypoints(self, request_result: tuple[list[list[int | float]], constants.TelemetryStatus]) -> None:

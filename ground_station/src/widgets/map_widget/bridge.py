@@ -327,6 +327,48 @@ class MapBridge:
         self._call("set_land_boundary_visible", visible)
 
     @_map_api
+    def set_obstacles_visible(self, visible: bool) -> None:
+        """Show or hide the drawn obstacle polygons."""
+
+        self._call("set_obstacles_visible", visible)
+
+    @_map_api
+    def set_obstacle_draw_enabled(self, enabled: bool) -> None:
+        """Enable or disable the obstacle polygon draw/edit control."""
+
+        self._call("set_obstacle_draw_enabled", enabled)
+
+    @_map_api
+    def load_obstacles_geojson(self, geojson: str) -> None:
+        """Replace the drawn obstacles with the polygons described by a GeoJSON string."""
+
+        self._call("load_obstacles_geojson", geojson)
+
+    @_map_api
+    def clear_obstacles(self) -> None:
+        """Remove every drawn obstacle polygon."""
+
+        self._call("clear_obstacles")
+
+    @_map_api
+    def set_planned_path(self, points: list[list[float]]) -> None:
+        """Replace the displayed planned path with an ordered list of ``[lat, lon]`` points."""
+
+        self._call("set_planned_path", points)
+
+    @_map_api
+    def clear_planned_path(self) -> None:
+        """Remove the displayed planned path."""
+
+        self._call("clear_planned_path")
+
+    @_map_api
+    def set_planned_path_visible(self, visible: bool) -> None:
+        """Show or hide the planned path overlay."""
+
+        self._call("set_planned_path_visible", visible)
+
+    @_map_api
     def remove_all_svgs(self) -> None:
         """Remove all diagnostic SVG overlays from the map."""
 

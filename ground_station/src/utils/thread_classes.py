@@ -11,6 +11,8 @@ __all__ = [
     "BoatStatusThreadRouter",
     "ImageThreadRouter",
     "InstanceManagerThreadRouter",
+    "ObstacleThreadRouter",
+    "PlannedPathThreadRouter",
     "WaypointThreadRouter",
 ]
 
@@ -413,3 +415,172 @@ class ImageThreadRouter:
                 image = b""
 
             self.data_fetched.emit(image)
+
+
+class ObstacleThreadRouter:
+    """
+    Class containing :class:`QThread` classes dealing with obstacle polygons.
+
+    Attributes
+    ----------
+    - :class:`RemoteFetcherThread` -> Fetches the obstacle GeoJSON from the telemetry server.
+    - :class:`LocalFetcherThread` -> Fetches the obstacle GeoJSON from the local server.
+    """
+
+    class RemoteFetcherThread(QThread):
+        """
+        Thread to fetch the obstacle GeoJSON document from the telemetry server.
+
+        Inherits
+        -------
+        :class:`QThread`
+
+        Attributes
+        ----------
+        response
+            Signal to send the obstacles to the main thread. Emits a tuple containing:
+                - the GeoJSON document (a ``dict``), or ``{}`` on failure,
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
+        """
+
+        response = Signal(tuple)
+
+        def __init__(self) -> None:
+            super().__init__()
+
+        def run(self) -> None:
+            """Run the thread to fetch obstacles from the telemetry server."""
+
+            self.get_obstacles()
+
+        def get_obstacles(self) -> None:
+            """Fetch the obstacle GeoJSON from the telemetry server and emit it."""
+
+            try:
+                data = constants.REQ_SESSION.get(
+                    urljoin(
+                        misc.get_route("get_obstacles"),
+                        str(constants.SM.read_int("telemetry_server_instance_id")),
+                    )
+                ).json()
+
+                if not isinstance(data, dict) or data.get("type") not in {"FeatureCollection", "Feature"}:
+                    raise TypeError
+
+            except RequestException:
+                self.response.emit(({}, constants.TelemetryStatus.FAILURE))
+
+            except TypeError:
+                self.response.emit(({}, constants.TelemetryStatus.WRONG_FORMAT))
+
+            else:
+                self.response.emit((data, constants.TelemetryStatus.SUCCESS))
+
+    class LocalFetcherThread(QThread):
+        """
+        Thread to fetch the obstacle GeoJSON document from the local callback server.
+
+        Inherits
+        --------
+        :class:`QThread`
+
+        Attributes
+        ----------
+        response
+            Signal to send the obstacles to the main thread. Emits a tuple containing:
+                - the GeoJSON document (a ``dict``), or ``{}`` on failure,
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
+        """
+
+        response = Signal(tuple)
+
+        def __init__(self) -> None:
+            super().__init__()
+
+        def run(self) -> None:
+            """Run the thread to fetch obstacles from the local server."""
+
+            self.get_obstacles()
+
+        def get_obstacles(self) -> None:
+            """Fetch the obstacle GeoJSON from the local server and emit it."""
+
+            try:
+                data = constants.REQ_SESSION.get(constants.SM.read_str("obstacles_server_url")).json()
+
+                if not isinstance(data, dict) or data.get("type") not in {"FeatureCollection", "Feature"}:
+                    raise TypeError
+
+            except RequestException:
+                self.response.emit(({}, constants.TelemetryStatus.FAILURE))
+
+            except TypeError:
+                self.response.emit(({}, constants.TelemetryStatus.WRONG_FORMAT))
+
+            else:
+                self.response.emit((data, constants.TelemetryStatus.SUCCESS))
+
+
+class PlannedPathThreadRouter:
+    """
+    Class containing :class:`QThread` classes dealing with the planned path.
+
+    Attributes
+    ----------
+    - :class:`RemoteFetcherThread` -> Fetches the planned path from the telemetry server.
+    """
+
+    class RemoteFetcherThread(QThread):
+        """
+        Thread to fetch the planned path from the telemetry server.
+
+        Inherits
+        -------
+        :class:`QThread`
+
+        Attributes
+        ----------
+        response
+            Signal to send the path to the main thread. Emits a tuple containing:
+                - a list of ``[latitude, longitude]`` points, or ``[]`` on failure,
+                - a :class:`TelemetryStatus` enum value indicating the status of the request.
+        """
+
+        response = Signal(tuple)
+
+        def __init__(self) -> None:
+            super().__init__()
+
+        def run(self) -> None:
+            """Run the thread to fetch the planned path from the telemetry server."""
+
+            self.get_planned_path()
+
+        def get_planned_path(self) -> None:
+            """Fetch the planned path from the telemetry server and emit it."""
+
+            try:
+                data = constants.REQ_SESSION.get(
+                    urljoin(
+                        misc.get_route("get_planned_path"),
+                        str(constants.SM.read_int("telemetry_server_instance_id")),
+                    )
+                ).json()
+
+                if not isinstance(data, list):
+                    raise TypeError
+
+                for point in data:
+                    if not isinstance(point, (tuple, list)) or len(point) != 2:
+                        raise TypeError
+                    if not all(isinstance(coord, (int, float)) for coord in point):
+                        raise TypeError
+
+            except RequestException:
+                self.response.emit(([], constants.TelemetryStatus.FAILURE))
+
+            except TypeError:
+                self.response.emit(([], constants.TelemetryStatus.WRONG_FORMAT))
+
+            else:
+                self.response.emit((data, constants.TelemetryStatus.SUCCESS))

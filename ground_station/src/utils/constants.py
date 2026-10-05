@@ -215,6 +215,9 @@ MAP_PAGE: QWebEnginePage
 # url for local waypoints server
 _waypoints_server_url: str = urljoin(f"http://127.0.0.1:{MAP_CALLBACK_PORT}", "waypoints")
 
+# url for local obstacles server (the map posts drawn obstacle GeoJSON here)
+_obstacles_server_url: str = urljoin(f"http://127.0.0.1:{MAP_CALLBACK_PORT}", "obstacles")
+
 # url for documentation
 DOCUMENTATION_URL = QUrl(urljoin("https://autoboat-vt.github.io", "documentation"))
 
@@ -287,6 +290,20 @@ _waypoints_endpoints: dict[str, str] = {
     "test_waypoints": urljoin(_telemetry_server_url, "waypoints/test/"),
 }
 
+_obstacles_endpoints: dict[str, str] = {
+    "get_obstacles": urljoin(_telemetry_server_url, "obstacles/get/"),
+    "get_new_obstacles": urljoin(_telemetry_server_url, "obstacles/get_new/"),
+    "set_obstacles": urljoin(_telemetry_server_url, "obstacles/set/"),
+    "test_obstacles": urljoin(_telemetry_server_url, "obstacles/test/"),
+}
+
+_planned_path_endpoints: dict[str, str] = {
+    "get_planned_path": urljoin(_telemetry_server_url, "path/get/"),
+    "get_new_planned_path": urljoin(_telemetry_server_url, "path/get_new/"),
+    "set_planned_path": urljoin(_telemetry_server_url, "path/set/"),
+    "test_planned_path": urljoin(_telemetry_server_url, "path/test/"),
+}
+
 _image_manager_endpoints: dict[str, str] = {
     "test_image_manager": urljoin(_telemetry_server_url, "image_manager/test/"),
     "get_image": urljoin(_telemetry_server_url, "image_manager/get/"),
@@ -302,6 +319,8 @@ _telemetry_server_endpoints: dict[str, str] = dict(
     **_boat_status_endpoints,
     **_autopilot_parameters_endpoints,
     **_waypoints_endpoints,
+    **_obstacles_endpoints,
+    **_planned_path_endpoints,
     **_image_manager_endpoints,
 )
 
@@ -341,6 +360,18 @@ _map_features: dict[str, dict[str, str | bool]] = {
         "feedback_text": "Updated Ocean Boundary Config.",
         "status": False,
     },
+    "obstacles": {
+        "name": "Obstacles",
+        "description": "Show the obstacle polygons the boat's pathfinder avoids.",
+        "feedback_text": "Updated Obstacles Config.",
+        "status": True,
+    },
+    "planned_path": {
+        "name": "Planned Path",
+        "description": "Show the obstacle-avoiding path the autopilot has planned.",
+        "feedback_text": "Updated Planned Path Config.",
+        "status": True,
+    },
 }
 
 _data_logging_active: bool = False
@@ -350,6 +381,7 @@ STATE_FILE_CONTENTS: dict[str, Any] = {
     "start_time": _start_time,
     "telemetry_server_url": _telemetry_server_url,
     "waypoints_server_url": _waypoints_server_url,
+    "obstacles_server_url": _obstacles_server_url,
     "local_autopilot_param_hash": _local_autopilot_param_hash,
     "remote_autopilot_param_hash": _remote_autopilot_param_hash,
     "current_autopilot_parameters": _current_autopilot_parameters,

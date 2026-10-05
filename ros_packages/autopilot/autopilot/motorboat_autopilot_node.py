@@ -12,9 +12,10 @@ from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Bool, Float32, Int32, String
 
-from autoboat_msgs.msg import RCData, VESCControlData, WaypointList
+from autoboat_msgs.msg import ObstacleList, RCData, VESCControlData, WaypointList
 
 from .autopilot_library.motorboat_autopilot import MotorboatAutopilot
+from .autopilot_library.path_planner import PathPlanner
 from .autopilot_library.utils.constants import (
     CONFIG_DIRECTORY,
     QOS_AUTOPILOT_PARAMETER_CONFIG_PATH,
@@ -63,8 +64,8 @@ class MotorboatAutopilotNode(Node):
         self.autopilot_refresh_timer = self.create_timer(autopilot_refresh_period, self.update_ros_topics)
 
         self.create_subscription(String, "/autopilot_parameters", self.autopilot_parameters_callback, 10)
-        # self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10) making changes to this line below
-        self.create_subscription(WaypointList, "/waypoint_path", self.waypoints_list_callback, 10)
+        self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10)
+        self.create_subscription(ObstacleList, "/obstacles_list", self.obstacles_list_callback, qos_profile_sensor_data)
         self.create_subscription(NavSatFix, "/position", self.position_callback, qos_profile_sensor_data)
         self.create_subscription(Twist, "/velocity", self.velocity_callback, qos_profile_sensor_data)
         self.create_subscription(Float32, "/heading", self.heading_callback, qos_profile_sensor_data)
@@ -74,6 +75,7 @@ class MotorboatAutopilotNode(Node):
         self.current_waypoint_index_publisher = self.create_publisher(Int32, "/current_waypoint_index", 10)
         self.boat_control_mode_publisher = self.create_publisher(String, "/boat_control_mode", qos_profile_sensor_data)
         self.desired_heading_publisher = self.create_publisher(Float32, "/desired_heading", 10)
+        self.planned_path_publisher = self.create_publisher(WaypointList, "/waypoint_path", qos_profile_sensor_data)
 
         self.should_propeller_motor_be_powered_publisher = self.create_publisher(Bool, "/should_propeller_motor_be_powered", 10)
         self.propeller_motor_control_struct_publisher = self.create_publisher(
@@ -93,6 +95,14 @@ class MotorboatAutopilotNode(Node):
         self.speed = 0.0
         self.heading = 0.0
         self.rudder_angle = 0.0
+
+        # pathfinding state: the user's mission waypoints, the obstacles to avoid, and
+        # the planner that turns them into an obstacle-avoiding path for the autopilot
+        self.mission_waypoints: list[Position] = []
+        self.obstacles: list[list[Position]] = []
+        self.path_planner = PathPlanner()
+        self.position_received = False
+        self.pending_replan = False
 
         self.motorboat_control_mode = MotorboatControlModes.WAYPOINT_MISSION
         self.propeller_motor_control_mode = PropellerMotorControlMode.RPM
@@ -244,8 +254,8 @@ class MotorboatAutopilotNode(Node):
         Converts the list of ROS2 ``NavSatFix`` objects to a list of ``Position`` objects,
         which are a custom datatype that has some useful helper methods.
 
-        Does not directly set the waypoints in the motorboat autopilot object,
-        instead it calls the ``update_waypoints_list`` method of the motorboat autopilot object.
+        The waypoints are stored as the mission and an obstacle-avoiding path is planned
+        through them, which is what is actually handed to the motorboat autopilot.
 
         Parameters
         ----------
@@ -256,21 +266,80 @@ class MotorboatAutopilotNode(Node):
         if len(waypoint_list.waypoints) == 0:
             return
 
+        self.mission_waypoints = [
+            Position(longitude=waypoint.longitude, latitude=waypoint.latitude) for waypoint in waypoint_list.waypoints
+        ]
+
+        self.pending_replan = True
+        self.try_replan()
+
+    def obstacles_list_callback(self, obstacle_list: ObstacleList) -> None:
+        """
+        Callback function that is called whenever there is a new obstacle list message.
+        Each polygon's ``NavSatFix`` vertices are converted to ``Position`` objects and
+        stored, then the path is re-planned so the boat avoids the new obstacles.
+
+        Parameters
+        ----------
+        obstacle_list
+            A ROS2 message that contains a list of obstacle polygons.
+        """
+
+        obstacles: list[list[Position]] = []
+        for polygon in obstacle_list.polygons:
+            vertices = [
+                Position(longitude=waypoint.longitude, latitude=waypoint.latitude) for waypoint in polygon.waypoints
+            ]
+            if len(vertices) >= 3:
+                obstacles.append(vertices)
+
+        self.obstacles = obstacles
+
+        self.pending_replan = True
+        self.try_replan()
+
+    def try_replan(self) -> None:
+        """
+        Plans an obstacle-avoiding path through the mission waypoints and hands it to the
+        motorboat autopilot, then publishes it on ``/waypoint_path``.
+
+        Planning is deferred until a position has been received, since the path depends on
+        where the boat currently is. If no path can be found the pending flag is left set so
+        planning is retried as the boat moves or its understanding of the obstacles changes.
+        """
+
+        if not self.pending_replan or not self.position_received or not self.mission_waypoints:
+            return
+
+        planned_path = self.path_planner.plan_route(self.position, self.mission_waypoints, self.obstacles)
+
+        if not planned_path:
+            self.get_logger().warning("no path through the mission waypoints could be found")
+            return
+
+        self.pending_replan = False
+
         self.motorboat_autopilot.reset()
+        self.motorboat_autopilot.update_waypoints_list(planned_path)
 
-        waypoint_navsatfixes: list[NavSatFix] = waypoint_list.waypoints
+        planned_navsatfixes = [
+            NavSatFix(longitude=position.longitude, latitude=position.latitude) for position in planned_path
+        ]
+        self.planned_path_publisher.publish(WaypointList(waypoints=planned_navsatfixes))
 
-        waypoint_positions: list[Position] = []
-        for waypoint in waypoint_navsatfixes:
-            waypoint_positions.append(Position(longitude=waypoint.longitude, latitude=waypoint.latitude))
-
-        self.motorboat_autopilot.update_waypoints_list(waypoint_positions)
+        self.get_logger().info(f"planned a path with {len(planned_path)} points")
 
 
     def position_callback(self, position: NavSatFix) -> None:
         """A callback function to get the current position of the boat."""
         self.position = Position(longitude=position.longitude, latitude=position.latitude)
         self.last_gps_position_received_time = time.time()
+        self.position_received = True
+
+        # planning needs a position, so a request that arrived before the first GPS fix is
+        # fulfilled here as soon as one is available
+        if self.pending_replan:
+            self.try_replan()
 
 
     def velocity_callback(self, velocity: Twist) -> None:

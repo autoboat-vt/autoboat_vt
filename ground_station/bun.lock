@@ -6,6 +6,7 @@
       "name": "map_widget",
       "dependencies": {
         "leaflet": "latest",
+        "leaflet-draw": "^1.0.4",
         "leaflet-rotatedmarker": "latest",
       },
       "devDependencies": {
@@ -13,6 +14,7 @@
         "@types/bun": "latest",
         "@types/geojson": "latest",
         "@types/leaflet": "latest",
+        "@types/leaflet-draw": "^1.0.13",
         "@types/leaflet-rotatedmarker": "latest",
         "typescript": "latest",
         "vite": "latest",
@@ -76,6 +78,8 @@
 
     "@types/leaflet": ["@types/leaflet@1.9.22", "", { "dependencies": { "@types/geojson": "*" } }, "sha512-h3lhECYEKDasG7LFHu+GiHqAvsgLuQvlJvVZzJDGONo3sEL+wUOqSFLnwkZlK0qVxnxbuGFW8iBlJNYs5wgndA=="],
 
+    "@types/leaflet-draw": ["@types/leaflet-draw@1.0.13", "", { "dependencies": { "@types/leaflet": "^1.9" } }, "sha512-YU82kilOaU+wPNbqKCCDfHH3hqepN6XilrBwG/mSeZ/z4ewumaRCOah44s3FMxSu/Aa0SVa3PPJvhIZDUA09mw=="],
+
     "@types/leaflet-rotatedmarker": ["@types/leaflet-rotatedmarker@0.2.6", "", { "dependencies": { "@types/leaflet": "^1.9" } }, "sha512-fqXoBOlBQnrpL/lqFk2gwn2cXGpNzJVApI3x/ZEINLOqNCzFDqvCtvGFy4ve9nm01eagJ6Q0BtyiPqDso46p5g=="],
 
     "@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
@@ -129,6 +133,8 @@
     "fsevents": ["fsevents@2.3.3", "", { "os": "darwin" }, "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw=="],
 
     "leaflet": ["leaflet@1.9.4", "", {}, "sha512-nxS1ynzJOmOlHp+iL3FyWqK89GtNL8U8rvlMOsQdTTssxZwCXh8N2NB3GDQOL+YR3XnWyZAxwQixURb+FA74PA=="],
+
+    "leaflet-draw": ["leaflet-draw@1.0.4", "", {}, "sha512-rsQ6saQO5ST5Aj6XRFylr5zvarWgzWnrg46zQ1MEOEIHsppdC/8hnN8qMoFvACsPvTioAuysya/TVtog15tyAQ=="],
 
     "leaflet-rotatedmarker": ["leaflet-rotatedmarker@0.2.0", "", {}, "sha512-yc97gxLXwbZa+Gk9VCcqI0CkvIBC9oNTTjFsHqq4EQvANrvaboib4UdeQLyTnEqDpaXHCqzwwVIDHtvz2mUiDg=="],
 
