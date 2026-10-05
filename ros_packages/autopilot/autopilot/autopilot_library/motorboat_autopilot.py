@@ -26,21 +26,18 @@ class MotorboatAutopilot:
     The ROS2 node does not have to concern itself with the exact implementation details of the autopilot,
     and this allows us in the future to switch to any other alternative for ROS2 (ie maybe ROS3) in the future by just
     plugging and playing this class.
+
+    Parameters
+    ----------
+    parameters
+        Dictionary that should contain information from a file in the ```config``` folder.
+    logger
+        A logger to use instead of print statements which works a little better with ROS.
+        For more information see:
+        https://docs.ros.org/en/humble/Tutorials/Demos/Logging-and-logger-configuration.html
     """
 
     def __init__(self, parameters: dict[str, Any], logger: RcutilsLogger) -> None:
-        """
-        Parameters
-        ----------
-        parameters
-            Dictionary that should contain information from a file in the ```config``` folder.
-
-        logger
-            A logger to use instead of print statements which works a little better with ROS.
-            For more information see:
-            https://docs.ros.org/en/humble/Tutorials/Demos/Logging-and-logger-configuration.html
-        """
-
         self.heading_pid_controller = DiscretePID(
             sample_period=(1 / parameters["autopilot_refresh_rate"]),
             k_p=parameters["heading_p_gain"],

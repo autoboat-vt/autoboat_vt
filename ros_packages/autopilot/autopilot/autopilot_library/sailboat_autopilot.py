@@ -34,23 +34,21 @@ class SailboatAutopilot:
     The ROS2 node does not have to concern itself with the exact implementation details of the autopilot,
     and this allows us in the future to switch to any other alternative for ROS2 (ie maybe ROS3) in the future by just
     plugging and playing this class.
+
+    Parameters
+    ----------
+    parameters
+        Dictionary that should contain the information from the ``config/sailboat_default_parameters.json`` file.
+        For more information on specific parameters you are allowed to use, please see that file.
+
+    logger
+        A ROS logger to use instead of print statements which works a little better with ROS.
+        For more information: https://docs.ros.org/en/humble/Tutorials/Demos/Logging-and-logger-configuration.html.
+        This logger is what you get by running ``self.get_logger()``. So for example in order to log an info message,
+        please use ``logger.info("message")``.
     """
 
     def __init__(self, parameters: dict[str, Any], logger: RcutilsLogger) -> None:
-        """
-        Parameters
-        ----------
-        parameters
-            Dictionary that should contain the information from the ``config/sailboat_default_parameters.json`` file.
-            For more information on specific parameters you are allowed to use, please see that file.
-
-        logger
-            A ROS logger to use instead of print statements which works a little better with ROS.
-            For more information: https://docs.ros.org/en/humble/Tutorials/Demos/Logging-and-logger-configuration.html.
-            This logger is what you get by running ``self.get_logger()``. So for example in order to log an info message,
-            please use ``logger.info("message")``.
-        """
-
         self.heading_pid_controller = DiscretePID(
             sample_period=(1 / parameters["autopilot_refresh_rate"]),
             k_p=parameters["heading_p_gain"],

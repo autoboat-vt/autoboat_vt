@@ -33,25 +33,24 @@ class Position:
 
     >>> Position(local_x=local_x, local_y=local_y, reference_longitude=reference_longitude, reference_latitude=reference_latitude)
 
-
     Parameters
     ----------
-        longitude: float
-            The global longitude in degrees.
-        latitude: float
-            The global latitude in degrees.
-        local_x: float
-            The Cartesian x-coordinate (e.g., Easting or NED North) relative to the reference point.
-        local_y: float
-            The Cartesian y-coordinate (e.g., Northing or NED East) relative to the reference point.
-        reference_longitude: float
-            The longitude of the origin for local coordinates.
-        reference_latitude: float
-            The latitude of the origin for local coordinates.
+    longitude: float
+        The global longitude in degrees.
+    latitude: float
+        The global latitude in degrees.
+    local_x: float
+        The Cartesian x-coordinate (e.g., Easting or NED North) relative to the reference point.
+    local_y: float
+        The Cartesian y-coordinate (e.g., Northing or NED East) relative to the reference point.
+    reference_longitude: float
+        The longitude of the origin for local coordinates.
+    reference_latitude: float
+        The latitude of the origin for local coordinates.
 
     Raises
     ------
-        Exception: If the provided arguments do not match one of the two supported initialization schemes.
+    Exception: If the provided arguments do not match one of the two supported initialization schemes.
     """
 
     def __init__(
