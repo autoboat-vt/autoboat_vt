@@ -158,6 +158,13 @@ class MapInterface {
 
         // contextmenu is right click
         this.map.on("contextmenu", (event: LeafletMouseEvent) => {
+            // while the obstacle draw/edit control is active, right-clicks belong to
+            // polygon editing and must never delete waypoints (mirrors the left-click
+            // guard in handleMapClick). The obstacle manager handles them instead.
+            if (this.obstacle_manager.isDrawEnabled()) {
+                return;
+            }
+
             const closestIndex = this.waypoint_manager.findClosestIndex(event.latlng.lat, event.latlng.lng);
 
             if (closestIndex !== -1) {

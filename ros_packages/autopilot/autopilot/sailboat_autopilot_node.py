@@ -96,7 +96,10 @@ class SailboatAutopilotNode(Node):
         self.path_planner = PathPlanner()
         self.position_received = False
         self.pending_replan = False
-        
+
+        self.mission_signature: tuple[tuple[float, float], ...] = ()
+        self.obstacle_signature: tuple[tuple[tuple[float, float], ...], ...] = ()
+
         self.apparent_wind_vector: npt.NDArray[np.float64] = np.zeros(2, dtype=np.float64)
         self.apparent_wind_angle: float = 0.0
         self.sail_angle: float = 0.0
@@ -244,9 +247,18 @@ class SailboatAutopilotNode(Node):
         if len(waypoint_list.waypoints) == 0:
             return
 
-        self.mission_waypoints = [
+        mission_waypoints = [
             Position(longitude=waypoint.longitude, latitude=waypoint.latitude) for waypoint in waypoint_list.waypoints
         ]
+
+        # the telemetry node republishes the same waypoints on a timer, so only replan when
+        # the mission actually changes
+        signature = tuple((position.longitude, position.latitude) for position in mission_waypoints)
+        if signature == self.mission_signature:
+            return
+
+        self.mission_signature = signature
+        self.mission_waypoints = mission_waypoints
 
         self.pending_replan = True
         self.try_replan()
@@ -271,6 +283,12 @@ class SailboatAutopilotNode(Node):
             if len(vertices) >= 3:
                 obstacles.append(vertices)
 
+        # only replan when the obstacle set actually changes
+        signature = tuple(tuple((vertex.longitude, vertex.latitude) for vertex in polygon) for polygon in obstacles)
+        if signature == self.obstacle_signature:
+            return
+
+        self.obstacle_signature = signature
         self.obstacles = obstacles
 
         self.pending_replan = True

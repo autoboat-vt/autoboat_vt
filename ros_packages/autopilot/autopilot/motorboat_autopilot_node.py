@@ -104,6 +104,11 @@ class MotorboatAutopilotNode(Node):
         self.position_received = False
         self.pending_replan = False
 
+        # signatures of the last mission/obstacles we planned for, so the telemetry node's
+        # periodic republish of unchanged data does not trigger a replan every tick
+        self.mission_signature: tuple[tuple[float, float], ...] = ()
+        self.obstacle_signature: tuple[tuple[tuple[float, float], ...], ...] = ()
+
         self.motorboat_control_mode = MotorboatControlModes.WAYPOINT_MISSION
         self.propeller_motor_control_mode = PropellerMotorControlMode.RPM
         self.should_propeller_motor_be_powered = False
@@ -266,9 +271,18 @@ class MotorboatAutopilotNode(Node):
         if len(waypoint_list.waypoints) == 0:
             return
 
-        self.mission_waypoints = [
+        mission_waypoints = [
             Position(longitude=waypoint.longitude, latitude=waypoint.latitude) for waypoint in waypoint_list.waypoints
         ]
+
+        # the telemetry node republishes the same waypoints on a timer, so only replan when
+        # the mission actually changes
+        signature = tuple((position.longitude, position.latitude) for position in mission_waypoints)
+        if signature == self.mission_signature:
+            return
+
+        self.mission_signature = signature
+        self.mission_waypoints = mission_waypoints
 
         self.pending_replan = True
         self.try_replan()
@@ -293,6 +307,12 @@ class MotorboatAutopilotNode(Node):
             if len(vertices) >= 3:
                 obstacles.append(vertices)
 
+        # only replan when the obstacle set actually changes
+        signature = tuple(tuple((vertex.longitude, vertex.latitude) for vertex in polygon) for polygon in obstacles)
+        if signature == self.obstacle_signature:
+            return
+
+        self.obstacle_signature = signature
         self.obstacles = obstacles
 
         self.pending_replan = True
