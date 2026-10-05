@@ -11,16 +11,16 @@ import cv2
 import numpy as np
 import numpy.typing as npt
 import requests
+from cv_bridge import CvBridge
 
 import rclpy
-from cv_bridge import CvBridge
-from geometry_msgs.msg import Twist, Vector3
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import NavSatFix
-from std_msgs.msg import Bool, Float32, Int32, String, UInt8MultiArray
 
 from autoboat_msgs.msg import ObstacleList, VESCTelemetryData, WaypointList
+from geometry_msgs.msg import Twist, Vector3
+from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import Bool, Float32, Int32, String, UInt8MultiArray
 
 from .autopilot_library.utils.constants import (
     QOS_AUTOPILOT_PARAMETER_CONFIG_PATH,

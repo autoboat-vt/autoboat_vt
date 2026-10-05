@@ -8,6 +8,14 @@ indent-width      = 4
 line-length       = 130
 respect-gitignore = true
 
+[format]
+docstring-code-format      = true
+docstring-code-line-length = "dynamic"
+indent-style               = "space"
+line-ending                = "native"
+quote-style                = "double"
+skip-magic-trailing-comma  = true
+
 [lint.pydocstyle]
 convention = "numpy"
 
@@ -17,9 +25,10 @@ max-returns         = 10
 max-locals          = 30
 
 [lint.isort]
-combine-as-imports     = true
-order-by-type          = true
-relative-imports-order = "furthest-to-closest"
+combine-as-imports      = true
+order-by-type           = true
+relative-imports-order  = "furthest-to-closest"
+split-on-trailing-comma = false
 
 # Ruff will place the import sections in this order:
 section-order = [
@@ -27,7 +36,8 @@ section-order = [
     "standard-library",
     "third-party",
     "qtpy",
-    "ros",
+    "ros_api",
+    "ros_msgs",
     "first-party",
     "local-folder",
 ]
@@ -44,43 +54,24 @@ known-first-party = [
     "autoboat_launch",
     "autoboat_msgs",
     "autopilot",
-    "autopilot_cpp",
     "drivers",
-    "drivers_cpp",
     "object_detection",
     "old_sailboat_simulation",
-    "custom_lift_drag",
-    "foil_dynamics",
-    "sail_limits",
-    "simulation_camera_engine",
-    "simulation_models",
-    "simulation_transform",
-    "wind_arrow",
+    "simulation",
 ]
 
 [lint.isort.sections]
-qtpy = ["qtpy", "pyqtgraph"]
-ros = [
-    "rclpy",
-    "rosidl_runtime_py",
-    "ament_index_python",
-    "ament_index_python.packages",
-    "ament_copyright",
-    "ament_flake8",
-    "ament_pep257",
-    "std_msgs",
-    "geometry_msgs",
-    "sensor_msgs",
-    "nav_msgs",
-    "cv_bridge",
-    "launch",
-    "launch_ros",
-]
+qtpy     = ["qtpy", "pyqtgraph"]
+ros_api  = ["rclpy"]
+ros_msgs = ["autoboat_msgs", "std_msgs", "sensor_msgs", "geometry_msgs"]
 
 [lint]
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 future-annotations = true
-logger-objects     = ["rclpy.impl.rcutils_logger.RcutilsLogger"]
+logger-objects = [
+    "rclpy.impl.rcutils_logger.RcutilsLogger",
+    "ground_station.utils.console_logger.ConsoleLogger",
+]
 
 select    = ["ALL"]
 unfixable = ["F401"]
