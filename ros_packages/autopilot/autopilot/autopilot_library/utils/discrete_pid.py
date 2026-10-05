@@ -12,24 +12,22 @@ class DiscretePID:
     Note
     ----
     ``low_pass_filter_cutoff_frequency`` is represented by ``n`` to improve readability in the equations.
+
+    Parameters
+    ----------
+    sample_period
+        Sample period for the discrete PID controller.
+    k_p
+        Proportional gain.
+    k_i
+        Integral gain.
+    k_d
+        Derivative gain.
+    n
+        Cutoff frequency for the low pass filter on the derivative term.
     """
 
     def __init__(self, sample_period: float, k_p: float, k_i: float, k_d: float, n: float) -> None:
-        """
-        Parameters
-        ----------
-        sample_period
-            Sample period for the discrete PID controller.
-        k_p
-            Proportional gain.
-        k_i
-            Integral gain.
-        k_d
-            Derivative gain.
-        n
-            Cutoff frequency for the low pass filter on the derivative term.
-        """
-
         self.sample_period = sample_period
         self.k_p = k_p
         self.k_i = k_i
