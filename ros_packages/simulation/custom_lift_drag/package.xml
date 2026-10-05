@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>custom_lift_drag</name>
+  <version>1.0.0</version>
+  <description>Custom lift drag package.</description>
+  <maintainer email="autoboat@vt.edu">autoboatvt</maintainer>
+  <license>http://www.apache.org/licenses/LICENSE-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

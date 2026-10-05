@@ -176,6 +176,10 @@ export class ObstacleManager {
         }
 
         const lastMarker = markers[markers.length - 1];
+        if (!lastMarker) {
+            return;
+        }
+
         const clickPoint = this.map.latLngToContainerPoint(event.latlng);
         const lastPoint = this.map.latLngToContainerPoint(lastMarker.getLatLng());
 

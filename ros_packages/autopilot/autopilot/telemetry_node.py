@@ -17,7 +17,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 
-from autoboat_msgs.msg import ObstacleList, VESCTelemetryData, WaypointList
+from autoboat_msgs.msg import VESCTelemetryData, WaypointList
 from geometry_msgs.msg import Twist, Vector3
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Bool, Float32, Int32, String, UInt8MultiArray
@@ -33,11 +33,7 @@ from .autopilot_library.utils.constants import (
 )
 from .autopilot_library.utils.position import Position
 from .autopilot_library.utils.telemetry_payloads import BoatStatusPayload, MotorboatStatusPayload, SailboatStatusPayload
-from .autopilot_library.utils.utils_function_library import (
-    cartesian_vector_to_polar,
-    get_distance_between_positions,
-    parse_polygons,
-)
+from .autopilot_library.utils.utils_function_library import cartesian_vector_to_polar, get_distance_between_positions
 
 
 class TelemetryNode(Node):
@@ -152,7 +148,7 @@ class TelemetryNode(Node):
         self.autopilot_parameters_publisher = self.create_publisher(String, "/autopilot_parameters", 10)
         self.sensors_parameters_publisher = self.create_publisher(String, "/sensors_parameters", 10)
         self.waypoints_list_publisher = self.create_publisher(WaypointList, "/waypoints_list", 10)
-        self.obstacles_list_publisher = self.create_publisher(ObstacleList, "/obstacles_list", qos_profile_sensor_data)
+        self.obstacles_geojson_publisher = self.create_publisher(String, "/obstacles_geojson", 10)
 
         self.create_subscription(Float32, "/desired_heading", self.desired_heading_callback, 10)
         self.create_subscription(WaypointList, "/waypoint_path", self.planned_path_callback, qos_profile_sensor_data)
@@ -551,13 +547,7 @@ class TelemetryNode(Node):
 
 
     def update_obstacles_from_telemetry(self) -> None:
-        """
-        Updates the boat's obstacles from the telemetry server and publishes them over ROS.
-
-        The server hands back a GeoJSON document. Only when it differs from the last one we
-        saw (compared by its JSON representation) do we parse it and publish it on
-        ``/obstacles_list``, so a mission is not re-planned for an unchanged obstacle set.
-        """
+        """Updates the boat's current obstacles from the telemetry server and publishes them over ROS."""
 
         route = f"obstacles/get_new/{self.instance_id}"
         for new_obstacles, status in self._get_raw_response_without_retry(route, self.obstacles_session):
@@ -565,27 +555,9 @@ class TelemetryNode(Node):
                 break
 
             new_obstacles_json = json.dumps(new_obstacles, sort_keys=True, separators=(",", ":"))
-            if new_obstacles_json == self.obstacles_geojson:
-                break
-
             self.obstacles_geojson = new_obstacles_json
-
-            try:
-                polygons = parse_polygons(new_obstacles)
-            except Exception as error:
-                self.logger.error(f"Failed to parse obstacle GeoJSON: {error}")
-                break
-
-            obstacle_polygons: list[WaypointList] = []
-            for polygon in polygons:
-                coordinates = list(polygon.exterior.coords)
-                vertices = [
-                    NavSatFix(latitude=latitude, longitude=longitude) for longitude, latitude in coordinates
-                ]
-                obstacle_polygons.append(WaypointList(waypoints=vertices))
-
-            self.obstacles_list_publisher.publish(ObstacleList(polygons=obstacle_polygons))
-            self.logger.info(f"published {len(obstacle_polygons)} obstacles")
+            self.obstacles_geojson_publisher.publish(String(data=self.obstacles_geojson))
+            
             break
 
 

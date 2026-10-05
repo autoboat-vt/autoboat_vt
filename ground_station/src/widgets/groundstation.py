@@ -36,12 +36,7 @@ from utils.dialog_templates import CoordinateInputDialog, InputDialog, show_mess
 from utils.syntax_highlighters import JsonHighlighter
 
 from .easter_eggs import PongDialog, SnakeDialog, TetrisDialog
-from .keybind_widget import (
-    KeybindConfigDialog,
-    get_keybind_manager,
-    normalize_key_string,
-    qt_key_event_to_string,
-)
+from .keybind_widget import KeybindConfigDialog, get_keybind_manager, normalize_key_string, qt_key_event_to_string
 from .map_widget import MapBridge, MapOptionsHandler
 from .map_widget.land_click_prompt import LAND_CLICK_PROMPT
 
@@ -112,8 +107,9 @@ class GroundStationWidget(QWidget):
 
         # region timers
         self.one_ms_timer = misc.copy_qtimer(constants.ONE_MS_TIMER)
+        self.one_second_timer = misc.copy_qtimer(constants.ONE_SECOND_TIMER)
         self.thirty_second_timer = misc.copy_qtimer(constants.THIRTY_SECOND_TIMER)
-        self.timers = [self.one_ms_timer, self.thirty_second_timer]
+        self.timers = [self.one_ms_timer, self.one_second_timer, self.thirty_second_timer]
         # endregion timers
 
         # region define layouts
@@ -247,6 +243,7 @@ class GroundStationWidget(QWidget):
         self.right_tab1_table = QTableWidget()
         self.right_tab1_table.setMinimumWidth(self.right_width - 20)
         self.right_tab1_table.cellClicked.connect(lambda row, _column: self.zoom_to_marker(row, table="waypoints"))
+
         self.can_send_waypoints = True
         self.send_waypoints_button = misc.pushbutton_maker(
             "Send Waypoints",
@@ -338,7 +335,7 @@ class GroundStationWidget(QWidget):
         self.right_tab3_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.right_tab3_table = QTableWidget()
         self.right_tab3_table.setMinimumWidth(self.right_width - 20)
-        self.right_tab3_table.cellClicked.connect(lambda row, _column: self.zoom_to_obstacle(row))
+        self.right_tab3_table.cellClicked.connect(lambda row, _column: self.zoom_to_marker(row, table="obstacles"))
 
         self.can_send_obstacles = True
         self.send_obstacles_button = misc.pushbutton_maker(
@@ -360,6 +357,7 @@ class GroundStationWidget(QWidget):
             is_clickable=self.can_pull_obstacles,
         )
 
+        self.can_reset_obstacles = False
         self.clear_obstacles_button = misc.pushbutton_maker(
             "Clear Obstacles",
             self.clear_obstacles,
@@ -368,6 +366,7 @@ class GroundStationWidget(QWidget):
             min_height=50,
         )
 
+        self.can_toggle_obstacle_draw_mode = True
         self.toggle_obstacle_draw_button = misc.pushbutton_maker(
             "Toggle Draw Mode",
             self.toggle_obstacle_draw_mode,
@@ -407,9 +406,9 @@ class GroundStationWidget(QWidget):
         self.local_obstacle_handler.response.connect(self.update_obstacles_display)
         self.one_ms_timer.timeout.connect(self.local_obstacle_handler_starter)
 
-        self.remote_planned_path_handler = thread_classes.PlannedPathThreadRouter.RemoteFetcherThread()
-        self.remote_planned_path_handler.response.connect(self.update_planned_path_display)
-        self.thirty_second_timer.timeout.connect(self.remote_planned_path_handler_starter)
+        self.planned_path_handler = thread_classes.PlannedPathThreadRouter.RemoteFetcherThread()
+        self.planned_path_handler.response.connect(self.update_planned_path_display)
+        self.one_second_timer.timeout.connect(self.planned_path_handler_starter)
 
         for timer in self.timers:
             timer.start()
@@ -759,6 +758,9 @@ class GroundStationWidget(QWidget):
             else:
                 logger.warning("No obstacles found on the server, or they were malformed.")
 
+            self.can_pull_obstacles = False
+            self.pull_obstacles_button.setDisabled(not self.can_pull_obstacles)
+
         except RequestException as e:
             logger.error(f"Failed to pull obstacles. Exception: {e}")
 
@@ -766,18 +768,20 @@ class GroundStationWidget(QWidget):
     def clear_obstacles(self) -> None:
         """Clear every drawn obstacle polygon from the map."""
 
+        self.can_reset_obstacles = False
+        self.can_pull_obstacles = True
+        self.pull_obstacles_button.setDisabled(not self.can_pull_obstacles)
         self.map_bridge.clear_obstacles()
 
     @Slot()
     def toggle_obstacle_draw_mode(self) -> None:
-        """
-        Toggle the obstacle polygon draw/edit control.
-
-        While enabled, left-clicks on the map draw obstacle vertices instead of placing
-        waypoints.
-        """
+        """Toggle the obstacle polygon draw/edit control."""
 
         self.obstacle_draw_enabled = not self.obstacle_draw_enabled
+        self.toggle_obstacle_draw_button.setText(
+            "Disable Draw Mode" if self.obstacle_draw_enabled else "Enable Draw Mode",
+        )
+
         self.map_bridge.set_obstacle_draw_enabled(self.obstacle_draw_enabled)
         logger.info(f"Obstacle draw mode {'enabled' if self.obstacle_draw_enabled else 'disabled'}.")
 
@@ -1194,11 +1198,11 @@ class GroundStationWidget(QWidget):
             self.local_obstacle_handler.start()
 
     @Slot()
-    def remote_planned_path_handler_starter(self) -> None:
+    def planned_path_handler_starter(self) -> None:
         """Starts the remote planned path handler thread."""
 
-        if not self.remote_planned_path_handler.isRunning():
-            self.remote_planned_path_handler.start()
+        if not self.planned_path_handler.isRunning():
+            self.planned_path_handler.start()
 
     @staticmethod
     def _open_ring(ring: list[list[float]]) -> list[list[float]]:
@@ -1274,7 +1278,6 @@ class GroundStationWidget(QWidget):
         rings = self._obstacle_polygon_rings()
 
         self.num_obstacles = len(rings)
-        self.send_obstacles_button.setDisabled(len(rings) == 0)
 
         # rebuild the table whenever the actual geometry changes, not just the polygon count,
         # so editing an existing shape refreshes its vertex count and center
@@ -1286,8 +1289,8 @@ class GroundStationWidget(QWidget):
 
         self.right_tab3_table.clear()
         self.right_tab3_table.setRowCount(0)
-        self.right_tab3_table.setColumnCount(3)
-        self.right_tab3_table.setHorizontalHeaderLabels(["Vertices", "Center Latitude", "Center Longitude"])
+        self.right_tab3_table.setColumnCount(2)
+        self.right_tab3_table.setHorizontalHeaderLabels(["Vertices", "Center"])
 
         for ring in rings:
             if not ring:
@@ -1295,7 +1298,7 @@ class GroundStationWidget(QWidget):
 
             latitudes = [vertex[1] for vertex in ring]
             longitudes = [vertex[0] for vertex in ring]
-            values = [f"{len(ring)}", f"{sum(latitudes) / len(latitudes):.13f}", f"{sum(longitudes) / len(longitudes):.13f}"]
+            values = [f"{len(ring)}", f"{sum(latitudes) / len(latitudes):.6f}, {sum(longitudes) / len(longitudes):.6f}"]
 
             self.right_tab3_table.insertRow(self.right_tab3_table.rowCount())
             for column, value in enumerate(values):
@@ -1728,6 +1731,7 @@ class GroundStationWidget(QWidget):
 
             self.start_data_logging_button.setDisabled(False)
             self.stop_data_logging_button.setDisabled(True)
+            self.clear_obstacles()
             self.clear_waypoints()
 
             constants.SM.write("has_telemetry_server_instance_changed", False)

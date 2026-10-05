@@ -360,12 +360,6 @@ _map_features: dict[str, dict[str, str | bool]] = {
         "feedback_text": "Updated Ocean Boundary Config.",
         "status": False,
     },
-    "obstacles": {
-        "name": "Obstacles",
-        "description": "Show the obstacle polygons the boat's pathfinder avoids.",
-        "feedback_text": "Updated Obstacles Config.",
-        "status": True,
-    },
     "planned_path": {
         "name": "Planned Path",
         "description": "Show the obstacle-avoiding path the autopilot has planned.",

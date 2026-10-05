@@ -8,7 +8,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 
-from autoboat_msgs.msg import ObstacleList, RCData, WaypointList
+from autoboat_msgs.msg import RCData, WaypointList
 from geometry_msgs.msg import Twist, Vector3
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Bool, Float32, Int32, String
@@ -22,7 +22,7 @@ from .autopilot_library.utils.constants import (
     SailboatControlModes,
 )
 from .autopilot_library.utils.position import Position
-from .autopilot_library.utils.utils_function_library import cartesian_vector_to_polar
+from .autopilot_library.utils.utils_function_library import cartesian_vector_to_polar, parse_polygons
 
 
 class SailboatAutopilotNode(Node):
@@ -63,7 +63,7 @@ class SailboatAutopilotNode(Node):
 
         self.create_subscription(String, "/autopilot_parameters", self.autopilot_parameters_callback, 10)
         self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10)
-        self.create_subscription(ObstacleList, "/obstacles_list", self.obstacles_list_callback, qos_profile_sensor_data)
+        self.create_subscription(String, "/obstacles_geojson", self.obstacles_list_callback, 10)
         self.create_subscription(NavSatFix, "/position", self.position_callback, qos_profile_sensor_data)
         self.create_subscription(Twist, "/velocity", self.velocity_callback, qos_profile_sensor_data)
         self.create_subscription(Float32, "/heading", self.heading_callback, qos_profile_sensor_data)
@@ -75,7 +75,7 @@ class SailboatAutopilotNode(Node):
         self.boat_control_mode_publisher = self.create_publisher(String, "/boat_control_mode", qos_profile_sensor_data)
         self.boat_autopilot_state_publisher = self.create_publisher(String, "/boat_autopilot_state", qos_profile_sensor_data)
         self.desired_heading_publisher = self.create_publisher(Float32, "/desired_heading", 10)
-        self.planned_path_publisher = self.create_publisher(WaypointList, "/waypoint_path", qos_profile_sensor_data)
+        self.planned_path_publisher = self.create_publisher(WaypointList, "/waypoint_path", 10)
 
         self.desired_sail_angle_publisher = self.create_publisher(Float32, "/desired_sail_angle", qos_profile_sensor_data)
         self.desired_rudder_angle_publisher = self.create_publisher(Float32, "/desired_rudder_angle", qos_profile_sensor_data)
@@ -93,12 +93,11 @@ class SailboatAutopilotNode(Node):
         # the planner that turns them into an obstacle-avoiding path for the autopilot
         self.mission_waypoints: list[Position] = []
         self.obstacles: list[list[Position]] = []
-        self.path_planner = PathPlanner()
+        self.path_planner = PathPlanner(cell_scale=50)
         self.position_received = False
         self.pending_replan = False
 
         self.mission_signature: tuple[tuple[float, float], ...] = ()
-        self.obstacle_signature: tuple[tuple[tuple[float, float], ...], ...] = ()
 
         self.apparent_wind_vector: npt.NDArray[np.float64] = np.zeros(2, dtype=np.float64)
         self.apparent_wind_angle: float = 0.0
@@ -263,34 +262,32 @@ class SailboatAutopilotNode(Node):
         self.pending_replan = True
         self.try_replan()
 
-    def obstacles_list_callback(self, obstacle_list: ObstacleList) -> None:
+    def obstacles_list_callback(self, obstacle_geojson: String) -> None:
         """
         Callback function that is called whenever there is a new obstacle list message.
-        Each polygon's ``NavSatFix`` vertices are converted to ``Position`` objects and
+
+        The telemetry server sends a GeoJSON ``FeatureCollection``, so the polygons are
+        extracted with :func:`parse_polygons`, which also flattens ``MultiPolygon``
+        features. Each polygon's exterior ring is converted to ``Position`` objects and
         stored, then the path is re-planned so the boat avoids the new obstacles.
 
         Parameters
         ----------
-        obstacle_list
-            A ROS2 message that contains a list of obstacle polygons.
+        obstacle_geojson
+            A ROS2 message that contains a GeoJSON string with the obstacle polygons.
         """
 
-        obstacles: list[list[Position]] = []
-        for polygon in obstacle_list.polygons:
-            vertices = [
-                Position(longitude=waypoint.longitude, latitude=waypoint.latitude) for waypoint in polygon.waypoints
-            ]
-            if len(vertices) >= 3:
-                obstacles.append(vertices)
+        obstacles: list[list[Position]] = [
+            [Position(longitude=longitude, latitude=latitude) for longitude, latitude in polygon.exterior.coords]
+            for polygon in parse_polygons(obstacle_geojson.data)
+        ]
 
-        # only replan when the obstacle set actually changes
-        signature = tuple(tuple((vertex.longitude, vertex.latitude) for vertex in polygon) for polygon in obstacles)
-        if signature == self.obstacle_signature:
+        # the telemetry node republishes the same obstacles on a timer, so only replan
+        # when the obstacle set actually changes
+        if obstacles == self.obstacles:
             return
 
-        self.obstacle_signature = signature
         self.obstacles = obstacles
-
         self.pending_replan = True
         self.try_replan()
 
@@ -304,10 +301,12 @@ class SailboatAutopilotNode(Node):
         planning is retried as the boat moves or its understanding of the obstacles changes.
         """
 
-        if not self.pending_replan or not self.position_received or not self.mission_waypoints:
-            return
+        # if not self.pending_replan or not self.position_received or not self.mission_waypoints:
+        #     return
 
         planned_path = self.path_planner.plan_route(self.position, self.mission_waypoints, self.obstacles)
+        route_string = " ".join(f"({p.longitude}, {p.latitude})" for p in planned_path)
+        self.get_logger().info(f"planned path: {route_string}")
 
         if not planned_path:
             self.get_logger().warning("no path through the mission waypoints could be found")
@@ -322,8 +321,6 @@ class SailboatAutopilotNode(Node):
             NavSatFix(longitude=position.longitude, latitude=position.latitude) for position in planned_path
         ]
         self.planned_path_publisher.publish(WaypointList(waypoints=planned_navsatfixes))
-
-        self.get_logger().info(f"planned a path with {len(planned_path)} points")
 
     def position_callback(self, position: NavSatFix) -> None:
         """A callback function to get the current position of the boat."""
@@ -383,7 +380,10 @@ class SailboatAutopilotNode(Node):
                 self.heading_entered_emergency_stop_in, self.heading, self.apparent_wind_angle
             )
 
-        elif self.sailboat_control_mode == SailboatControlModes.WAYPOINT_MISSION and self.sailboat_autopilot.waypoints is not None:
+        elif (
+            self.sailboat_control_mode == SailboatControlModes.WAYPOINT_MISSION
+            and self.sailboat_autopilot.waypoints is not None
+        ):
             desired_sail_angle, desired_rudder_angle, desired_heading = self.sailboat_autopilot.run_waypoint_mission_step(
                 self.position, self.global_velocity, self.heading, self.apparent_wind_vector
             )

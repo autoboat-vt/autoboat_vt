@@ -51,9 +51,9 @@ class MapInterface {
     static readonly bathymetryUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/bathymetry`;
     static readonly landBoundaryUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/land_boundary`;
     static readonly obstaclesUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/obstacles`;
+
     lastFocusedTimestamp = 0;
     private waypointHistory: { type: "add" | "remove"; waypoint: LatLngTuple; color?: string }[] = [];
-
     map: LeafletMapType;
 
     readonly waypoint_manager: WaypointManager;
@@ -190,12 +190,9 @@ class MapInterface {
      * user chose to add the waypoint anyway.
      */
     async handleMapClick(lat: number, lon: number): Promise<void> {
-        // while the obstacle draw control is active, clicks belong to it and must
-        // never drop a waypoint
         if (this.obstacle_manager.isDrawEnabled()) {
             return;
         }
-
         if (!(await this.shouldAddWaypoint(lat, lon))) {
             return;
         }
@@ -345,6 +342,10 @@ class MapInterface {
     }
 
     undo_last_waypoint(): void {
+        if (this.obstacle_manager.isDrawEnabled()) {
+            return;
+        }
+
         const op = this.waypointHistory.pop();
         if (!op) {
             return;

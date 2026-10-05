@@ -158,6 +158,7 @@ class PathPlanner:
             diagonal=self.diagonal,
             obstacles=self._local_polygons(obstacles, reference),
             origin=(-offset * self.cell_scale, -offset * self.cell_scale),
+            cell_size=self.cell_scale,
             buffer=self.buffer,
         )
         matrix_path = astar.find_path(start, goal)

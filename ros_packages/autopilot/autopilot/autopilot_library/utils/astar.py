@@ -20,6 +20,7 @@ def obstacles_to_mask(
     rows: int,
     cols: int,
     origin: tuple[float, float] = (0.0, 0.0),
+    cell_size: float = 1.0,
     buffer: float = 0.0
 ) -> npt.NDArray[np.bool_]:
     """
@@ -37,7 +38,12 @@ def obstacles_to_mask(
     origin
         The world coordinate of grid cell ``(0, 0)``. The first element is the
         coordinate along the row axis and the second along the column axis, so
-        cell ``(row, col)`` is tested at ``(origin[0] + row, origin[1] + col)``.
+        cell ``(row, col)`` is tested at
+        ``(origin[0] + row * cell_size, origin[1] + col * cell_size)``.
+    cell_size
+        The size, in world units, of a single cell. The cell indices are scaled
+        by this before the obstacle geometry is tested, so the mask lines up with
+        the world coordinates of the grid no matter how coarse the grid is.
     buffer
         An optional clearance, in world units, applied to every obstacle before
         testing. A positive value also blocks cells within ``buffer`` of an
@@ -55,8 +61,8 @@ def obstacles_to_mask(
         obstacles = (obstacles,)
 
     row_coordinates, col_coordinates = np.meshgrid(np.arange(rows), np.arange(cols), indexing="ij")
-    x = origin[0] + row_coordinates
-    y = origin[1] + col_coordinates
+    x = origin[0] + row_coordinates * cell_size
+    y = origin[1] + col_coordinates * cell_size
 
     mask = np.zeros((rows, cols), dtype=np.bool_)
     for obstacle in obstacles:
@@ -129,6 +135,7 @@ class Grid:
         diagonal: bool = True,
         obstacles: BaseGeometry | Sequence[BaseGeometry] | None = None,
         origin: tuple[float, float] = (0.0, 0.0),
+        cell_size: float = 1.0,
         buffer: float = 0.0,
     ) -> None:
         """
@@ -147,6 +154,10 @@ class Grid:
         origin
             The world coordinate of cell ``(0, 0)``, used when rasterizing the
             obstacles.
+        cell_size
+            The size, in world units, of a single grid cell, used when
+            rasterizing the obstacles so the mask lines up with the world
+            coordinates.
         buffer
             An optional clearance applied to every obstacle before rasterizing.
         """
@@ -158,7 +169,7 @@ class Grid:
         self.cells = [[GridCell(row=i, col=j) for j in range(cols)] for i in range(rows)]
 
         if obstacles is not None:
-            mask = obstacles_to_mask(obstacles, rows=rows, cols=cols, origin=origin, buffer=buffer)
+            mask = obstacles_to_mask(obstacles, rows=rows, cols=cols, origin=origin, cell_size=cell_size, buffer=buffer)
             for i in range(self.rows):
                 for j in range(self.cols):
                     if mask[i, j]:
@@ -292,6 +303,7 @@ class Astar:
         diagonal: bool = True,
         obstacles: dict[str, Any] | str | BaseGeometry | Sequence[BaseGeometry] | None = None,
         origin: tuple[float, float] = (0.0, 0.0),
+        cell_size: float = 1.0,
         buffer: float = 0.0,
     ) -> None:
         """
@@ -310,6 +322,9 @@ class Astar:
         origin
             The world coordinate of cell ``(0, 0)``, used when rasterizing the
             obstacles onto the grid.
+        cell_size
+            The size, in world units, of a single grid cell, used when
+            rasterizing the obstacles.
         buffer
             An optional clearance, in world units, applied to every obstacle
             before rasterizing it.
@@ -328,6 +343,7 @@ class Astar:
             diagonal=diagonal,
             obstacles=obstacles,
             origin=origin,
+            cell_size=cell_size,
             buffer=buffer,
         )
     

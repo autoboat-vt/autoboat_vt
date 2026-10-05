@@ -9,7 +9,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 
-from autoboat_msgs.msg import ObstacleList, RCData, VESCControlData, WaypointList
+from autoboat_msgs.msg import RCData, VESCControlData, WaypointList
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Bool, Float32, Int32, String
@@ -23,7 +23,7 @@ from .autopilot_library.utils.constants import (
     PropellerMotorControlMode,
 )
 from .autopilot_library.utils.position import Position
-from .autopilot_library.utils.utils_function_library import get_bearing
+from .autopilot_library.utils.utils_function_library import get_bearing, parse_polygons
 
 
 class MotorboatAutopilotNode(Node):
@@ -56,7 +56,6 @@ class MotorboatAutopilotNode(Node):
         for param in self.raw_autopilot_parameters:
             self.autopilot_parameters[param] = self.raw_autopilot_parameters[param]["default"]
 
-
         self.motorboat_autopilot = MotorboatAutopilot(parameters=self.autopilot_parameters, logger=self.get_logger())
 
         # Initialize ROS2 subscriptions, publishers, and timers
@@ -65,7 +64,7 @@ class MotorboatAutopilotNode(Node):
 
         self.create_subscription(String, "/autopilot_parameters", self.autopilot_parameters_callback, 10)
         self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10)
-        self.create_subscription(ObstacleList, "/obstacles_list", self.obstacles_list_callback, qos_profile_sensor_data)
+        self.create_subscription(String, "/obstacles_geojson", self.obstacles_list_callback, qos_profile_sensor_data)
         self.create_subscription(NavSatFix, "/position", self.position_callback, qos_profile_sensor_data)
         self.create_subscription(Twist, "/velocity", self.velocity_callback, qos_profile_sensor_data)
         self.create_subscription(Float32, "/heading", self.heading_callback, qos_profile_sensor_data)
@@ -85,10 +84,6 @@ class MotorboatAutopilotNode(Node):
         self.desired_rudder_angle_publisher = self.create_publisher(Float32, "/desired_rudder_angle", 10)
         self.zero_rudder_encoder_publisher = self.create_publisher(Bool, "/zero_rudder_encoder", 10)
 
-
-
-
-
         # default values
         self.position = Position(longitude=0.0,latitude=0.0)
         self.velocity: npt.NDArray[np.float64] = np.zeros(2, dtype=np.float64)
@@ -103,11 +98,6 @@ class MotorboatAutopilotNode(Node):
         self.path_planner = PathPlanner()
         self.position_received = False
         self.pending_replan = False
-
-        # signatures of the last mission/obstacles we planned for, so the telemetry node's
-        # periodic republish of unchanged data does not trigger a replan every tick
-        self.mission_signature: tuple[tuple[float, float], ...] = ()
-        self.obstacle_signature: tuple[tuple[tuple[float, float], ...], ...] = ()
 
         self.motorboat_control_mode = MotorboatControlModes.WAYPOINT_MISSION
         self.propeller_motor_control_mode = PropellerMotorControlMode.RPM
@@ -153,7 +143,8 @@ class MotorboatAutopilotNode(Node):
 
         Parameters
         ----------
-            rc_data_message (RCData): A struct that contains all of the data on what is pressed on the remote control
+        rc_data_message
+            A struct that contains all of the data on what is pressed on the remote control
         """
 
         self.last_rc_data_received_time = time.time()
@@ -274,49 +265,40 @@ class MotorboatAutopilotNode(Node):
         mission_waypoints = [
             Position(longitude=waypoint.longitude, latitude=waypoint.latitude) for waypoint in waypoint_list.waypoints
         ]
+        if mission_waypoints:
+            self.mission_waypoints = mission_waypoints
+            self.pending_replan = True
+            self.try_replan()
 
-        # the telemetry node republishes the same waypoints on a timer, so only replan when
-        # the mission actually changes
-        signature = tuple((position.longitude, position.latitude) for position in mission_waypoints)
-        if signature == self.mission_signature:
-            return
-
-        self.mission_signature = signature
-        self.mission_waypoints = mission_waypoints
-
-        self.pending_replan = True
-        self.try_replan()
-
-    def obstacles_list_callback(self, obstacle_list: ObstacleList) -> None:
+    def obstacles_list_callback(self, obstacle_geojson: String) -> None:
         """
         Callback function that is called whenever there is a new obstacle list message.
-        Each polygon's ``NavSatFix`` vertices are converted to ``Position`` objects and
+
+        The telemetry server sends a GeoJSON ``FeatureCollection``, so the polygons are
+        extracted with :func:`parse_polygons`, which also flattens ``MultiPolygon``
+        features. Each polygon's exterior ring is converted to ``Position`` objects and
         stored, then the path is re-planned so the boat avoids the new obstacles.
 
         Parameters
         ----------
-        obstacle_list
-            A ROS2 message that contains a list of obstacle polygons.
+        obstacle_geojson
+            A ROS2 message that contains a GeoJSON string with the obstacle polygons.
         """
 
-        obstacles: list[list[Position]] = []
-        for polygon in obstacle_list.polygons:
-            vertices = [
-                Position(longitude=waypoint.longitude, latitude=waypoint.latitude) for waypoint in polygon.waypoints
-            ]
-            if len(vertices) >= 3:
-                obstacles.append(vertices)
+        obstacles: list[list[Position]] = [
+            [Position(longitude=longitude, latitude=latitude) for longitude, latitude in polygon.exterior.coords]
+            for polygon in parse_polygons(obstacle_geojson.data)
+        ]
 
-        # only replan when the obstacle set actually changes
-        signature = tuple(tuple((vertex.longitude, vertex.latitude) for vertex in polygon) for polygon in obstacles)
-        if signature == self.obstacle_signature:
+        # the telemetry node republishes the same obstacles on a timer, so only replan
+        # when the obstacle set actually changes
+        if obstacles == self.obstacles:
             return
 
-        self.obstacle_signature = signature
         self.obstacles = obstacles
-
         self.pending_replan = True
         self.try_replan()
+
 
     def try_replan(self) -> None:
         """
