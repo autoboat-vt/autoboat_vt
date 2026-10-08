@@ -31,9 +31,9 @@
 
 
         uint16_t drv8711::drv8711_readReg(DRV8711_registerAddress address) {
-            // Bit  0    - Read
-            // Bits 1:3  - Register     address
-            // Bits 4:15 - Irrelevant
+            // Bit  15    - Write
+            // Bits 12:14 - Register address
+            // Bits 0:11 - Irrelevant
             uint16_t send = (0x8 | (address & 0b111)) << 12;
             uint8_t tx[2] = {(send & 0x00FF), (send & 0xFF00) >> 8};
             uint8_t rx[2] = {};
@@ -54,7 +54,7 @@
 
         void drv8711::drv8711_writeReg(DRV8711_registerAddress address, uint16_t value) {
             // Bit  15    - Write
-            // Bits 12:14  - Register address
+            // Bits 12:14 - Register address
             // Bits 0:11 - Data to write
             uint16_t send = ((address & 0b111) << 12) | (value & 0xFFF);
             uint8_t tx[2] = {send >> 8, send & 0x00FF};
