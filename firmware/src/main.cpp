@@ -8,7 +8,6 @@
 #include "task.h"
 
 #include "systems.hpp"
-#include "rtos_main.h"
 
 static void microros_task(void *params);
 static void node_task(void *params);
@@ -17,7 +16,7 @@ static void node_task(void *params);
 // initialized; node_task must not touch the HAL before then.
 static volatile bool sharedReady = false;
 
-void start_rtos_main() {
+int main() {
     stdio_init_all();
     xTaskCreate(microros_task, "microros Task", 2048, NULL, 1, NULL);
     xTaskCreate(node_task, "Node Task", 2048, NULL, 1, NULL);

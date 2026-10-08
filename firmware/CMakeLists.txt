@@ -48,7 +48,6 @@ target_link_libraries(freertos_kernel_port PRIVATE pico_stdlib)
 
 add_executable(pico_microros
     src/main.cpp
-    src/rtos_main.cpp
     src/microros.cpp 
     src/spi_device.cpp
     src/amt22_encoder.cpp

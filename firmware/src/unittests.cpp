@@ -84,7 +84,7 @@ private:
 // -----------------------------------------------------
 
 // These tests can't see inside the Pico's FreeRTOS scheduler directly, but
-// rtos_main.cpp only reaches Systems::application_loop_step() (which publishes
+// main.cpp only reaches Systems::application_loop_step() (which publishes
 // /heading) once both the microros_task and node_task FreeRTOS tasks are
 // created, scheduled, and running past sharedReady. So receiving that topic at
 // a steady cadence is indirect evidence the tasks are alive and not deadlocked.
