@@ -1,31 +1,32 @@
-// Include the microros nodes
-//cd#include "boat.hpp"
+#include <stdio.h>
+#include <stdlib.h>
 
+#include "pico/stdlib.h"
 #include "common_libraries.h"
-//#include "microros.hpp"
+
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "systems.hpp"
 #include "rtos_main.h"
 
+static void microros_task(void *params);
+static void node_task(void *params);
 
-// Change when adding new nodes
-#define NUMBER_OF_NODES 1
+// Set by microros_task once the agent is connected and the system is
+// initialized; node_task must not touch the HAL before then.
+static volatile bool sharedReady = false;
 
-
-int main()
-{
-    start_rtos_main();
+void start_rtos_main() {
+    stdio_init_all();
+    xTaskCreate(microros_task, "microros Task", 2048, NULL, 1, NULL);
+    xTaskCreate(node_task, "Node Task", 2048, NULL, 1, NULL);
+    vTaskStartScheduler();
     for (;;) {}
 }
 
-
-/* Previous bare-metal entry point, superseded by the FreeRTOS runtime above.
-int main()
-{
-    //instantiate boat system
-    // Systems current_boat(THESEUS);
-
-
-    stdio_init_all();
+static void microros_task(void *params) {
+    (void)params;
 
     while (true) {
         rmw_uros_set_custom_transport(
@@ -44,25 +45,33 @@ int main()
         const uint8_t attempts = 120;
         rmw_uros_ping_agent(timeout_ms, attempts);
 
-        //initialize System
         Systems system = Systems(THESEUS);
         system.initialize_microros();
         system.initialize_hal();
-        system.initialize_application_loop();
 
-
+        sharedReady = true;
 
         while (true) {
-            // Ping the agent every few seconds to check connection
             if (rmw_uros_ping_agent(1000, 5) != RMW_RET_OK) {
                 break;
             }
-            
+
             system.check_microros();
-            
+            vTaskDelay(pdMS_TO_TICKS(10));
         }
-        
+
+        sharedReady = false;
         system.cleanup();
     }
 }
-*/
+
+static void node_task(void *params) {
+    (void)params;
+
+    for (;;) {
+        while (!sharedReady) { vTaskDelay(pdMS_TO_TICKS(10)); }
+
+        Systems::application_loop_step();
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
