@@ -117,7 +117,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 
 USER root
 RUN cd /tmp \
-   && git clone --depth 1 https://github.com/libcpr/cpr.git \
+   && git clone --depth 1 --branch 1.14.2 https://github.com/libcpr/cpr.git \
    && cd cpr \
    && mkdir build && cd build \
    && cmake .. -DCPR_USE_SYSTEM_CURL=ON \
