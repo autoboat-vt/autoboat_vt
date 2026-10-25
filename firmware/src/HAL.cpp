@@ -55,15 +55,11 @@ void HAL::init_rudder_stepper(drv8711*& rudderStepperMotorDriver) {
 }
 
 void HAL::init_winch_stepper(drv8711*& winchStepperMotorDriver) {
-    rudderStepperMotorDriver = new drv8711(SPI_PORT, WINCH_MOTOR_CS_PIN, WINCH_MOTOR_SLEEP_PIN, AutoMixed, WINCH_MICROSTEP, MAX_WINCH_CURRENT);
-}
-
-void HAL::init_winch_stepper(drv8711*& winchStepperMotorDriver) {
-    rudderStepperMotorDriver = new drv8711(SPI_PORT, WINCH_MOTOR_CS_PIN, WINCH_MOTOR_SLEEP_PIN, AutoMixed, WINCH_MICROSTEP, MAX_WINCH_CURRENT);
+    winchStepperMotorDriver = new drv8711(SPI_PORT, WINCH_MOTOR_CS_PIN, WINCH_MOTOR_SLEEP_PIN, AutoMixed, WINCH_MICROSTEP, MAX_WINCH_CURRENT);
 }
 
 u_int16_t HAL::debug(drv8711* rudderStepperMotorDriver){
-    u_int16_t Control_REG_output = drv8711_readReg(rudderStepperMotorDriver, CTRL_REG_ADDRESS);
+    u_int16_t Control_REG_output = rudderStepperMotorDriver->drv8711_readReg(CTRL_REG_ADDRESS);
     // u_int16_t TORQUE_REG_output = drv8711_readReg(rudderStepperMotorDriver, TORQUE_REG_ADDRESS);
     // u_int16_t OFF_REG_output = drv8711_readReg(rudderStepperMotorDriver, OFF_REG_ADDRESS);
     // u_int16_t BLANK_REG_output = drv8711_readReg(rudderStepperMotorDriver, BLANK_REG_ADDRESS);
