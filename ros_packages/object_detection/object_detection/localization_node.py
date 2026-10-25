@@ -15,6 +15,7 @@ from std_msgs.msg import Bool, Float32, String
 from autoboat_msgs.msg import ObjectDetectionResultsList, TriangulationResult, TriangulationResultsList
 
 from .cv_library.triangulation import ObjectDetection, ObjectTriangulator
+from .cv_library.stereo_depth import StereoMatcher, Detection
 
 EARTH_RADIUS = 6378137.0 # Radius of Earth in meters
 
@@ -76,8 +77,9 @@ class LocalizationNode(Node):
                                                buffer_window_size=self.parameters["buffer_window_size"],
                                                iou_threshold=self.parameters["iou_threshold"],
                                                logger=self.get_logger().info)
+        self.stereo_matcher = StereoMatcher(self.get_logger().info)
 
-        self.timer = self.create_timer(timer_period_sec=self.parameters["update_rate"], callback=self.triangulate)
+        # self.timer = self.create_timer(timer_period_sec=self.parameters["update_rate"], callback=self.triangulate)
     
     def _read_default_parameters(self) -> None:
         try:
@@ -121,24 +123,40 @@ class LocalizationNode(Node):
             
             # TODO This is not a good world frame ideally this should be in meters or whatever
             # TODO This also needs to account for the offset of the camera from the GPS antenna
-            pose_matrix = self._get_current_pose(self.current_position["latitude"], self.current_position["longitude"],
-                                                 self.current_heading)
-            obj_list = msg.detection_results
-            for obj in obj_list:
-                self.triangulator.add_observation(ObjectDetection(
-                                                    frame_number = obj.frame_num,
-                                                    detector_confidence = obj.confidence,
-                                                    tracker_confidence = obj.tracker_confidence,
-                                                    x_position = obj.x_position,
-                                                    y_position = obj.y_position,
-                                                    width = obj.width,
-                                                    height = obj.height,
-                                                    object_id = obj.object_id,
-                                                    class_id = obj.class_id,
-                                                    obj_label = obj.obj_label,
-                                                    pose_matrix = pose_matrix,
-                                                    camera_matrix_inv = self.camera_K_inv
-                                                ))
+            # pose_matrix = self._get_current_pose(self.current_position["latitude"], self.current_position["longitude"],
+            #                                      self.current_heading)
+            frame_results = msg.detection_results
+            # for obj in obj_list:
+            #     self.triangulator.add_observation(ObjectDetection(
+            #                                         frame_number = obj.frame_num,
+            #                                         detector_confidence = obj.confidence,
+            #                                         tracker_confidence = obj.tracker_confidence,
+            #                                         x_position = obj.x_position,
+            #                                         y_position = obj.y_position,
+            #                                         width = obj.width,
+            #                                         height = obj.height,
+            #                                         object_id = obj.object_id,
+            #                                         class_id = obj.class_id,
+            #                                         obj_label = obj.obj_label,
+            #                                         pose_matrix = pose_matrix,
+            #                                         camera_matrix_inv = self.camera_K_inv
+            #                                     ))
+            left_objs = []
+            right_objs = []
+            stereo_objs = []
+            for i in range(len(frame_results)):
+                stereo_objs.append([])
+                obj_list = frame_results[i].detection_results
+                for obj in obj_list:
+                    new_detection = Detection
+                    new_detection.x_position = obj.x_position
+                    new_detection.y_position = obj.y_position
+                    new_detection.width = obj.width
+                    new_detection.height = obj.height
+                    new_detection.object_id = obj.object_id
+                    new_detection.class_id = obj.class_id
+                    stereo_objs[i].append(new_detection)
+            stereo_matcher.process_stereo(stereo_objs[0], stereo_objs[1])
     
     def _get_current_pose(self, lat: float, long: float, heading: float) -> np.ndarray:
         # Delta lat/lon in radians
