@@ -1,3 +1,5 @@
+#ifndef PCB_CONFIG_H
+#define PCB_CONFIG_H
 /*
 PCB SPECIFIC CONFIGURATIONS
 */
@@ -65,7 +67,7 @@ PCB SPECIFIC CONFIGURATIONS
 #define I2C_PORT i2c1
 #define SPI_PORT spi0
 
-
+#endif
 
 
 

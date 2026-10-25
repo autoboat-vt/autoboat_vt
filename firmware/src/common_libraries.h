@@ -30,7 +30,9 @@ extern "C"
 #endif
 
 // Configuration files
-#include "config.h"
+#include "pcb_config.h"
+#include "peripheral_config.h"
+
 
 // Misc libraries
 #include <math.h>

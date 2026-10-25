@@ -7,7 +7,8 @@
 #include <stddef.h>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
-#include "config.h"
+#include "pcb_config.h"
+#include "peripheral_config.h"
 
 class spi_device {
 

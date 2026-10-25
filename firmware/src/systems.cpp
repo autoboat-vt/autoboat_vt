@@ -38,9 +38,9 @@ void Systems::initialize_hal()
   gpio_init(RUDDER_MOTOR_CS_PIN);
   gpio_set_dir(RUDDER_MOTOR_CS_PIN, GPIO_OUT);
   gpio_pull_down(RUDDER_MOTOR_CS_PIN);
-  HAL::init_rudderEncoder(HAL::devices->winchEncoder);
-  HAL::init_winchEncoder(HAL::devices->rudderEncoder);
-  HAL::init_rudder_stepper(HAL::devices->rudderStepperMotorDriver);
+  HAL::init_rudderEncoder(HAL::devices::winchEncoder);
+  HAL::init_winchEncoder(HAL::devices::rudderEncoder);
+  HAL::init_rudder_stepper(HAL::devices::rudderStepperMotorDriver);
 }
 
 void Systems::cleanup()
@@ -63,11 +63,11 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
   // -----------------------------------------------------
   // RUDDER CLOSED LOOP CONTROL
   // -----------------------------------------------------
-  float current_rudder_motor_angle = HAL::devices->rudderEncoder->get_motor_angle() + RUDDER_ANGLE_OFFSET;
+  float current_rudder_motor_angle = HAL::devices::rudderEncoder->get_motor_angle() + RUDDER_ANGLE_OFFSET;
   if (current_rudder_motor_angle >= 180.0f)
     current_rudder_motor_angle -= 360.0f;
 
-  float current_rudder_angle = HAL::devices->rudderEncoder->get_rudder_angle_from_motor_angle(current_rudder_motor_angle);
+  float current_rudder_angle = get_rudder_angle_from_motor_angle(current_rudder_motor_angle);
   float rudder_error = current_rudder_angle - desired_rudder_angle;
 
   int number_of_steps_rudder = 0;
@@ -79,9 +79,9 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
 
     // Set direction
     if (rudder_error > 0)
-      HAL::devices->rudderStepperMotorDriver->drv8711_setDirection(CLOCKWISE);
+      HAL::devices::rudderStepperMotorDriver->drv8711_setDirection(CLOCKWISE);
     else
-      HAL::devices->rudderStepperMotorDriver->drv8711_setDirection(COUNTER_CLOCKWISE);
+      HAL::devices::rudderStepperMotorDriver->drv8711_setDirection(COUNTER_CLOCKWISE);
 
     number_of_steps_rudder = (int)(fabsf(rudder_error) * RUDDER_GAIN / MAX_RUDDER_ERROR);
     if (number_of_steps_rudder > RUDDER_NUMBER_OF_STEPS_TO_CLIP_AT)
@@ -94,7 +94,7 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
   for (int i = 0; i < number_of_steps_rudder; i++)
   {
     if (rudder_step_enabled)
-      HAL::devices->rudderStepperMotorDriver->drv8711_step();
+      HAL::devices::rudderStepperMotorDriver->drv8711_step();
     sleep_us(1000);
   }
 

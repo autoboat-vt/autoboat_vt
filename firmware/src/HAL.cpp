@@ -54,11 +54,11 @@ void HAL::init_rudder_stepper(drv8711*& rudderStepperMotorDriver) {
     rudderStepperMotorDriver = new drv8711(SPI_PORT, RUDDER_MOTOR_CS_PIN, RUDDER_MOTOR_SLEEP_PIN, AutoMixed, RUDDER_MICROSTEP, MAX_RUDDER_CURRENT);
 }
 
-void HAL::init_winch_stepper(drv8711* winchStepperMotorDriver) {
+void HAL::init_winch_stepper(drv8711*& winchStepperMotorDriver) {
     rudderStepperMotorDriver = new drv8711(SPI_PORT, WINCH_MOTOR_CS_PIN, WINCH_MOTOR_SLEEP_PIN, AutoMixed, WINCH_MICROSTEP, MAX_WINCH_CURRENT);
 }
 
-void HAL::init_winch_stepper(drv8711* winchStepperMotorDriver) {
+void HAL::init_winch_stepper(drv8711*& winchStepperMotorDriver) {
     rudderStepperMotorDriver = new drv8711(SPI_PORT, WINCH_MOTOR_CS_PIN, WINCH_MOTOR_SLEEP_PIN, AutoMixed, WINCH_MICROSTEP, MAX_WINCH_CURRENT);
 }
 
