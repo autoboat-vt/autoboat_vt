@@ -14,8 +14,8 @@ from std_msgs.msg import Bool, Float32, String
 
 from autoboat_msgs.msg import ObjectDetectionResultsList, TriangulationResult, TriangulationResultsList
 
+from .cv_library.stereo_depth import Detection, StereoMatcher
 from .cv_library.triangulation import ObjectDetection, ObjectTriangulator
-from .cv_library.stereo_depth import StereoMatcher, Detection
 
 EARTH_RADIUS = 6378137.0 # Radius of Earth in meters
 
@@ -64,7 +64,7 @@ class LocalizationNode(Node):
             "latitude": 0,
             "longitude": 0
         }
-        self.valid_origin_position = False
+        self.valid_origin_position = True
         self.current_heading = 0 # default to true east. Heading is counterclockwise of true east
 
         self.cam_list = self._read_camera_config()
@@ -141,14 +141,12 @@ class LocalizationNode(Node):
             #                                         pose_matrix = pose_matrix,
             #                                         camera_matrix_inv = self.camera_K_inv
             #                                     ))
-            left_objs = []
-            right_objs = []
             stereo_objs = []
             for i in range(len(frame_results)):
                 stereo_objs.append([])
                 obj_list = frame_results[i].detection_results
                 for obj in obj_list:
-                    new_detection = Detection
+                    new_detection = Detection()
                     new_detection.x_position = obj.x_position
                     new_detection.y_position = obj.y_position
                     new_detection.width = obj.width
@@ -156,7 +154,7 @@ class LocalizationNode(Node):
                     new_detection.object_id = obj.object_id
                     new_detection.class_id = obj.class_id
                     stereo_objs[i].append(new_detection)
-            stereo_matcher.process_stereo(stereo_objs[0], stereo_objs[1])
+            self.stereo_matcher.process_stereo(stereo_objs[0], stereo_objs[1], {})
     
     def _get_current_pose(self, lat: float, long: float, heading: float) -> np.ndarray:
         # Delta lat/lon in radians
