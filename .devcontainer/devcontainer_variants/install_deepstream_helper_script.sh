@@ -5,7 +5,6 @@
 
 # NOTE: This is for x86 platforms. Untested on aarch64.
 
-# It might be necessary to run a gstreamer script once to initialize plugins
 set -e
 
 
@@ -118,6 +117,17 @@ else
 fi
 pip3 install ./pyds-1.2.0-*.whl
 sudo rm -f ./pyds-1.2.0-*.whl
+
+# Install ZED SDK
+# With zed sdk, host_environment_variable should be set to this "--gpus=all,\"capabilities=compute,utility,video\"" and to comment out "${localEnv:DOCKER_GPU_RUN_ARGS:--env}",
+# echo -e "\n\nInstalling ZED SDK\n\n"
+# wget https://download.stereolabs.com/zedsdk/5.5/cu12_trt10/ubuntu22 -O zed_sdk_ubuntu22.run
+# sudo apt install zstd
+# chmod +x zed_sdk_ubuntu22.run
+# sudo ./zed_sdk_ubuntu22.run -- silent skip_python # yes there is a space
+# sudo chmod 777 -R /usr/local/zed
+# python3 /usr/local/zed/get_python_api.py
+# rm zed_sdk_ubuntu22.run
 
 # Install ultralytics
 echo -e "\n\nInstalling ultralytics\n\n"

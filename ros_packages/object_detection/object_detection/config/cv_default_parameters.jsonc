@@ -24,7 +24,7 @@
     },
     "model_name": {
         "type": "string",
-        "default": "yolo26s",
+        "default": "chris",
         "description": "Name of the model to use for object detection. This should match the name used in the config file and the engine file."
     },
     "jpg_compression_ratio": {
