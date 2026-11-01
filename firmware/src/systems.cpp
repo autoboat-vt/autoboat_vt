@@ -109,4 +109,7 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
 
   current_heading::heading_msg.data = rudder_error; //fmodf((-compass.getBearing() / 10.0f + COMPASS_OFFSET + 360.0f), 360.0f);
   rcl_publish(&current_heading::compass_angle_publisher, &current_heading::heading_msg, NULL);
+
+  rudder_debug::current_register_value_msg.data = HAL::debug(HAL::devices::rudderStepperMotorDriver);
+  rcl_publish(&rudder_debug::rudder_debug_publisher, &rudder_debug::current_register_value_msg, NULL);
 }

@@ -67,7 +67,7 @@ void init_pump();
 void init_propeller();
 
 // debug
-u_int16_t debug(drv8711* rudderStepperMotorDriver);
+u_int16_t debug(drv8711*& rudderStepperMotorDriver);
 }  // namespace HAL
 
 #endif
