@@ -1,3 +1,5 @@
+#ifndef PCB_CONFIG_H
+#define PCB_CONFIG_H
 /*
 PCB SPECIFIC CONFIGURATIONS
 */
@@ -65,11 +67,9 @@ PCB SPECIFIC CONFIGURATIONS
 #define I2C_PORT i2c1
 #define SPI_PORT spi0
 
-
-//Magnetometer
-#define MAGNETOMETER_ADDRESS 0x60
+#endif
 
 
-//Motor Controllers
-#define RUDDER_MICROSTEP (DRV8711_stepMode) 8
-#define MAX_RUDDER_CURRENT 2000
+
+
+

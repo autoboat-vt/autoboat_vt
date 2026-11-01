@@ -1,9 +1,12 @@
 #ifndef HAL_H
 #define HAL_H
 
+//hardware abstraction layer: acts as interface between physical hardware and software
+
 // TODO: include all driver libraries here
 #include "spi_device.hpp"
 #include "common_libraries.h"
+#include "amt22_encoder_library.hpp"
 #include "drv8711_stepper_motor_driver_library.hpp"
 #include "i2c_device.hpp"
 #ifdef __cplusplus
@@ -35,13 +38,27 @@ namespace HAL
 // oput of microros and hal and into boat
 // This is recommended but i need to figure out what to do with microros.cpp
 
+//Device struct (insert helpful comment)
+struct devices
+{
+    //this is a comment
+    static inline amt22* winchEncoder;
+    static inline amt22* rudderEncoder; 
+    static inline drv8711* rudderStepperMotorDriver;
+    static inline drv8711* winchStepperMotorDriver;
+};
+
+
 // communication protocols
 void init_spi();
 void init_i2c();
 void init_uart();
 
 // device specifics
-void init_rudder_stepper(drv8711* rudderStepperMotorDriver);
+void init_rudderEncoder(amt22*& rudderEncoder);
+void init_winchEncoder(amt22*& winchEncoder);
+void init_rudder_stepper(drv8711*& rudderStepperMotorDriver);
+void init_winch_stepper(drv8711*& winchStepperMotorDriver);
 void init_contactor();
 void init_hydraulics();
 void init_magnetometer();

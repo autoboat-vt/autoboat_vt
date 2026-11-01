@@ -1,0 +1,65 @@
+#ifndef PERIPHERAL_CONFIG_H
+#define PERIPHERAL_CONFIG_H
+
+/*
+PERIPHERAL SPECIFIC CONFIGURATIONS
+*/
+
+//Magnetometer
+#define MAGNETOMETER_ADDRESS 0x60
+
+
+//Motor Controllers
+
+//-----------Stripped from Main_microros_node.h-------------
+//TODO: make adjustments
+
+#define CLOCKWISE 1
+#define COUNTER_CLOCKWISE 0
+
+#define MAX_RUDDER_CURRENT 2000
+#define MAX_WINCH_CURRENT 2000
+
+#if BOAT_MODE == Theseus
+#define RUDDER_GAIN (float)2
+#define RUDDER_GAIN_Q (float)0.5
+#define RUDDER_NUMBER_OF_STEPS_TO_CLIP_AT 50
+#define RUDDER_MICROSTEP MicroStep32
+#else
+#define RUDDER_GAIN (float)400
+#define RUDDER_GAIN_Q (float)150
+#define RUDDER_NUMBER_OF_STEPS_TO_CLIP_AT 50
+#define RUDDER_MICROSTEP MicroStep4
+#endif
+
+#define WINCH_GAIN 150
+#define WINCH_MICROSTEP MicroStep4
+#define WINCH_NUMBER_OF_STEPS_TO_CLIP_AT 150
+
+#define WINCH_ZERO_POINT 100
+
+#define MAX_RUDDER_ANGLE 35
+#define MIN_RUDDER_ANGLE -35
+
+#define MAX_WINCH_ANGLE 580
+#define MIN_WINCH_ANGLE -600
+
+#define MAX_SAIL_ANGLE 90
+#define MIN_SAIL_ANGLE 0
+
+#define ACCEPTABLE_RUDDER_ERROR 0.1
+#define ACCEPTABLE_WINCH_ERROR 0.5
+
+#define RUDDER_ANGLE_OFFSET -85
+#define WINCH_ANGLE_OFFSET 0
+// #define COMPASS_OFFSET -13.7 // Magnetic Declination at WPI
+#define COMPASS_OFFSET 180
+
+const float MID_RUDDER_ANGLE = (MAX_RUDDER_ANGLE + MIN_RUDDER_ANGLE) / 2;
+const float MID_WINCH_MOTOR_ANGLE = (MAX_WINCH_ANGLE + MIN_WINCH_ANGLE) / 2;
+
+const int MAX_RUDDER_ERROR = (float)(MAX_RUDDER_ANGLE - MIN_RUDDER_ANGLE);
+const int MAX_WINCH_ERROR = (float)(MAX_WINCH_ANGLE - MIN_RUDDER_ANGLE);
+const int MAX_SAIL_ERROR = (float)(MAX_SAIL_ANGLE - MIN_SAIL_ANGLE);
+
+#endif
