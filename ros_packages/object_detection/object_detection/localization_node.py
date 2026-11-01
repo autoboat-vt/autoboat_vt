@@ -78,7 +78,7 @@ class LocalizationNode(Node):
                                                buffer_window_size=self.parameters["buffer_window_size"],
                                                iou_threshold=self.parameters["iou_threshold"],
                                                logger=self.get_logger().info)
-        self.stereo_matcher = StereoMatcher(self.get_logger().info)
+        self.stereo_matcher = StereoMatcher(self.get_logger().info, self.cam_list)
 
         # self.timer = self.create_timer(timer_period_sec=self.parameters["update_rate"], callback=self.triangulate)
     
@@ -143,6 +143,7 @@ class LocalizationNode(Node):
             #                                         camera_matrix_inv = self.camera_K_inv
             #                                     ))
             stereo_objs = []
+            # Use the right frame for stereo only. Use the left as the primary and for triangulation
             for i in range(len(frame_results)):
                 stereo_objs.append([])
                 obj_list = frame_results[i].detection_results

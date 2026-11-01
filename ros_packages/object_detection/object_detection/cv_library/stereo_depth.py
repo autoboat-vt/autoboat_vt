@@ -17,7 +17,7 @@ DUMMY_COST = 1e12 # dummy cost so it doesn't error for linear_sum_assignment whe
 EARTH_RADIUS = 6_378_137.0
 
 class StereoMatcher:
-    def __init__(self, info_callback: Callable[[str], None]) -> None:
+    def __init__(self, info_callback: Callable[[str], None], cam_list) -> None:
         self.info_callback = info_callback
         self.weights = [1, 5, 1] # Weight for x_diff, y_diff, and h_diff. Larger is more punishing
         self.buffer_x = 5 # How many pixels the right object can be right of the left object.
@@ -27,7 +27,7 @@ class StereoMatcher:
         self.buffer_y = 20 # If the cameras are rectified, objects in the left and right should
                            # always fall along the same horizontal line. A buffer is good to
                            # account for inconsistency from inference.
-        self.cam_list = self._read_camera_config()
+        self.cam_list = cam_list
 
     def process_stereo(self, objs_left: list[BBox], objs_right: list[BBox],
                        curr_pos: dict[float, float, float]) -> list[dict[int, int, float, float, float, float]]:
@@ -98,13 +98,10 @@ class StereoMatcher:
         d_north = forward * np.sin(h_rad) - right * np.cos(h_rad)
         lat = curr_pos["lat"] + d_north / EARTH_RADIUS * 180 / np.pi
         lon = curr_pos["lon"] + d_east / EARTH_RADIUS / np.cos(curr_pos["lat"]) * 180 / np.pi
+        # TODO: Return ENU instead of lat lon.
         return {
             "depth": depth,
             "dist": np.sqrt(depth**2 + right**2),
             "lat": lat,
             "lon": lon
         }
-        
-    def _read_camera_config(self) -> dict:
-        with open(CAMERA_CONFIG, 'r') as file:
-            return yaml.safe_load(file)
