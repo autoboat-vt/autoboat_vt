@@ -11,7 +11,9 @@
             uint16_t max_winch_current
         ) : spi_device(spi_port, cs_pin), slp_pin(slp_pin)  {
            
+            gpio_init(slp_pin);
             gpio_put(slp_pin, 1);
+            gpio_set_dir(slp_pin, GPIO_OUT);
             sleep_ms(1000);
            
             drv8711_clearStatus();
@@ -35,7 +37,7 @@
             // Bits 12:14 - Register address
             // Bits 0:11 - Irrelevant
             uint16_t send = (0x8 | (address & 0b111)) << 12;
-            uint8_t tx[2] = {(send & 0x00FF), (send & 0xFF00) >> 8};
+            uint8_t tx[2] = {(send & 0xFF00) >> 8, (send & 0x00FF)};
             uint8_t rx[2] = {};
             
             
@@ -48,7 +50,8 @@
             uint16_t whatIsRead = ((rx0 & 0x0F) << 8) | rx1;
 
 
-            return whatIsRead;
+            // return whatIsRead;
+            return (rx0 << 8) | rx1;
         }
 
 
