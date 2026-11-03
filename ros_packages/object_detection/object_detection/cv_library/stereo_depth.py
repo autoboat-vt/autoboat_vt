@@ -3,7 +3,6 @@ import re
 from collections.abc import Callable
 
 import numpy as np
-import yaml
 from scipy.optimize import linear_sum_assignment
 
 from .bbox import BBox
@@ -17,7 +16,7 @@ DUMMY_COST = 1e12 # dummy cost so it doesn't error for linear_sum_assignment whe
 EARTH_RADIUS = 6_378_137.0
 
 class StereoMatcher:
-    def __init__(self, info_callback: Callable[[str], None], cam_list) -> None:
+    def __init__(self, info_callback: Callable[[str], None], cam_list: dict) -> None:
         self.info_callback = info_callback
         self.weights = [1, 5, 1] # Weight for x_diff, y_diff, and h_diff. Larger is more punishing
         self.buffer_x = 5 # How many pixels the right object can be right of the left object.
@@ -89,19 +88,14 @@ class StereoMatcher:
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
         return (cost_matrix, row_ind, col_ind)
     
-    def _calc_pos(self, left_obj: BBox, right_obj: BBox, curr_pos: dict[float, float, float]) -> dict[float, float, float, float]:
-        depth = (self.cam_list[0]['focal_px'] * self.cam_list[0]['baseline']) / (left_obj.x_position - right_obj.x_position)
-        forward = depth + self.cam_list[0]["gps_dist"]
-        right = (left_obj.c_x - self.cam_list[0]["c_x"]) * depth / self.cam_list[0]["focal_px"] - self.cam_list[0]['baseline'] / 2
-        h_rad = curr_pos['head'] * np.pi / 180
-        d_east = forward * np.cos(h_rad) + right * np.sin(h_rad)
-        d_north = forward * np.sin(h_rad) - right * np.cos(h_rad)
-        lat = curr_pos["lat"] + d_north / EARTH_RADIUS * 180 / np.pi
-        lon = curr_pos["lon"] + d_east / EARTH_RADIUS / np.cos(curr_pos["lat"]) * 180 / np.pi
-        # TODO: Return ENU instead of lat lon.
+    def _calc_pos(self, left_obj: BBox, right_obj: BBox, curr_pos: dict[float, float, float]) -> dict[float, float, float]:
+        depth = (self.cam_list[0]['focal_px'] * self.cam_list[0]['baseline']) / (left_obj.c_x - right_obj.c_x)
+        right = (left_obj.c_x - self.cam_list[0]["c_x"]) * depth / self.cam_list[0]["focal_px"]
+        d_x = depth * np.cos(curr_pos["head"]) + right * np.sin(curr_pos["head"])
+        d_y = depth * np.sin(curr_pos["head"]) - right * np.cos(curr_pos["head"])
         return {
-            "depth": depth,
+            "x": d_x + curr_pos["x"],
             "dist": np.sqrt(depth**2 + right**2),
-            "lat": lat,
-            "lon": lon
+            "y": d_y + curr_pos["y"],
+            "z": 0.2 # maybe we need to calculate position? over 1 km the z-coordinate drops 0.1 meters
         }

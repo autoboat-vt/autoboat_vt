@@ -134,6 +134,7 @@ echo -e "\n\nInstalling ultralytics\n\n"
 pip install --no-cache-dir ultralytics
 pip install --no-cache-dir onnx onnxslim onnxruntime onnxscript
 pip install --no-cache-dir sahi # sahi is currently not used
+pip install --no-cache-dir pymap3d
 pip install --no-cache-dir numpy==1.26.4
 pip install setuptools==59.6.0
 
