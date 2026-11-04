@@ -1,5 +1,3 @@
-import os
-import re
 from collections.abc import Callable
 
 import numpy as np
@@ -7,13 +5,7 @@ from scipy.optimize import linear_sum_assignment
 
 from .bbox import BBox
 
-IS_DEV_CONTAINER = re.search("/home/ws", os.getcwd()) is not None
-PATH_TO_PKG_DIR = "/home/ws/ros_packages" if IS_DEV_CONTAINER else f"{os.path.expanduser('~')}/autoboat_vt/ros_packages"
-
-CAMERA_CONFIG = f"{PATH_TO_PKG_DIR}/object_detection/object_detection/config/camera_config.yaml"
-
 DUMMY_COST = 1e12 # dummy cost so it doesn't error for linear_sum_assignment when a row or column is all infinite
-EARTH_RADIUS = 6_378_137.0
 
 class StereoMatcher:
     def __init__(self, info_callback: Callable[[str], None], cam_list: dict) -> None:
@@ -42,32 +34,24 @@ class StereoMatcher:
                 left_obj = objs_left[row]
                 right_obj = objs_right[col]
                 pos = self._calc_pos(left_obj, right_obj, curr_pos)
-                results.append({
-                    {
-                        "left": left_obj.object_id,
-                        "right": right_obj.object_id,
-                        "lat": pos["lat"],
-                        "lon": pos["lon"],
-                        "depth": pos["depth"],
-                        "dist": pos["dist"]
-                    }
-                })
+                results.append((left_obj.object_id, left_obj.class_id, pos))
                 self.info_callback(f"Paired object {left_obj.object_id} to {right_obj.object_id}."
-                                   f"Distance: {pos['dist']:.2f} meters")
+                                   f"Distance: "
+                                   f"{np.linalg.norm(pos - np.array([curr_pos['x'], curr_pos['y'], curr_pos['z']])):.2f} meters")
         return results
 
     def _get_cost(self, left: BBox, right: BBox) -> float:
         if (left.class_id != right.class_id):
             return DUMMY_COST
         
-        x_diff = left.x_position - right.x_position
+        x_diff = left.c_x - right.c_x
 
         if (x_diff < 0 - self.buffer_x):
             return DUMMY_COST
         
         x_diff = abs(x_diff)
         
-        y_diff = abs(left.y_position - right.y_position)
+        y_diff = abs(left.c_y - right.c_y)
         if (y_diff > self.buffer_y):
             return DUMMY_COST
         
@@ -84,18 +68,13 @@ class StereoMatcher:
         for i in range(len(left)):
             for j in range(len(right)):
                 cost_matrix[i][j] = self._get_cost(left[i], right[j])
-        # self.info_callback(f"cost: {cost_matrix}")
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
         return (cost_matrix, row_ind, col_ind)
     
-    def _calc_pos(self, left_obj: BBox, right_obj: BBox, curr_pos: dict[float, float, float]) -> dict[float, float, float]:
+    def _calc_pos(self, left_obj: BBox, right_obj: BBox, curr_pos: dict[float, float, float]) -> np.array:
         depth = (self.cam_list[0]['focal_px'] * self.cam_list[0]['baseline']) / (left_obj.c_x - right_obj.c_x)
         right = (left_obj.c_x - self.cam_list[0]["c_x"]) * depth / self.cam_list[0]["focal_px"]
         d_x = depth * np.cos(curr_pos["head"]) + right * np.sin(curr_pos["head"])
         d_y = depth * np.sin(curr_pos["head"]) - right * np.cos(curr_pos["head"])
-        return {
-            "x": d_x + curr_pos["x"],
-            "dist": np.sqrt(depth**2 + right**2),
-            "y": d_y + curr_pos["y"],
-            "z": 0.2 # maybe we need to calculate position? over 1 km the z-coordinate drops 0.1 meters
-        }
+        # maybe we need to calculate elevation? over 1 km the z-coordinate drops 0.1 meters
+        return np.array([d_x + curr_pos['x'], d_y + curr_pos['y'], 0.2])

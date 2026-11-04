@@ -72,8 +72,8 @@ class LocalizationNode(Node):
             "longitude": 0,
             "altitude": 0
         }
-        self.valid_origin_position = False
-        self.valid_heading = False
+        self.valid_origin_position = True
+        self.valid_heading = True
 
         self.camera_K = np.array([[self.cam_list[0]["focal_px"], 0, self.cam_list[0]["width"] * 0.5],
                                   [0, self.cam_list[0]["focal_px"], self.cam_list[0]["height"] * 0.5],
@@ -124,7 +124,7 @@ class LocalizationNode(Node):
                 d_y = np.sin(self.current_position["head"]) * forward - np.cos(self.current_position["head"]) * right
                 self.current_position["x"] = enu[0] + d_y
                 self.current_position["y"] = enu[1] + d_x
-                self.current_position["z"] = enu[2]
+                self.current_position["z"] = self.cam_list[0]["altitude"] # We could set it to enu[2]
 
     def _localization_parameters_callback(self, msg: String) -> None:
         new_parameters_json = json.loads(msg.data)
@@ -171,22 +171,22 @@ class LocalizationNode(Node):
             #                                         pose_matrix = pose_matrix,
             #                                         camera_matrix_inv = self.camera_K_inv
             #                                     ))
-            stereo_objs = []
+            stereo_objs: list[list[BBox]] = []
             # Use the right frame for stereo only. Use the left as the primary and for triangulation
             for i in range(len(frame_results)):
                 stereo_objs.append([])
                 obj_list = frame_results[i].detection_results
                 for obj in obj_list:
                     new_detection = BBox()
-                    new_detection.x_position = obj.x_position
-                    new_detection.y_position = obj.y_position
+                    new_detection.c_x = obj.x_position
+                    new_detection.c_y = obj.y_position
                     new_detection.width = obj.width
                     new_detection.height = obj.height
                     new_detection.object_id = obj.object_id
                     new_detection.class_id = obj.class_id
                     stereo_objs[i].append(new_detection)
-            self.stereo_matcher.process_stereo(stereo_objs[0], stereo_objs[1], curr_pos)
-            self._calc_frustum(curr_pos)
+            stereo_results = self.stereo_matcher.process_stereo(stereo_objs[0], stereo_objs[1], curr_pos)
+            frustum = self._calc_frustum(curr_pos)
 
     def _calc_frustum(self, curr_pos: dict[float, float, float, float]) -> dict:
         # For now assume camera is level
