@@ -38,8 +38,8 @@ void Systems::initialize_hal()
   gpio_init(RUDDER_MOTOR_CS_PIN);
   gpio_set_dir(RUDDER_MOTOR_CS_PIN, GPIO_OUT);
   gpio_pull_down(RUDDER_MOTOR_CS_PIN);
-  HAL::init_rudderEncoder(HAL::devices::winchEncoder);
-  HAL::init_winchEncoder(HAL::devices::rudderEncoder);
+  HAL::init_rudderEncoder(HAL::devices::rudderEncoder);
+  HAL::init_winchEncoder(HAL::devices::winchEncoder);
   HAL::init_rudder_stepper(HAL::devices::rudderStepperMotorDriver);
 }
 

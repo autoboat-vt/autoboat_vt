@@ -50,8 +50,8 @@
             uint16_t whatIsRead = ((rx0 & 0x0F) << 8) | rx1;
 
 
-            // return whatIsRead;
-            return (rx0 << 8) | rx1;
+            return whatIsRead;
+            // return (rx0 << 8) | rx1;
         }
 
 

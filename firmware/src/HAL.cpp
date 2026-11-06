@@ -59,14 +59,15 @@ void HAL::init_winch_stepper(drv8711*& winchStepperMotorDriver) {
 }
 
 u_int16_t HAL::debug(drv8711*& rudderStepperMotorDriver){
+    rudderStepperMotorDriver->drv8711_writeReg(OFF_REG_ADDRESS, 0xAAA);
     // u_int16_t Control_REG_output = rudderStepperMotorDriver->drv8711_readReg(CTRL_REG_ADDRESS);
     // u_int16_t TORQUE_REG_output = drv8711_readReg(rudderStepperMotorDriver, TORQUE_REG_ADDRESS);
-    // u_int16_t OFF_REG_output = drv8711_readReg(rudderStepperMotorDriver, OFF_REG_ADDRESS);
+    u_int16_t OFF_REG_output = rudderStepperMotorDriver->drv8711_readReg(OFF_REG_ADDRESS);
     // u_int16_t BLANK_REG_output = drv8711_readReg(rudderStepperMotorDriver, BLANK_REG_ADDRESS);
     // u_int16_t DECAY_REG_output = drv8711_readReg(rudderStepperMotorDriver, DECAY_REG_ADDRESS);
     // u_int16_t STALL_REG_output = drv8711_readReg(rudderStepperMotorDriver, STALL_REG_ADDRESS);
     // u_int16_t DRIVE_REG_output = drv8711_readReg(rudderStepperMotorDriver, DRIVE_REG_ADDRESS);
-    u_int16_t STATUS_REG_output = rudderStepperMotorDriver->drv8711_readReg(STATUS_REG_ADDRESS);
+    // u_int16_t STATUS_REG_output = rudderStepperMotorDriver->drv8711_readReg(STATUS_REG_ADDRESS);
 
-    return STATUS_REG_output;
+    return OFF_REG_output;
 }
