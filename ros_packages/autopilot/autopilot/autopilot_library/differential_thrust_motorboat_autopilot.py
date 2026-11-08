@@ -78,24 +78,42 @@ class DifferentialThrustMotorboatAutopilot:
         )
 
     def _compute_differential_motor_commands(
-        self, throttle: float, steering: float, control_type: str) -> tuple[float, float]:
-        """Mix forward/reverse throttle and steering into port and starboard commands."""
+        self, throttle: float, steering: float, motor_control_type: str) -> tuple[float, float]:
+        """
+        Mix a base motor command and differential steering correction.
 
-        left = throttle + steering
-        right = throttle - steering
+        Parameters
+        ----------
+        throttle
+            Base motor command, in the units required by ``motor_control_type``.
+        steering
+            Differential correction in the same units as ``throttle``. It is
+            added to the port command and subtracted from the starboard command.
+        motor_control_type
+            Motor command type. RPM commands are clipped to the configured
+            ``max_rpm``; other command types are clipped to ``[-100, 100]``.
 
-        if control_type == "rpm":
+        Returns
+        -------
+        tuple[float, float]
+            The clipped ``(port, starboard)`` motor commands, in the same units
+            as ``throttle`` and ``steering``.
+        """
+
+        port_command = throttle + steering
+        starboard_command = throttle - steering
+
+        if motor_control_type == "rpm":
             max_command = self.parameters["max_rpm"]
         else:
             max_command = 100.0
         return (
-            float(np.clip(left, -max_command, max_command)),
-            float(np.clip(right, -max_command, max_command)),
+            float(np.clip(port_command, -max_command, max_command)),
+            float(np.clip(starboard_command, -max_command, max_command)),
         )
 
     def _get_throttle_control(
-        self, joystick_left_y: float, control_mode: PropellerMotorControlMode
-    ) -> tuple[str, float]:
+        self, joystick_left_y: float, control_mode: PropellerMotorControlMode) -> tuple[str, float]:
         if control_mode == PropellerMotorControlMode.RPM:
             return "rpm", self.parameters["max_rpm"] * joystick_left_y / 100.0
         if control_mode == PropellerMotorControlMode.DUTY_CYCLE:
@@ -117,7 +135,7 @@ class DifferentialThrustMotorboatAutopilot:
         left, right = self._compute_differential_motor_commands(throttle, steering, control_type)
         return control_type, left, right
 
-    def run_heading_hold_step(
+    def run_hold_heading_step(
         self,
         joystick_left_y: float,
         heading: float,
@@ -131,13 +149,13 @@ class DifferentialThrustMotorboatAutopilot:
             abs(self.parameters["max_turn_force"]),
         )
         max_command = self.parameters["max_rpm"] if control_type == "rpm" else 100.0
-        heading_correction = self.get_optimal_turn_force(heading, desired_heading)
-        steering = max_command * heading_correction / max_correction if max_correction else 0.0
+        turn_force = self.get_optimal_turn_force(heading, desired_heading)
+        steering = max_command * turn_force / max_correction if max_correction else 0.0
         left, right = self._compute_differential_motor_commands(throttle, steering, control_type)
         return control_type, left, right
 
     def run_waypoint_mission_step(self, current_position: Position, heading: float) -> tuple[float, float, float | None]:
-        """Return port RPM, starboard RPM, and the steering correction for the active waypoint."""
+        """Return port RPM, starboard RPM, and turn force for the active waypoint."""
 
         if not self.waypoints:
             return 0.0, 0.0, None
@@ -152,7 +170,7 @@ class DifferentialThrustMotorboatAutopilot:
             return 0.0, 0.0, 0.0
 
         desired_heading = get_bearing(current_position, target)
-        heading_correction = self.get_optimal_turn_force(heading, desired_heading)
+        turn_force = self.get_optimal_turn_force(heading, desired_heading)
         max_correction = max(
             abs(self.parameters["min_turn_force"]),
             abs(self.parameters["max_turn_force"]),
@@ -160,14 +178,14 @@ class DifferentialThrustMotorboatAutopilot:
         max_rpm = self.parameters["max_rpm"]
 
         if max_correction:
-            steering_rpm = max_rpm * heading_correction / max_correction
+            steering_rpm = max_rpm * turn_force / max_correction
         else:
             steering_rpm = 0.0
 
         min_rpm = self.parameters["min_rpm"]
         rpm_decay_rate = self.parameters["rpm_decay_rate"]
 
-        rpm = + (max_rpm - min_rpm) * np.exp(-rpm_decay_rate * abs(heading_correction))
+        rpm = + (max_rpm - min_rpm) * np.exp(-rpm_decay_rate * abs(turn_force))
         left, right = self._compute_differential_motor_commands(float(rpm), steering_rpm, "rpm")
 
-        return left, right, heading_correction
+        return left, right, turn_force

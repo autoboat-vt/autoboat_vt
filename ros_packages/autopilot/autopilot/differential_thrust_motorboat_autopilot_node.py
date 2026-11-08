@@ -381,7 +381,7 @@ class DifferentialThrustMotorboatAutopilotNode(Node):
             # but instead of moving a rudder, it converts that correction into a
             # left/right steering split for the propulsion motors.
             desired_vesc_control_type, desired_left, desired_right = (
-                self.differential_thrust_motorboat_autopilot.run_heading_hold_step(
+                self.differential_thrust_motorboat_autopilot.run_hold_heading_step(
                     self.joystick_left_y,
                     self.heading,
                     self.heading_to_hold,
