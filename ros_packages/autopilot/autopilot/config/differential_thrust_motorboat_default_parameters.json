@@ -9,11 +9,11 @@
     },
     "min_turn_force": {
         "default": -25.0,
-        "description": "Minimum heading-controller correction used to steer with differential thrust, in degrees."
+        "description": "Minimum turn-force output from the heading controller, in degrees."
     },
     "max_turn_force": {
         "default": 25.0,
-        "description": "Maximum heading-controller correction used to steer with differential thrust, in degrees."
+        "description": "Maximum turn-force output from the heading controller, in degrees."
     },
     "heading_p_gain": {
         "default": 0.3,
@@ -41,7 +41,7 @@
     },
     "rpm_decay_rate": {
         "default": 0.1,
-        "description": "Rate at which forward RPM decreases as heading correction increases."
+        "description": "Rate at which forward RPM decreases as the magnitude of the turn force increases."
     },
     "gps_position_failsafe_time": {
         "default": 3.0,

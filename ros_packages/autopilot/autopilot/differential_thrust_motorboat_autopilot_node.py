@@ -322,7 +322,7 @@ class DifferentialThrustMotorboatAutopilotNode(Node):
         # The node keeps a legacy rudder angle field for compatibility with the
         # rest of the telemetry and UI pipeline, even though the actual steering is
         # done by balancing the two motor commands rather than rotating a rudder.
-        desired_rudder_angle = 0.0
+        turn_force = 0.0
         left_control = VESCControlData(control_type_for_vesc="rpm", control_value=0.0)
         right_control = VESCControlData(control_type_for_vesc="rpm", control_value=0.0)
 
@@ -369,7 +369,7 @@ class DifferentialThrustMotorboatAutopilotNode(Node):
             # Autonomous waypoint mode: ask the differential-thrust controller for
             # the correct left/right thruster commands to steer toward the current
             # waypoint while maintaining forward progress.
-            left_cmd, right_cmd, desired_rudder_angle = self.differential_thrust_motorboat_autopilot.run_waypoint_mission_step(
+            left_cmd, right_cmd, turn_force = self.differential_thrust_motorboat_autopilot.run_waypoint_mission_step(
                 self.position,
                 self.heading,
             )
@@ -378,7 +378,7 @@ class DifferentialThrustMotorboatAutopilotNode(Node):
 
         elif self.motorboat_control_mode == MotorboatControlModes.HOLD_HEADING:
             # Hold-heading mode uses the same heading PID as the original boat,
-            # but instead of moving a rudder, it converts that correction into a
+            # but instead of moving a rudder, it converts that turn force into a
             # left/right steering split for the propulsion motors.
             desired_vesc_control_type, desired_left, desired_right = (
                 self.differential_thrust_motorboat_autopilot.run_hold_heading_step(
@@ -413,8 +413,8 @@ class DifferentialThrustMotorboatAutopilotNode(Node):
 
         # Keep legacy telemetry channels populated for compatibility with the rest
         # of the boat stack even though the physical steering is differential.
-        if desired_rudder_angle is not None:
-            self.desired_rudder_angle_publisher.publish(Float32(data=float(desired_rudder_angle)))
+        if turn_force is not None:
+            self.desired_rudder_angle_publisher.publish(Float32(data=float(turn_force)))
 
         if self.should_zero_encoder:
             self.zero_rudder_encoder_publisher.publish(Bool(data=self.should_zero_encoder))

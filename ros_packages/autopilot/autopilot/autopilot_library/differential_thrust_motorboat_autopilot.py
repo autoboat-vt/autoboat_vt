@@ -44,7 +44,7 @@ class DifferentialThrustMotorboatAutopilot:
 
     def get_optimal_turn_force(self, heading: float, desired_heading: float) -> float:
         """
-        Compute the PID heading correction used to steer with differential thrust.
+        Compute the PID turn force used to steer with differential thrust.
 
         Parameters
         ----------
@@ -56,7 +56,7 @@ class DifferentialThrustMotorboatAutopilot:
         Returns
         -------
         `float`
-            The heading correction in degrees.
+            The turn-force correction in degrees.
         """
 
         self.heading_pid_controller.set_gains(
@@ -144,13 +144,13 @@ class DifferentialThrustMotorboatAutopilot:
     ) -> tuple[str, float, float]:
         """Hold a target heading while taking throttle from the RC transmitter."""
         control_type, throttle = self._get_throttle_control(joystick_left_y, propeller_motor_control_mode)
-        max_correction = max(
+        max_turn_force_magnitude = max(
             abs(self.parameters["min_turn_force"]),
             abs(self.parameters["max_turn_force"]),
         )
         max_command = self.parameters["max_rpm"] if control_type == "rpm" else 100.0
         turn_force = self.get_optimal_turn_force(heading, desired_heading)
-        steering = max_command * turn_force / max_correction if max_correction else 0.0
+        steering = (max_command * turn_force / max_turn_force_magnitude if max_turn_force_magnitude else 0.0)
         left, right = self._compute_differential_motor_commands(throttle, steering, control_type)
         return control_type, left, right
 
@@ -171,14 +171,14 @@ class DifferentialThrustMotorboatAutopilot:
 
         desired_heading = get_bearing(current_position, target)
         turn_force = self.get_optimal_turn_force(heading, desired_heading)
-        max_correction = max(
+        max_turn_force_magnitude = max(
             abs(self.parameters["min_turn_force"]),
             abs(self.parameters["max_turn_force"]),
         )
         max_rpm = self.parameters["max_rpm"]
 
-        if max_correction:
-            steering_rpm = max_rpm * turn_force / max_correction
+        if max_turn_force_magnitude:
+            steering_rpm = max_rpm * turn_force / max_turn_force_magnitude
         else:
             steering_rpm = 0.0
 
