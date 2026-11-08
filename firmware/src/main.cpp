@@ -6,28 +6,46 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
 
 #include "systems.hpp"
 
-static void microros_task(void *params);
-static void node_task(void *params);
+static void microros_connect_task(void *params);
+static void microros_pulse_task(void *params);
+static void microros_executor_task(void *params);
+static void application_task(void *params);
 
-// Set by microros_task once the agent is connected and the system is
-// initialized; node_task must not touch the HAL before then.
+static TaskHandle_t connectTaskHandle = NULL;
+
+// Ping and spin used to run back to back in one loop (microros lines could be written at the same time) so a mutex line is setup
+static SemaphoreHandle_t microrosMutex = NULL;
+
+// Set by microros_connect_task once the agent is connected and the system is initialized
 static volatile bool sharedReady = false;
+
+// Owned by microros_connect_task; valid only while sharedReady is true.
+static Systems *activeSystem = NULL;
 
 int main() {
     stdio_init_all();
-    xTaskCreate(microros_task, "microros Task", 2048, NULL, 1, NULL);
-    xTaskCreate(node_task, "Node Task", 2048, NULL, 1, NULL);
+
+    microrosMutex = xSemaphoreCreateMutex();
+
+    xTaskCreate(microros_connect_task, "uROS Connect", 2048, NULL, 1, &connectTaskHandle);
+    xTaskCreate(microros_pulse_task, "uROS Pulse", 2048, NULL, 1, NULL);
+    xTaskCreate(microros_executor_task, "uROS Executor", 2048, NULL, 1, NULL);
+    xTaskCreate(application_task, "Application", 2048, NULL, 1, NULL);
+
     vTaskStartScheduler();
     for (;;) {}
 }
 
-static void microros_task(void *params) {
+// Waits for the agent, brings the system up, then sleeps until the pulse task reports the agent is gone, tears down, and starts over.
+static void microros_connect_task(void *params) {
     (void)params;
 
     while (true) {
+        // connect micro-ROS to the pico serial port
         rmw_uros_set_custom_transport(
             true,
             NULL,
@@ -40,31 +58,62 @@ static void microros_task(void *params) {
         gpio_init(LED_PIN);
         gpio_set_dir(LED_PIN, 1);
 
-        const int timeout_ms = 1000;
-        const uint8_t attempts = 120;
-        rmw_uros_ping_agent(timeout_ms, attempts);
+        // wait for the agent to respond
+        rmw_uros_ping_agent(1000, 120);
 
+        // COME ALIVE THESEUS
         Systems system = Systems(THESEUS);
         system.initialize_microros();
         system.initialize_hal();
 
+        activeSystem = &system;
         sharedReady = true;
 
-        while (true) {
-            if (rmw_uros_ping_agent(1000, 5) != RMW_RET_OK) {
-                break;
-            }
+        // sleep until microros_pulse_task says the agent is lost
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-            system.check_microros();
-            vTaskDelay(pdMS_TO_TICKS(10));
-        }
-
+        xSemaphoreTake(microrosMutex, portMAX_DELAY);
         sharedReady = false;
+        activeSystem = NULL;
         system.cleanup();
+        xSemaphoreGive(microrosMutex);
     }
 }
 
-static void node_task(void *params) {
+// Checks the pulse of the agent every 10ms; notifies the connect task when it dies.
+static void microros_pulse_task(void *params) {
+    (void)params;
+
+    for (;;) {
+        if (sharedReady) {
+            xSemaphoreTake(microrosMutex, portMAX_DELAY);
+            bool alive = !sharedReady || rmw_uros_ping_agent(1000, 5) == RMW_RET_OK;
+            xSemaphoreGive(microrosMutex);
+
+            if (!alive) {
+                xTaskNotifyGive(connectTaskHandle);
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
+// Spins the executor every 10ms.
+static void microros_executor_task(void *params) {
+    (void)params;
+
+    for (;;) {
+        if (sharedReady) {
+            xSemaphoreTake(microrosMutex, portMAX_DELAY);
+            if (sharedReady) { activeSystem->check_microros(); }
+            xSemaphoreGive(microrosMutex);
+        }
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
+// Application loop, runs alongside micro-ROS as the old node_task did.
+static void application_task(void *params) {
     (void)params;
 
     for (;;) {
@@ -74,3 +123,5 @@ static void node_task(void *params) {
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
+
+// TODO: move magnetometer out of application_loop_step into its own task / ISR
