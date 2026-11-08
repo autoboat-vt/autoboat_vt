@@ -30,3 +30,24 @@ Ensure that you have the following software installed on your system:
 - Left click on the map to add waypoints.
 - Right click to remove the waypoint closest to your mouse's cursor position.
 - Click on waypoint or buoy in the table to zoom to that marker on the map.
+
+### Differential-thrust motorboat simulation
+
+Run the ROS simulation and ground station in separate terminals from the workspace:
+
+```bash
+# Terminal 1
+source install/setup.bash
+ros2 launch autoboat_launch motorboat_simulation_differential_thrust.launch.py
+```
+
+```bash
+# Terminal 2
+cd ground_station
+./run.sh
+```
+
+The ROS launch starts Gazebo, the differential-thrust autopilot, and telemetry. The
+ground station displays boat status, control mode, desired heading, and measured
+port/starboard propeller RPM. Build and source the workspace after changing ROS
+packages so the installed launch file and autopilot executable are current.
