@@ -1,11 +1,10 @@
 
 from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import Node
-
-from launch import LaunchDescription
 
 
 def generate_launch_description():
@@ -44,8 +43,8 @@ def generate_launch_description():
 
         Node(
             package='autopilot',
-            executable='motorboat_autopilot',
-            name='motorboat_autopilot',
+            executable='differential_thrust_motorboat_autopilot',
+            name='differential_thrust_motorboat_autopilot',
 
             respawn=True,
             respawn_delay=2.0,
