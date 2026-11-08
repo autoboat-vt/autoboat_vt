@@ -17,7 +17,7 @@ from cv_bridge import CvBridge
 from geometry_msgs.msg import Twist, Vector3
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import NavSatFix
+from sensor_msgs.msg import JointState, NavSatFix
 from std_msgs.msg import Bool, Float32, Int32, String, UInt8MultiArray
 
 from autoboat_msgs.msg import VESCTelemetryData, WaypointList
@@ -32,7 +32,12 @@ from .autopilot_library.utils.constants import (
     TelemetryStatus,
 )
 from .autopilot_library.utils.position import Position
-from .autopilot_library.utils.telemetry_payloads import BoatStatusPayload, MotorboatStatusPayload, SailboatStatusPayload
+from .autopilot_library.utils.telemetry_payloads import (
+    BoatStatusPayload,
+    DifferentialThrustMotorboatStatusPayload,
+    MotorboatStatusPayload,
+    SailboatStatusPayload,
+)
 from .autopilot_library.utils.utils_function_library import (
     cartesian_vector_to_polar,
     get_distance_between_positions,
@@ -91,6 +96,8 @@ class TelemetryNode(Node):
         self.vesc_telemetry_data_time_since_vesc_startup_in_ms: float = 0.0
         self.vesc_telemetry_data_motor_temperature: float = 0.0
         self.vesc_telemetry_data_vesc_temperature: float = 0.0
+        self.port_propeller_rpm: float = 0.0
+        self.starboard_propeller_rpm: float = 0.0
 
         self.logger = self.get_logger()
 
@@ -122,11 +129,14 @@ class TelemetryNode(Node):
             self.boat_control_mode = SailboatControlModes.DISABLED
             self.boat_autopilot_state = SailboatAutopilotStates.DOWNWIND_SAILING
 
-        elif self.telemetry_node_mode == TelemetryNodeModes.MOTORBOAT:
+        elif self.telemetry_node_mode in {
+            TelemetryNodeModes.MOTORBOAT,
+            TelemetryNodeModes.DIFFERENTIAL_THRUST_MOTORBOAT,
+        }:
             self.boat_control_mode = MotorboatControlModes.DISABLED
 
         else:
-            raise Exception("Expected TelemetryNodeModes to be either MOTORBOAT or SAILBOT")
+            raise Exception("Unsupported telemetry node mode.")
 
 
         self.instance_id = self.create_telemetry_server_instance(self.autopilot_parameters, self.telemetry_node_mode)
@@ -162,6 +172,12 @@ class TelemetryNode(Node):
         )
 
         self.create_subscription(NavSatFix, "/position", self.position_callback, qos_profile_sensor_data)
+        self.create_subscription(
+            JointState,
+            "/world/motorboat_model/model/my_ship/joint_state",
+            self.joint_state_callback,
+            qos_profile_sensor_data,
+        )
         self.create_subscription(Twist, "/velocity", self.velocity_callback, qos_profile_sensor_data)
         self.create_subscription(Float32, "/heading", self.heading_callback, qos_profile_sensor_data)
         self.create_subscription(Vector3, "/apparent_wind_vector", self.apparent_wind_vector_callback, qos_profile_sensor_data)
@@ -196,8 +212,11 @@ class TelemetryNode(Node):
         elif telemetry_node_mode == TelemetryNodeModes.MOTORBOAT:
             boat_status_mapping = MotorboatStatusPayload.construct_mapping()
 
+        elif telemetry_node_mode == TelemetryNodeModes.DIFFERENTIAL_THRUST_MOTORBOAT:
+            boat_status_mapping = DifferentialThrustMotorboatStatusPayload.construct_mapping()
+
         else:
-            raise Exception("Expected TelemetryNodeModes to be either MOTORBOAT or SAILBOT")
+            raise Exception("Unsupported telemetry node mode.")
 
 
         autopilot_parameters_string = json.dumps(autopilot_parameters, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -380,11 +399,14 @@ class TelemetryNode(Node):
         if self.telemetry_node_mode == TelemetryNodeModes.SAILBOAT:
             self.boat_autopilot_state = SailboatAutopilotStates[boat_autopilot_state.data]
 
-        elif self.telemetry_node_mode == TelemetryNodeModes.MOTORBOAT:
+        elif self.telemetry_node_mode in {
+            TelemetryNodeModes.MOTORBOAT,
+            TelemetryNodeModes.DIFFERENTIAL_THRUST_MOTORBOAT,
+        }:
             self.boat_autopilot_state = SailboatAutopilotStates.NA
 
         else:
-            raise Exception("Expected TelemetryNodeModes to be either MOTORBOAT or SAILBOT")
+            raise Exception("Unsupported telemetry node mode.")
 
     def boat_control_mode_callback(self, boat_control_mode: String) -> None:
         """
@@ -399,11 +421,14 @@ class TelemetryNode(Node):
         if self.telemetry_node_mode == TelemetryNodeModes.SAILBOAT:
             self.boat_control_mode = SailboatControlModes[boat_control_mode.data]
 
-        elif self.telemetry_node_mode == TelemetryNodeModes.MOTORBOAT:
+        elif self.telemetry_node_mode in {
+            TelemetryNodeModes.MOTORBOAT,
+            TelemetryNodeModes.DIFFERENTIAL_THRUST_MOTORBOAT,
+        }:
             self.boat_control_mode = MotorboatControlModes[boat_control_mode.data]
 
         else:
-            raise Exception("Expected TelemetryNodeModes to be either MOTORBOAT or SAILBOT")
+            raise Exception("Unsupported telemetry node mode.")
 
     def desired_sail_angle_callback(self, desired_sail_angle: Float32) -> None:
         """
@@ -467,7 +492,11 @@ class TelemetryNode(Node):
 
         parameters_path = Path(autopilot_parameter_config_path.data)
 
-        if parameters_path.stem in {"sailboat_default_parameters", "motorboat_default_parameters"}:
+        if parameters_path.stem in {
+            "sailboat_default_parameters",
+            "motorboat_default_parameters",
+            "differential_thrust_motorboat_default_parameters",
+        }:
             with open(file=parameters_path, mode="r", encoding="utf-8") as parameters_file:
                 self.autopilot_parameters = json.load(parameters_file)
 
@@ -479,8 +508,11 @@ class TelemetryNode(Node):
             elif parameters_path.stem == "motorboat_default_parameters":
                 self.telemetry_node_mode = TelemetryNodeModes.MOTORBOAT
 
+            elif parameters_path.stem == "differential_thrust_motorboat_default_parameters":
+                self.telemetry_node_mode = TelemetryNodeModes.DIFFERENTIAL_THRUST_MOTORBOAT
+
             else:
-                raise Exception("Expected either motorboat_default_parameters or sailboat_default_parameters")
+                raise Exception("Unsupported autopilot parameter config file.")
 
 
             self.autopilot_parameters_loaded = True
@@ -635,11 +667,20 @@ class TelemetryNode(Node):
 
 
 
-    def construct_boat_status_payload(self) -> SailboatStatusPayload | MotorboatStatusPayload | None:
+    def joint_state_callback(self, joint_state: JointState) -> None:
+        """Track measured RPM for the port and starboard propellers."""
+        for joint_name, angular_velocity in zip(joint_state.name, joint_state.velocity, strict=True):
+            rpm = float(angular_velocity * 60.0 / (2.0 * np.pi))
+            if joint_name == "port_propeller_joint":
+                self.port_propeller_rpm = rpm
+            elif joint_name == "starboard_propeller_joint":
+                self.starboard_propeller_rpm = rpm
+
+    def construct_boat_status_payload(
+        self,
+    ) -> SailboatStatusPayload | MotorboatStatusPayload | DifferentialThrustMotorboatStatusPayload | None:
         """
-        Constructs a :class:`BoatStatusPayload` (specifically a :class:`SailboatStatusPayload` or
-        :class:`MotorboatStatusPayload` depending on the boat mode) from the boat's current
-        status information.
+        Construct a status payload matching the configured boat mode.
 
         Note
         ----
@@ -648,9 +689,8 @@ class TelemetryNode(Node):
 
         Returns
         -------
-        `SailboatStatusPayload | MotorboatStatusPayload | None`
-            The constructed boat status payload. Returns `None` if the boat is not in
-            either sailboat or motorboat mode, but this should never happen.
+        `SailboatStatusPayload | MotorboatStatusPayload | DifferentialThrustMotorboatStatusPayload | None`
+            The constructed status payload, or `None` when no mode has been selected.
         """
 
         # TODO MAKE SURE THIS MATH IS RIGHT
@@ -726,8 +766,25 @@ class TelemetryNode(Node):
                 vesc_temperature=self.vesc_telemetry_data_vesc_temperature,
             )
 
+        elif self.telemetry_node_mode == TelemetryNodeModes.DIFFERENTIAL_THRUST_MOTORBOAT:
+            payload = DifferentialThrustMotorboatStatusPayload(
+                rpm=self.vesc_telemetry_data_rpm,
+                duty_cycle=self.vesc_telemetry_data_duty_cycle,
+                amp_hours=self.vesc_telemetry_data_amp_hours,
+                amp_hours_charged=self.vesc_telemetry_data_amp_hours_charged,
+                current_to_vesc=self.vesc_telemetry_data_current_to_vesc,
+                voltage_to_motor=self.vesc_telemetry_data_voltage_to_motor,
+                voltage_to_vesc=self.vesc_telemetry_data_voltage_to_vesc,
+                wattage_to_motor=self.vesc_telemetry_data_wattage_to_motor,
+                time_since_vesc_startup=self.vesc_telemetry_data_time_since_vesc_startup_in_ms,
+                motor_temperature=self.vesc_telemetry_data_motor_temperature,
+                vesc_temperature=self.vesc_telemetry_data_vesc_temperature,
+                port_propeller_rpm=self.port_propeller_rpm,
+                starboard_propeller_rpm=self.starboard_propeller_rpm,
+            )
+
         else:
-            raise Exception("Expected TelemetryNodeModes to be either MOTORBOAT or SAILBOT")
+            raise Exception("Unsupported telemetry node mode.")
 
         if payload is not None:
             for key, value in base.items():

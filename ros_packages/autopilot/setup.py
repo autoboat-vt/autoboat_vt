@@ -13,6 +13,7 @@ setup(
         ("share/" + package_name, ["package.xml"]),
     ],
     install_requires=["setuptools"],
+    package_data={"autopilot": ["config/*.json"]},
     zip_safe=True,
     maintainer="autoboatvt",
     maintainer_email="autoboat@vt.edu",
@@ -22,6 +23,7 @@ setup(
         'console_scripts': [
             'sailboat_autopilot = autopilot.sailboat_autopilot_node:main',
             'motorboat_autopilot = autopilot.motorboat_autopilot_node:main',
+            'differential_thrust_motorboat_autopilot = autopilot.differential_thrust_motorboat_autopilot_node:main',
             'telemetry = autopilot.telemetry_node:main'
         ],
     },

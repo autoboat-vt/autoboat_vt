@@ -1,0 +1,62 @@
+{
+    "autopilot_refresh_rate": {
+        "default": 50.0,
+        "description": "Autopilot control-loop frequency in hertz."
+    },
+    "waypoint_accuracy": {
+        "default": 5.0,
+        "description": "Distance in meters at which a waypoint is considered reached."
+    },
+    "min_rudder_angle": {
+        "default": -25.0,
+        "description": "Minimum heading-controller correction, in degrees."
+    },
+    "max_rudder_angle": {
+        "default": 25.0,
+        "description": "Maximum heading-controller correction, in degrees."
+    },
+    "rudder_hard_over": {
+        "default": 25.0,
+        "description": "Legacy rudder parameter retained for compatibility with the motorboat configuration UI."
+    },
+    "heading_p_gain": {
+        "default": 0.3,
+        "description": "Proportional gain for heading control."
+    },
+    "heading_i_gain": {
+        "default": 0.0,
+        "description": "Integral gain for heading control."
+    },
+    "heading_d_gain": {
+        "default": 0.2,
+        "description": "Derivative gain for heading control."
+    },
+    "heading_n_gain": {
+        "default": 0.0,
+        "description": "Derivative filter gain for heading control."
+    },
+    "max_rpm": {
+        "default": 500.0,
+        "description": "Maximum RPM command for either propeller in the differential-thrust simulation."
+    },
+    "min_rpm": {
+        "default": 100.0,
+        "description": "Minimum forward RPM while tracking a waypoint."
+    },
+    "rpm_decay_rate": {
+        "default": 0.1,
+        "description": "Rate at which forward RPM decreases as heading correction increases."
+    },
+    "gps_position_failsafe_time": {
+        "default": 3.0,
+        "description": "Stop both propellers if GPS data is stale for this many seconds."
+    },
+    "rc_data_failsafe_time": {
+        "default": 100000000000.0,
+        "description": "Stop both propellers if RC data is stale for this many seconds."
+    },
+    "heading_data_failsafe_time": {
+        "default": 3.0,
+        "description": "Stop both propellers if heading data is stale for this many seconds."
+    }
+}

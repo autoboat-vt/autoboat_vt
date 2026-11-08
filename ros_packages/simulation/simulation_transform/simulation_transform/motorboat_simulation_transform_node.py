@@ -22,13 +22,21 @@ class AutopilotTransformNode(Node):
         self.heading_publisher = self.create_publisher(Float32, "/heading", 10)
         self.desired_rudder_angle_publisher = self.create_publisher(Float64, "/motorboat_simulation/desired_rudder_angle", 10)
         self.propeller_rpm_publisher = self.create_publisher(Float64, "/motorboat_simulation/desired_propeller_rpm", 10)
+        self.port_propeller_rpm_publisher = self.create_publisher(Float64, "/motorboat_simulation/desired_port_propeller_rpm", 10)
+        self.starboard_propeller_rpm_publisher = self.create_publisher(Float64, "/motorboat_simulation/desired_starboard_propeller_rpm", 10)
         self.current_rudder_angle_publisher = self.create_publisher(Float32, "/current_rudder_angle", 10)
         
         self.create_subscription(JointState, "/world/motorboat_model/model/my_ship/joint_state", self.joint_state_callback, 10)
         self.create_subscription(Odometry, "/motorboat_simulation/odometry", self.odometry_callback, 10)
         self.create_subscription(Float32, "/desired_rudder_angle", self.desired_rudder_callback, 10)
         self.create_subscription(
-            VESCControlData, "/propeller_motor_control_struct", self.vesc_control_data_callback, qos_profile_sensor_data
+            VESCControlData, "/propeller_motor_control_struct", self.propeller_vesc_control_data_callback, qos_profile_sensor_data
+        )
+        self.create_subscription(
+            VESCControlData, "/left_propeller_motor_control_struct", self.left_vesc_control_data_callback, qos_profile_sensor_data
+        )
+        self.create_subscription(
+            VESCControlData, "/right_propeller_motor_control_struct", self.right_vesc_control_data_callback, qos_profile_sensor_data
         )
 
         self.velocity: Twist = Twist()
@@ -36,7 +44,9 @@ class AutopilotTransformNode(Node):
         self.heading: float = 0.0
         self.odometry = Odometry()
         self.desired_rudder_angle: float = 0.0
-        self.vesc_control_data: VESCControlData = VESCControlData()
+        self.propeller_vesc_control_data: VESCControlData = VESCControlData()
+        self.left_vesc_control_data: VESCControlData = VESCControlData()
+        self.right_vesc_control_data: VESCControlData = VESCControlData()
         self.joint_state: JointState = JointState()
     
 
@@ -48,9 +58,17 @@ class AutopilotTransformNode(Node):
         """A callback function to get the desired rudder angle of the boat."""
         self.desired_rudder_angle = np.deg2rad(float(desired_rudder_angle.data))
     
-    def vesc_control_data_callback(self, vesc_control_data: VESCControlData) -> None:
-        """A callback function to get the current propeller motor control the autopilot is attempting to output."""
-        self.vesc_control_data = vesc_control_data
+    def propeller_vesc_control_data_callback(self, vesc_control_data: VESCControlData) -> None:
+        """Store the single propeller command from the standard motorboat autopilot."""
+        self.propeller_vesc_control_data = vesc_control_data
+
+    def left_vesc_control_data_callback(self, vesc_control_data: VESCControlData) -> None:
+        """Store the port propeller command from the differential-thrust autopilot."""
+        self.left_vesc_control_data = vesc_control_data
+
+    def right_vesc_control_data_callback(self, vesc_control_data: VESCControlData) -> None:
+        """Store the starboard propeller command from the differential-thrust autopilot."""
+        self.right_vesc_control_data = vesc_control_data
     
     def joint_state_callback(self, joint_state: JointState) -> None:
         """A callback function to get the current joint states of the boat."""
@@ -93,7 +111,9 @@ class AutopilotTransformNode(Node):
         
         self.heading_publisher.publish(Float32(data=yaw))
         self.desired_rudder_angle_publisher.publish(Float64(data=self.desired_rudder_angle))
-        self.propeller_rpm_publisher.publish(Float64(data=self.vesc_control_data.control_value))
+        self.propeller_rpm_publisher.publish(Float64(data=float(self.propeller_vesc_control_data.control_value)))
+        self.port_propeller_rpm_publisher.publish(Float64(data=float(self.left_vesc_control_data.control_value)))
+        self.starboard_propeller_rpm_publisher.publish(Float64(data=float(self.right_vesc_control_data.control_value)))
         self.current_rudder_angle_publisher.publish(Float32(data=current_rudder_angle))
 
 
