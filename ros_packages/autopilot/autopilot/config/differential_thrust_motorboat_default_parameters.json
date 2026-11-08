@@ -7,17 +7,13 @@
         "default": 5.0,
         "description": "Distance in meters at which a waypoint is considered reached."
     },
-    "min_rudder_angle": {
+    "min_turn_force": {
         "default": -25.0,
-        "description": "Minimum heading-controller correction, in degrees."
+        "description": "Minimum heading-controller correction used to steer with differential thrust, in degrees."
     },
-    "max_rudder_angle": {
+    "max_turn_force": {
         "default": 25.0,
-        "description": "Maximum heading-controller correction, in degrees."
-    },
-    "rudder_hard_over": {
-        "default": 25.0,
-        "description": "Legacy rudder parameter retained for compatibility with the motorboat configuration UI."
+        "description": "Maximum heading-controller correction used to steer with differential thrust, in degrees."
     },
     "heading_p_gain": {
         "default": 0.3,

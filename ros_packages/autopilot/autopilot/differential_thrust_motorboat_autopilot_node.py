@@ -9,7 +9,7 @@ import rclpy
 from geometry_msgs.msg import Twist
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import JointState, NavSatFix
+from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Bool, Float32, Int32, String
 
 from autoboat_msgs.msg import RCData, VESCControlData, WaypointList
@@ -79,12 +79,6 @@ class DifferentialThrustMotorboatAutopilotNode(Node):
         self.create_subscription(String, "/autopilot_parameters", self.autopilot_parameters_callback, 10)
         self.create_subscription(WaypointList, "/waypoints_list", self.waypoints_list_callback, 10)
         self.create_subscription(NavSatFix, "/position", self.position_callback, qos_profile_sensor_data)
-        self.create_subscription(
-            JointState,
-            "/world/motorboat_model/model/my_ship/joint_state",
-            self.joint_state_callback,
-            qos_profile_sensor_data,
-        )
         self.create_subscription(Twist, "/velocity", self.velocity_callback, qos_profile_sensor_data)
         self.create_subscription(Float32, "/heading", self.heading_callback, qos_profile_sensor_data)
         self.create_subscription(RCData, "/rc_data", self.rc_data_callback, qos_profile_sensor_data)
@@ -121,8 +115,6 @@ class DifferentialThrustMotorboatAutopilotNode(Node):
         self.speed = 0.0
         self.heading = 0.0
         self.rudder_angle = 0.0
-        self.left_motor_actual_rpm: float | None = None
-        self.right_motor_actual_rpm: float | None = None
 
         self.motorboat_control_mode = MotorboatControlModes.WAYPOINT_MISSION
         self.propeller_motor_control_mode = PropellerMotorControlMode.RPM
@@ -306,15 +298,6 @@ class DifferentialThrustMotorboatAutopilotNode(Node):
         self.heading = heading.data
         self.last_heading_received_time = time.time()
 
-    def joint_state_callback(self, joint_state: JointState) -> None:
-        """Update measured motor speeds from Gazebo propeller joint velocities."""
-        for joint_name, angular_velocity in zip(joint_state.name, joint_state.velocity, strict=True):
-            actual_rpm = float(angular_velocity * 60.0 / (2.0 * np.pi))
-            if joint_name == "port_propeller_joint":
-                self.left_motor_actual_rpm = actual_rpm
-            elif joint_name == "starboard_propeller_joint":
-                self.right_motor_actual_rpm = actual_rpm
-
     def emergency_stop_callback(self, should_emergency_stop: Bool) -> None:
         """
         Track whether an emergency stop is active.
@@ -423,19 +406,6 @@ class DifferentialThrustMotorboatAutopilotNode(Node):
         else:
             left_control = VESCControlData(control_type_for_vesc="rpm", control_value=0.0)
             right_control = VESCControlData(control_type_for_vesc="rpm", control_value=0.0)
-
-        if (
-            left_control.control_type_for_vesc == "rpm"
-            and right_control.control_type_for_vesc == "rpm"
-        ):
-            left_control.control_value, right_control.control_value = (
-                self.differential_thrust_motorboat_autopilot.apply_motor_rpm_feedback(
-                    left_control.control_value,
-                    right_control.control_value,
-                    self.left_motor_actual_rpm,
-                    self.right_motor_actual_rpm,
-                )
-            )
 
         # Publish the actual motor commands to the left and right thrusters.
         self.left_propeller_motor_control_struct_publisher.publish(left_control)

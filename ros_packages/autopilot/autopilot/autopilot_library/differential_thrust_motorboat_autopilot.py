@@ -42,7 +42,23 @@ class DifferentialThrustMotorboatAutopilot:
         self.waypoints = waypoints_list
         self.current_waypoint_index = 0
 
-    def _heading_correction(self, heading: float, desired_heading: float) -> float:
+    def get_optimal_turn_force(self, heading: float, desired_heading: float) -> float:
+        """
+        Compute the PID heading correction used to steer with differential thrust.
+
+        Parameters
+        ----------
+        heading
+            The current heading of the boat measured counter-clockwise from true east.
+        desired_heading
+            The current desired heading of the boat measured counter-clockwise from true east.
+
+        Returns
+        -------
+        `float`
+            The heading correction in degrees.
+        """
+
         self.heading_pid_controller.set_gains(
             k_p=self.parameters["heading_p_gain"],
             k_i=self.parameters["heading_i_gain"],
@@ -50,28 +66,36 @@ class DifferentialThrustMotorboatAutopilot:
             n=self.parameters["heading_n_gain"],
             sample_period=1 / self.parameters["autopilot_refresh_rate"],
         )
-        correction = self.heading_pid_controller(get_distance_between_angles(heading, desired_heading))
+
+        error = get_distance_between_angles(desired_heading, heading)
+        turn_force = self.heading_pid_controller(error)
         return float(
             np.clip(
-                correction,
-                self.parameters["min_rudder_angle"],
-                self.parameters["max_rudder_angle"],
+                -turn_force,
+                self.parameters["min_turn_force"],
+                self.parameters["max_turn_force"],
             )
         )
 
-    def _mix_motor_commands(
-        self, throttle: float, steering: float, control_type: str
-    ) -> tuple[float, float]:
+    def _compute_differential_motor_commands(
+        self, throttle: float, steering: float, control_type: str) -> tuple[float, float]:
         """Mix forward/reverse throttle and steering into port and starboard commands."""
+
         left = throttle + steering
         right = throttle - steering
-        max_command = self.parameters["max_rpm"] if control_type == "rpm" else 100.0
+
+        if control_type == "rpm":
+            max_command = self.parameters["max_rpm"]
+        else:
+            max_command = 100.0
         return (
             float(np.clip(left, -max_command, max_command)),
             float(np.clip(right, -max_command, max_command)),
         )
 
-    def _get_throttle(self, joystick_left_y: float, control_mode: PropellerMotorControlMode) -> tuple[str, float]:
+    def _get_throttle_control(
+        self, joystick_left_y: float, control_mode: PropellerMotorControlMode
+    ) -> tuple[str, float]:
         if control_mode == PropellerMotorControlMode.RPM:
             return "rpm", self.parameters["max_rpm"] * joystick_left_y / 100.0
         if control_mode == PropellerMotorControlMode.DUTY_CYCLE:
@@ -87,10 +111,10 @@ class DifferentialThrustMotorboatAutopilot:
         propeller_motor_control_mode: PropellerMotorControlMode,
     ) -> tuple[str, float, float]:
         """Map RC throttle and steering inputs into two motor commands."""
-        control_type, throttle = self._get_throttle(joystick_left_y, propeller_motor_control_mode)
+        control_type, throttle = self._get_throttle_control(joystick_left_y, propeller_motor_control_mode)
         steering_scale = self.parameters["max_rpm"] if control_type == "rpm" else 100.0
         steering = -steering_scale * joystick_right_x / 100.0
-        left, right = self._mix_motor_commands(throttle, steering, control_type)
+        left, right = self._compute_differential_motor_commands(throttle, steering, control_type)
         return control_type, left, right
 
     def run_heading_hold_step(
@@ -101,18 +125,20 @@ class DifferentialThrustMotorboatAutopilot:
         propeller_motor_control_mode: PropellerMotorControlMode,
     ) -> tuple[str, float, float]:
         """Hold a target heading while taking throttle from the RC transmitter."""
-        control_type, throttle = self._get_throttle(joystick_left_y, propeller_motor_control_mode)
-        max_angle = max(abs(self.parameters["min_rudder_angle"]), abs(self.parameters["max_rudder_angle"]))
+        control_type, throttle = self._get_throttle_control(joystick_left_y, propeller_motor_control_mode)
+        max_correction = max(
+            abs(self.parameters["min_turn_force"]),
+            abs(self.parameters["max_turn_force"]),
+        )
         max_command = self.parameters["max_rpm"] if control_type == "rpm" else 100.0
-        steering_angle = self._heading_correction(heading, desired_heading)
-        steering = max_command * steering_angle / max_angle if max_angle else 0.0
-        left, right = self._mix_motor_commands(throttle, steering, control_type)
+        heading_correction = self.get_optimal_turn_force(heading, desired_heading)
+        steering = max_command * heading_correction / max_correction if max_correction else 0.0
+        left, right = self._compute_differential_motor_commands(throttle, steering, control_type)
         return control_type, left, right
 
-    def run_waypoint_mission_step(
-        self, current_position: Position, heading: float
-    ) -> tuple[float, float, float | None]:
+    def run_waypoint_mission_step(self, current_position: Position, heading: float) -> tuple[float, float, float | None]:
         """Return port RPM, starboard RPM, and the steering correction for the active waypoint."""
+
         if not self.waypoints:
             return 0.0, 0.0, None
 
@@ -126,22 +152,22 @@ class DifferentialThrustMotorboatAutopilot:
             return 0.0, 0.0, 0.0
 
         desired_heading = get_bearing(current_position, target)
-        steering_angle = self._heading_correction(heading, desired_heading)
-        max_angle = max(abs(self.parameters["min_rudder_angle"]), abs(self.parameters["max_rudder_angle"]))
-        max_rpm = self.parameters["max_rpm"]
-        steering_rpm = max_rpm * steering_angle / max_angle if max_angle else 0.0
-        rpm = self.parameters["min_rpm"] + (max_rpm - self.parameters["min_rpm"]) * np.exp(
-            -self.parameters["rpm_decay_rate"] * abs(steering_angle)
+        heading_correction = self.get_optimal_turn_force(heading, desired_heading)
+        max_correction = max(
+            abs(self.parameters["min_turn_force"]),
+            abs(self.parameters["max_turn_force"]),
         )
-        left, right = self._mix_motor_commands(float(rpm), steering_rpm, "rpm")
-        return left, right, steering_angle
+        max_rpm = self.parameters["max_rpm"]
 
-    def apply_motor_rpm_feedback(
-        self,
-        desired_left_rpm: float,
-        desired_right_rpm: float,
-        _actual_left_rpm: float | None,
-        _actual_right_rpm: float | None,
-    ) -> tuple[float, float]:
-        """Pass setpoints through; the Gazebo thruster plugin tracks the requested RPM."""
-        return desired_left_rpm, desired_right_rpm
+        if max_correction:
+            steering_rpm = max_rpm * heading_correction / max_correction
+        else:
+            steering_rpm = 0.0
+
+        min_rpm = self.parameters["min_rpm"]
+        rpm_decay_rate = self.parameters["rpm_decay_rate"]
+
+        rpm = + (max_rpm - min_rpm) * np.exp(-rpm_decay_rate * abs(heading_correction))
+        left, right = self._compute_differential_motor_commands(float(rpm), steering_rpm, "rpm")
+
+        return left, right, heading_correction
