@@ -41,6 +41,12 @@ void Systems::initialize_hal()
   HAL::init_rudderEncoder(HAL::devices::rudderEncoder);
   HAL::init_winchEncoder(HAL::devices::winchEncoder);
   HAL::init_rudder_stepper(HAL::devices::rudderStepperMotorDriver);
+  
+  //REMINDER IF THIS COMMITTED. FIX STEP LOOP BY UNDOING HARD CODED VALUES
+  //MOVE LED PIN TEST INTO HAL
+  gpio_init(LED_PIN);
+  gpio_set_dir(LED_PIN, GPIO_OUT);
+
 }
 
 void Systems::cleanup()
@@ -59,6 +65,7 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
 {
   (void)timer;
   (void)last_call_time;
+
 
   // -----------------------------------------------------
   // RUDDER CLOSED LOOP CONTROL
@@ -91,9 +98,9 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
   // -----------------------------------------------------
   // EXECUTE STEPPING (only rudder, no winch)
   // -----------------------------------------------------
-  for (int i = 0; i < number_of_steps_rudder; i++)
+  for (int i = 0; i < 100; i++)
   {
-    if (rudder_step_enabled)
+    if (true)
       HAL::devices::rudderStepperMotorDriver->drv8711_step();
     sleep_us(1000);
   }
@@ -112,4 +119,6 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
 
   rudder_debug::current_register_value_msg.data = HAL::debug(HAL::devices::rudderStepperMotorDriver);
   rcl_publish(&rudder_debug::rudder_debug_publisher, &rudder_debug::current_register_value_msg, NULL);
+
+  gpio_put(LED_PIN, 1); 
 }

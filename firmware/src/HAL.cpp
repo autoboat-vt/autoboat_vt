@@ -52,6 +52,8 @@ void HAL::init_winchEncoder(amt22*& winchEncoder) {
 
 void HAL::init_rudder_stepper(drv8711*& rudderStepperMotorDriver) {
     rudderStepperMotorDriver = new drv8711(SPI_PORT, RUDDER_MOTOR_CS_PIN, RUDDER_MOTOR_SLEEP_PIN, AutoMixed, RUDDER_MICROSTEP, MAX_RUDDER_CURRENT);
+    // Set TOFF once per driver initialization; keep indexer mode and reserved bits clear.
+    rudderStepperMotorDriver->drv8711_writeReg(OFF_REG_ADDRESS, 0x030);
 }
 
 void HAL::init_winch_stepper(drv8711*& winchStepperMotorDriver) {
@@ -59,15 +61,6 @@ void HAL::init_winch_stepper(drv8711*& winchStepperMotorDriver) {
 }
 
 u_int16_t HAL::debug(drv8711*& rudderStepperMotorDriver){
-    rudderStepperMotorDriver->drv8711_writeReg(OFF_REG_ADDRESS, 0xAAA);
-    // u_int16_t Control_REG_output = rudderStepperMotorDriver->drv8711_readReg(CTRL_REG_ADDRESS);
-    // u_int16_t TORQUE_REG_output = drv8711_readReg(rudderStepperMotorDriver, TORQUE_REG_ADDRESS);
-    u_int16_t OFF_REG_output = rudderStepperMotorDriver->drv8711_readReg(OFF_REG_ADDRESS);
-    // u_int16_t BLANK_REG_output = drv8711_readReg(rudderStepperMotorDriver, BLANK_REG_ADDRESS);
-    // u_int16_t DECAY_REG_output = drv8711_readReg(rudderStepperMotorDriver, DECAY_REG_ADDRESS);
-    // u_int16_t STALL_REG_output = drv8711_readReg(rudderStepperMotorDriver, STALL_REG_ADDRESS);
-    // u_int16_t DRIVE_REG_output = drv8711_readReg(rudderStepperMotorDriver, DRIVE_REG_ADDRESS);
-    // u_int16_t STATUS_REG_output = rudderStepperMotorDriver->drv8711_readReg(STATUS_REG_ADDRESS);
-
-    return OFF_REG_output;
+    // Read each loop without repeatedly overwriting the test setting.
+    return rudderStepperMotorDriver->drv8711_readReg(OFF_REG_ADDRESS);
 }
