@@ -107,13 +107,12 @@ class PropellerMotorControlMode(Enum):
 
 class TelemetryNodeModes(Enum):
     """
-    An enum containing whether or not we are relaying the telemety data of a sailboat
-    or of a motorboat. The things that we need to send to the telemetry server changes
-    based on whether or not we are using a sailboat or motorboat.
+    Select the telemetry payload for a sailboat, motorboat, or differential-thrust motorboat.
     """
 
     SAILBOAT = 0
     MOTORBOAT = 1
+    DIFFERENTIAL_THRUST_MOTORBOAT = 2
 
 
 class TelemetryStatus(Enum):

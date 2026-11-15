@@ -85,6 +85,7 @@ class StrictMatchEnums:
         FULL_RC = 1
         HOLD_HEADING = 2
         WAYPOINT_MISSION = 3
+        EMERGENCY_STOP = 4
 
 
 class TelemetryStatus(StrEnum):

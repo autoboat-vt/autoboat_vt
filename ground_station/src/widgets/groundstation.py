@@ -1243,6 +1243,22 @@ class GroundStationWidget(QWidget):
 
         def motorboat_mode(boat_data: dict[str, Any]) -> str:
             self.boat_data["boat_control_mode"] = misc.resolve_enum_name(MotorboatControlModes, boat_data["boat_control_mode"])
+            is_differential_thrust = (
+                "port_propeller_rpm" in boat_data and "starboard_propeller_rpm" in boat_data
+            )
+            differential_rpm_text = (
+                f"Port Propeller RPM: {fix_formatting(boat_data.get('port_propeller_rpm'))} RPM\n"
+                f"Starboard Propeller RPM: {fix_formatting(boat_data.get('starboard_propeller_rpm'))} RPM\n"
+                if is_differential_thrust
+                else ""
+            )
+            rudder_angle_text = ""
+            if not is_differential_thrust:
+                rudder_angle_text = (
+                    f"Desired Rudder Angle: {fix_formatting(self.boat_data.get('desired_rudder_angle'))}°\n"
+                    f"Current Rudder Angle: {fix_formatting(self.boat_data.get('current_rudder_angle'))}°\n"
+                    f"Rudder Angle Error: {fix_formatting(self.boat_data.get('rudder_angle_error'))}°\n"
+                )
 
             return (
                 "Position: "
@@ -1256,9 +1272,9 @@ class GroundStationWidget(QWidget):
                 f"Speed: {fix_formatting(self.boat_data.get('speed'))} m/s\n"
                 f"Distance To Next WP: {fix_formatting(self.boat_data.get('distance_to_next_waypoint'))} meters\n"
                 f"Heading: {fix_formatting(self.boat_data.get('heading', self.fake_heading))}°\n"
-                f"Desired Rudder Angle: {fix_formatting(self.boat_data.get('desired_rudder_angle'))}°\n"
-                f"Current Rudder Angle: {fix_formatting(self.boat_data.get('current_rudder_angle'))}°\n"
-                f"Rudder Angle Error: {fix_formatting(self.boat_data.get('rudder_angle_error'))}°\n"
+                f"Desired Heading: {fix_formatting(self.boat_data.get('desired_heading'))}°\n"
+                f"{rudder_angle_text}"
+                f"{differential_rpm_text}"
                 f"Motor RPM: {fix_formatting(self.boat_data.get('rpm'))} RPM\n"
                 f"Duty Cycle: {fix_formatting(self.boat_data.get('duty_cycle'))}%\n"
                 f"Amp Hours Charged: {fix_formatting(self.boat_data.get('amp_hours_charged'))} Ah\n"

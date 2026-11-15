@@ -8,6 +8,7 @@ from typing_extensions import override
 # used to specify what is available to import from this file
 __all__ = [
     "BoatStatusPayload",
+    "DifferentialThrustMotorboatStatusPayload",
     "MotorboatStatusPayload",
     "SailboatStatusPayload",
 ]
@@ -177,3 +178,24 @@ class MotorboatStatusPayload(BoatStatusPayload):
         parent_mapping = BoatStatusPayload.construct_mapping()
         child_mapping = [[field_name, field_type.__name__] for field_name, field_type in cls._fields_]
         return parent_mapping + child_mapping
+
+
+class DifferentialThrustMotorboatStatusPayload(MotorboatStatusPayload):
+    """Motorboat telemetry extended with measured RPM for each propeller."""
+
+    _fields_: ClassVar[tuple[tuple[str, ctypes._SimpleCData], ...]] = (
+        ("port_propeller_rpm", ctypes.c_float),
+        ("starboard_propeller_rpm", ctypes.c_float),
+    )
+    _field_names: ClassVar[tuple[str, ...]] = (
+        *BoatStatusPayload._field_names,
+        *MotorboatStatusPayload._field_names,
+        *(name for name, _ in _fields_),
+    )
+
+    @classmethod
+    @override
+    def construct_mapping(cls) -> list[list[str]]:
+        return MotorboatStatusPayload.construct_mapping() + [
+            [field_name, field_type.__name__] for field_name, field_type in cls._fields_
+        ]
