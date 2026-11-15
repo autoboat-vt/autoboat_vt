@@ -7,10 +7,15 @@
 #include <rcl/error_handling.h>
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
+
 #include <std_msgs/msg/int32.h>
 #include <std_msgs/msg/bool.h>
 #include <std_msgs/msg/float32.h>
 #include <std_msgs/msg/string.h>
+
+#include <geometry_msgs/msg/quaternion.h>
+#include <geometry_msgs/msg/vector3.h>
+
 #include <std_srvs/srv/empty.h>
 #include <rmw_microros/rmw_microros.h>
 #include <rcl_interfaces/msg/log.h>

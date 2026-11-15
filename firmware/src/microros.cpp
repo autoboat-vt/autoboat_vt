@@ -216,6 +216,35 @@ void rudder_debug::create_rudder_debug_publisher(rcl_node_t *microros_node){
         rudder_debug::debug_publisher_topic.c_str());
 }
 
+//------------------MAGNETOMETER-DATA---------------------
+void magnetometer_data::create_compass_quaternion_publisher(rcl_node_t *microros_node)
+{
+    rclc_publisher_init_default(
+        &magnetometer_data::compass_quaternion_publisher,
+        microros_node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Quaternion),
+        magnetometer_data::quaternion_topic.c_str());
+}
+
+void magnetometer_data::create_compass_linear_acceleration_publisher(rcl_node_t *microros_node)
+{
+    rclc_publisher_init_default(
+        &magnetometer_data::compass_linear_acceleration_publisher,
+        microros_node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Vector3),
+        magnetometer_data::linear_acceleration_topic.c_str());
+}
+
+void magnetometer_data::create_compass_angular_acceleration_publisher(rcl_node_t *microros_node)
+{
+    rclc_publisher_init_default(
+        &magnetometer_data::compass_angular_acceleration_publisher,
+        microros_node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Vector3),
+        magnetometer_data::angular_acceleration_topic.c_str());
+}
+
+
 //----------------MICROROS-CLASS----------------------------------
 Microros::Microros(){
 
@@ -279,6 +308,8 @@ void Microros::initialize_theseus_peripherals()
     // Heading publisher
     current_heading::create_heading_publisher(&microros_node);
 
-
-    
+    // Magnetometer publishers
+    magnetometer_data::create_compass_quaternion_publisher(&microros_node);
+    magnetometer_data::create_compass_linear_acceleration_publisher(&microros_node);
+    magnetometer_data::create_compass_angular_acceleration_publisher(&microros_node);
 }

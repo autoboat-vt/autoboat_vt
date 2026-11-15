@@ -46,27 +46,27 @@ void HAL::init_rudderEncoder(amt22*& rudderEncoder) {
     rudderEncoder = new amt22(RUDDER_ENCODER_CS_PIN, SPI_PORT);
 }
 
+void HAL::init_magnetometer() {
+    // CMPS14 default 7-bit I2C address.
+    devices::compass = new cmps14(I2C_PORT, 0x60);
+}
+
 void HAL::init_winchEncoder(amt22*& winchEncoder) {
     winchEncoder = new amt22(WINCH_ENCODER_CS_PIN, SPI_PORT);
 }
 
 void HAL::init_rudder_stepper(drv8711*& rudderStepperMotorDriver) {
     rudderStepperMotorDriver = new drv8711(SPI_PORT, RUDDER_MOTOR_CS_PIN, RUDDER_MOTOR_SLEEP_PIN, AutoMixed, RUDDER_MICROSTEP, MAX_RUDDER_CURRENT);
+    // Set TOFF once per driver initialization; keep indexer mode and reserved bits clear.
+    rudderStepperMotorDriver->drv8711_writeReg(OFF_REG_ADDRESS, 0x030);
 }
 
 void HAL::init_winch_stepper(drv8711*& winchStepperMotorDriver) {
     winchStepperMotorDriver = new drv8711(SPI_PORT, WINCH_MOTOR_CS_PIN, WINCH_MOTOR_SLEEP_PIN, AutoMixed, WINCH_MICROSTEP, MAX_WINCH_CURRENT);
 }
 
-u_int16_t HAL::debug(drv8711* rudderStepperMotorDriver){
-    u_int16_t Control_REG_output = rudderStepperMotorDriver->drv8711_readReg(CTRL_REG_ADDRESS);
-    // u_int16_t TORQUE_REG_output = drv8711_readReg(rudderStepperMotorDriver, TORQUE_REG_ADDRESS);
-    // u_int16_t OFF_REG_output = drv8711_readReg(rudderStepperMotorDriver, OFF_REG_ADDRESS);
-    // u_int16_t BLANK_REG_output = drv8711_readReg(rudderStepperMotorDriver, BLANK_REG_ADDRESS);
-    // u_int16_t DECAY_REG_output = drv8711_readReg(rudderStepperMotorDriver, DECAY_REG_ADDRESS);
-    // u_int16_t STALL_REG_output = drv8711_readReg(rudderStepperMotorDriver, STALL_REG_ADDRESS);
-    // u_int16_t DRIVE_REG_output = drv8711_readReg(rudderStepperMotorDriver, DRIVE_REG_ADDRESS);
-    // u_int16_t STATUS_REG_output = drv8711_readReg(rudderStepperMotorDriver, STATUS_REG_ADDRESS);
-
-    return Control_REG_output;
+u_int16_t HAL::debug(drv8711*& rudderStepperMotorDriver){
+    // Read each loop without repeatedly overwriting the test setting.
+    rudderStepperMotorDriver->drv8711_writeReg(OFF_REG_ADDRESS, 0x030);
+    return rudderStepperMotorDriver->drv8711_readReg(OFF_REG_ADDRESS);
 }

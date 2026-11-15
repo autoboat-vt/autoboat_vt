@@ -142,6 +142,7 @@ struct current_sail
     static void add_sail_angle_to_executor(rclc_executor_t *executor);
 };
 
+//decide if i want to absorb this into magnetometer data
 struct current_heading
 {
     inline static rcl_publisher_t compass_angle_publisher;
@@ -149,6 +150,26 @@ struct current_heading
     inline static std_msgs__msg__Float32 heading_msg; // for publishing
 
     static void create_heading_publisher(rcl_node_t *microros_node);
+};
+
+//This good (code structure not implementation)
+struct magnetometer_data
+{
+    inline static rcl_publisher_t compass_quaternion_publisher;
+    inline static rcl_publisher_t compass_linear_acceleration_publisher;
+    inline static rcl_publisher_t compass_angular_acceleration_publisher;
+
+    inline static geometry_msgs__msg__Quaternion quaternion_msg;
+    inline static geometry_msgs__msg__Vector3 linear_acceleration_msg;
+    inline static geometry_msgs__msg__Vector3 angular_acceleration_msg;
+
+    inline static string quaternion_topic = "/compass_quaternion";
+    inline static string linear_acceleration_topic = "/compass_linear_acceleration";
+    inline static string angular_acceleration_topic = "/compass_angular_acceleration";
+
+    static void create_compass_quaternion_publisher(rcl_node_t *microros_node);
+    static void create_compass_linear_acceleration_publisher(rcl_node_t *microros_node);
+    static void create_compass_angular_acceleration_publisher(rcl_node_t *microros_node);
 };
 
 class Microros

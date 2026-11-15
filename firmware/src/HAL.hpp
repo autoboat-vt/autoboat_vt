@@ -9,6 +9,7 @@
 #include "amt22_encoder_library.hpp"
 #include "drv8711_stepper_motor_driver_library.hpp"
 #include "i2c_device.hpp"
+#include "cmps14_compass.hpp"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -41,6 +42,7 @@ namespace HAL
 //Device struct (insert helpful comment)
 struct devices
 {
+    static inline cmps14* compass;
     //this is a comment
     static inline amt22* winchEncoder;
     static inline amt22* rudderEncoder; 
@@ -67,7 +69,7 @@ void init_pump();
 void init_propeller();
 
 // debug
-u_int16_t debug(drv8711* rudderStepperMotorDriver);
+u_int16_t debug(drv8711*& rudderStepperMotorDriver);
 }  // namespace HAL
 
 #endif

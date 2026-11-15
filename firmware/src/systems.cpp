@@ -34,13 +34,20 @@ void Systems::initialize_hal()
 {
   // write boat specific intialization later
   HAL::init_i2c();
+  HAL::init_magnetometer();
   HAL::init_spi();
   gpio_init(RUDDER_MOTOR_CS_PIN);
   gpio_set_dir(RUDDER_MOTOR_CS_PIN, GPIO_OUT);
   gpio_pull_down(RUDDER_MOTOR_CS_PIN);
-  HAL::init_rudderEncoder(HAL::devices::winchEncoder);
-  HAL::init_winchEncoder(HAL::devices::rudderEncoder);
+  HAL::init_rudderEncoder(HAL::devices::rudderEncoder);
+  HAL::init_winchEncoder(HAL::devices::winchEncoder);
   HAL::init_rudder_stepper(HAL::devices::rudderStepperMotorDriver);
+  
+  //REMINDER IF THIS COMMITTED. FIX STEP LOOP BY UNDOING HARD CODED VALUES
+  //MOVE LED PIN TEST INTO HAL
+  gpio_init(LED_PIN);
+  gpio_set_dir(LED_PIN, GPIO_OUT);
+
 }
 
 void Systems::cleanup()
@@ -59,6 +66,7 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
 {
   (void)timer;
   (void)last_call_time;
+
 
   // -----------------------------------------------------
   // RUDDER CLOSED LOOP CONTROL
@@ -91,10 +99,10 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
   // -----------------------------------------------------
   // EXECUTE STEPPING (only rudder, no winch)
   // -----------------------------------------------------
-  for (int i = 0; i < number_of_steps_rudder; i++)
+  for (int i = 0; i < 100; i++)
   {
-    if (rudder_step_enabled)
-      HAL::devices::rudderStepperMotorDriver->drv8711_step();
+    if (true)
+      // HAL::devices::rudderStepperMotorDriver->drv8711_step();
     sleep_us(1000);
   }
 
@@ -109,4 +117,24 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
 
   current_heading::heading_msg.data = rudder_error; //fmodf((-compass.getBearing() / 10.0f + COMPASS_OFFSET + 360.0f), 360.0f);
   rcl_publish(&current_heading::compass_angle_publisher, &current_heading::heading_msg, NULL);
+
+  rudder_debug::current_register_value_msg.data = HAL::debug(HAL::devices::rudderStepperMotorDriver);
+  rcl_publish(&rudder_debug::rudder_debug_publisher, &rudder_debug::current_register_value_msg, NULL);
+
+  // Publish orientation using the compass's native roll, pitch, and bearing axes.
+  const int16_t bearing = HAL::devices::compass->getBearing();
+  if (bearing >= 0)
+  {
+    //TODO: MOVE DEGREE TO RADIAN INTO MAG
+    constexpr double degrees_to_radians = 3.14159265358979323846 / 180.0;
+    const double roll = HAL::devices::compass->getRoll() * degrees_to_radians;
+    const double pitch = HAL::devices::compass->getPitch() * degrees_to_radians;
+    // Bearing is reported in tenths of a degree.
+    const double yaw = (bearing / 10.0) * degrees_to_radians;
+    magnetometer_data::quaternion_msg = toQuaternion(roll, pitch, yaw);
+    rcl_publish(&magnetometer_data::compass_quaternion_publisher,
+                &magnetometer_data::quaternion_msg, NULL);
+  }
+
+  gpio_put(LED_PIN, 1);
 }

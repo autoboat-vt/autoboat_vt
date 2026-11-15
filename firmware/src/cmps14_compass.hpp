@@ -1,6 +1,7 @@
 #ifndef CMPS14_I2CSENSOR_H  
 #define CMPS14_I2CSENSOR_H 
 
+#include "common_libraries.h"
 #include "hardware/i2c.h"
 #include <cmath>
 
@@ -27,6 +28,66 @@
 #define MAGNETOMETER_SCALE 1.0                   // No clue
 
 #include "i2c_device.hpp"
+
+using Vector3 = geometry_msgs__msg__Vector3;
+using Quaternion = geometry_msgs__msg__Quaternion;
+
+inline Vector3 operator+(const Vector3& lhs, const Vector3& rhs) {
+    return {lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
+}
+
+// Rotate a vector into the orientation's frame. Orientation must be unit length.
+inline Vector3 rotate(const Quaternion& orientation, const Vector3& vector) {
+    const double tx = 2.0 * (orientation.y * vector.z - orientation.z * vector.y);
+    const double ty = 2.0 * (orientation.z * vector.x - orientation.x * vector.z);
+    const double tz = 2.0 * (orientation.x * vector.y - orientation.y * vector.x);
+
+    return {
+        vector.x + orientation.w * tx + orientation.y * tz - orientation.z * ty,
+        vector.y + orientation.w * ty + orientation.z * tx - orientation.x * tz,
+        vector.z + orientation.w * tz + orientation.x * ty - orientation.y * tx
+    };
+}
+
+inline Quaternion toQuaternion(double roll, double pitch, double yaw) {
+    // Inputs in radians
+    double cr = cos(roll / 2);
+    double sr = sin(roll / 2);
+    double cp = cos(pitch / 2);
+    double sp = sin(pitch / 2);
+    double cy = cos(yaw / 2);
+    double sy = sin(yaw / 2);
+
+    return {
+        sr*cp*cy - cr*sp*sy,
+        cr*sp*cy + sr*cp*sy,
+        cr*cp*sy - sr*sp*cy,
+        cr*cp*cy + sr*sp*sy
+    };
+}
+
+inline Vector3 calculateLinearAcceleration(
+    const Vector3& accel,
+    const Quaternion& orientation
+) {
+    Vector3 gravityWorld{0.0, 0.0, -9.80665};
+
+    Vector3 accelWorld = rotate(orientation, accel);
+
+    return accelWorld + gravityWorld;
+}
+
+inline Vector3 calculateAngularAcceleration(
+    const Vector3& currentAngularVelocity,
+    const Vector3& previousAngularVelocity,
+    double dt
+) {
+    return {
+        (currentAngularVelocity.x - previousAngularVelocity.x) / dt,
+        (currentAngularVelocity.y - previousAngularVelocity.y) / dt,
+        (currentAngularVelocity.z - previousAngularVelocity.z) / dt
+    };
+}
 
 class cmps14 : public I2CDevice { 
     public:
