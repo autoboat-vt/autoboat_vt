@@ -34,6 +34,7 @@ void Systems::initialize_hal()
 {
   // write boat specific intialization later
   HAL::init_i2c();
+  HAL::init_magnetometer();
   HAL::init_spi();
   gpio_init(RUDDER_MOTOR_CS_PIN);
   gpio_set_dir(RUDDER_MOTOR_CS_PIN, GPIO_OUT);
@@ -101,7 +102,7 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
   for (int i = 0; i < 100; i++)
   {
     if (true)
-      HAL::devices::rudderStepperMotorDriver->drv8711_step();
+      // HAL::devices::rudderStepperMotorDriver->drv8711_step();
     sleep_us(1000);
   }
 
@@ -120,5 +121,20 @@ void Systems::application_loop(rcl_timer_t* timer, int64_t last_call_time)
   rudder_debug::current_register_value_msg.data = HAL::debug(HAL::devices::rudderStepperMotorDriver);
   rcl_publish(&rudder_debug::rudder_debug_publisher, &rudder_debug::current_register_value_msg, NULL);
 
-  gpio_put(LED_PIN, 1); 
+  // Publish orientation using the compass's native roll, pitch, and bearing axes.
+  const int16_t bearing = HAL::devices::compass->getBearing();
+  if (bearing >= 0)
+  {
+    //TODO: MOVE DEGREE TO RADIAN INTO MAG
+    constexpr double degrees_to_radians = 3.14159265358979323846 / 180.0;
+    const double roll = HAL::devices::compass->getRoll() * degrees_to_radians;
+    const double pitch = HAL::devices::compass->getPitch() * degrees_to_radians;
+    // Bearing is reported in tenths of a degree.
+    const double yaw = (bearing / 10.0) * degrees_to_radians;
+    magnetometer_data::quaternion_msg = toQuaternion(roll, pitch, yaw);
+    rcl_publish(&magnetometer_data::compass_quaternion_publisher,
+                &magnetometer_data::quaternion_msg, NULL);
+  }
+
+  gpio_put(LED_PIN, 1);
 }

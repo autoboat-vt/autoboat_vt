@@ -46,6 +46,11 @@ void HAL::init_rudderEncoder(amt22*& rudderEncoder) {
     rudderEncoder = new amt22(RUDDER_ENCODER_CS_PIN, SPI_PORT);
 }
 
+void HAL::init_magnetometer() {
+    // CMPS14 default 7-bit I2C address.
+    devices::compass = new cmps14(I2C_PORT, 0x60);
+}
+
 void HAL::init_winchEncoder(amt22*& winchEncoder) {
     winchEncoder = new amt22(WINCH_ENCODER_CS_PIN, SPI_PORT);
 }
@@ -62,5 +67,6 @@ void HAL::init_winch_stepper(drv8711*& winchStepperMotorDriver) {
 
 u_int16_t HAL::debug(drv8711*& rudderStepperMotorDriver){
     // Read each loop without repeatedly overwriting the test setting.
+    rudderStepperMotorDriver->drv8711_writeReg(OFF_REG_ADDRESS, 0x030);
     return rudderStepperMotorDriver->drv8711_readReg(OFF_REG_ADDRESS);
 }
