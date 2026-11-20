@@ -1,10 +1,8 @@
-# This is primarily used for configuration for formatting/ linting for .toml files 
+# This is primarily used for configuration for formatting/ linting for .toml files
 
 # If you would like to learn more about taplo.toml files please read: https://taplo.tamasfe.dev/configuration/file.html
 
-
 [formatting]
-
 # Align entries vertically within the same table.
 # Entries separated by headers, comments, or blank lines are not aligned.
 align_entries = true
@@ -53,9 +51,6 @@ reorder_keys = false
 
 # Alphabetically reorder array values not separated by blank lines.
 reorder_arrays = false
-
-# Alphabetically reorder inline table keys.
-reorder_inline_tables = false
 
 # Maximum number of consecutive blank lines allowed.
 allowed_blank_lines = 2
