@@ -1,0 +1,100 @@
+.measure-control {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.measure-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+}
+
+.measure-toggle:hover {
+    background: #f4f4f4;
+}
+
+.measure-toggle.active {
+    background: #ff9f1c;
+    border-color: #d98511;
+    color: #fff;
+}
+
+/*
+ * The readout is an overlay in the map container, centred along the bottom edge.
+ * The container is `position: relative`, so these offsets are relative to the
+ * whole map area rather than to any control.
+ */
+.measure-panel {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 200px;
+    padding: 10px 12px;
+    border-radius: 4px;
+    background: rgba(37, 37, 37, 0.92);
+    color: #f8f8f2;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+}
+
+.measure-panel[hidden] {
+    display: none;
+}
+
+/* Metric and nautical readings share one line, metric first. */
+.measure-values {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.measure-total {
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffd866;
+}
+
+.measure-secondary {
+    font-size: 13px;
+    color: #ab9df2;
+}
+
+.measure-meta {
+    font-size: 11px;
+    color: #cfcfcf;
+}
+
+.measure-hint {
+    margin-top: 4px;
+    font-size: 10px;
+    line-height: 1.35;
+    color: #9a9a9a;
+}
+
+.measure-clear {
+    margin-top: 6px;
+    padding: 2px 8px;
+    border: 1px solid #666;
+    border-radius: 3px;
+    background: transparent;
+    color: #f8f8f2;
+    font-size: 11px;
+    cursor: pointer;
+    align-self: flex-start;
+}
+
+.measure-clear:hover {
+    background: rgba(255, 255, 255, 0.12);
+}

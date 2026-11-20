@@ -6,6 +6,7 @@
         "serve": "vite --clearScreen false --logLevel error"
     },
     "dependencies": {
+        "@turf/distance": "^7.4.0",
         "leaflet": "latest",
         "leaflet-rotatedmarker": "latest"
     },

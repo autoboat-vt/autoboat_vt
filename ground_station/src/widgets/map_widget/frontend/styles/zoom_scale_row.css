@@ -1,0 +1,16 @@
+.zoom-scale-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+/* Leaflet stacks controls vertically and floats them inside a corner; inside the
+   row they are ordinary flex items, so undo the float and the corner margins. */
+.zoom-scale-row > .leaflet-control {
+    float: none;
+    margin: 0;
+}
+
+.zoom-scale-row > .leaflet-control-scale {
+    margin-bottom: 4px;
+}

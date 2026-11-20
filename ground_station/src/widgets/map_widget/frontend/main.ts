@@ -1,5 +1,4 @@
 import {
-    control,
     type Icon,
     icon,
     map as LeafletMap,
@@ -10,23 +9,28 @@ import {
 } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-rotatedmarker";
+import "./styles/lat_lon_grid.css";
+import "./styles/measure.css";
+import "./styles/zoom_scale_row.css";
 
 import { BathymetryManager } from "./bathymetry";
 import { BoatManager } from "./boat";
 import { BuoyManager } from "./buoys";
 import { KeybindHandler, type KeybindMap } from "./keybinds";
 import { LandBoundaryManager } from "./land_boundary";
+import { LatLonGridManager } from "./lat_lon_grid";
+import { MeasureManager } from "./measure";
 import { SVGManager } from "./svg";
 import { TrackManager } from "./track";
 import type { LatLngTuple } from "./types";
 import { WaypointManager } from "./waypoints";
+import { ZoomScaleRowControl } from "./zoom_scale_row";
 
 class MapInterface {
     // note that lower zoom levels are more zoomed out
     // and higher zoom levels are more zoomed in
     static readonly MIN_ZOOM = 3;
     static readonly MAX_ZOOM = 20;
-
     static readonly mapOptions: MapOptions = {
         center: [0, 0],
         zoom: 13,
@@ -38,14 +42,20 @@ class MapInterface {
             [90, 180]
         ],
         maxBoundsViscosity: 1.0,
-        attributionControl: true
+        attributionControl: true,
+
+        // the zoom buttons are added manually below, so they can be positioned
+        // in the bottom right corner above the attribution line
+        zoomControl: false
     };
+
     static readonly iconCache = new Map<string, Icon>();
     static readonly assetsUrl = `http://localhost:${import.meta.env.ASSET_SERVER_PORT ?? "8000"}`;
     static readonly waypointsUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/waypoints`;
     static readonly checkLandUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/check_land`;
     static readonly bathymetryUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/bathymetry`;
     static readonly landBoundaryUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/land_boundary`;
+
     lastFocusedTimestamp = 0;
     private waypointHistory: { type: "add" | "remove"; waypoint: LatLngTuple; color?: string }[] = [];
 
@@ -59,6 +69,8 @@ class MapInterface {
     readonly track_manager: TrackManager;
     readonly bathymetry_manager: BathymetryManager;
     readonly land_boundary_manager: LandBoundaryManager;
+    readonly measure_manager: MeasureManager;
+    readonly lat_lon_grid_manager: LatLonGridManager;
 
     static getMarkerIcon(color: string): Icon {
         const key = `marker-${color}`;
@@ -119,8 +131,15 @@ class MapInterface {
         this.bathymetry_manager = new BathymetryManager(this.map, MapInterface.bathymetryUrl);
         this.land_boundary_manager = new LandBoundaryManager(this.map, MapInterface.landBoundaryUrl);
 
-        // add zoom control buttons to the map
-        control.scale().addTo(this.map);
+        // Every control lives in the bottom right corner, so the left edge stays
+        // free for the latitude labels. The scale bar and zoom buttons are added
+        // together by ZoomScaleRowControl so they sit side by side (scale on the
+        // left) instead of stacking, and the measure tool is registered last so
+        // it renders on top of them.
+        new ZoomScaleRowControl().addTo(this.map);
+
+        this.measure_manager = new MeasureManager(this.map);
+        this.lat_lon_grid_manager = new LatLonGridManager(this.map);
 
         this.map.createPane("bathyPane");
         const bathyPane = this.map.getPane("bathyPane");
@@ -133,6 +152,7 @@ class MapInterface {
         this.keybind_handler.register("zoom_in", () => this.map.zoomIn());
         this.keybind_handler.register("zoom_out", () => this.map.zoomOut());
         this.keybind_handler.register("undo_waypoint", () => this.undo_last_waypoint());
+        this.keybind_handler.register("toggle_measure", () => this.measure_manager.toggle());
 
         let moveTimeout: ReturnType<typeof setTimeout> | undefined;
         this.map.on("move", () => {
@@ -144,11 +164,19 @@ class MapInterface {
         });
 
         this.map.on("click", (event: LeafletMouseEvent) => {
+            if (this.measure_manager.isMeasuring()) {
+                return;
+            }
+
             void this.handleMapClick(event.latlng.lat, event.latlng.lng);
         });
 
         // contextmenu is right click
         this.map.on("contextmenu", (event: LeafletMouseEvent) => {
+            if (this.measure_manager.isMeasuring()) {
+                return;
+            }
+
             const closestIndex = this.waypoint_manager.findClosestIndex(event.latlng.lat, event.latlng.lng);
 
             if (closestIndex !== -1) {
@@ -344,6 +372,18 @@ class MapInterface {
         void this.land_boundary_manager.setVisible(visible);
     }
 
+    toggle_measure(): void {
+        this.measure_manager.toggle();
+    }
+
+    clear_measure(): void {
+        this.measure_manager.clear();
+    }
+
+    set_latlon_grid_visible(visible: boolean): void {
+        this.lat_lon_grid_manager.setVisible(visible);
+    }
+
     remove_all_svgs(): void {
         this.svg_manager.removeAllSvgs();
     }
@@ -421,5 +461,10 @@ declare global {
 }
 
 window.map = map;
+
+// Lets the Python side know the map API is ready. MapBridge's load guard waits
+// for this event, so a call made before the module finished loading runs as
+// soon as the map exists instead of being dropped.
+document.dispatchEvent(new Event("mapLoaded"));
 
 export default map;

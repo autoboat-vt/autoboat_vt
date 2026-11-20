@@ -342,6 +342,12 @@ _map_features: dict[str, dict[str, str | bool]] = {
         "feedback_text": "Updated Ocean Boundary Config.",
         "status": False,
     },
+    "latlon_grid": {
+        "name": "Latitude/Longitude Grid",
+        "description": "Show latitude and longitude grid lines with edge labels that adapt to the zoom level.",
+        "feedback_text": "Updated Latitude/Longitude Grid Config.",
+        "status": True,
+    },
 }
 
 _data_logging_active: bool = False

@@ -17,6 +17,12 @@
         "scope": "map",
         "key": "Ctrl+Z"
     },
+    "toggle_measure": {
+        "name": "Toggle Measure Tool",
+        "description": "Measure distances on the map; left click adds a point, right click undoes, Esc finishes.",
+        "scope": "map",
+        "key": "m"
+    },
     "pull_waypoints": {
         "name": "Pull Waypoints from Server",
         "description": "Fetch waypoints from the telemetry server and add them to the map.",

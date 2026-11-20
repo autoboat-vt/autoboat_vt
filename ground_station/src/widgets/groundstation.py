@@ -361,6 +361,9 @@ class GroundStationWidget(QWidget):
         self._keybind_manager.bindings_changed.connect(self._on_keybinds_changed)
         # endregion keybinds
 
+        # restore any map features saved as enabled before the app was closed
+        self._apply_saved_map_features()
+
         # we need to "install" an event filter on the QWebEngineView's internal
         # Chromium render widget so we can intercept Ctrl+Z before it swallows it
         self.browser.installEventFilter(self)
@@ -404,6 +407,24 @@ class GroundStationWidget(QWidget):
 
         frontend_bindings = self._keybind_manager.to_frontend_dict()
         self.map_bridge.set_keybinds(frontend_bindings)
+
+    def _apply_saved_map_features(self) -> None:
+        """
+        Push the saved ``map_features`` state into the TS frontend at startup.
+
+        The Map Appearance Configuration dialog only calls
+        :meth:`on_map_feature_toggled` when a box is clicked, so without this a
+        feature saved as enabled would stay hidden after a restart. Each call is
+        queued by :class:`MapBridge` until the map finishes loading.
+        """
+
+        map_features = constants.SM.read_dict("map_features")
+        if not isinstance(map_features, dict):
+            return
+
+        for feature, info in map_features.items():
+            if isinstance(info, dict) and info.get("status") is True:
+                self.on_map_feature_toggled(feature, True)
 
     def _trigger_undo_waypoint(self) -> None:
         """Trigger the undo waypoint action in the TS frontend."""
@@ -895,6 +916,8 @@ class GroundStationWidget(QWidget):
             self.map_bridge.set_bathymetry_visible(enabled)
         elif feature == "land_boundary":
             self.map_bridge.set_land_boundary_visible(enabled)
+        elif feature == "latlon_grid":
+            self.map_bridge.set_latlon_grid_visible(enabled)
 
     @Slot(int, str)
     def zoom_to_marker(self, row: int, table: Literal["waypoints", "buoys"] = "waypoints") -> None:

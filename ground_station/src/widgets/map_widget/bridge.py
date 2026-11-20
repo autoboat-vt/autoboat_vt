@@ -327,6 +327,24 @@ class MapBridge:
         self._call("set_land_boundary_visible", visible)
 
     @_map_api
+    def toggle_measure(self) -> None:
+        """Toggle the distance measure tool on the map."""
+
+        self._call("toggle_measure")
+
+    @_map_api
+    def clear_measure(self) -> None:
+        """Clear the measured path and distance readout from the map."""
+
+        self._call("clear_measure")
+
+    @_map_api
+    def set_latlon_grid_visible(self, visible: bool) -> None:
+        """Show or hide the latitude/longitude grid lines."""
+
+        self._call("set_latlon_grid_visible", visible)
+
+    @_map_api
     def remove_all_svgs(self) -> None:
         """Remove all diagnostic SVG overlays from the map."""
 

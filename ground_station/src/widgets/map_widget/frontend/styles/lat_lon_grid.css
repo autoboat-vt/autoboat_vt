@@ -1,0 +1,42 @@
+/* Latitude/longitude graticule. */
+
+/*
+ * Labels are plain DOM in an overlay owned by the grid manager, positioned in
+ * map-container pixels. Keeping them out of Leaflet's animated marker pane is
+ * what stops a label from a previous redraw lingering while the map zooms.
+ */
+.grid-label-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.grid-label {
+    position: absolute;
+    color: #1d2b38;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    text-shadow:
+        0 0 3px #fff,
+        0 0 3px #fff,
+        0 0 4px #fff,
+        0 0 4px #fff;
+}
+
+/* Left-edge latitude labels: centred on the line, text grows rightwards. */
+.grid-label-left {
+    transform: translateY(-50%);
+    text-align: left;
+}
+
+/* Top-edge longitude labels: centred on the line, text grows downwards. */
+.grid-label-top {
+    transform: translateX(-50%);
+    text-align: center;
+}
