@@ -141,6 +141,7 @@ export class BathymetryManager {
 
         this.fetching = true;
         try {
+            console.info("Loading bathymetry layer...");
             const response = await fetch(this.url);
             if (!response.ok) {
                 console.warn(`Bathymetry unavailable (HTTP ${response.status})`);
@@ -151,6 +152,7 @@ export class BathymetryManager {
 
             this.layer = geoJSON(data as GeoJSON.GeoJsonObject, this.buildOptions());
             this.layer.addTo(this.map);
+            console.info(`Bathymetry layer loaded with ${data.features.length} depth bands`);
         } catch (error) {
             console.error("Failed to load bathymetry:", error);
         } finally {

@@ -71,6 +71,7 @@ export class LandBoundaryManager {
 
         this.fetching = true;
         try {
+            console.info("Loading land boundary layer...");
             const response = await fetch(this.url);
             if (!response.ok) {
                 console.warn(`Land boundary unavailable (HTTP ${response.status})`);
@@ -81,6 +82,7 @@ export class LandBoundaryManager {
 
             this.layer = geoJSON(data as GeoJSON.GeoJsonObject, this.buildOptions());
             this.layer.addTo(this.map);
+            console.info(`Land boundary layer loaded with ${data.features.length} shapes`);
         } catch (error) {
             console.error("Failed to load land boundary:", error);
         } finally {

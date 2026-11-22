@@ -56,8 +56,22 @@ class MapInterface {
     static readonly bathymetryUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/bathymetry`;
     static readonly landBoundaryUrl = `http://localhost:${import.meta.env.MAP_CALLBACK_PORT ?? "8001"}/land_boundary`;
 
+    // MapTiler keys, tried in order. A revoked or over-quota key still answers
+    // with a valid (error) tile image instead of failing the request, so the map
+    // would silently go blank; instead the next key is used.
+    static readonly mapTilerKeys = ["21bF5koC68eFHXyf2U6o", "cgMC3WGf9i7Di4lU79UT"];
+
     lastFocusedTimestamp = 0;
     private waypointHistory: { type: "add" | "remove"; waypoint: LatLngTuple; color?: string }[] = [];
+
+    /**
+     * Waypoint adds awaiting a log line. `add_waypoint` is called once per
+     * waypoint when Python restores a mission or runs the 500-waypoint test,
+     * so adds are coalesced and reported as a single summary instead of
+     * flooding the Qt console with one line per waypoint.
+     */
+    private pendingWaypointAdds: LatLngTuple[] = [];
+    private waypointAddLogTimeout: ReturnType<typeof setTimeout> | undefined;
 
     map: LeafletMapType;
 
@@ -100,10 +114,25 @@ class MapInterface {
         });
     }
 
-    constructor() {
-        this.map = LeafletMap("map", MapInterface.mapOptions);
-        const mapTilerKey = "21bF5koC68eFHXyf2U6o";
-        tileLayer(`https://api.maptiler.com/maps/openstreetmap/{z}/{x}/{y}.jpg?key=${mapTilerKey}`, {
+    /**
+     * Add the MapTiler base layer, using the first key that still works.
+     *
+     * A revoked or over-quota key makes MapTiler answer `403` with a valid PNG
+     * saying the key is invalid, so Leaflet's `tileerror` never fires and the
+     * map would just go blank. The keys are therefore probed with `fetch`,
+     * which can read the status code, before a layer is created.
+     */
+    async _add_map_tiler_layer(): Promise<void> {
+        const index = await this._find_working_map_tiler_key();
+        if (index === -1) {
+            console.error("All MapTiler keys are failing, the base map will stay blank");
+            return;
+        }
+
+        const key = MapInterface.mapTilerKeys[index];
+        console.info(`Using MapTiler key ${index + 1} of ${MapInterface.mapTilerKeys.length}`);
+
+        const layer = tileLayer(`https://api.maptiler.com/maps/openstreetmap/{z}/{x}/{y}.jpg?key=${key}`, {
             minZoom: MapInterface.MIN_ZOOM,
             maxZoom: MapInterface.MAX_ZOOM,
             tileSize: 512,
@@ -114,9 +143,55 @@ class MapInterface {
             crossOrigin: true
         }).addTo(this.map);
 
+        // Tiles fail in bulk when the network drops, so warn only once per layer
+        // instead of on every failed tile, which would flood the log while panning.
+        let tileErrorLogged = false;
+        layer.on("tileerror", () => {
+            if (tileErrorLogged) {
+                return;
+            }
+
+            tileErrorLogged = true;
+            console.warn("Some map tiles failed to load, the base map may be incomplete");
+        });
+
         // have to set max bounds after adding the maptiler layer, otherwise it will be overridden
         // and the map will be able to pan outside of the bounds
         this.map.setMaxBounds(MapInterface.mapOptions.maxBounds);
+    }
+
+    /**
+     * Probe each MapTiler key with a single tile request.
+     *
+     * Returns the index of the first key that returns a real tile. When the
+     * network itself is unreachable the first key is returned so the layer is
+     * still created and its tiles load once connectivity returns; `-1` means
+     * every key answered and rejected the request.
+     */
+    async _find_working_map_tiler_key(): Promise<number> {
+        for (let index = 0; index < MapInterface.mapTilerKeys.length; index += 1) {
+            const key = MapInterface.mapTilerKeys[index];
+            try {
+                const response = await fetch(`https://api.maptiler.com/maps/openstreetmap/0/0/0.jpg?key=${key}`, {
+                    method: "HEAD"
+                });
+                if (response.ok) {
+                    return index;
+                }
+                console.warn(`MapTiler key ${index + 1} is not usable (${response.status}), trying the next key`);
+            } catch (error) {
+                console.error("Could not reach MapTiler, using the first key:", error);
+                return 0;
+            }
+        }
+
+        return -1;
+    }
+
+    constructor() {
+        console.info("Initializing map interface");
+        this.map = LeafletMap("map", MapInterface.mapOptions);
+        void this._add_map_tiler_layer();
 
         this.waypoint_manager = new WaypointManager(
             this.map,
@@ -186,10 +261,13 @@ class MapInterface {
                     const removed = this.waypoint_manager.pop(closestIndex);
                     if (removed) {
                         this.waypointHistory.push({ type: "remove", waypoint: removed, color });
+                        console.info(`Removed waypoint at ${removed[0].toFixed(5)}, ${removed[1].toFixed(5)}`);
                     }
                 }
             }
         });
+
+        console.info("Map interface ready");
     }
 
     /**
@@ -202,7 +280,10 @@ class MapInterface {
      * user chose to add the waypoint anyway.
      */
     async handleMapClick(lat: number, lon: number): Promise<void> {
+        console.info(`Map click at ${lat.toFixed(5)}, ${lon.toFixed(5)}`);
+
         if (!(await this.shouldAddWaypoint(lat, lon))) {
+            console.info("Waypoint placement declined");
             return;
         }
 
@@ -223,7 +304,7 @@ class MapInterface {
         try {
             const response = await fetch(url);
             if (!response.ok) {
-                console.error("Failed to check land status");
+                console.error(`Land check failed (HTTP ${response.status}), adding the waypoint anyway`);
                 return true;
             }
 
@@ -248,10 +329,10 @@ class MapInterface {
             });
 
             if (!response.ok) {
-                console.error("Failed to sync waypoints");
+                console.error(`Failed to sync ${snapshot.length} waypoints (HTTP ${response.status})`);
             }
         } catch (error) {
-            console.error("Error syncing waypoints:", error);
+            console.error(`Error syncing ${snapshot.length} waypoints:`, error);
         }
     }
 
@@ -305,6 +386,39 @@ class MapInterface {
     add_waypoint(lat: number, lon: number): void {
         this.waypoint_manager.add(lat, lon);
         this.waypointHistory.push({ type: "add", waypoint: [lat, lon] });
+        this._queue_waypoint_add_log(lat, lon);
+    }
+
+    /**
+     * Report waypoint adds as one log line per burst.
+     *
+     * A single clicked waypoint logs immediately on the next tick; a bulk add
+     * (mission restore, test waypoints) collapses into one summary line.
+     */
+    private _queue_waypoint_add_log(lat: number, lon: number): void {
+        this.pendingWaypointAdds.push([lat, lon]);
+
+        if (this.waypointAddLogTimeout !== undefined) {
+            return;
+        }
+
+        this.waypointAddLogTimeout = setTimeout(() => {
+            this.waypointAddLogTimeout = undefined;
+            const added = this.pendingWaypointAdds;
+            this.pendingWaypointAdds = [];
+
+            if (added.length === 1) {
+                const [only] = added;
+                if (only) {
+                    console.info(
+                        `Added waypoint at ${only[0].toFixed(5)}, ${only[1].toFixed(5)} (${this.waypoint_manager.waypoints.length} total)`
+                    );
+                }
+                return;
+            }
+
+            console.info(`Added ${added.length} waypoints (${this.waypoint_manager.waypoints.length} total on the map)`);
+        }, 0);
     }
 
     remove_waypoint(index: number): void {
@@ -316,21 +430,28 @@ class MapInterface {
         const removed = this.waypoint_manager.pop(index);
         if (removed) {
             this.waypointHistory.push({ type: "remove", waypoint: removed, color });
+            console.info(
+                `Removed waypoint at ${removed[0].toFixed(5)}, ${removed[1].toFixed(5)} (${this.waypoint_manager.waypoints.length} left)`
+            );
         }
     }
 
     change_color_waypoints(color: string): void {
         this.waypoint_manager.changeColor(color);
+        console.info(`Changed all waypoints to ${color}`);
     }
 
     clear_waypoints(): void {
+        const count = this.waypoint_manager.waypoints.length;
         this.waypoint_manager.clear();
         this.waypointHistory = [];
+        console.info(`Cleared ${count} waypoints`);
     }
 
     undo_last_waypoint(): void {
         const op = this.waypointHistory.pop();
         if (!op) {
+            console.info("Nothing to undo");
             return;
         }
 
@@ -339,49 +460,61 @@ class MapInterface {
             if (index !== -1) {
                 this.waypoint_manager.pop(index);
             }
+            console.info(`Undid adding a waypoint at ${op.waypoint[0].toFixed(5)}, ${op.waypoint[1].toFixed(5)}`);
         } else {
             this.waypoint_manager.add(op.waypoint[0], op.waypoint[1], op.color);
+            console.info(`Undid removing a waypoint at ${op.waypoint[0].toFixed(5)}, ${op.waypoint[1].toFixed(5)}`);
         }
     }
 
     add_buoy(lat: number, lon: number): void {
         this.buoy_manager.add(lat, lon);
+        console.info(`Added buoy at ${lat.toFixed(5)}, ${lon.toFixed(5)}`);
     }
 
     remove_buoy(index: number): void {
         this.buoy_manager.remove(index);
+        console.info(`Removed buoy ${index}`);
     }
 
     clear_buoys(): void {
         this.buoy_manager.clear();
+        console.info("Cleared all buoys");
     }
 
     clear_track(): void {
         this.track_manager.clear();
+        console.info("Cleared the boat track");
     }
 
     set_track_visible(visible: boolean): void {
         this.track_manager.setVisible(visible);
+        console.info(`Boat track ${visible ? "shown" : "hidden"}`);
     }
 
     set_bathymetry_visible(visible: boolean): void {
+        console.info(`Bathymetry layer ${visible ? "enabled" : "disabled"}`);
         void this.bathymetry_manager.setVisible(visible);
     }
 
     set_land_boundary_visible(visible: boolean): void {
+        console.info(`Land boundary layer ${visible ? "enabled" : "disabled"}`);
         void this.land_boundary_manager.setVisible(visible);
     }
 
     toggle_measure(): void {
         this.measure_manager.toggle();
+        console.info(`Measure tool ${this.measure_manager.isMeasuring() ? "started" : "finished"}`);
     }
 
     clear_measure(): void {
         this.measure_manager.clear();
+        console.info("Cleared the measurement");
     }
 
     set_latlon_grid_visible(visible: boolean): void {
         this.lat_lon_grid_manager.setVisible(visible);
+        console.info(`Lat/lon grid ${visible ? "shown" : "hidden"}`);
     }
 
     remove_all_svgs(): void {

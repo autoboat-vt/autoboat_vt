@@ -20,6 +20,7 @@ import os
 import shutil
 import socket
 import subprocess
+import threading
 import time
 from collections.abc import Callable
 from enum import Enum
@@ -67,6 +68,7 @@ class MapViewerServer:
     def __init__(self) -> None:
         self._process: subprocess.Popen | None = None
         self._ready = False
+        self._log_output_thread: threading.Thread | None = None
 
     @property
     def process(self) -> subprocess.Popen | None:
@@ -181,12 +183,46 @@ class MapViewerServer:
                 [bun_path, "run", "serve"],
                 cwd=constants.TOP_LEVEL_DIR.as_posix(),
                 shell=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
             )
+            self._log_output_thread = threading.Thread(target=self._log_output, daemon=True)
+            self._log_output_thread.start()
             logger.info(f"Map viewer server started on port {constants.MAP_VIEWER_PORT}.")
 
         except Exception as e:
             logger.error(f"Failed to start map viewer server: {e}")
             self.process = None
+
+    def _log_output(self) -> None:
+        """
+        Forward the map viewer server's output to the ground station logger.
+
+        Vite writes its startup banner and all compile/HMR errors to stdout and stderr. Those streams are piped
+        so the lines can be logged to the Qt console instead of only appearing in the terminal that launched the
+        application - a failed compile is otherwise invisible from inside the app.
+        """
+
+        process = self.process
+        if process is None or process.stdout is None:
+            return
+
+        for raw_line in process.stdout:
+            line = raw_line.strip()
+
+            # `bun run` echoes the script it is about to run as `$ <command>`,
+            # which is noise rather than server output.
+            if not line or line.startswith("$ "):
+                continue
+
+            if "error" in line.lower() or "failed" in line.lower():
+                logger.error(f"[vite] {line}")
+            elif "warn" in line.lower():
+                logger.warning(f"[vite] {line}")
+            else:
+                logger.info(f"[vite] {line}")
 
     def stop(self) -> None:
         """Stop the map viewer server process."""
@@ -503,17 +539,35 @@ def create_symlinks(source_dir: Path, target_dir: Path) -> None:
         If a symbolic link cannot be created.
     """
 
+    if not source_dir.is_dir():
+        raise RuntimeError(f"Symlink source directory does not exist: '{source_dir}'")
+
+    target_dir.mkdir(parents=True, exist_ok=True)
+
     for item in source_dir.iterdir():
         if item.is_file() and item.name != ".DS_Store":
             target_path = target_dir / item.name
             try:
+                source_path = item.resolve(strict=True)
+
+                if target_path.is_symlink():
+                    try:
+                        if target_path.resolve(strict=True) == source_path:
+                            continue
+                    except FileNotFoundError:
+                        pass
+
                 if target_path.exists() or target_path.is_symlink():
                     target_path.unlink()
 
-                target_path.symlink_to(item.resolve())
-                # make file in target_dir read-only to prevent accidental edits
-                target_path.chmod(0o444)
+                target_path.symlink_to(source_path)
                 logger.info(f"Created symlink for '{item.name}' at '{target_path}'.")
+
+            except PermissionError as e:
+                raise RuntimeError(
+                    f"Failed to create symlink for '{item.name}' at '{target_path}': "
+                    f"permission denied. Ensure '{target_dir}' is writable by the current user."
+                ) from e
 
             except Exception as e:
                 raise RuntimeError(f"Failed to create symlink for '{item.name}': {e}") from e

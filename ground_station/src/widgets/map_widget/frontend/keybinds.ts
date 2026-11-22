@@ -81,6 +81,7 @@ export class KeybindHandler {
     setBindings(bindings: KeybindMap): void {
         this.bindings = { ...bindings };
         this.ensureAttached();
+        console.info(`Registered ${Object.keys(bindings).length} map keybinds`);
     }
 
     /**
