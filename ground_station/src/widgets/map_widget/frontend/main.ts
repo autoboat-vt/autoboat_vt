@@ -102,7 +102,7 @@ class MapInterface {
 
     constructor() {
         this.map = LeafletMap("map", MapInterface.mapOptions);
-        const mapTilerKey = "M9yBkV9J49pYUg5o8SGC";
+        const mapTilerKey = "21bF5koC68eFHXyf2U6o";
         tileLayer(`https://api.maptiler.com/maps/openstreetmap/{z}/{x}/{y}.jpg?key=${mapTilerKey}`, {
             minZoom: MapInterface.MIN_ZOOM,
             maxZoom: MapInterface.MAX_ZOOM,
