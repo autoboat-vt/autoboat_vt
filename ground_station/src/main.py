@@ -23,8 +23,8 @@ from widgets import (
     InstanceHandler,
     UserGuideWidget,
 )
+from widgets.map_widget.bridge import MapBridge
 from widgets.map_widget.callback_server.server import assemble_map_callback_server
-from widgets.map_widget.map_page import MapWebEnginePage
 
 logger = get_logger(__name__)
 
@@ -109,10 +109,10 @@ class MainWindow(QMainWindow):
 
         # The page object is created eagerly so widgets can call setPage() on it,
         # but navigation is deferred until the viewer server is up (load_map_page).
-        # MapWebEnginePage forwards the frontend's JavaScript console output to the logger.
+        # MapBridge.Logger forwards the frontend's JavaScript console output to the logger.
         self.map_viewer_server = misc.MapViewerServer()
         self.map_page_loaded = False
-        constants.MAP_PAGE = MapWebEnginePage()
+        constants.MAP_PAGE = MapBridge.Logger()
 
         self.main_widget = QTabWidget()
         self.setCentralWidget(self.main_widget)
