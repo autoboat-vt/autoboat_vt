@@ -23,7 +23,7 @@ from widgets import (
     InstanceHandler,
     UserGuideWidget,
 )
-from widgets.map_widget.bridge import MapBridge
+from widgets.map_widget.bridge import MapViewerServer
 from widgets.map_widget.callback_server.server import assemble_map_callback_server
 
 logger = get_logger(__name__)
@@ -78,27 +78,11 @@ class MainWindow(QMainWindow):
                 time.sleep(0.1)
 
             logger.info(f"Starting map viewer server on port {constants.MAP_VIEWER_PORT}...")
-            self.map_viewer_server.start()
-            self.map_viewer_server.wait_until_ready()
+            if not self.map_viewer_server.start_and_load():
+                logger.error("Map viewer server did not start; the map page will not be loaded.")
 
         except Exception as exc:
             logger.error(f"Failed to start map viewer server: {exc}")
-
-    def load_map_page(self) -> None:
-        """
-        Navigate the map page to the map viewer URL.
-
-        Called only once the map viewer server is accepting connections. Making
-        the web view navigate before Vite is listening makes the first load fail
-        with ``ERR_CONNECTION_REFUSED`` even though a manual reload then works.
-        """
-
-        if self.map_page_loaded:
-            return
-
-        self.map_page_loaded = True
-        constants.MAP_PAGE.load(constants.MAP_URL)
-        logger.info(f"Loading map from {constants.MAP_URL.toString()}...")
 
     def __init__(self) -> None:
         super().__init__()
@@ -107,12 +91,8 @@ class MainWindow(QMainWindow):
         self.setMaximumSize(constants.MAX_WINDOW_SIZE)
         self.setUnifiedTitleAndToolBarOnMac(True)
 
-        # The page object is created eagerly so widgets can call setPage() on it,
-        # but navigation is deferred until the viewer server is up (load_map_page).
-        # MapBridge.Logger forwards the frontend's JavaScript console output to the logger.
-        self.map_viewer_server = misc.MapViewerServer()
-        self.map_page_loaded = False
-        constants.MAP_PAGE = MapBridge.Logger()
+        self.map_viewer_server = MapViewerServer(self)
+        constants.MAP_PAGE = self.map_viewer_server.page
 
         self.main_widget = QTabWidget()
         self.setCentralWidget(self.main_widget)
@@ -180,7 +160,6 @@ class MainWindow(QMainWindow):
         logger.info("Releasing map page...")
         if hasattr(constants, "MAP_PAGE") and isinstance(constants.MAP_PAGE, QWebEnginePage):
             constants.MAP_PAGE.deleteLater()
-
         logger.info("Shutting down map viewer server...")
         if hasattr(self, "map_viewer_server"):
             self.map_viewer_server.stop()
@@ -222,15 +201,6 @@ if __name__ == "__main__":
     threading.Thread(target=window.start_asset_server, daemon=True).start()
     threading.Thread(target=window.start_map_control_server, daemon=True).start()
     threading.Thread(target=window.start_map_viewer_server, daemon=True).start()
-
-    map_load_timer = misc.create_timer(100)
-    def load_map_when_ready() -> None:
-        if window.map_viewer_server.is_ready:
-            map_load_timer.stop()
-            window.load_map_page()
-
-    map_load_timer.timeout.connect(load_map_when_ready)
-    map_load_timer.start()
 
     if constants.APP_LOGO_PATH.is_file():
         logger.info(f"Setting application icon from {constants.APP_LOGO_PATH}...")

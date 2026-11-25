@@ -222,6 +222,19 @@ DOCUMENTATION_URL = QUrl(urljoin("https://autoboat-vt.github.io", "documentation
 TELEMETRY_TIMEOUT_SECONDS = 10
 TELEMETRY_RETRY_ATTEMPTS = 3
 
+# Mean Earth radius in meters, used for great-circle distance calculations.
+EARTH_RADIUS_METERS = 6_371_000.0
+
+# Only the next few waypoints get a time-to-arrival estimate: extrapolating the
+# boat's current speed over a long mission plan is not meaningful, and the
+# waypoints table can hold hundreds of waypoints.
+MAX_ETA_WAYPOINTS = 10
+
+# Maximum decimal places used when displaying waypoint coordinates. Seven decimal
+# places is roughly 1 cm of precision, which is well past GPS accuracy; showing more
+# only widens the fixed-width waypoints table until Qt elides the text.
+WAYPOINT_COORDINATE_DECIMALS = 7
+
 REQ_SESSION = requests.Session()
 ADAPTER = requests.adapters.HTTPAdapter(max_retries=TELEMETRY_RETRY_ATTEMPTS)
 REQ_SESSION.mount("http://", ADAPTER)

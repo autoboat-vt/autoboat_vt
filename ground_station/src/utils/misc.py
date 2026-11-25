@@ -4,6 +4,9 @@ Module containing miscellaneous utility functions for the Groundstation applicat
 Functions:
 - get_icons: Load and return a set of icons for the application.
 - get_route: Get the full URL for a given route name.
+- haversine_distance_m: Calculate the great-circle distance between two coordinates in meters.
+- destination_point_m: Calculate the point reached by travelling a distance along a great circle.
+- format_duration: Format a duration in seconds as a compact human-readable string.
 - pushbutton_maker: Create a QPushButton with specified features.
 - create_timer: Create a QTimer with specified interval and single-shot status.
 - copy_qtimer: Create a copy of a QTimer with the same interval and single-shot status.
@@ -12,22 +15,20 @@ Functions:
 - resolve_enum_name: Resolve a telemetry enum value to its member name.
 
 Classes:
-- MapViewerServer: Class to manage the map viewer server process.
 - IconProtocol: Protocol defining the expected attributes for icon objects.
 """
 
+import math
 import os
-import shutil
 import socket
-import subprocess
-import threading
-import time
 from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Protocol, TypeVar, cast
 
+import numpy as np
+import numpy.typing as npt
 import qtawesome as qta
 from requests import RequestException
 
@@ -39,13 +40,15 @@ from utils import constants
 from utils.console_logger import get_logger
 
 __all__ = [
-    "MapViewerServer",
     "cache_cdn_file",
     "copy_qtimer",
     "create_symlinks",
     "create_timer",
+    "destination_point_m",
+    "format_duration",
     "get_icons",
     "get_route",
+    "haversine_distance_m",
     "pushbutton_maker",
     "resolve_enum_name",
 ]
@@ -53,193 +56,6 @@ __all__ = [
 logger = get_logger(__name__)
 
 T = TypeVar("T")
-
-
-class MapViewerServer:
-    """
-    Class to manage the map viewer server process.
-
-    Attributes
-    ----------
-    process
-        The :class:`subprocess.Popen` object representing the map viewer server process, or `None` if not running.
-    """
-
-    def __init__(self) -> None:
-        self._process: subprocess.Popen | None = None
-        self._ready = False
-        self._log_output_thread: threading.Thread | None = None
-
-    @property
-    def process(self) -> subprocess.Popen | None:
-        """The :class:`subprocess.Popen` object representing the map viewer server process, or `None` if not running."""
-
-        return self._process
-
-    @process.setter
-    def process(self, value: subprocess.Popen | None) -> None:
-        """Set the map viewer server process, or `None` when it is not running."""
-
-        self._process = value
-
-    @property
-    def is_ready(self) -> bool:
-        """Whether the map viewer server is accepting TCP connections on the viewer port."""
-
-        return self._ready
-
-    def wait_until_ready(self, timeout: float = 60.0, poll_interval: float = 0.2) -> bool:
-        """
-        Block until the map viewer server is accepting TCP connections.
-
-        Parameters
-        ----------
-        timeout
-            Maximum number of seconds to wait before giving up.
-        poll_interval
-            Seconds to sleep between connection attempts.
-
-        Returns
-        -------
-        bool
-            `True` once the server accepts connections, `False` if it exited or
-            the timeout elapsed first.
-        """
-
-        deadline = time.monotonic() + timeout
-
-        while time.monotonic() < deadline:
-            if self.process is not None and self.process.poll() is not None:
-                logger.error(f"Map viewer server exited with code {self.process.returncode} before becoming ready.")
-                return False
-
-            try:
-                # attempt to connect to the server to check if it's ready
-                with socket.create_connection(("127.0.0.1", constants.MAP_VIEWER_PORT), timeout=1.0):
-                    self._ready = True
-                    logger.info(f"Map viewer server is accepting connections on port {constants.MAP_VIEWER_PORT}.")
-                    return True
-
-            except OSError:
-                time.sleep(poll_interval)
-
-        logger.error(f"Map viewer server did not become ready within {timeout:.0f} seconds.")
-        return False
-
-    def start(self) -> None:
-        """Start the map viewer server process."""
-
-        if self.process is not None and self.process.poll() is None:
-            logger.warning("Map viewer server is already running.")
-            return
-
-        self._ready = False
-
-        bun_path = shutil.which("bun")
-        if bun_path is None:
-            logger.error("Bun is not installed or not found in PATH. Please install Bun to run the map viewer server.")
-            return
-
-        bun_path = Path(bun_path).resolve()
-        if not bun_path.is_file():
-            logger.error(f"Bun executable not found at {bun_path}. Please install Bun to run the map viewer server.")
-            return
-
-        try:
-            output = subprocess.run(
-                [bun_path.as_posix(), "--version"],
-                check=True,
-                capture_output=True,
-                shell=False,
-                timeout=10,
-            )
-            logger.info(f"Using Bun version {output.stdout.decode().strip()}")
-
-        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            logger.error("Bun is not installed or not found in PATH. Please install Bun to run the map viewer server.")
-            return
-
-        logger.info("Making sure all dependencies are installed for the map viewer server...")
-        try:
-            start_time = time.time()
-            subprocess.run(
-                [bun_path.as_posix(), "install"],
-                check=True,
-                cwd=constants.TOP_LEVEL_DIR.as_posix(),
-                shell=False,
-            )
-            elapsed_time = time.time() - start_time
-            if elapsed_time < 1.0:
-                logger.info("Dependencies were already installed, skipping installation.")
-            else:
-                logger.info(f"Dependencies installed successfully in {elapsed_time:.2f} seconds.")
-
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to install dependencies for the map viewer server: {e}")
-            return
-
-        try:
-            self.process = subprocess.Popen(
-                [bun_path, "run", "serve"],
-                cwd=constants.TOP_LEVEL_DIR.as_posix(),
-                shell=False,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
-            )
-            self._log_output_thread = threading.Thread(target=self._log_output, daemon=True)
-            self._log_output_thread.start()
-            logger.info(f"Map viewer server started on port {constants.MAP_VIEWER_PORT}.")
-
-        except Exception as e:
-            logger.error(f"Failed to start map viewer server: {e}")
-            self.process = None
-
-    def _log_output(self) -> None:
-        """
-        Forward the map viewer server's output to the ground station logger.
-
-        Vite writes its startup banner and all compile/HMR errors to stdout and stderr. Those streams are piped
-        so the lines can be logged to the Qt console instead of only appearing in the terminal that launched the
-        application - a failed compile is otherwise invisible from inside the app.
-        """
-
-        process = self.process
-        if process is None or process.stdout is None:
-            return
-
-        for raw_line in process.stdout:
-            line = raw_line.strip()
-
-            # `bun run` echoes the script it is about to run as `$ <command>`,
-            # which is noise rather than server output.
-            if not line or line.startswith("$ "):
-                continue
-
-            if "error" in line.lower() or "failed" in line.lower():
-                logger.error(f"[vite] {line}")
-            elif "warn" in line.lower():
-                logger.warning(f"[vite] {line}")
-            else:
-                logger.info(f"[vite] {line}")
-
-    def stop(self) -> None:
-        """Stop the map viewer server process."""
-
-        self._ready = False
-
-        if self.process is not None and self.process.poll() is None:
-            self.process.terminate()
-            exit_code = self.process.wait()
-
-            if exit_code != 0:
-                logger.warning(f"Map viewer server terminated with exit code {exit_code}.")
-            else:
-                logger.info("Map viewer server stopped successfully.")
-
-        else:
-            logger.warning("Map viewer server is not running.")
 
 
 class IconProtocol(Protocol):
@@ -372,6 +188,193 @@ def get_route(route_name: str) -> str:
         return endpoints[route_name]
 
     raise ValueError(f"Route name '{route_name}' not found in telemetry server endpoints.")
+
+
+def haversine_distance_m(
+    lat1: npt.ArrayLike, lon1: npt.ArrayLike, lat2: npt.ArrayLike, lon2: npt.ArrayLike
+) -> float | npt.NDArray[np.float64]:
+    """
+    Calculate the great-circle distance between two coordinates.
+
+    Both scalars and arrays are accepted. Scalar inputs take a :mod:`math` fast path;
+    array inputs are broadcast against each other in numpy, so every leg of a path
+    can be measured in a single call.
+
+    Examples
+    --------
+    >>> round(haversine_distance_m(0.0, 0.0, 0.0, 1.0))
+    111195
+    >>> leg_distances = haversine_distance_m(
+    ...     np.array([0.0, 0.0]),
+    ...     np.array([0.0, 1.0]),
+    ...     np.array([0.0, 1.0]),
+    ...     np.array([1.0, 2.0]),
+    ... )
+    >>> leg_distances.shape
+    (2,)
+
+    Parameters
+    ----------
+    lat1
+        Latitude(s) of the first point(s) in decimal degrees.
+    lon1
+        Longitude(s) of the first point(s) in decimal degrees.
+    lat2
+        Latitude(s) of the second point(s) in decimal degrees.
+    lon2
+        Longitude(s) of the second point(s) in decimal degrees.
+
+    Returns
+    -------
+    `float` or :class:`numpy.ndarray`
+        The distance between the points in meters. A `float` is returned for scalar
+        inputs, and an array of the broadcast shape for array inputs.
+    """
+
+    def scalar_m(lat_a: float, lon_a: float, lat_b: float, lon_b: float) -> float:
+        """Measure one pair of coordinates with :mod:`math`, avoiding numpy's dispatch overhead."""
+
+        delta_lat = math.radians(lat_b - lat_a)
+        delta_lon = math.radians(lon_b - lon_a)
+
+        a = math.sin(delta_lat / 2) ** 2 + (
+            math.cos(math.radians(lat_a)) * math.cos(math.radians(lat_b)) * math.sin(delta_lon / 2) ** 2
+        )
+
+        return 2 * constants.EARTH_RADIUS_METERS * math.asin(math.sqrt(min(1.0, a)))
+
+    def array_m(
+        lat_a: npt.ArrayLike, lon_a: npt.ArrayLike, lat_b: npt.ArrayLike, lon_b: npt.ArrayLike
+    ) -> npt.NDArray[np.float64]:
+        """Measure every pair at once, broadcasting the inputs against each other."""
+
+        latitudes_1 = np.asarray(lat_a, dtype=np.float64)
+        longitudes_1 = np.asarray(lon_a, dtype=np.float64)
+        latitudes_2 = np.asarray(lat_b, dtype=np.float64)
+        longitudes_2 = np.asarray(lon_b, dtype=np.float64)
+
+        delta_lat = np.radians(latitudes_2 - latitudes_1)
+        delta_lon = np.radians(longitudes_2 - longitudes_1)
+
+        a = np.sin(delta_lat / 2) ** 2 + (
+            np.cos(np.radians(latitudes_1)) * np.cos(np.radians(latitudes_2)) * np.sin(delta_lon / 2) ** 2
+        )
+
+        return 2 * constants.EARTH_RADIUS_METERS * np.arcsin(np.sqrt(np.minimum(1.0, a)))
+
+    if (
+        isinstance(lat1, (int, float))
+        and isinstance(lon1, (int, float))
+        and isinstance(lat2, (int, float))
+        and isinstance(lon2, (int, float))
+    ):
+        return scalar_m(lat1, lon1, lat2, lon2)
+
+    distances = array_m(lat1, lon1, lat2, lon2)
+    return float(distances) if distances.ndim == 0 else distances
+
+
+def destination_point_m(lat: float, lon: float, bearing_deg: float, distance_m: float) -> tuple[float, float]:
+    """
+    Calculate the point reached by travelling a distance along a great circle.
+
+    This is the inverse of :func:`haversine_distance_m`, and is useful for placing
+    points a fixed distance away from a known location.
+
+    Examples
+    --------
+    >>> point = destination_point_m(0.0, 0.0, 0.0, 111_195.0)
+    >>> round(point[0], 3)
+    1.0
+    >>> round(point[1], 3)
+    0.0
+
+    Parameters
+    ----------
+    lat
+        Latitude of the starting point in decimal degrees.
+    lon
+        Longitude of the starting point in decimal degrees.
+    bearing_deg
+        Initial bearing in degrees clockwise from true north.
+    distance_m
+        Distance to travel in meters.
+
+    Returns
+    -------
+    `tuple[float, float]`
+        The destination latitude and longitude in decimal degrees, with the longitude
+        normalized to the range ``[-180, 180]``.
+    """
+
+    angular_distance = distance_m / constants.EARTH_RADIUS_METERS
+    bearing = math.radians(bearing_deg)
+    start_lat = math.radians(lat)
+    start_lon = math.radians(lon)
+
+    sin_start_lat = math.sin(start_lat)
+    cos_start_lat = math.cos(start_lat)
+    sin_angular_distance = math.sin(angular_distance)
+    cos_angular_distance = math.cos(angular_distance)
+
+    dest_lat = math.asin(
+        (sin_start_lat * cos_angular_distance) + (cos_start_lat * sin_angular_distance * math.cos(bearing))
+    )
+    dest_lon = start_lon + math.atan2(
+        math.sin(bearing) * sin_angular_distance * cos_start_lat,
+        cos_angular_distance - (sin_start_lat * math.sin(dest_lat)),
+    )
+
+    # atan2 can land outside [-pi, pi], so wrap it back into a valid longitude
+    normalized_lon = (math.degrees(dest_lon) + 540) % 360 - 180
+
+    return math.degrees(dest_lat), normalized_lon
+
+
+def format_duration(seconds: float) -> str:
+    """
+    Format a duration in seconds as a compact human-readable string.
+
+    Examples
+    --------
+    >>> format_duration(45)
+    '45s'
+    >>> format_duration(754)
+    '12m 34s'
+    >>> format_duration(5400)
+    '1h 30m'
+    >>> format_duration(90061)
+    '1d 01h'
+
+    Parameters
+    ----------
+    seconds
+        The duration in seconds.
+
+    Returns
+    -------
+    `str`
+        The formatted duration, or ``"N/A"`` if the value is not a finite, non-negative number.
+    """
+
+    if not math.isfinite(seconds) or seconds < 0:
+        return "N/A"
+
+    total_seconds = round(seconds)
+
+    if total_seconds < 60:
+        return f"{total_seconds}s"
+
+    minutes, secs = divmod(total_seconds, 60)
+    if minutes < 60:
+        return f"{minutes}m {secs:02d}s"
+
+    hours, minutes = divmod(minutes, 60)
+    if hours < 24:
+        return f"{hours}h {minutes:02d}m"
+
+    days, hours = divmod(hours, 24)
+    return f"{days}d {hours:02d}h"
 
 
 def pushbutton_maker(

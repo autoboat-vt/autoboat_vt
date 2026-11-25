@@ -11,12 +11,13 @@ import svg
 from requests.exceptions import RequestException
 
 from qtpy.QtCore import QEvent, QObject, QSize, Qt, QTimer, Signal, Slot
-from qtpy.QtGui import QKeyEvent, QKeySequence, QShowEvent
+from qtpy.QtGui import QBrush, QKeyEvent, QKeySequence, QShowEvent
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import (
     QFileDialog,
     QGridLayout,
     QGroupBox,
+    QHeaderView,
     QLabel,
     QMessageBox,
     QPushButton,
@@ -32,7 +33,7 @@ from qtpy.QtWidgets import (
 from utils import TextEditWindow, constants, misc, thread_classes
 from utils.console_logger import get_logger
 from utils.constants import StrictMatchEnums
-from utils.dialog_templates import CoordinateInputDialog, InputDialog, show_message_box
+from utils.dialog_templates import CoordinateInputDialog, InputDialog, RandomWaypointsDialog, show_message_box
 from utils.syntax_highlighters import JsonHighlighter
 
 from .easter_eggs import PongDialog, SnakeDialog, TetrisDialog
@@ -42,7 +43,7 @@ from .keybind_widget import (
     normalize_key_string,
     qt_key_event_to_string,
 )
-from .map_widget import MapBridge, MapOptionsHandler
+from .map_widget import MapOptionsHandler, MapViewerServer
 from .map_widget.land_click_prompt import LAND_CLICK_PROMPT
 
 logger = get_logger(__name__)
@@ -80,6 +81,9 @@ class GroundStationWidget(QWidget):
 
         self.waypoints: list[list[float]] = []
         self.num_waypoints: int = 0
+
+        # table rows that currently display a time-to-arrival estimate
+        self._eta_rows_filled: set[int] = set()
 
         # buoy_name => {"lat": float, "lon": float}
         self.buoys: dict[str, dict[str, float]] = {}
@@ -183,8 +187,7 @@ class GroundStationWidget(QWidget):
         self.middle_layout.addWidget(self.browser, 0, 1)
         self.middle_layout.setRowStretch(0, 1)
 
-        self.map_bridge = MapBridge(self.browser)
-        QTimer.singleShot(0, self.map_bridge.verify_api)
+        self.map_bridge = MapViewerServer.TypeScriptInterface(self.browser, constants.MAP_PAGE)
 
         LAND_CLICK_PROMPT.agreement_requested.connect(self._handle_land_click_prompt, Qt.ConnectionType.QueuedConnection)
 
@@ -208,8 +211,11 @@ class GroundStationWidget(QWidget):
         self.pong_window = PongDialog()
 
         self.test_waypoint_rng = np.random.default_rng(69420)
-        self.add_500_test_waypoints_button = QPushButton("Add 500 Test Waypoints?")
-        self.add_500_test_waypoints_button.clicked.connect(self.add_500_test_waypoints)
+        self.add_random_waypoints_button = QPushButton("Add Random Waypoints")
+        self.add_random_waypoints_button.setToolTip(
+            "Generate random waypoints within a chosen distance of the boat's current position."
+        )
+        self.add_random_waypoints_button.clicked.connect(self.add_random_waypoints)
 
         self.manual_waypoint_button = QPushButton("Add Waypoint by Coordinates")
         self.manual_waypoint_button.setToolTip("Manually enter latitude and longitude to add a waypoint.")
@@ -217,7 +223,7 @@ class GroundStationWidget(QWidget):
 
         self.middle_button_layout.addWidget(self.telemetry_config_button, 0, 0)
         self.middle_button_layout.addWidget(self.keybind_config_button, 0, 1)
-        self.middle_button_layout.addWidget(self.add_500_test_waypoints_button, 0, 2)
+        self.middle_button_layout.addWidget(self.add_random_waypoints_button, 0, 2)
         self.middle_button_layout.addWidget(self.manual_waypoint_button, 0, 3)
         self.middle_button_groupbox.setLayout(self.middle_button_layout)
 
@@ -233,6 +239,12 @@ class GroundStationWidget(QWidget):
         self.right_tab1_table = QTableWidget()
         self.right_tab1_table.setMinimumWidth(self.right_width - 20)
         self.right_tab1_table.cellClicked.connect(lambda row, _column: self.zoom_to_marker(row, table="waypoints"))
+
+        # size each column to its widest value so the coordinates are never elided,
+        # then let the last column soak up whatever horizontal room is left over
+        waypoint_header = self.right_tab1_table.horizontalHeader()
+        waypoint_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        waypoint_header.setStretchLastSection(True)
         self.can_send_waypoints = True
         self.send_waypoints_button = misc.pushbutton_maker(
             "Send Waypoints",
@@ -286,6 +298,12 @@ class GroundStationWidget(QWidget):
         self.right_tab2_table = QTableWidget()
         self.right_tab2_table.setMinimumWidth(self.right_width - 20)
         self.right_tab2_table.cellClicked.connect(lambda row, _column: self.zoom_to_marker(row, table="buoys"))
+
+        # size each column to its widest value so the coordinates are never elided,
+        # then let the last column soak up whatever horizontal room is left over
+        buoy_header = self.right_tab2_table.horizontalHeader()
+        buoy_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        buoy_header.setStretchLastSection(True)
 
         self.edit_buoy_data_button = misc.pushbutton_maker(
             "Edit Buoy Data",
@@ -415,7 +433,7 @@ class GroundStationWidget(QWidget):
         The Map Appearance Configuration dialog only calls
         :meth:`on_map_feature_toggled` when a box is clicked, so without this a
         feature saved as enabled would stay hidden after a restart. Each call is
-        queued by :class:`MapBridge` until the map finishes loading.
+        queued by :class:`MapViewerServer.TypeScriptInterface` until the map finishes loading.
         """
 
         map_features = constants.SM.read_dict("map_features")
@@ -667,15 +685,44 @@ class GroundStationWidget(QWidget):
         self.map_bridge.clear_waypoints()
 
     @Slot()
-    def add_500_test_waypoints(self) -> None:
-        """Add 500 test waypoints to the map."""
+    def add_random_waypoints(self) -> None:
+        """
+        Open a dialog and add randomly placed waypoints near the boat.
 
-        for _ in range(500):
-            latitude = self.test_waypoint_rng.uniform(-90, 90)
-            longitude = self.test_waypoint_rng.uniform(-180, 180)
+        The waypoints are scattered on a disc of the requested radius around the boat's
+        current position, so they stay relevant to the mission instead of being spread
+        over the whole planet.
+        """
+
+        boat_lat = self.boat_data.get("latitude")
+        boat_lon = self.boat_data.get("longitude")
+
+        if not all(isinstance(value, (int, float)) for value in (boat_lat, boat_lon)):
+            show_message_box(
+                title="Boat Position Unknown",
+                message="Random waypoints are placed around the boat, so a position is required. "
+                "Wait for telemetry to arrive and try again.",
+                icon=constants.ICONS.warning,
+            )
+            return
+
+        dialog = RandomWaypointsDialog(self)
+        if dialog.exec() != RandomWaypointsDialog.DialogCode.Accepted:
+            return
+
+        count = dialog.get_count()
+        max_distance = dialog.get_max_distance_m()
+
+        for _ in range(count):
+            # sqrt of a uniform sample keeps the points evenly spread over the disc
+            # instead of clustering them near the center
+            distance = max_distance * float(np.sqrt(self.test_waypoint_rng.random()))
+            bearing = float(self.test_waypoint_rng.uniform(0, 360))
+
+            latitude, longitude = misc.destination_point_m(float(boat_lat), float(boat_lon), bearing, distance)
             self.map_bridge.add_waypoint(latitude, longitude)
 
-        logger.info("Added 500 test waypoints to the map, LOL.")
+        logger.info(f"Added {count} random waypoints within {max_distance:.0f} m of the boat.")
 
     @Slot()
     def add_manual_waypoint(self) -> None:
@@ -836,11 +883,18 @@ class GroundStationWidget(QWidget):
             self.map_bridge.add_buoy(self.buoys[buoy]["lat"], self.buoys[buoy]["lon"])
 
             for i, coord in enumerate(["lat", "lon"]):
-                item = QTableWidgetItem(f"{float(self.buoys[buoy][coord]):.13f}")
+                value = float(self.buoys[buoy][coord])
+
+                # cap the precision, then trim trailing zeros so a value like
+                # -80.1 stays short instead of being padded to 7 decimals;
+                # rounding a tiny negative value can leave a bare "-0"
+                text = f"{value:.{constants.WAYPOINT_COORDINATE_DECIMALS}f}".rstrip("0").rstrip(".")
+
+                item = QTableWidgetItem(text if text not in ("", "-0") else "0")
                 item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+                item.setToolTip(f"{value:.13f}")
                 self.right_tab2_table.setItem(self.right_tab2_table.rowCount() - 1, i, item)
 
-        self.right_tab2_table.resizeColumnsToContents()
         self.right_tab2_table.resizeRowsToContents()
 
     @Slot()
@@ -1056,18 +1110,126 @@ class GroundStationWidget(QWidget):
 
             self.right_tab1_table.clear()
             self.right_tab1_table.setRowCount(0)
-            self.right_tab1_table.setColumnCount(2)
-            self.right_tab1_table.setHorizontalHeaderLabels(["Latitude", "Longitude"])
+            self.right_tab1_table.setColumnCount(3)
+            self.right_tab1_table.setHorizontalHeaderLabels(["Latitude", "Longitude", "ETA"])
+            self._eta_rows_filled = set()
+
+            eta_header = self.right_tab1_table.horizontalHeaderItem(2)
+            if eta_header is not None:
+                eta_header.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                eta_header.setToolTip(
+                    f"Estimated time to reach each of the next {constants.MAX_ETA_WAYPOINTS} waypoints "
+                    "at the current speed."
+                )
 
             for waypoint in waypoints:
                 self.right_tab1_table.insertRow(self.right_tab1_table.rowCount())
-                for i, coord in enumerate(waypoint):
-                    item = QTableWidgetItem(f"{coord:.13f}")
+                for i, coord in enumerate(waypoint[:2]):
+                    text = f"{float(coord):.{constants.WAYPOINT_COORDINATE_DECIMALS}f}".rstrip("0").rstrip(".")
+                    item = QTableWidgetItem(text if text not in ("", "-0") else "0")
                     item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+                    item.setToolTip(f"{float(coord):.13f}")
                     self.right_tab1_table.setItem(self.right_tab1_table.rowCount() - 1, i, item)
 
-            self.right_tab1_table.resizeColumnsToContents()
+            self._refresh_waypoint_eta()
             self.right_tab1_table.resizeRowsToContents()
+
+    def _compute_waypoint_etas(self) -> dict[int, str]:
+        """
+        Estimate the time needed to reach the next few waypoints.
+
+        Distances are accumulated along the planned path, starting at the boat's
+        current position and at the waypoint the autopilot is currently targeting.
+        Only the next :data:`constants.MAX_ETA_WAYPOINTS` waypoints are estimated, and
+        the boat's current speed is assumed to stay constant.
+
+        Returns
+        -------
+        `dict[int, str]`
+            A mapping of table row index to a formatted duration. Empty if the boat
+            position or speed is unavailable.
+        """
+
+        boat_lat = self.boat_data.get("latitude")
+        boat_lon = self.boat_data.get("longitude")
+        speed = self.boat_data.get("speed")
+
+        if not all(isinstance(value, (int, float)) for value in (boat_lat, boat_lon, speed)):
+            return {}
+
+        speed = float(speed)
+        if speed <= 1e-6:
+            return {}
+
+        start_index = self.boat_data.get("current_waypoint_index")
+        if not isinstance(start_index, int) or not 0 <= start_index < len(self.waypoints):
+            start_index = 0
+
+        end_index = min(start_index + constants.MAX_ETA_WAYPOINTS, len(self.waypoints))
+
+        etas: dict[int, str] = {}
+        previous_lat, previous_lon = float(boat_lat), float(boat_lon)
+        cumulative_distance = 0.0
+
+        for row in range(start_index, end_index):
+            waypoint = self.waypoints[row]
+            if len(waypoint) < 2 or not all(isinstance(coord, (int, float)) for coord in waypoint[:2]):
+                break
+
+            waypoint_lat, waypoint_lon = float(waypoint[0]), float(waypoint[1])
+            cumulative_distance += misc.haversine_distance_m(previous_lat, previous_lon, waypoint_lat, waypoint_lon)
+            etas[row] = misc.format_duration(cumulative_distance / speed)
+            previous_lat, previous_lon = waypoint_lat, waypoint_lon
+
+        return etas
+
+    def _refresh_waypoint_eta(self) -> None:
+        """
+        Refresh the time-to-arrival column of the waypoints table.
+
+        Waypoints the autopilot has already passed are marked as visited, the next
+        :data:`constants.MAX_ETA_WAYPOINTS` waypoints get an estimate, and every other
+        row is left blank so that stale values do not linger.
+        """
+
+        if self.right_tab1_table.columnCount() <= 2:
+            return
+
+        # the autopilot's current target is the first waypoint it has not reached yet,
+        # so everything before it has been visited
+        current_index = self.boat_data.get("current_waypoint_index")
+        if not isinstance(current_index, int) or current_index < 0:
+            current_index = 0
+
+        visited_rows = set(range(min(current_index, self.right_tab1_table.rowCount())))
+
+        labels: dict[int, str] = dict.fromkeys(visited_rows, "✓ visited")
+        labels.update(self._compute_waypoint_etas())
+
+        touched_rows = labels.keys() | self._eta_rows_filled
+
+        for row in touched_rows:
+            if not 0 <= row < self.right_tab1_table.rowCount():
+                continue
+
+            text = labels.get(row, "")
+            visited = row in visited_rows
+            item = self.right_tab1_table.item(row, 2)
+
+            if item is None:
+                if not text:
+                    continue
+
+                item = QTableWidgetItem(text)
+                item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.right_tab1_table.setItem(row, 2, item)
+            elif item.text() != text:
+                item.setText(text)
+
+            item.setForeground(QBrush(constants.GREY if visited else constants.FONT_COLOR))
+
+        self._eta_rows_filled = set(labels)
 
     @Slot(tuple)
     def check_telemetry_waypoints(self, request_result: tuple[list[list[int | float]], constants.TelemetryStatus]) -> None:
@@ -1474,6 +1636,8 @@ class GroundStationWidget(QWidget):
             self.refresh_autopilot_config_signal.emit(False)
 
         # endregion data validation and defaulting
+
+        self._refresh_waypoint_eta()
 
         self.map_bridge.update_boat_location_and_heading(lat, lon, heading, record_track=not instance_changed)
 

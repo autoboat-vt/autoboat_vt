@@ -593,11 +593,10 @@ declare global {
     }
 }
 
+// The Python side polls for `window.map` becoming callable rather than waiting on
+// an event, so there is nothing to announce here: an event dispatched at this point
+// would fire before any listener could be registered, which is what silently dropped
+// startup calls such as restoring saved map features.
 window.map = map;
-
-// Lets the Python side know the map API is ready. MapBridge's load guard waits
-// for this event, so a call made before the module finished loading runs as
-// soon as the map exists instead of being dropped.
-document.dispatchEvent(new Event("mapLoaded"));
 
 export default map;
