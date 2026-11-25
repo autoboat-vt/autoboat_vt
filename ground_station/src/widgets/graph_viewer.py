@@ -208,6 +208,19 @@ class GraphViewer(QWidget):
         self.graph_layout_widget.clear()
         logger.info("Cleared all graphs and data.")
 
+    def shutdown(self) -> None:
+        """
+        Stop the telemetry fetcher thread.
+
+        The fetcher has no Qt parent, so :meth:`QMainWindow.closeEvent`'s
+        ``findChildren(QThread)`` sweep does not reach it. Without this, the thread keeps
+        emitting ``data_fetched`` while the window tears down, delivering telemetry slots
+        to a :class:`GroundStationWidget` whose map page is already being released.
+        """
+
+        self.telemetry_handler.requestInterruption()
+        self.telemetry_handler.wait(2000)
+
     def closeEvent(self, event: QCloseEvent) -> None:
         """
         Stop the telemetry fetcher thread and poll timer before closing.
@@ -224,8 +237,7 @@ class GraphViewer(QWidget):
             The close event that triggered this method.
         """
 
-        self.telemetry_handler.requestInterruption()
-        self.telemetry_handler.wait()
+        self.shutdown()
         super().closeEvent(event)
 
 

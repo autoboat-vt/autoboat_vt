@@ -396,6 +396,7 @@ class MapViewerServer(QObject):
             self._browser = browser
             self._page = page if page is not None else browser.page()
             self._api_verified = False
+            self._page_destroyed = False
 
             # Calls made before the map document has loaded are held here rather than
             # in JavaScript. `runJavaScript` before navigation executes against
@@ -409,6 +410,7 @@ class MapViewerServer(QObject):
             if loaded_page is not None:
                 loaded_page.loadStarted.connect(self._on_load_started)
                 loaded_page.loadFinished.connect(self._on_load_finished)
+                loaded_page.destroyed.connect(self._on_page_destroyed)
 
                 # This interface can be built after the map has already loaded, for
                 # example when the ground station tab is created once a telemetry
@@ -456,6 +458,9 @@ class MapViewerServer(QObject):
                 The JS code to run, executed only once :attr:`window.map` exists.
             """
 
+            if self._page is None or self._page_destroyed:
+                return
+
             if not self._map_loaded:
                 self._pending_calls.append(js)
                 return
@@ -475,6 +480,9 @@ class MapViewerServer(QObject):
 
             pending_calls = self._pending_calls
             self._pending_calls = []
+
+            if self._page is None or self._page_destroyed:
+                return
 
             logger.info(f"Flushing {len(pending_calls)} map call(s) queued before the map loaded.")
 
@@ -510,6 +518,20 @@ class MapViewerServer(QObject):
 
             self._map_loaded = False
 
+        def _on_page_destroyed(self) -> None:
+            """
+            Record that Qt has destroyed the page's underlying C++ object.
+
+            Calls can still arrive after shutdown starts, because the telemetry fetcher
+            emits faster than the close sequence completes and its slots were already
+            queued on the GUI thread. Checking this flag makes :meth:`_run_js` a no-op
+            instead of raising ``Internal C++ object already deleted``. The dying page is
+            left untouched so as not to disturb Qt's destruction sequence.
+            """
+
+            self._page_destroyed = True
+            self._pending_calls.clear()
+
         def _is_map_document(self) -> bool:
             """
             Whether the page is currently showing the map viewer document.
@@ -523,6 +545,9 @@ class MapViewerServer(QObject):
             `bool`
                 `True` if the loaded document is the map viewer.
             """
+
+            if self._page is None or self._page_destroyed:
+                return False
 
             page_url = self._page.url().toString()
             return page_url.startswith(constants.MAP_URL.toString())
@@ -634,6 +659,9 @@ class MapViewerServer(QObject):
                     )
 
             def _retry() -> None:
+                if self._page is None or self._page_destroyed:
+                    return
+
                 self._page.runJavaScript(js_probe, _on_result)
 
             _retry()

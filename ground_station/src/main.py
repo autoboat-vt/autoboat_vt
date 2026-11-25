@@ -96,6 +96,7 @@ class MainWindow(QMainWindow):
 
         self.main_widget = QTabWidget()
         self.setCentralWidget(self.main_widget)
+        self.graph_viewer: GraphViewer | None = None
 
         try:
             self.console_widget = ConsoleOutputWidget()
@@ -124,6 +125,7 @@ class MainWindow(QMainWindow):
             self.main_widget.addTab(self.instance_handler, "Instance Handler")
 
             graph_viewer = GraphViewer()
+            self.graph_viewer = graph_viewer
             groundstation_widget = GroundStationWidget(graph_viewer.boat_data_signal)
             self.main_widget.addTab(groundstation_widget, "Ground Station")
             self.main_widget.addTab(graph_viewer, "Graph Viewer")
@@ -152,6 +154,12 @@ class MainWindow(QMainWindow):
         for thread in self.findChildren(QThread):
             thread.requestInterruption()
             thread.wait()
+
+        # The telemetry fetcher has no Qt parent, so the sweep above misses it. Stop it
+        # before the map page is released below, otherwise its last emissions arrive as
+        # slots that call into the already-deleted QWebEnginePage.
+        if self.graph_viewer is not None:
+            self.graph_viewer.shutdown()
 
         logger.info("Shutting down asset server...")
         if hasattr(self, "asset_server"):
