@@ -51,9 +51,71 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/libcpr/cpr.git
   GIT_TAG        1.14.2
 )
+
+# BEGIN SECTION
+# cpr's checkout reads merge.conflictStyle; older Git rejects the zdiff3 value
+# if it is present in the user's global config. Override it only for this fetch
+# rather than requiring a Git upgrade or changing the user's global config.
+# fatal: unknown style 'zdiff3' given for 'merge.conflictstyle'
+
+# GIT_CONFIG_COUNT entries are indexed from zero. Appending preserves any
+# overrides supplied by the environment instead of replacing them.
+if(DEFINED ENV{GIT_CONFIG_COUNT})
+  set(_CPR_PREVIOUS_GIT_CONFIG_COUNT "$ENV{GIT_CONFIG_COUNT}")
+  math(EXPR _CPR_GIT_CONFIG_INDEX "${_CPR_PREVIOUS_GIT_CONFIG_COUNT}")
+  set(_CPR_GIT_CONFIG_COUNT_WAS_SET TRUE)
+else()
+  set(_CPR_GIT_CONFIG_INDEX 0)
+endif()
+
+# Git requires each indexed override to be supplied as a matching KEY_n/VALUE_n pair.
+set(_CPR_GIT_CONFIG_KEY_ENV "GIT_CONFIG_KEY_${_CPR_GIT_CONFIG_INDEX}")
+set(_CPR_GIT_CONFIG_VALUE_ENV "GIT_CONFIG_VALUE_${_CPR_GIT_CONFIG_INDEX}")
+
+# The next slot may already have values even though it is not counted; save them
+# so this temporary override does not discard unrelated environment state.
+if(DEFINED ENV{${_CPR_GIT_CONFIG_KEY_ENV}})
+  set(_CPR_PREVIOUS_GIT_CONFIG_KEY "$ENV{${_CPR_GIT_CONFIG_KEY_ENV}}")
+  set(_CPR_GIT_CONFIG_KEY_WAS_SET TRUE)
+endif()
+if(DEFINED ENV{${_CPR_GIT_CONFIG_VALUE_ENV}})
+  set(_CPR_PREVIOUS_GIT_CONFIG_VALUE "$ENV{${_CPR_GIT_CONFIG_VALUE_ENV}}")
+  set(_CPR_GIT_CONFIG_VALUE_WAS_SET TRUE)
+endif()
+
+# Increase the active entry count so Git reads this pair. diff3 is supported by
+# older Git and overrides zdiff3 without changing other Git configuration.
+math(EXPR _CPR_GIT_CONFIG_COUNT "${_CPR_GIT_CONFIG_INDEX} + 1")
+set(ENV{GIT_CONFIG_COUNT} "${_CPR_GIT_CONFIG_COUNT}")
+set(ENV{${_CPR_GIT_CONFIG_KEY_ENV}} "merge.conflictStyle")
+set(ENV{${_CPR_GIT_CONFIG_VALUE_ENV}} "diff3")
+
+# FetchContent runs the cpr clone/checkout during configuration, and its Git
+# subprocesses inherit this override.
 FetchContent_MakeAvailable(cpr)
 
+# Restore the indexed variables so later Git subprocesses see the original
+# environment rather than this cpr-specific compatibility override.
+if(_CPR_GIT_CONFIG_KEY_WAS_SET)
+  set(ENV{${_CPR_GIT_CONFIG_KEY_ENV}} "${_CPR_PREVIOUS_GIT_CONFIG_KEY}")
+else()
+  unset(ENV{${_CPR_GIT_CONFIG_KEY_ENV}})
+endif()
+if(_CPR_GIT_CONFIG_VALUE_WAS_SET)
+  set(ENV{${_CPR_GIT_CONFIG_VALUE_ENV}} "${_CPR_PREVIOUS_GIT_CONFIG_VALUE}")
+else()
+  unset(ENV{${_CPR_GIT_CONFIG_VALUE_ENV}})
+endif()
+# Restore the original count so the appended pair is no longer active.
+if(_CPR_GIT_CONFIG_COUNT_WAS_SET)
+  set(ENV{GIT_CONFIG_COUNT} "${_CPR_PREVIOUS_GIT_CONFIG_COUNT}")
+else()
+  unset(ENV{GIT_CONFIG_COUNT})
+endif()
 
+# At this point the cpr fetch is complete, and the override is no longer needed. The
+# environment is restored to its original state so later Git subprocesses are not affected.
+# END SECTION
 
 # Shared autopilot static library (compiled once, linked by multiple targets)
 add_library(autopilot_lib STATIC
